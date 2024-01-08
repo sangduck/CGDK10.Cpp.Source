@@ -1,0 +1,63 @@
+//*****************************************************************************
+//*                                                                           *
+//*                      Cho sanghyun's Game Classes II                       *
+//*                       Ver 10.0 / Release 2019.12.11                       *
+//*                                                                           *
+//*                          Server Admin Host Agent                          *
+//*                                                                           *
+//*                                                                           *
+//*                                                                           *
+//*                                                                           *
+//*  This Program is programmed by Cho SangHyun. sangduck@cgcii.co.kr         *
+//*  Best for Game Developement and Optimized for Game Developement.          *
+//*                                                                           *
+//*                (c) 2003. Cho Sanghyun. All right reserved.                *
+//*                          http://www.CGCII.co.kr                           *
+//*                                                                           *
+//*****************************************************************************
+
+#pragma once
+// ----------------------------------------------------------------------------
+//
+// observable_websocket_server_executor_info
+//
+//
+// ----------------------------------------------------------------------------
+class observable_websocket_server_executor_info : 
+	public						Iobservable_websocket
+{
+protected:
+	explicit observable_websocket_server_executor_info(const std::string_view _name);
+	virtual ~observable_websocket_server_executor_info();
+
+public:
+			void				request_update_webpage_executor(uint64_t _flag = 0xffffffff);
+			void				request_update_webpage_schedulable(uint64_t _flag = 0xffffffff);
+			void				request_update_webpage_executable(uint64_t _flag = 0xffffffff);
+
+private:
+	virtual	result_code			on_observer_registering(socket_websocket* _pobserver, observer_channel_t _ocid, observer_data_t& _observer_data) override;
+	virtual	void				on_observer_registered(socket_websocket* _pobserver, observer_channel_t _ocid, const observer_data_t& _observer_data) override;
+	virtual	uintptr_t			on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t _ocid) override;
+	virtual	void				on_observer_unregistered(socket_websocket* _pobserver, observer_channel_t _ocid, uintptr_t _result) override;
+	virtual	uintptr_t			on_observer_data_updating(socket_websocket* _pobserver, observer_channel_t _ocid, observer_data_t& _observer_data) override;
+	virtual	void				on_observer_data_update(socket_websocket* _pobserver, observer_channel_t _ocid, uintptr_t _result) override;
+
+	virtual result_code			on_message(sMESSAGE_NETWORK& _msg);
+			result_code			on_message_server_button_toggle(sMESSAGE_HTTP_WEBSOCKET& _msg);
+
+			shared_buffer		make_webmessage_executor_list(const std::vector<server_admin::executor_snap>& _vector_executor_snap, uint64_t _flag);
+			shared_buffer		make_webmessage_schedulable_list(const std::vector<server_admin::schedulable_snap>& _vector_schedulable_info, uint64_t _flag);
+			shared_buffer		make_webmessage_executable_list(const std::vector<server_admin::factory_snap>& _vector_executable_info, uint64_t _flag);
+
+			//shared_buffer		make_webmessage_executor_list_add(uint64_t _flag);
+			//shared_buffer		make_webmessage_schedulable_list_add(uint64_t _flag);
+			//shared_buffer		make_webmessage_executable_list_add(uint64_t _flag);
+
+			shared_buffer		make_webmessage_executor_list_update(const std::vector<server_admin::executor_snap>& _vector_executor_snap, uint64_t _flag);
+			shared_buffer		make_webmessage_schedulable_list_update(const std::vector<server_admin::schedulable_snap>& _vector_schedulable, uint64_t _flag);
+			shared_buffer		make_webmessage_executable_list_update(const std::vector<server_admin::factory_snap>& _vector_factory_snap, uint64_t _flag);
+
+public:
+			server_admin::instance_Iservice* m_pservice_entity = nullptr;
+};

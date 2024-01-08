@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Server Lobby">
+      <UniqueIdentifier>{82add53d-1d21-41c6-a631-f48d850c95a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="User">
+      <UniqueIdentifier>{3d82a61f-02c7-4dbf-90bd-ddf3a92c558e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Service.h" />
+    <ClInclude Include="LoginServer.h" />
+    <ClInclude Include="LoginServerDefinition.h" />
+    <ClInclude Include="ServerLobbyGroupImmigrationSocket.h">
+      <Filter>Server Lobby</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerLobbySocket.h">
+      <Filter>Server Lobby</Filter>
+    </ClInclude>
+    <ClInclude Include="UserGroupImmigrationSocket.h">
+      <Filter>User</Filter>
+    </ClInclude>
+    <ClInclude Include="UserSocket.h">
+      <Filter>User</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerLobbyGroupSocket.h">
+      <Filter>Server Lobby</Filter>
+    </ClInclude>
+    <ClInclude Include="LoginServerDlg.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="..\Common\Definitions.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="UserAccountManager.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Service.cpp" />
+    <ClCompile Include="LoginServer.cpp" />
+    <ClCompile Include="ServerLobbyGroupImmigrationSocket.cpp">
+      <Filter>Server Lobby</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerLobbySocket.cpp">
+      <Filter>Server Lobby</Filter>
+    </ClCompile>
+    <ClCompile Include="UserGroupImmigrationSocket.cpp">
+      <Filter>User</Filter>
+    </ClCompile>
+    <ClCompile Include="UserSocket.cpp">
+      <Filter>User</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerLobbyGroupSocket.cpp">
+      <Filter>Server Lobby</Filter>
+    </ClCompile>
+    <ClCompile Include="LoginServerDlg.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="UserAccountManager.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="LoginServer.rc">
+      <Filter>리소스 파일</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="LoginServer_Setting.json" />
+    <None Include="res\LoginServer.ico">
+      <Filter>리소스 파일</Filter>
+    </None>
+    <None Include="res\LoginServer.rc2">
+      <Filter>리소스 파일</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\ServerStateMngServer.ico">
+      <Filter>리소스 파일</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

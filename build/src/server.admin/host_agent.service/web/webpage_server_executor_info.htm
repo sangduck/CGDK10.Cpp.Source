@@ -1,0 +1,754 @@
+<HTML>
+<HEAD>
+    <META NAME='GENERATOR' Content='CGCII HostAgent'>
+    <TITLE></TITLE>
+
+    <style>
+        *:focus {
+            outline: none;
+        }
+        .head_1 {
+            color: #000;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        .server_list_button {
+            width: 28px;
+            height: 24px;
+            color: #666;
+            vertical-align: bottom;
+            border: none;
+            background-color: transparent;
+            margin: 0px;
+            padding: 0px;
+            cursor: pointer;
+        }
+        .server_list_button:hover, .server_list_button:focus {
+            color: #000;
+            cursor: pointer;
+        }
+
+        .table_server_list {
+            margin-left: 5px;
+            width: 400px;
+            table-layout:fixed;
+        }
+
+        .table_server_list th {
+            height: 20px;
+            background-color: #888;
+            vertical-align: top;
+            padding: 0px 0px 2px 4px;
+            vertical-align:bottom;
+            border-right-width:2px;
+            border-right-style:solid;
+            border-right-color:#fff;
+        }
+        .table_server_list th span {
+            table-layout: fixed;
+            font-size: 10px;
+            font-weight: bold;
+            vertical-align: bottom;
+            color: #fff;
+        }
+            .table_server_list tr {
+                height: 25px;
+            }
+        .table_server_list tr:hover {
+            background-color: #ddd;
+            cursor: pointer;
+        }
+        .table_server_list tr td {
+            table-layout: fixed;
+            vertical-align: top;
+            font-size: 14px;
+            padding-left: 2px 3px 3px 4px;
+            overflow-x: hidden;
+            white-space: nowrap;
+        }
+
+        .texecutor_thread {
+            text-align:right;
+            margin-left:5px;
+            padding-right:5px;
+            background-color:#f0f0f8;
+            margin-left: 5px;
+        }
+
+        .button_type {
+            background-color: #fff;
+            color: #cce;
+            border: none;
+            padding: 1px;
+        }
+        .button_type:hover {
+            color: #99f;
+            border: none;
+        }
+        .button_type_selected {
+            background-color: #fff;
+            color: #222;
+            border: none;
+        }
+        .button_type_selected:hover {
+            color: #00f;
+            border: none;
+        }
+    }
+    </style>
+    <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css'>
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/xeicon@2.3.3/xeicon.min.css'>
+</HEAD>
+<BODY style='margin-top:0px; margin-left:0px; margin-right:0px'>
+    <div style='width: 100%;min-width:1400px'>
+        <table>
+            <tr>
+                <td width="400px" style='overflow-x:hidden; border-width: 0px; min-height:14px;margin-right:10px' valign="top">
+                    <table width='400px' height='30px' style="margin-left:0px;">
+                        <td style='width:150px;height:30px;vertical-align:bottom'>
+                            <div class='head_1'>&nbsp;&nbsp;EXECUTORs</div>
+                        </td>
+                        <td width='250px' height='40px' align='right' valign='bottom'>
+                            <button class="button_type" id="button_executor_system_v" title='system executor' onclick="onclick_checkbox_executor_system()"><i class='fa fa-cogs'></i></button>
+                            <button class="button_type" id="button_executor_user_v" title='user executor' onclick="onclick_checkbox_executor_user()"><i class='fa fa-user-circle'></i></button>
+                        </td>
+                    </table>
+                    <table class='table_server_list' id='table_server_list_n' cellspacing='0'>
+                        <thead>
+                            <tr style='height:20px;border-bottom-color#111;border-bottom-style:solid;border-bottom-width:2px'>
+                                <th style='width:140px;'><span style='float:left'>EXECUTOR NAME</span></th>
+                                <th style='width:40px;'><span style='float:left'>ID</span></th>
+                                <th style='width:80px;'><span style='float:left'>EXECUTED</span></th>
+                                <th style='width:80px;'><span style='float:left'>ERROR</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id='table_executor_list_n'>
+                        </tbody>
+                    </table>
+                </td>
+                <td width="400px" style='overflow-x:hidden; border-width: 0px; min-height:14px;margin-right:10px' align="left" valign="top">
+                    <table width='400px' height='30px' style="margin-left:0px;">
+                        <td style='width:150px;height:30px;vertical-align:bottom'>
+                            <div class='head_1'>&nbsp;&nbsp;SCHEDULABLEs</div>
+                        </td>
+                        <td width='250px' height='40px' align='right' valign='bottom'>
+                            <button class="button_type" id="button_schedulable_system_v" title='system schedulable' onclick="onclick_checkbox_schedulable_system()"><i class='fa fa-cogs'></i></button>
+                            <button class="button_type" id="button_schedulable_user_v" title='user schedulable' onclick="onclick_checkbox_schedulable_user()"><i class='fa fa-user-circle'></i></button>
+                        </td>
+                    </table>
+                    <table class='table_server_list' cellspacing="0px">
+                        <thead>
+                            <tr style='height:20px'>
+                                <th style='width:200px;'><span style='float:left'>NAME</span></th>
+                                <th style='width:60px;'><span style='float:left'>INTERVAL</span></th>
+                                <th style='width:100px;'><span style='float:left'>EXECUTED</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id='table_schedulable_list_n'>
+                        </tbody>
+                    </table>
+                </td>
+                <td width="400px" style='overflow-x:hidden; border-width: 0px; min-height:14px;margin-right:10px' align="left" valign="top">
+                    <table width='400px' height='30px' style="margin-left:0px;">
+                        <td style='width:150px;height:30px;vertical-align:bottom'>
+                            <div class='head_1'>&nbsp;&nbsp;EXECUTABLEs</div>
+                        </td>
+                        <td width='250px' height='40px' align='right' valign='bottom'>
+                            <button class="button_type" id="button_executable_system_v" title='system executable' onclick="onclick_checkbox_executable_system()"><i class='fa fa-cogs'></i></button>
+                            <button class="button_type" id="button_executable_user_v" title='user executable' onclick="onclick_checkbox_executable_user()"><i class='fa fa-user-circle'></i></button>
+                        </td>
+                    </table>
+                    <table class='table_server_list' cellspacing="0px">
+                        <thead>
+                            <tr style='height:20px'>
+                                <th style='width:260px;'><span style='float:left'>NAME</span></th>
+                                <th style='width:100px;'><span style='float:left'>EXECUTED</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id='table_executable_list_n'>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <script>
+        var websocket;
+        var table_executor_list_v;
+        var table_executable_list_v;
+        var table_schedulable_list_v;
+
+        function init() {
+            table_executor_list_v = document.getElementById("table_executor_list_n");
+            table_executable_list_v = document.getElementById("table_executable_list_n");
+            table_schedulable_list_v = document.getElementById("table_schedulable_list_n");
+        }
+
+        function on_message(_event) {
+            let message_type = _event.data.substring(0, 4);
+
+            if (message_type == 'CELO') {
+                on_messsage_executor_list(_event.data);
+            }
+            else if (message_type == 'CEBO') {
+                on_messsage_executable_list(_event.data);
+            }
+            else if (message_type == 'CSLO') {
+                on_messsage_schedulable_list(_event.data);
+            }
+        }
+
+        function on_message_log(message) {
+            let pre = document.createElement("div");
+            pre.style.wordWrap = "break-word";
+            pre.innerHTML = message.slice(4);
+            div_log_output.appendChild(pre);
+            div_log_output.scrollTo(0, div_log_output.scrollTop + pre.scrollHeight);
+        }
+        function on_messsage_executor_list(message)
+        {
+            let pos_buf = 4;
+            let len_buf = message.length;
+
+            while (pos_buf < len_buf) {
+                // 1) get command type
+                let command = message[pos_buf];
+                ++pos_buf;
+
+                // 3) execute command (A:Add, D:delete, U:update)
+                switch (command) {
+                    case 'L': // add new
+                        {
+                            // - set flag
+                            {
+                                let check_find = document.getElementById("button_executor_system_v");
+                                let flag = message[pos_buf];
+                                ++pos_buf;
+                                if ((flag == 'C'))
+                                    check_find.classList.add("button_type_selected");
+                                else
+                                    check_find.classList.remove("button_type_selected");
+                            }
+                            {
+                                let check_find = document.getElementById("button_executor_user_v");
+                                let flag = message[pos_buf];
+                                ++pos_buf;
+                                if ((flag == 'C'))
+                                    check_find.classList.add("button_type_selected");
+                                else
+                                    check_find.classList.remove("button_type_selected");
+                            }
+
+                            // - clear table
+                            table_executor_list_v.innerHTML = "";
+
+                            while (pos_buf < len_buf) {
+                                // - get element id
+                                let pos_buf_new = message.indexOf('\n', pos_buf);
+
+                                if (pos_buf_new == pos_buf) {
+                                   pos_buf = pos_buf_new + 1;
+                                   break;
+                                }
+
+                                let element_id = message.substring(pos_buf, pos_buf_new);
+                                pos_buf = pos_buf_new + 1;
+
+                                // - get element length
+                                pos_buf_new = message.indexOf('\n', pos_buf);
+                                let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                                pos_buf = pos_buf_new + 1;
+
+                                // - get element innnerHTML;
+                                let value = message.substring(pos_buf, pos_buf + value_length);
+                                pos_buf = pos_buf + value_length;
+
+                                // - add
+                                let pre = document.createElement("ul");
+                                pre.innerHTML = value;
+                                pre.style = "padding:0px;width:420px;border-bottom-color:#333;border-bottom-style:dotted;border-bottom-width:1px";
+                                pre.id = element_id;
+                                pre.addEventListener("click", onclick_table_executor_list);
+                                pre.addEventListener("dblclick", ondblclick_table_executor_list);
+                                table_executor_list_v.appendChild(pre);
+                            }
+                        }
+                        break;
+
+                    case 'A': // add new
+                        {
+                            // - get element id
+                            let pos_buf_new = message.indexOf('\n', pos_buf);
+                            let element_id = message.substring(pos_buf, pos_buf_new);
+                            pos_buf = pos_buf_new + 1;
+
+                            // - get element length
+                            pos_buf_new = message.indexOf('\n', pos_buf);
+                            let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                            pos_buf = pos_buf_new + 1;
+
+                            // - get element innnerHTML;
+                            let value = message.substring(pos_buf, pos_buf + value_length);
+                            pos_buf = pos_buf + value_length;
+
+                            // - add
+                            let pre = document.createElement("ul");
+                            pre.innerHTML = value;
+                            pre.style = "padding:0px;width:420px;border-bottom-color:#333;border-bottom-style:dotted;border-bottom-width:1px";
+                            pre.id = element_id;
+                            pre.addEventListener("click", onclick_table_executor_list);
+                            pre.addEventListener("dblclick", ondblclick_table_executor_list);
+                            table_executor_list_v.appendChild(pre);
+                        }
+                        break;
+
+                    case 'D': // delete
+                        {
+                            // - get element id
+                            let pos_buf_new = message.indexOf('\n', pos_buf);
+                            let element_id = message.substring(pos_buf, pos_buf_new);
+                            pos_buf = pos_buf_new + 1;
+
+                            // - delete 
+                            table_executor_list_v.removeChild(document.getElementById(element_id));
+                        }
+                        break;
+
+                    case 'U': // update
+                        {
+                            // - get element id
+                            let pos_buf_new = message.indexOf('\n', pos_buf);
+                            let element_id = message.substring(pos_buf, pos_buf_new);
+                            pos_buf = pos_buf_new + 1;
+
+                            // - executor name
+                            {
+                                // - find element
+                                let element_update = document.getElementById(element_id);
+
+                                // check) set 
+                                if (element_update == null)
+                                    return;
+
+                                // - get child noes
+                                let child_nodes = element_update.childNodes;
+
+                                // - get value
+                                pos_buf_new = message.indexOf('\n', pos_buf);
+                                let value = message.substring(pos_buf, pos_buf_new);
+                                pos_buf = pos_buf_new + 1;
+
+                                // - set name
+                                child_nodes[0].childNodes[1].textContent = value;
+                            }
+
+                            // - get thread count
+                            pos_buf_new = message.indexOf('\n', pos_buf);
+                            let count_thread = Number(message.substring(pos_buf, pos_buf_new));
+                            pos_buf = pos_buf_new + 1;
+
+                            for (let i=0; i<count_thread; ++i)
+                            {
+                                // - get thread id
+                                pos_buf_new = message.indexOf('\n', pos_buf);
+                                let thread_id = message.substring(pos_buf, pos_buf_new);
+                                pos_buf = pos_buf_new + 1;
+
+                                // - find element
+                                let element_thread = document.getElementById(thread_id);
+                                let child_nodes = element_thread.childNodes;
+
+                                for (let j = 2; j<4; ++j)
+                                {
+                                    // - get executed
+                                    pos_buf_new = message.indexOf('\n', pos_buf);
+                                    let value_text = Number(message.substring(pos_buf, pos_buf_new));
+                                    pos_buf = pos_buf_new + 1;
+
+                                    // - thread get child node
+                                    if (child_nodes[j].textContent != value_text) {
+                                        child_nodes[j].textContent = value_text;
+                                        child_nodes[j].style.color = "#00f";
+                                        setTimeout(function (node) { node.style.color = "#000"; }, 1000, child_nodes[j]);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+        function on_messsage_executable_list(message)
+        {
+            let pos_buf = 4;
+            let len_buf = message.length;
+
+            while (pos_buf < len_buf) {
+                // 1) get command type
+                let command = message[pos_buf];
+                ++pos_buf;
+
+                // 3) execute command (A:Add, D:delete, U:update)
+                switch (command) {
+                    case 'L': // add new
+                        {
+                            {
+                                let check_find = document.getElementById("button_executable_system_v");
+                                let flag = message[pos_buf];
+                                ++pos_buf;
+                                if ((flag == 'C'))
+                                    check_find.classList.add("button_type_selected");
+                                else
+                                    check_find.classList.remove("button_type_selected");
+                            }
+                            {
+                                let check_find = document.getElementById("button_executable_user_v");
+                                let flag = message[pos_buf];
+                                ++pos_buf;
+                                if ((flag == 'C'))
+                                    check_find.classList.add("button_type_selected");
+                                else
+                                    check_find.classList.remove("button_type_selected");
+                            }
+
+                            // - clear table
+                            table_executable_list_v.innerHTML = "";
+
+                            while (pos_buf < len_buf) {
+                                // - get element id
+                                let pos_buf_new = message.indexOf('\n', pos_buf);
+
+                                if (pos_buf_new == pos_buf) {
+                                    pos_buf = pos_buf_new + 1;
+                                    break;
+                                }
+
+                                let element_id = message.substring(pos_buf, pos_buf_new);
+                                pos_buf = pos_buf_new + 1;
+
+                                // - get element length
+                                pos_buf_new = message.indexOf('\n', pos_buf);
+                                let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                                pos_buf = pos_buf_new + 1;
+
+                                // - get element innnerHTML;
+                                let value = message.substring(pos_buf, pos_buf + value_length);
+                                pos_buf = pos_buf + value_length;
+
+                                // - add
+                                let pre = document.createElement("tr");
+                                pre.innerHTML = value;
+                                pre.id = element_id;
+                                pre.addEventListener("click", onclick_table_executable_list);
+                                pre.addEventListener("dblclick", ondblclick_table_executable_list);
+                                table_executable_list_v.appendChild(pre);
+                            }
+                        }
+                        break;
+
+                    case 'A': // add new
+                        {
+                            // - get element id
+                            let pos_buf_new = message.indexOf('\n', pos_buf);
+                            let element_id = message.substring(pos_buf, pos_buf_new);
+                            pos_buf = pos_buf_new + 1;
+
+                            // - get element length
+                            pos_buf_new = message.indexOf('\n', pos_buf);
+                            let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                            pos_buf = pos_buf_new + 1;
+
+                            // - get element innnerHTML;
+                            let value = message.substring(pos_buf, pos_buf + value_length);
+                            pos_buf = pos_buf + value_length;
+
+                            // - add
+                            let pre = document.createElement("tr");
+                            pre.innerHTML = value;
+                            pre.id = element_id;
+                            pre.addEventListener("click", onclick_table_executable_list);
+                            pre.addEventListener("dblclick", ondblclick_table_executable_list);
+                            table_executable_list_v.appendChild(pre);
+                        }
+                        break;
+
+                    case 'D': // delete
+                        {
+                            // - get element id
+                            let pos_buf_new = message.indexOf('\n', pos_buf);
+                            let element_id = message.substring(pos_buf, pos_buf_new);
+                            pos_buf = pos_buf_new + 1;
+
+                            // - delete 
+                            table_executable_list_v.removeChild(document.getElementById(element_id));
+                        }
+                        break;
+
+                    case 'U':
+                        {
+                            // - get element id
+                            let pos_buf_new = message.indexOf('\n', pos_buf);
+                            let element_id = message.substring(pos_buf, pos_buf_new);
+                            pos_buf = pos_buf_new + 1;
+
+                            // - find element
+                            let element_update = document.getElementById(element_id);
+
+                            // check) set 
+                            if (element_update == null)
+                                return;
+
+                            // 3) get child noes
+                            let child_nodes = element_update.childNodes;
+
+                            // 4) get value
+                            pos_buf_new = message.indexOf('\n', pos_buf);
+                            let value = message.substring(pos_buf, pos_buf_new);
+                            pos_buf = pos_buf_new + 1;
+
+                            // - set 'EXECUTED' value
+                            if (child_nodes[1].textContent != value) {
+                                child_nodes[1].textContent = value;
+                                child_nodes[1].style.color = "#00f";
+                                setTimeout(function (node) { node.style.color = "#000"; }, 1000, child_nodes[1]);
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+        function on_messsage_schedulable_list(message)
+        {
+            let pos_buf = 4;
+            let len_buf = message.length;
+
+            while (pos_buf < len_buf) {
+                // 1) get command type
+                let command = message[pos_buf];
+                ++pos_buf;
+
+                // 3) execute command (A:Add, D:delete, U:update)
+                switch (command) {
+                    case 'L': // add new
+                        {
+                            {
+                                let check_find = document.getElementById("button_schedulable_system_v");
+                                let flag = message[pos_buf];
+                                ++pos_buf;
+                                if ((flag == 'C'))
+                                    check_find.classList.add("button_type_selected");
+                                else
+                                    check_find.classList.remove("button_type_selected");
+                            }
+                            {
+                                let check_find = document.getElementById("button_schedulable_user_v");
+                                let flag = message[pos_buf];
+                                ++pos_buf;
+                                if ((flag == 'C'))
+                                    check_find.classList.add("button_type_selected");
+                                else
+                                    check_find.classList.remove("button_type_selected");
+                            }
+
+                            // - clear table
+                            table_schedulable_list_v.innerHTML = "";
+
+                            while (pos_buf < len_buf) {
+                                // - get element id
+                                let pos_buf_new = message.indexOf('\n', pos_buf);
+
+                                if (pos_buf_new == pos_buf) {
+                                    pos_buf = pos_buf_new + 1;
+                                    break;
+                                }
+
+                                let element_id = message.substring(pos_buf, pos_buf_new);
+                                pos_buf = pos_buf_new + 1;
+
+                                // - get element length
+                                pos_buf_new = message.indexOf('\n', pos_buf);
+                                let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                                pos_buf = pos_buf_new + 1;
+
+                                // - get element innnerHTML;
+                                let value = message.substring(pos_buf, pos_buf + value_length);
+                                pos_buf = pos_buf + value_length;
+
+                                // - add
+                                let pre = document.createElement("tr");
+                                pre.innerHTML = value;
+                                pre.id = element_id;
+                                pre.addEventListener("click", onclick_table_schedulable_list);
+                                pre.addEventListener("dblclick", ondblclick_table_schedulable_list);
+                                table_schedulable_list_v.appendChild(pre);
+                            }
+                        }
+                        break;
+
+                    case 'A': // add new
+                        {
+                            // - get element id
+                            let pos_buf_new = message.indexOf('\n', pos_buf);
+                            let element_id = message.substring(pos_buf, pos_buf_new);
+                            pos_buf = pos_buf_new + 1;
+
+                            // - get element length
+                            pos_buf_new = message.indexOf('\n', pos_buf);
+                            let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                            pos_buf = pos_buf_new + 1;
+
+                            // - get element innnerHTML;
+                            let value = message.substring(pos_buf, pos_buf + value_length);
+                            pos_buf = pos_buf + value_length;
+
+                            // - add
+                            let pre = document.createElement("tr");
+                            pre.innerHTML = value;
+                            pre.id = element_id;
+                            pre.addEventListener("click", onclick_table_schedulable_list);
+                            pre.addEventListener("dblclick", ondblclick_table_schedulable_list);
+                            table_schedulable_list_v.appendChild(pre);
+                        }
+                        break;
+
+                    case 'D': // delete
+                        {
+                            // - get element id
+                            let pos_buf_new = message.indexOf('\n', pos_buf);
+                            let element_id = message.substring(pos_buf, pos_buf_new);
+                            pos_buf = pos_buf_new + 1;
+
+                            // - delete 
+                            table_schedulable_list_v.removeChild(document.getElementById(element_id));
+                        }
+                        break;
+
+                    case 'U':
+                        {
+                            // - get element id
+                            let pos_buf_new = message.indexOf('\n', pos_buf);
+                            let element_id = message.substring(pos_buf, pos_buf_new);
+                            pos_buf = pos_buf_new + 1;
+
+                            // - find element
+                            let element_update = document.getElementById(element_id);
+
+                            // check) set 
+                            if (element_update == null)
+                                return;
+
+                            // 3) get child noes
+                            let child_nodes = element_update.childNodes;
+
+                            // 4-1) get value (interval)
+                            pos_buf_new = message.indexOf('\n', pos_buf);
+                            let value_interval = message.substring(pos_buf, pos_buf_new);
+                            pos_buf = pos_buf_new + 1;
+
+                            // 4-2) set 'INTERVAL' value
+                            if (child_nodes[1].textContent != value_interval) {
+                                child_nodes[1].textContent = value_interval;
+                                child_nodes[1].style.color = "#00f";
+                                setTimeout(function (node) { node.style.color = "#000"; }, 1000, child_nodes[1]);
+                            }
+
+                            // 5-1) get value (executed)
+                            pos_buf_new = message.indexOf('\n', pos_buf);
+                            let value_executed = message.substring(pos_buf, pos_buf_new);
+                            pos_buf = pos_buf_new + 1;
+
+                            // 5-2) set 'EXECUTED' value
+                            if (child_nodes[2].textContent != value_executed) {
+                                child_nodes[2].textContent = value_executed;
+                                child_nodes[2].style.color = "#00f";
+                                setTimeout(function (node) { node.style.color = "#000"; }, 1000, child_nodes[2]);
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+        function on_messsage_event_general(message) {
+            let pos_buf = 4;
+            let len_buf = message.length;
+
+            while (pos_buf < len_buf) {
+                // 1) get key
+                let pos_buf_new = message.indexOf('\n', pos_buf);
+                let key = message.substring(pos_buf, pos_buf_new);
+                pos_buf = pos_buf_new + 1;
+
+                // 2) get length
+                pos_buf_new = message.indexOf('\n', pos_buf);
+                let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                pos_buf = pos_buf_new + 1;
+
+                // 3) get value;
+                let value = message.substring(pos_buf, pos_buf + value_length);
+                pos_buf = pos_buf + value_length;
+
+                // 4) fine element
+                let element_key = document.getElementById(key);
+
+                if (element_key == null)
+                    continue;
+
+                // 5) set value
+                element_key.innerHTML = value;
+            }
+        }
+
+        function onclick_table_executor_list(_event) {
+        }
+        function ondblclick_table_executor_list(_event) {
+        }
+
+        function onclick_table_executable_list(_event) {
+        }
+        function ondblclick_table_executable_list(_event) {
+        }
+
+        function onclick_table_schedulable_list(_event) {
+        }
+        function ondblclick_table_schedulable_list(_event) {
+        }
+
+
+        function onclick_checkbox_executor_system() {
+            let temp = document.getElementById("button_executor_system_v");
+            temp.classList.toggle("button_type_selected");
+            websocket.send("CVAD" + "button_executor_system_v");
+        }
+        function onclick_checkbox_executor_user() {
+            let temp = document.getElementById("button_executor_user_v");
+            temp.classList.toggle("button_type_selected");
+            websocket.send("CVAD" + "button_executor_user_v");
+        }
+
+        function onclick_checkbox_schedulable_system() {
+            let temp = document.getElementById("button_schedulable_system_v");
+            temp.classList.toggle("button_type_selected");
+            websocket.send("CVAD" + "button_schedulable_system_v");
+        }
+        function onclick_checkbox_schedulable_user() {
+            let temp = document.getElementById("button_schedulable_user_v");
+            temp.classList.toggle("button_type_selected");
+            websocket.send("CVAD" + "button_schedulable_user_v");
+        }
+
+        function onclick_checkbox_executable_system() {
+            let temp = document.getElementById("button_executable_system_v");
+            temp.classList.toggle("button_type_selected");
+            websocket.send("CVAD" + "button_executable_system_v");
+        }
+        function onclick_checkbox_executable_user() {
+            let temp = document.getElementById("button_executable_user_v");
+            temp.classList.toggle("button_type_selected");
+            websocket.send("CVAD" + "button_executable_user_v");
+        }
+
+        window.addEventListener("load", init, false);
+    </script>
+
+</BODY >
+</HTML >

@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{db196ff8-ee17-4c7c-8490-13f2ff9b351b}</ItemsProjectGuid>
+    <ItemsProjectName>CGDK10.server.query.redis</ItemsProjectName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.packetable.resp.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sender.resp.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.resp.data.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.redis.definitions.protocol.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.redis.Iquery.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.redis.querier.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.redis.query.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.redis.session.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query.redis.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\net.definitions.resp.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\net.io.packetable.resp.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\net.io.sender.resp.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\net.resp.data.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.definitions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.definitions.protocol.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.Iquery.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.querier.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.query.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.session.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\read_me.txt" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,147 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{ad65497a-7bae-410d-bded-23bc233960a1}</ItemsProjectGuid>
+    <ItemsProjectName>CGDK10.server.admin.host_agent.service.shared</ItemsProjectName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_control.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_server.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_server_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_websocket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_websocket_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Igroup.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Iobservable_websocket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_host_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_crash_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_executor_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_factory_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_network_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_overview_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_querier_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_system_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.Iinstance.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_host.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_Iservice.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_manager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_service_local.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_service_remote.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)service.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_admin_server.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_server.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_web.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_websocket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_frame_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_host_info_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_host_log_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_reject_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_crash_info_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_executor_info_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_factory_info_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_info_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_network_info_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_overview_info_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_querier_info_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_setting_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_statistics_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_time_event_info_htm.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)definition_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_control.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_server_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_websocket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_websocket_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Igroup.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Iobservable_websocket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_host_info.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_crash_info.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_executor_info.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_factory_info.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_info.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_network_info.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_overview_info.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_querier_info.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_system_info.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)resource.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.Iinstance.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_host.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_Iservice.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_manager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_service_local.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_service_remote.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)service.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_admin_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_web.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_websocket.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\execute\host_agent_server_list.json" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\execute\host_agent_setting.json" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\execute\host_agent_setting_linux.json" />
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_frame.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_host_info.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_host_log.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_login.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_reject.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_crash_info.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_executor_info.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_factory_info.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_info.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_log.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_network.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_overview_info.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_querier.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_setting.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_statistics.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_time_event_info.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)read_me.txt" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,86 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{dff329a0-d36c-4683-b97c-7528bfbd54b7}</ItemsProjectGuid>
+    <ItemsProjectName>CGDK10.server.system.group</ItemsProjectName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\read_me.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system.container.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system.group.array.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system.group.array_seat.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system.group.count.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system.group.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system.group.list.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system.group.map.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system.group.no_manage.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system.observer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.container.list.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.container.list_sender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.container.map.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.container.map_sender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.container.set.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.container.set_sender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.container_data.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.array.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.array_dispatchable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.array_seat.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.array_seat_dispatchable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.array_seat_sender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.array_seat_sender_dispatchable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.array_sender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.array_sender_dispatchable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.base.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.count.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.count_dispatchable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.definitions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.Icountable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.list.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.list_dispatchable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.list_sender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.list_sender_dispatchable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.map.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.member_data.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.Nmap.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.Nmap_dispatchable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.Nmap_sender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.Nmap_sender_dispatchable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.no_manage.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.no_manage_dispatchable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.preset.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.Icontainer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.Igroup.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.Igroupable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.Igroup_enterable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.Iobservable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.Iobserver.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.member.Icontainerable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.observable.list.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.observable.list_sender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.observable.map.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.observable.map_sender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.observable.set.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.observable.set_sender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.observer_data.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.array.inl" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.array_seat.inl" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.count.inl" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.list.inl" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.Nmap.inl" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\group\server.group.no_manage.inl" />
+  </ItemGroup>
+</Project>

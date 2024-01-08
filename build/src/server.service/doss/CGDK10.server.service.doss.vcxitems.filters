@@ -1,0 +1,129 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.messages.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.statistics.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.depot.group.socket.immigration.cpp">
+      <Filter>repository\depot</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.depot.socket.cpp">
+      <Filter>repository\depot</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.Ientity.cpp">
+      <Filter>entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.manager_repository.cpp">
+      <Filter>repository\manager</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.Itransactable.cpp">
+      <Filter>transaction</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.Ndepot.cpp">
+      <Filter>repository\depot</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.Irepository.cpp">
+      <Filter>repository</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="repository">
+      <UniqueIdentifier>{8d96b618-a2ce-4756-b9dc-b8c96f8c221f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="entity">
+      <UniqueIdentifier>{449b5b44-1ccc-40e4-a004-859e97395b3f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="transaction">
+      <UniqueIdentifier>{4b6fdb82-4ee8-43f3-bf46-6b6ffaf4a888}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="repository\manager">
+      <UniqueIdentifier>{c091a469-6189-46c5-8116-bc8d8172dedb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="session">
+      <UniqueIdentifier>{1ddffbe8-44fe-4f4d-90b8-9ce2d4882ec7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="repository\depot">
+      <UniqueIdentifier>{917b490e-2120-47a2-9126-7b5433dfb62d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.definition_protocol.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.definitions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.messages.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.statistics.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.Nrepository.h">
+      <Filter>repository</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.repository.Nhub.h">
+      <Filter>repository</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.repository.orm.h">
+      <Filter>repository</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.repository.rdb.h">
+      <Filter>repository</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.repository.remote.h">
+      <Filter>repository</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.manager_repository.h">
+      <Filter>repository\manager</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.Ientity.h">
+      <Filter>entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.depot_restore.h">
+      <Filter>repository\depot</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.depot.socket.h">
+      <Filter>repository\depot</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.depot.h">
+      <Filter>repository\depot</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.depot.group_socket_immigration.h">
+      <Filter>repository\depot</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.Itransactable.h">
+      <Filter>transaction</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.Isession.h">
+      <Filter>session</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.session.h">
+      <Filter>session</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.Ndepot.h">
+      <Filter>repository\depot</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.Irepository.h">
+      <Filter>repository</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.Idepot.h">
+      <Filter>repository\depot</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project_CGDK\CGDK10.C++\include\cgdk\sdk10\server.service\doss\server.service.doss.entity_command.h">
+      <Filter>entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project_CGDK\CGDK10.C++\include\cgdk\sdk10\server.service.doss.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project_CGDK\CGDK10.C++\include\cgdk\sdk10\server.service\doss\server.service.doss.entity_session.h">
+      <Filter>entity</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.repository.Nhub.inl">
+      <Filter>repository</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.repository.orm.inl">
+      <Filter>repository</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.repository.rdb.inl">
+      <Filter>repository</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.repository.remote.inl">
+      <Filter>repository</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project_CGDK\CGDK10.C++\include\cgdk\sdk10\server.service\doss\server.service.doss.entity_command.inl">
+      <Filter>entity</Filter>
+    </None>
+  </ItemGroup>
+</Project>

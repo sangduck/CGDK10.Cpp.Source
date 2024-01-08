@@ -1,0 +1,198 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)service.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_event_log.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)time_event.definitions.cpp">
+      <Filter>time_event</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)time_event.manager.cpp">
+      <Filter>time_event</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)time_event.server.cpp">
+      <Filter>time_event</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)time_event.server_operation.cpp">
+      <Filter>time_event</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\common\definition_message_admin.cpp">
+      <Filter>common.server</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.web.group.cpp">
+      <Filter>cllient\web</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.web.group_immigration.cpp">
+      <Filter>cllient\web</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.web.Iobservable.cpp">
+      <Filter>cllient\web</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.web.socket.cpp">
+      <Filter>cllient\web</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.event.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.group.cpp">
+      <Filter>server_entity\peer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.group_immigration.cpp">
+      <Filter>server_entity\peer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.socket.cpp">
+      <Filter>server_entity\peer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.host.group_immigration.cpp">
+      <Filter>server_entity\host</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.host.socket.cpp">
+      <Filter>server_entity\host</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.host.group.cpp">
+      <Filter>server_entity\host</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.Isocket.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.instance.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.app.group.cpp">
+      <Filter>cllient\app</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.app.group_immigration.cpp">
+      <Filter>cllient\app</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.app.socket.cpp">
+      <Filter>cllient\app</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)querier_server.cpp">
+      <Filter>query</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.manager_instance.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\common\definition_message.cpp">
+      <Filter>common.server</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)service.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_event_log.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)include.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)definition_admin_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)time_event.server_operation.h">
+      <Filter>time_event</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)time_event.definitions.h">
+      <Filter>time_event</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)time_event.manager.h">
+      <Filter>time_event</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)time_event.server.h">
+      <Filter>time_event</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\common.server.h">
+      <Filter>common.server</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\definition_message_admin.h">
+      <Filter>common.server</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\Isocket_server.h">
+      <Filter>common.server</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\requestable.h">
+      <Filter>common.server</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)query\Iquery_event.h">
+      <Filter>query</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.web.group.h">
+      <Filter>cllient\web</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.web.group_immigration.h">
+      <Filter>cllient\web</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.web.Iobservable.h">
+      <Filter>cllient\web</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.web.socket.h">
+      <Filter>cllient\web</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.event.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.group.h">
+      <Filter>server_entity\peer</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.group_immigration.h">
+      <Filter>server_entity\peer</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.socket.h">
+      <Filter>server_entity\peer</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.host.socket.h">
+      <Filter>server_entity\host</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.host.group.h">
+      <Filter>server_entity\host</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.host.group_immigration.h">
+      <Filter>server_entity\host</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.Isocket.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.instance.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.app.group.h">
+      <Filter>cllient\app</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.app.group_immigration.h">
+      <Filter>cllient\app</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.app.socket.h">
+      <Filter>cllient\app</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)querier_server.h">
+      <Filter>query</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.manager_instance.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\definition_message.h">
+      <Filter>common.server</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="query">
+      <UniqueIdentifier>{1838b28d-bf95-49fe-8241-b22439acb5bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="time_event">
+      <UniqueIdentifier>{2ae845ad-c8dd-4598-b984-f7d6574b6e3e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common.server">
+      <UniqueIdentifier>{0318745c-2fa8-41b9-9f44-b948505c2cb8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cllient">
+      <UniqueIdentifier>{a3df9a00-ea46-4bca-bd42-93001322d4e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cllient\web">
+      <UniqueIdentifier>{9707df07-99da-47f9-9cba-4984a3960804}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="server_entity">
+      <UniqueIdentifier>{834ffca2-c487-44d7-a122-47580d066596}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="server_entity\peer">
+      <UniqueIdentifier>{b311cd4d-fad4-40f6-8d33-0ad7703ea699}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="server_entity\host">
+      <UniqueIdentifier>{e3269c2f-268e-4505-b12f-3943fd12b791}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cllient\app">
+      <UniqueIdentifier>{4ddbfe79-e63f-4062-b382-b16574082a02}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

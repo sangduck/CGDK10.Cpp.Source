@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.redis.definitions.protocol.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.redis.querier.cpp">
+      <Filter>querier</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.redis.query.cpp">
+      <Filter>query</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.redis.Iquery.cpp">
+      <Filter>query</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.redis.session.cpp">
+      <Filter>session</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.resp.data.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.packetable.resp.cpp">
+      <Filter>net.io</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sender.resp.cpp">
+      <Filter>net.io</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\net.io.packetable.resp.h">
+      <Filter>net.io</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\net.io.sender.resp.h">
+      <Filter>net.io</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.querier.h">
+      <Filter>querier</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.session.h">
+      <Filter>session</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\net.resp.data.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.definitions.protocol.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.query.h">
+      <Filter>query</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.Iquery.h">
+      <Filter>query</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.definitions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\net.definitions.resp.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query.redis.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="querier">
+      <UniqueIdentifier>{1eea19bf-b409-4130-8b72-390948570328}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="query">
+      <UniqueIdentifier>{0818fd3f-8fce-4933-9146-93e10549fdeb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="session">
+      <UniqueIdentifier>{065caf90-7ef2-4f3a-ab46-4b670024030c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="net.io">
+      <UniqueIdentifier>{c98eace4-ce5d-4d57-bd4f-a24bf0df8e69}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\read_me.txt" />
+  </ItemGroup>
+</Project>

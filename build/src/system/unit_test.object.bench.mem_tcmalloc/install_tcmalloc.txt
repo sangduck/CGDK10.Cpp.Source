@@ -1,0 +1,20 @@
+1. git으로 vcpkg를 다운받는다.
+ 
+   git clone https://github.com/Microsoft/vcpkg.git
+   cd vcpkg
+
+2. boostrap-vcpkg.bat를 실행해서 빌드
+
+
+3. vcpkg로 패키지를 찾는다.
+
+   vcpkg search protobuf
+
+4. 설치한다.
+
+   vcpkg install protobuf:x64-windows
+   vcpkg install gperftools:x64-windows
+
+5. visual studio와 연동한다.
+
+   vcpkg integrate install

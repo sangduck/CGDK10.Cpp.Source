@@ -1,0 +1,101 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31717.71
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "windows", "windows", "{DE28DC24-B24C-4944-90AE-24AFE40703CF}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.system.log", "log\CGDK10.server.system.log.windows.vcxitems", "{EEDA7395-FA2E-4547-8A0F-8E53DDBE5EE0}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.system.service", "service\CGDK10.server.system.service.windows.vcxitems", "{6D98ABAB-E188-465A-9A75-142B888E4908}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.system.time_event", "time_event\CGDK10.server.system.time_event.windows.vcxitems", "{0E0509AB-A620-481C-9974-7A762E860E9E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.system.log", "log\CGDK10.server.system.log.windows.vs17.vcxproj", "{EEA8B3FC-6C30-4451-B6BD-2188981C13A9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.system.time_event", "time_event\CGDK10.server.system.time_event.windows.vs17.vcxproj", "{45D845B1-4739-4CC6-9DF7-F3ED871D61A2}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.system.service", "service\CGDK10.server.system.service.windows.vs17.vcxproj", "{F99A8E26-8807-4731-8198-EC942FFC8912}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.system.group", "group\CGDK10.server.system.group.vcxitems", "{DFF329A0-D36C-4683-B97C-7528BFBD54B7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.system.mfc_controls", "mfc_controls\CGDK10.server.system.mfc_controls.vs17.vcxproj", "{324EEA7D-A3F6-4D89-838B-64C11B5E7224}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F99A8E26-8807-4731-8198-EC942FFC8912} = {F99A8E26-8807-4731-8198-EC942FFC8912}
+		{45D845B1-4739-4CC6-9DF7-F3ED871D61A2} = {45D845B1-4739-4CC6-9DF7-F3ED871D61A2}
+		{EEA8B3FC-6C30-4451-B6BD-2188981C13A9} = {EEA8B3FC-6C30-4451-B6BD-2188981C13A9}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.system.mfc_controls", "mfc_controls\CGDK10.server.system.mfc_controls.shared.vcxitems", "{B42E3CF8-EC9C-4300-B744-1DFFA78D1D66}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license_info", "..\license\license_info\liccense_info.shared.vcxitems", "{D032106C-3C02-4F52-8D7E-4ED375F0B58F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug.NDI|x64 = Debug.NDI|x64
+		Debug|x64 = Debug|x64
+		Release.NDI|x64 = Release.NDI|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EEA8B3FC-6C30-4451-B6BD-2188981C13A9}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{EEA8B3FC-6C30-4451-B6BD-2188981C13A9}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{EEA8B3FC-6C30-4451-B6BD-2188981C13A9}.Debug|x64.ActiveCfg = Debug|x64
+		{EEA8B3FC-6C30-4451-B6BD-2188981C13A9}.Debug|x64.Build.0 = Debug|x64
+		{EEA8B3FC-6C30-4451-B6BD-2188981C13A9}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{EEA8B3FC-6C30-4451-B6BD-2188981C13A9}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{EEA8B3FC-6C30-4451-B6BD-2188981C13A9}.Release|x64.ActiveCfg = Release|x64
+		{EEA8B3FC-6C30-4451-B6BD-2188981C13A9}.Release|x64.Build.0 = Release|x64
+		{45D845B1-4739-4CC6-9DF7-F3ED871D61A2}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{45D845B1-4739-4CC6-9DF7-F3ED871D61A2}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{45D845B1-4739-4CC6-9DF7-F3ED871D61A2}.Debug|x64.ActiveCfg = Debug|x64
+		{45D845B1-4739-4CC6-9DF7-F3ED871D61A2}.Debug|x64.Build.0 = Debug|x64
+		{45D845B1-4739-4CC6-9DF7-F3ED871D61A2}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{45D845B1-4739-4CC6-9DF7-F3ED871D61A2}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{45D845B1-4739-4CC6-9DF7-F3ED871D61A2}.Release|x64.ActiveCfg = Release|x64
+		{45D845B1-4739-4CC6-9DF7-F3ED871D61A2}.Release|x64.Build.0 = Release|x64
+		{F99A8E26-8807-4731-8198-EC942FFC8912}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{F99A8E26-8807-4731-8198-EC942FFC8912}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{F99A8E26-8807-4731-8198-EC942FFC8912}.Debug|x64.ActiveCfg = Debug|x64
+		{F99A8E26-8807-4731-8198-EC942FFC8912}.Debug|x64.Build.0 = Debug|x64
+		{F99A8E26-8807-4731-8198-EC942FFC8912}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{F99A8E26-8807-4731-8198-EC942FFC8912}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{F99A8E26-8807-4731-8198-EC942FFC8912}.Release|x64.ActiveCfg = Release|x64
+		{F99A8E26-8807-4731-8198-EC942FFC8912}.Release|x64.Build.0 = Release|x64
+		{324EEA7D-A3F6-4D89-838B-64C11B5E7224}.Debug.NDI|x64.ActiveCfg = Debug_Dynamic.NDI|x64
+		{324EEA7D-A3F6-4D89-838B-64C11B5E7224}.Debug.NDI|x64.Build.0 = Debug_Dynamic.NDI|x64
+		{324EEA7D-A3F6-4D89-838B-64C11B5E7224}.Debug|x64.ActiveCfg = Debug_Dynamic|x64
+		{324EEA7D-A3F6-4D89-838B-64C11B5E7224}.Debug|x64.Build.0 = Debug_Dynamic|x64
+		{324EEA7D-A3F6-4D89-838B-64C11B5E7224}.Release.NDI|x64.ActiveCfg = Release_Dynamic.NDI|x64
+		{324EEA7D-A3F6-4D89-838B-64C11B5E7224}.Release.NDI|x64.Build.0 = Release_Dynamic.NDI|x64
+		{324EEA7D-A3F6-4D89-838B-64C11B5E7224}.Release|x64.ActiveCfg = Release_Dynamic|x64
+		{324EEA7D-A3F6-4D89-838B-64C11B5E7224}.Release|x64.Build.0 = Release_Dynamic|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{EEA8B3FC-6C30-4451-B6BD-2188981C13A9} = {DE28DC24-B24C-4944-90AE-24AFE40703CF}
+		{45D845B1-4739-4CC6-9DF7-F3ED871D61A2} = {DE28DC24-B24C-4944-90AE-24AFE40703CF}
+		{F99A8E26-8807-4731-8198-EC942FFC8912} = {DE28DC24-B24C-4944-90AE-24AFE40703CF}
+		{324EEA7D-A3F6-4D89-838B-64C11B5E7224} = {DE28DC24-B24C-4944-90AE-24AFE40703CF}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4503A5E8-8A45-44B6-B382-B92268BF91A1}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		time_event\CGDK10.server.system.time_event.windows.vcxitems*{0e0509ab-a620-481c-9974-7a762e860e9e}*SharedItemsImports = 9
+		mfc_controls\CGDK10.server.system.mfc_controls.shared.vcxitems*{324eea7d-a3f6-4d89-838b-64c11b5e7224}*SharedItemsImports = 4
+		..\license\license_info\liccense_info.shared.vcxitems*{45d845b1-4739-4cc6-9df7-f3ed871d61a2}*SharedItemsImports = 4
+		time_event\CGDK10.server.system.time_event.windows.vcxitems*{45d845b1-4739-4cc6-9df7-f3ed871d61a2}*SharedItemsImports = 4
+		service\CGDK10.server.system.service.windows.vcxitems*{6d98abab-e188-465a-9a75-142b888e4908}*SharedItemsImports = 9
+		mfc_controls\CGDK10.server.system.mfc_controls.shared.vcxitems*{b42e3cf8-ec9c-4300-b744-1dffa78d1d66}*SharedItemsImports = 9
+		..\license\license_info\liccense_info.shared.vcxitems*{d032106c-3c02-4f52-8d7e-4ed375f0b58f}*SharedItemsImports = 9
+		group\CGDK10.server.system.group.vcxitems*{dff329a0-d36c-4683-b97c-7528bfbd54b7}*SharedItemsImports = 9
+		..\license\license_info\liccense_info.shared.vcxitems*{eea8b3fc-6c30-4451-b6bd-2188981c13a9}*SharedItemsImports = 4
+		log\CGDK10.server.system.log.windows.vcxitems*{eea8b3fc-6c30-4451-b6bd-2188981c13a9}*SharedItemsImports = 4
+		log\CGDK10.server.system.log.windows.vcxitems*{eeda7395-fa2e-4547-8a0f-8e53ddbe5ee0}*SharedItemsImports = 9
+		..\license\license_info\liccense_info.shared.vcxitems*{f99a8e26-8807-4731-8198-ec942ffc8912}*SharedItemsImports = 4
+		service\CGDK10.server.system.service.windows.vcxitems*{f99a8e26-8807-4731-8198-ec942ffc8912}*SharedItemsImports = 4
+	EndGlobalSection
+EndGlobal

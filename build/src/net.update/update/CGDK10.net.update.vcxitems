@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{3f405de5-5202-46b7-af8b-7f5acefec1d6}</ItemsProjectGuid>
+    <ItemsProjectName>CGDK10.net.update.shared</ItemsProjectName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.definitions.update.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.definitions.update.protocol.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.Ireceivable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.Isendable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.Isender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.Nreceiver.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.Nsender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.receivable.file.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.receiver.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.receiver_lambda.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.sendable.file.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.sender.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.sender_lambda.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\resource.Iupdatable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\resource.updatable.file.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\resource.updatable.file_stream.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\resource.updatable.folder.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\update.file_md5_caching..h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\update.resource_manager.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\readme.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.definitions.update.protocol.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.update.Nreceiver.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.update.Nsender.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.update.receivable.file.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.update.receiver.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.update.sender.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)resource.updatable.file.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)resource.updatable.file_stream.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)resource.updatable.folder.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)update.file_md5_caching.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)update.resource_manager.cpp" />
+  </ItemGroup>
+</Project>

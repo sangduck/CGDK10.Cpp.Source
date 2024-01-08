@@ -1,0 +1,10 @@
+PATH_NAME=$(dirname $(realpath $0))
+$PATH_NAME/CGDK10.unit_test.system.log.Release --gtest_output="xml:$PATH_NAME/unit_test.result.system.log.xml"
+$PATH_NAME/CGDK10.unit_test.system.object.buffer.Release --gtest_output="xml:$PATH_NAME/unit_test.result.system.object.buffer.xml"
+$PATH_NAME/CGDK10.unit_test.system.object.context.Release --gtest_output="xml:$PATH_NAME/unit_test.result.system.object.context.xml"
+$PATH_NAME/CGDK10.unit_test.system.object.execute.Release --gtest_output="xml:$PATH_NAME/unit_test.result.system.object.execute.xml"
+$PATH_NAME/CGDK10.unit_test.system.object.ptr.Release --gtest_output="xml:$PATH_NAME/unit_test.result.system.object.ptr.xml"
+$PATH_NAME/CGDK10.unit_test.system.object.state.Release --gtest_output="xml:$PATH_NAME/unit_test.result.system.object.state.xml"
+$PATH_NAME/CGDK10.unit_test.system.object.ptr.Release --gtest_output="xml:$PATH_NAME/unit_test.result.system.object.ptr.xml"
+$PATH_NAME/CGDK10.unit_test.system.object.bench.mem_pool.Release --gtest_output="xml:$PATH_NAME/unit_test.result.system.object.bench.mem_pool.xml"
+$PATH_NAME/CGDK10.unit_test.system.object.bench.object_pool.Release --gtest_output="xml:$PATH_NAME/unit_test.result.system.object.bench.object_pool.xml"

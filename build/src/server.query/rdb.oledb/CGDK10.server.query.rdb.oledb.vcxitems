@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{13af5304-e2b5-4460-a7ef-c7b8f46d2741}</ItemsProjectGuid>
+    <ItemsProjectName>CGDK10.server.query.rdb.oledb</ItemsProjectName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.oledb.definitions.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.oledb.functions.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.oledb.Iquery.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.oledb.manager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.oledb.querier.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.oledb.session.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.oledb.transaction_guard.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\read_me.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query.rdb.oledb.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.Cquery.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.data_source.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.definitions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.definitions.protocol.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.functions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.Iquery.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.Nquery.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.querier.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.query.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.query_dynamic.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.query_dynamic_parameter.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.query_GET_PARAM.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.query_GET_VALUE.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.query_SET_PARAM.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.session.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.oledb\server.query.rdb.oledb.transaction_guard.h" />
+  </ItemGroup>
+</Project>

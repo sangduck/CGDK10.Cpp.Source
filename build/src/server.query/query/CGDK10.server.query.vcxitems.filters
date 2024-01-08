@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.querier_manager.cpp">
+      <Filter>query</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query_functions.cpp">
+      <Filter>query</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)numeric.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.definitions.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="query">
+      <UniqueIdentifier>{da6bd055-3049-4ef3-8d30-552d3a57771a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="+wal">
+      <UniqueIdentifier>{c251dee3-6e64-4b96-b2c8-1948d7927185}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\query\server.Iquerier.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\query\server.Iquery.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\query\server.query.definitions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\query\server.query.definitions.protocol.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\query\server.query.Irequestor.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\query\server.query.Istatistics.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\query\wal.file.h">
+      <Filter>+wal</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\query\wal.Inotifiable.h">
+      <Filter>+wal</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\query\wal.querier.h">
+      <Filter>+wal</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\query\server.query_functions.h">
+      <Filter>query</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\query\server.query.querier_manager.h">
+      <Filter>query</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project_CGDK\CGDK10.C++\include\cgdk\sdk10\server.query.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project_CGDK\CGDK10.C++\include\cgdk\sdk10\server.query.wal.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project_CGDK\CGDK10.C++\include\cgdk\sdk10\server.query\query\numeric.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\query\read_me.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)CMakeLists.txt" />
+  </ItemGroup>
+</Project>

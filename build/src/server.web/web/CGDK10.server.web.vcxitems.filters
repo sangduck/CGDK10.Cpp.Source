@@ -1,0 +1,86 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="server_entity">
+      <UniqueIdentifier>{6ca06b58-2b1d-4407-9d2f-4a605a8b2c19}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="templates">
+      <UniqueIdentifier>{43f07453-729a-4e1d-90af-07b6a74aa32c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_web.Ientity.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_web.entity.folder.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_web.entity.Iresource.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_web.entity.Inode.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_web.entity.resource.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_web.entity.Itext.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_web.entity.text.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_web.entity.application.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_web.entity.Iapplication.cpp">
+      <Filter>server_entity</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_web.socket.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\net.acceptor.web_server.h">
+      <Filter>templates</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.definitions.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.definitions_message.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.entity.application.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.entity.folder.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.entity.Iapplication.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.entity.Inode.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.entity.Iresource.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.entity.Itext.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.entity.resource.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.entity.text.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.Ientitable.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.Ientity.h">
+      <Filter>server_entity</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\server_web.socket.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.web\web\read_me.txt" />
+  </ItemGroup>
+</Project>

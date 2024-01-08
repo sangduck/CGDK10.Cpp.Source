@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="querier">
+      <UniqueIdentifier>{a34e27cc-8c22-4f9f-9523-0776e824771e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="query">
+      <UniqueIdentifier>{ba2c8bf2-cacc-4244-b0a5-957c967f0266}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.http.querier.cpp">
+      <Filter>querier</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.http.query.cpp">
+      <Filter>query</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\http\read_me.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\http\server.query.http.definitions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\http\server.query.http.definitions.protocol.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query.http.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\http\server.query.http.querier.h">
+      <Filter>querier</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\http\server.query.http.query.h">
+      <Filter>query</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

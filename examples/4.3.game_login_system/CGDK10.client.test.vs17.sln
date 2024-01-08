@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33801.468
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.game_login.client.test", "client.test\CGDK1.game_login.client.test.vs17.vcxproj", "{A4D10F0E-7482-4D1B-9DA8-B8A07EA50616}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Unicode Debug|x64 = Unicode Debug|x64
+		Unicode Debug|x86 = Unicode Debug|x86
+		Unicode Release|x64 = Unicode Release|x64
+		Unicode Release|x86 = Unicode Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A4D10F0E-7482-4D1B-9DA8-B8A07EA50616}.Unicode Debug|x64.ActiveCfg = Unicode Debug|x64
+		{A4D10F0E-7482-4D1B-9DA8-B8A07EA50616}.Unicode Debug|x64.Build.0 = Unicode Debug|x64
+		{A4D10F0E-7482-4D1B-9DA8-B8A07EA50616}.Unicode Debug|x86.ActiveCfg = Unicode Debug|Win32
+		{A4D10F0E-7482-4D1B-9DA8-B8A07EA50616}.Unicode Debug|x86.Build.0 = Unicode Debug|Win32
+		{A4D10F0E-7482-4D1B-9DA8-B8A07EA50616}.Unicode Release|x64.ActiveCfg = Unicode Release|x64
+		{A4D10F0E-7482-4D1B-9DA8-B8A07EA50616}.Unicode Release|x64.Build.0 = Unicode Release|x64
+		{A4D10F0E-7482-4D1B-9DA8-B8A07EA50616}.Unicode Release|x86.ActiveCfg = Unicode Release|Win32
+		{A4D10F0E-7482-4D1B-9DA8-B8A07EA50616}.Unicode Release|x86.Build.0 = Unicode Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

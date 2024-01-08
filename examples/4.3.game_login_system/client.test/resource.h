@@ -1,0 +1,55 @@
+//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++ generated include file.
+// Used by SampleSocketClientTCPEcho.rc
+//
+#define IDD_SAMPLECGNETTCPECHOCLIENT_DIALOG 102
+#define IDP_SOCKETS_INIT_FAILED         103
+#define IDR_MAINFRAME                   128
+#define IDR_MENU_MAIN                   129
+#define IDC_EDIT_PORT                   1000
+#define IDC_BUTTON_CONNECT1             1001
+#define IDC_BUTTON_GAMESERVER_DISCONNECT 1002
+#define IDC_EDIT_SEND_PER_ONETIME       1003
+#define IDC_EDIT_ADDRESS                1004
+#define IDC_EDIT_TEST_INTERVAL          1005
+#define IDC_EDIT_CONNECTIONS_PER_INTERVAL 1006
+#define IDC_BUTTON_DISCONNECT           1008
+#define IDC_BUTTON_POOL                 1009
+#define IDC_BUTTON_CONNECT100           1010
+#define IDC_EDIT_TEST_CONNECT_MIN       1011
+#define IDC_BUTTON_THREAD               1012
+#define IDC_BUTTON__GAMESERVER_DISCONNECT_ALL 1014
+#define IDC_BUTTON_CONNECT10            1015
+#define IDC_CHECK_CONNECT_TEST_STARTSTOP 1018
+#define IDC_BUTTON_CONNECT              1020
+#define IDC_BUTTON_DISCONNECT_ALL       1021
+#define IDC_EDIT_TEST_CONNECT_MAX       1026
+#define IDC_EDIT_CONNECT_TIMES          1027
+#define IDC_SPIN_TIMES_PER_SEND         1032
+#define IDC_COMBO_PACKET_SIZE           1033
+#define IDC_BUTTON_SINGLE_SEND          1034
+#define IDC_BUTTON_ZERO_SIZE_PACKET     1035
+#define IDC_CHECK_SEND_TEST_STARTSTOP   1039
+#define IDC_STATIC_FRAME_CONNECTION     1045
+#define IDC_STATIC_FRAME_TRAFFIC        1046
+#define IDC_SLIDER_TIMES                1047
+#define IDC_STATIC_ERROR_COUNT          1048
+#define IDC_STATIC_FRAME_CONNECTION_GAME 1049
+#define IDC_STATIC_COUNT_LOGIN_IMMIGRATION 1050
+#define IDC_STATIC_COUNT_GAME_IMMIGRATION 1051
+#define IDC_STATIC_COUNT_GAME_TOWN      1052
+#define IDC_STATIC_COUNT_GAME_STAGE     1053
+#define IDC_STATIC_COUNT_GAME_IW        1054
+#define IDC_STATIC_COUNT_GAME_MA        1055
+#define ID_SYSTEM_EXIT                  32771
+
+// Next default values for new objects
+// 
+#ifdef APSTUDIO_INVOKED
+#ifndef APSTUDIO_READONLY_SYMBOLS
+#define _APS_NEXT_RESOURCE_VALUE        132
+#define _APS_NEXT_COMMAND_VALUE         32771
+#define _APS_NEXT_CONTROL_VALUE         1056
+#define _APS_NEXT_SYMED_VALUE           101
+#endif
+#endif

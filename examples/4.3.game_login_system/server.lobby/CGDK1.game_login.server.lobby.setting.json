@@ -1,0 +1,11 @@
+{
+  "ServerVersion" : 100,
+
+  "acceptorServerLogin": {
+    "Port": 13000
+  },
+
+  "acceptorServerGame": {
+    "Port": 1140
+  }
+}

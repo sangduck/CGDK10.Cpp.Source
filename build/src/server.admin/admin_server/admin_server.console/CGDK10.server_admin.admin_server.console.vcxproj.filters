@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="CGDK10.server_admin.admin_server.console.cpp" />
+    <ClCompile Include="pch.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="svn_version.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="configure">
+      <UniqueIdentifier>{281fd483-01a2-43c2-a904-efb710c33565}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\execute\CGDK10.server_admin.admin_server.console\configure\admin_server_setting.json">
+      <Filter>configure</Filter>
+    </None>
+  </ItemGroup>
+</Project>

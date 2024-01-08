@@ -1,0 +1,592 @@
+<HTML>
+<HEAD>
+    <META NAME='GENERATOR' Content='CGCII HostAgent'>
+    <TITLE></TITLE>
+
+    <style>
+        *:focus {
+            outline: none;
+        }
+        .head_1 {
+            color: #000;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        .server_list_button {
+            width: 28px;
+            height: 24px;
+            color: #666;
+            vertical-align: bottom;
+            border: none;
+            background-color: transparent;
+            margin: 0px;
+            padding: 0px;
+            cursor: pointer;
+        }
+        .server_list_button:hover, .server_list_button:focus {
+            color: #000;
+            cursor: pointer;
+        }
+
+        .table_server_list {
+            margin-left: 70px;
+            width: 1300px;
+            table-layout:fixed;
+        }
+
+        .table_server_list th {
+            height: 15px;
+            background-color: #888;
+            vertical-align: top;
+            padding: 0px 0px 2px 4px;
+            vertical-align:bottom;
+            border-right-width:2px;
+            border-right-style:solid;
+            border-right-color:#fff;
+        }
+        .table_server_list th span {
+            table-layout: fixed;
+            font-size: 10px;
+            font-weight: bold;
+            vertical-align: bottom;
+            color: #fff;
+        }
+        .table_server_list tr {
+            height: 46px;
+        }
+        .table_server_list tr:hover {
+            background-color: #ddd;
+            cursor: pointer;
+        }
+        .table_server_list td {
+            table-layout: fixed;
+            vertical-align: top;
+            font-size: 14px;
+            padding-left: 2px 3px 3px 4px;
+            overflow-x: hidden;
+        }
+
+        .table_event_list {
+            margin-left: 70px;
+            width: 1300px;
+            table-layout: fixed;
+        }
+        .table_event_list th {
+            height: 15px;
+            background-color: #888;
+            vertical-align: top;
+            padding: 0px 0px 2px 2px;
+            vertical-align: bottom;
+            border-right-width:2px;
+            border-right-style:solid;
+            border-right-color:#fff;
+        }
+        .table_event_list th span {
+            table-layout: fixed;
+            font-size: 10px;
+            font-weight: bold;
+            vertical-align: bottom;
+            color: #fff;
+        }
+        .table_event_list tr {
+            height: 25px;
+        }
+        .table_event_list tr:hover {
+            background-color: #ddd;
+            cursor: pointer;
+        }
+        .table_event_list td {
+            table-layout: fixed;
+            vertical-align: top;
+            font-size: 14px;
+            padding-left: 2px 3px 3px 2px;
+            overflow-x: hidden;
+        }
+
+        .table_server_list_canvas {
+            width: 128px;
+            height: 40px;
+            border-width: 1px;
+            border-style: solid;
+        }
+
+        .log_count {
+            width: 55px;
+            height:17px;
+            font-size: 13px;
+            display:inline-block;
+            padding: 2px 12px 3px 12px;
+            background-color: #f3f3f3;
+            vertical-align: central;
+            text-align:right;
+            border-left-style: solid;
+            border-radius: 3px;
+            border-left-width: 3px;
+        }
+
+        .selected {
+            background-color: #eee;
+    }
+    </style>
+    <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css'>
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/xeicon@2.3.3/xeicon.min.css'>
+</HEAD>
+<BODY style='margin-top:0px; margin-left:0px; margin-right:0px'>
+    <div style='width: 100%;min-width:1400px'>
+        <div width=100% style='overflow-x:hidden; border-width: 0px; min-height:14px'>
+            <table width='1390px' height='30px' style="margin-left:40px;">
+                <tr>
+                    <td style='width:200px;height:30px;vertical-align:bottom'>
+                        <div class='head_1'>&nbsp;&nbsp;EVENT LIST</div>
+                    </td>
+                    <td style="width:200px;height:40px;vertical-align:bottom">
+                        <button class='server_list_button' title='register new event' onclick="onclick_eventlist_add()"><i class='xi-calendar-add xi-fw'></i></button>
+                        <button class='server_list_button' title='unregister event' onclick="onclick_eventlist_remove()"><i class='xi-calendar-remove xi-fw'></i></button>
+                        <button class='server_list_button' title='start event' onclick="onclick_eventlist_start()"><i class='xi-play xi-fw'></i></button>
+                        <button class='server_list_button' title='pause event' onclick="onclick_eventlist_pause()"><i class='xi-pause xi-fw'></i></button>
+                        <button class='server_list_button' title='stop event' onclick="onclick_eventlist_stop()"><i class='xi-stop xi-fw'></i></button>
+                    </td>
+                    <td style='float:left;flex-grow:1;'>
+                    </td>
+                </tr>
+            </table>
+            <table class='table_event_list cellspacing="0px">
+                <thead>
+                    <tr style='height:20px'>
+                        <th style='width:160px;table-layout:fixed'><span style='float:left'></span></th>
+                        <th style='width:140px;table-layout:fixed'><span style='float:left'>TYPE</span></th>
+                        <th style='width:80px;table-layout:fixed'><span style='float:left'>STATUS</span></th>
+                        <th style='width:80px;table-layout:fixed'><span style='float:left'>SETTER</span></th>
+                        <th style='width:140px;table-layout:fixed'><span style='float:left'>TIME.SET</span></th>
+                        <th style='width:140px;table-layout:fixed'><span style='float:left'>TIME.NEXT</span></th>
+                        <th style='width:140px;table-layout:fixed'><span style='float:left'>TIME.LAST TRY</span></th>
+                        <th style='width:70px;table-layout:fixed'><span style='float:left'>TRY</span></th>
+                        <th style='width:140px;table-layout:fixed'><span style='float:left'>TIME.LAST_SUCCESS</span></th>
+                        <th style='width:70px;table-layout:fixed'><span style='float:left'>SUCCESS</span></th>
+                        <th style='width:70px;table-layout:fixed'><span style='float:left'>FAILED</span></th>
+                    </tr>
+                </thead>
+                <tbody id='table_event_list_n'>
+                </tbody>
+            </table>
+        </div>
+        <br /><br />
+        <div width=100% style='overflow-x:hidden; border-width: 0px; min-height:14px'>
+            <table width='1290px' height='30px' style="margin-left:40px;">
+                <tr>
+                    <td style='width:200px;height:30px;vertical-align:bottom'>
+                        <div class='head_1'>&nbsp;&nbsp;SERVICE LIST</div>
+                    </td>
+                    <td width='300px' height='40px' valign='bottom'>
+                        <button class='server_list_button' title='register new server' onclick="onclick_serverlist_add()"><i class='xi-folder-add xi-fw'></i></button>
+                        <button class='server_list_button' title='unregister server' onclick="onclick_serverlist_remove()"><i class='xi-folder-remove xi-fw'></i></button>
+                        <button class='server_list_button' title='update server' onclick="onclick_serverlist_update()"><i class='xi-renew xi-fw'></i></button>
+                        <button class='server_list_button' title='initialize server' onclick="onclick_serverlist_initialize()"><i class='xi-power-off xi-fw'></i></button>
+                        <button class='server_list_button' title='start server' onclick="onclick_serverlist_start()"><i class='xi-play xi-fw'></i></button>
+                        <button class='server_list_button' title='stop server' onclick="onclick_serverlist_stop()"><i class='xi-stop xi-fw'></i></button>
+                        <button class='server_list_button' title='destroy server' onclick="onclick_serverlist_destroy()"><i class='xi-close-circle-o xi-fw'></i></button>
+                        <button class='server_list_button' title='kill server' onclick="onclick_serverlist_kill()"><i class='xi-trash xi-fw'></i></button>
+                    </td>
+                    <td style='float:left;flex-grow:1;'>
+                    </td>
+                </tr>
+            </table>
+            <table class='table_server_list' cellspacing="0px">
+                <thead>
+                    <tr style='height:20px'>
+                        <th style='width:160px;'><span style='float:left'></span></th>
+                        <th style='width:120px;'><span style='float:left'>TYPE/UID</span></th>
+                        <th style='width:100px;'><span style='float:left'>REVISION</span></th>
+                        <th style='width:80px;'><span style='float:left'>STATUS</span></th>
+                        <th style='width:130px;'><span style='float:left'>PROCESSOR</span></th>
+                        <th style='width:130px;'><span style='float:left'>MEMORY</span></th>
+                        <th style='width:130px;'><span style='float:left'>SESSION</span></th>
+                        <th style='width:130px;'><span style='float:left'>NETWORK</span></th>
+                        <th style='width:280px;'><span style='float:left'>PATH</span></th>
+                    </tr>
+                </thead>
+                <tbody id='table_server_list_n'>
+                </tbody>
+            </table>
+        </div>
+        <br /><br />
+        <div style='border-style:solid;border-color:#d0d0d0;border-width:10px;border-radius:5px;margin:4px;padding:4px 4px 10px 4px; height:550px'>
+            <table style='margin-bottom:8px'>
+                <tr>
+                    <td style='height:35pt;'>
+                        <div class='head_1' style='width:70px;'>&nbsp;&nbsp;LOG</div>
+                    </td>
+                    <td valign='bottom'>
+                        <span style='font-size:9pt;line-height:100%;vertical-align:bottom'>this is value of the<br>how is it possiable</span>
+                    </td>
+                    <td width='80px'>
+                    </td>
+                    <td width='110' title='system'>
+                        <i class='xi-desktop'></i> <span id='log_count_system' class='log_count' style="border-left-color:#0000FF">0</span>
+                    </td>
+                    <td width='110' title='progress'>
+                        <i class='xi-label-o'></i> <span id='log_count_progress' class='log_count' style="border-left-color:#008000">0</span>
+                    </td>
+                    <td width='110' title='info'>
+                        <i class='xi-info-o'></i> <span id='log_count_info' class='log_count' style="border-left-color:#000000">0</span>
+                    </td>
+                    <td width='110' title='fatal'>
+                        <i class='xi-ban'></i> <span id='log_count_fatal' class='log_count' style="border-left-color:#FF0000">0</span>
+                    </td>
+                    <td width='110' title='error'>
+                        <i class='xi-error'></i> <span id='log_count_error' class='log_count' style="border-left-color:#FF0000">0</span>
+                    </td>
+                    <td width='110' title='warning'>
+                        <i class='xi-warning'></i> <span id='log_count_warning' class='log_count' style="border-left-color:#CD5C5C">0</span>
+                    </td>
+                    <td width='110' title='debug'>
+                        <i class='xi-bug'></i> <span id='log_count_debug' class='log_count' style="border-left-color:#D3D3D3">0</span>
+                    </td>
+                    <td width='110' title='user'>
+                        <i class='xi-user-o'></i> <span id='log_count_user' class='log_count' style="border-left-color:#FFD700">0</span>
+                    </td>
+                </tr>
+            </table>
+            <div width=100% style='overflow:auto;height:500px;min-width:1400px' id='log_output'></div>
+        </div>
+    </div>
+    <script>
+        var websocket;
+        var table_event_list_v;
+        var table_server_list_v;
+        var div_log_output;
+
+        function init() {
+            table_event_list_v = document.getElementById("table_event_list_n");
+            table_server_list_v = document.getElementById("table_server_list_n");
+            div_log_output = document.getElementById("log_output");
+        } 
+
+        function on_message(_event) {
+            let message_type = _event.data.substring(0, 4);
+
+            if (message_type == 'LOGS') {
+                on_message_log(_event.data);
+            }
+            else if (message_type == 'SELI') {
+                on_messsage_server_list(_event.data);
+            }
+            else if (message_type == 'EVLI') {
+                on_messsage_event_list(_event.data);
+            }
+            else if (message_type == 'GNRL') {
+                on_messsage_event_general(_event.data);
+            }
+        }
+
+        function on_message_log(message) {
+            let pre = document.createElement("div");
+            pre.style.wordWrap = "break-word";
+            pre.innerHTML = message.slice(4);
+            div_log_output.appendChild(pre);
+            div_log_output.scrollTo(0, div_log_output.scrollTop + pre.scrollHeight);
+        }
+        function on_messsage_server_list(message)
+        {
+            let pos_buf = 4;
+            let len_buf = message.length;
+
+            while (pos_buf < len_buf) {
+                // 1) get command type
+                let command = message[pos_buf];
+                ++pos_buf;
+
+                // 2) get element id
+                let pos_buf_new = message.indexOf('\n', pos_buf);
+                let element_id = message.substring(pos_buf, pos_buf_new);
+                pos_buf = pos_buf_new + 1;
+
+                // 3) execute command
+                switch (command) {
+                    case 'A': // add new
+                        {
+                            // - get element length
+                            pos_buf_new = message.indexOf('\n', pos_buf);
+                            let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                            pos_buf = pos_buf_new + 1;
+
+                            // - get element innnerHTML;
+                            let value = message.substring(pos_buf, pos_buf + value_length);
+                            pos_buf = pos_buf + value_length;
+
+                            // - add
+                            let pre = document.createElement("tr");
+                            pre.innerHTML = value;
+                            pre.id = element_id;
+                            pre.addEventListener("click", onclick_table_server_list);
+                            pre.addEventListener("dblclick", ondblclick_table_server_list);
+                            table_server_list_v.appendChild(pre);
+                        }
+                        break;
+
+                    case 'D': // delete
+                        {
+                            // - delete 
+                            table_server_list_v.removeChild(document.getElementById(element_id));
+                        }
+                        break;
+
+                    case 'U':
+                        {
+                            // - get element innnerHTML length
+                            pos_buf_new = message.indexOf('\n', pos_buf);
+                            let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                            pos_buf = pos_buf_new + 1;
+
+                            // - get element innnerHTML;
+                            let value = message.substring(pos_buf, pos_buf + value_length);
+                            pos_buf = pos_buf + value_length;
+
+                            // - find element
+                            let element_update = document.getElementById(element_id);
+                            if (element_update != null) {
+                                element_update.innerHTML = value;
+                            }
+                        }
+                        break;
+
+                    case 'V':
+                        {
+                            // - get count of values
+                            pos_buf_new = message.indexOf('\n', pos_buf);
+                            let count_value = Number(message.substring(pos_buf, pos_buf_new));
+                            pos_buf = pos_buf_new + 1;
+
+                            // - find element
+                            const ctx = document.getElementById(element_id).getContext('2d',{ willReadFrequently: true });
+
+                            // - scroll 
+                            const source_image = ctx.getImageData(count_value * 2, 0, 126, 100);
+                            ctx.putImageData(source_image, 0, 0);
+                            ctx.filter = 'url(#remove-alpha)'
+
+                            let pos_x = 127 - 2 * count_value;
+                            for (let i = 0; i < count_value; ++i)
+                            {
+                                // - get value
+                                pos_buf_new = message.indexOf('\n', pos_buf);
+                                let value = Number(message.substring(pos_buf, pos_buf_new));
+                                pos_buf = pos_buf_new + 1;
+                                
+                                // - value
+                                ctx.beginPath();
+                                ctx.moveTo(pos_x, 100);
+                                ctx.lineTo(pos_x, 100 - value);
+                                ctx.strokeStyle = '#0000ff';
+                                ctx.stroke();
+                                ctx.lineTo(pos_x, 0);
+                                ctx.strokeStyle = '#ffffff';
+                                ctx.stroke();
+
+                                pos_x += 2;
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+        function on_messsage_event_list(message)
+        {
+            let pos_buf = 4;
+            let len_buf = message.length;
+
+            while (pos_buf < len_buf) {
+                // 1) get command type
+                let command = message[pos_buf];
+                ++pos_buf;
+
+                // 2) get element id
+                let pos_buf_new = message.indexOf('\n', pos_buf);
+                let element_id = message.substring(pos_buf, pos_buf_new);
+                pos_buf = pos_buf_new + 1;
+
+                // 3) execute command (A:Add, D:delete, U:update)
+                switch (command) {
+                    case 'A': // add new
+                        {
+                            // - get element length
+                            pos_buf_new = message.indexOf('\n', pos_buf);
+                            let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                            pos_buf = pos_buf_new + 1;
+
+                            // - get element innnerHTML;
+                            let value = message.substring(pos_buf, pos_buf + value_length);
+                            pos_buf = pos_buf + value_length;
+
+                            // - add
+                            let pre = document.createElement("tr");
+                            pre.innerHTML = value;
+                            pre.id = element_id;
+                            pre.addEventListener("click", onclick_table_event_list);
+                            pre.addEventListener("dblclick", ondblclick_table_event_list);
+                            table_event_list_v.appendChild(pre);
+                        }
+                        break;
+
+                    case 'D': // delete
+                        {
+                            // - delete 
+                            table_event_list_v.removeChild(document.getElementById(element_id));
+                        }
+                        break;
+
+                    case 'U':
+                        {
+                            // - get element innnerHTML length
+                            pos_buf_new = message.indexOf('\n', pos_buf);
+                            let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                            pos_buf = pos_buf_new + 1;
+
+                            // - get element innnerHTML;
+                            let value = message.substring(pos_buf, pos_buf + value_length);
+                            pos_buf = pos_buf + value_length;
+
+                            // - find element
+                            let element_update = document.getElementById(element_id);
+                            if (element_update != null) {
+                                element_update.innerHTML = value;
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+
+        function on_messsage_event_general(message) {
+            let pos_buf = 4;
+            let len_buf = message.length;
+
+            while (pos_buf < len_buf) {
+                // 1) get key
+                let pos_buf_new = message.indexOf('\n', pos_buf);
+                let key = message.substring(pos_buf, pos_buf_new);
+                pos_buf = pos_buf_new + 1;
+
+                // 2) get length
+                pos_buf_new = message.indexOf('\n', pos_buf);
+                let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                pos_buf = pos_buf_new + 1;
+
+                // 3) get value;
+                let value = message.substring(pos_buf, pos_buf + value_length);
+                pos_buf = pos_buf + value_length;
+
+                // 4) fine element
+                let element_key = document.getElementById(key);
+
+                if (element_key == null)
+                    continue;
+
+                // 5) set value
+                element_key.innerHTML = value;
+            }
+        }
+
+        //$('.ok').on('click', function (e) {
+        //    alert($("#table_event_list_n tr.selected td:first").html());
+        //});
+
+        function onclick_table_event_list(_event) {
+            this.classList.toggle("selected");
+        }
+        function ondblclick_table_event_list(_event) {
+        }
+
+        function onclick_table_server_list(_event) {
+            this.classList.toggle("selected");
+        }
+        function ondblclick_table_server_list(_event) {
+        }
+
+        function onclick_eventlist_add() {
+            let temp = table_event_list_v.querySelectorAll('.selected');
+            for (let iter in temp) {
+                websocket.send("EVAD" + temp[iter].id);
+            }
+        }
+        function onclick_eventlist_remove() {
+            let temp = table_event_list_v.querySelectorAll('.selected');
+            for (let iter in temp) {
+                websocket.send("EVRV" + temp[iter].id);
+            }
+        }
+        function onclick_eventlist_start() {
+
+            let temp = table_event_list_v.querySelectorAll('.selected');
+            for (let iter in temp)
+            {
+                websocket.send("EVST" + temp[iter].id);
+            }
+        }
+        function onclick_eventlist_pause() {
+            let temp = table_event_list_v.querySelectorAll('.selected');
+            for (let iter in temp) {
+                websocket.send("EVPU" + temp[iter].id);
+            }
+        }
+        function onclick_eventlist_stop() {
+            let temp = table_event_list_v.querySelectorAll('.selected');
+            for (let iter in temp) {
+                websocket.send("EVSP" + temp[iter].id);
+            }
+        }
+
+        function onclick_serverlist_add() {
+            let temp = table_server_list_v.querySelectorAll('.selected');
+            for (let iter in temp) {
+                websocket.send("SVAD" + temp[iter].id);
+            }
+        }
+        function onclick_serverlist_remove() {
+            let temp = table_server_list_v.querySelectorAll('.selected');
+            for (let iter in temp) {
+                websocket.send("SVRV" + temp[iter].id);
+            }
+        }
+        function onclick_serverlist_update() {
+            let temp = table_server_list_v.querySelectorAll('.selected');
+            for (let iter in temp) {
+                websocket.send("SVUD" + temp[iter].id);
+            }
+        }
+        function onclick_serverlist_initialize() {
+            let temp = table_server_list_v.querySelectorAll('.selected');
+            for (let iter in temp) {
+                websocket.send("SVIN" + temp[iter].id);
+            }
+        }
+        function onclick_serverlist_start() {
+            let temp = table_server_list_v.querySelectorAll('.selected');
+            for (let iter in temp) {
+                websocket.send("SVST" + temp[iter].id);
+            }
+        }
+        function onclick_serverlist_stop() {
+            let temp = table_server_list_v.querySelectorAll('.selected');
+            for (let iter in temp) {
+                websocket.send("SVSP" + temp[iter].id);
+            }
+        }
+        function onclick_serverlist_destroy() {
+            let temp = table_server_list_v.querySelectorAll('.selected');
+            for (let iter in temp) {
+                websocket.send("SVDT" + temp[iter].id);
+            }
+        }
+        function onclick_serverlist_kill() {
+            let temp = table_server_list_v.querySelectorAll('.selected');
+            for (let iter in temp) {
+                websocket.send("SVKI" + temp[iter].id);
+            }
+        }
+
+        window.addEventListener("load", init, false);
+    </script>
+
+</BODY >
+</HTML >

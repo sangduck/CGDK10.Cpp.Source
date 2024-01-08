@@ -1,0 +1,88 @@
+
+
+<html>
+<head>
+    <title> X119.co.kr - E02.01. 마우스로 그림 이동 시키기 </title>
+
+</head>
+
+<body>
+    <script language="JavaScript">
+N = (document.all) ? 0 : 1;
+var ob;
+function MD(e) {
+if (N) {
+ob = document.layers[e.target.name];
+X=e.x;
+Y=e.y;
+return false;
+}
+else {
+ob = event.srcElement.parentElement.style;
+X=event.offsetX;
+Y=event.offsetY;
+}
+}
+function MM(e) {
+if (ob) {
+if (N) {
+ob.moveTo((e.pageX-X), (e.pageY-Y));
+}
+else {
+ob.pixelLeft = event.clientX-X + document.body.scrollLeft;
+ob.pixelTop = event.clientY-Y + document.body.scrollTop;
+return false;
+}
+}
+}
+function MU() {
+ob = null;
+}
+if (N) {
+document.captureEvents(Event.MOUSEDOWN | Event.MOUSEMOVE | Event.MOUSEUP);
+}
+document.onmousedown = MD;
+document.onmousemove = MM;
+document.onmouseup = MU;
+    </script>
+    <div id="s" style="position:absolute;left:50;top:100;">
+        <img src="grim/001.gif" name="s">
+    </div>
+    <div id="d" style="position:absolute;left:50;top:150;">
+        <img src="grim/002.gif" name="d">
+    </div>
+    <div id="c" style="position:absolute;left:100;top:100;">
+        <img src="grim/003.gif" name="c">
+    </div>
+    <div id="h" style="position:absolute;left:100;top:150;">
+        <img src="grim/004.gif" name="h">
+    </div>
+    <center>
+    </center>
+
+
+
+
+
+    <center>
+
+        <table width="640" border="0" cellspacing="2" cellpadding="2">
+            <tr>
+                <td align="center" valign="middle" height="24" bgcolor="orange">
+                    <font size="4" color="white">
+                        ** 설명 **
+                    </font>
+                </td>
+            </tr>
+            <tr>
+                <td bgcolor="cornsilk">
+                    1. 마우스로 그림을선택하여 옮기면(드래그하면) 원하는 위치로 옮길 수 있습니다.
+
+                </td>
+            </tr>
+        </table>
+
+    </center>
+</body>
+</html>
+

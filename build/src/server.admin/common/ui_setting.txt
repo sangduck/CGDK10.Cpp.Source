@@ -1,0 +1,46 @@
+host brief info
+- ip info (local ip infos)
+- cpu, os version, memory(installed, usage)
+
+service brief info
+1) process info
+   - cpu usage,
+     cpu ...
+   - memory
+     memory process
+
+2) service components
+   - service compments list
+     name
+     status
+     initialization strings
+
+3) event status
+   - event list
+   - ...
+
+3) factory info => 
+   - memory block (in using, stacked, created/delected) 
+   - system objects (in using, stacked, created/delected)
+   - user objects (in using, stacked, created/delected)
+
+4) execution info
+   - executor_info => total thread, total executed, total executed/sec
+   - schedulable => schedulable count executed executed/sec
+
+5) network info
+   - connectives
+   - binded socket
+   - connection status (connections, connection/sec)
+   - traffic status (message/sec, bytes/sec)
+
+6) querier info
+   - 
+
+7) crush info
+   - crush count
+   - last crush
+
+8) logs 
+   - count logs 
+   - error log count, last error log time

@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{3CE81DD7-04AB-4FC4-A83C-5FDE39DC0620}</ItemsProjectGuid>
+    <ItemsProjectName>CGDK10.server.query.mfc_controls</ItemsProjectName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGDK10.server.query.mfc_controls.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_querier_list.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dllmain.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)CGDK10.server.query.mfc_controls.def" />
+    <None Include="$(MSBuildThisFileDirectory)res\CGDK10.server.query.mfc_controls.rc2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="$(MSBuildThisFileDirectory)CGDK10.server.query.mfc_controls.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\CGDK10\server.query\mfc_controls\child_querier_list.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query.mfc_controls.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\CGDK10\server.query\mfc_controls\read_me.txt" />
+  </ItemGroup>
+</Project>

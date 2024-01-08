@@ -1,0 +1,78 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{de5d0546-8f34-45a6-a5af-66f2b04226ea}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\common.server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\definition_message.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\definition_message_admin.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\Isocket_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\requestable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.app.group.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.app.group_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.app.socket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.web.group.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.web.group_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.web.Iobservable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)client.web.socket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)definition_admin_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)include.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)querier_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)query\Iquery_event.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.event.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.group.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.group_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.host.group.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.host.group_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.host.socket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.instance.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.Isocket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.manager_instance.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.socket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_event_log.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)service.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)time_event.definitions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)time_event.manager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)time_event.server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)time_event.server_operation.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\common\definition_message.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\common\definition_message_admin.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.app.group.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.app.group_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.app.socket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.web.group.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.web.group_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.web.Iobservable.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)client.web.socket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)querier_server.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.event.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.group.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.group_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.host.group.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.host.group_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.host.socket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.instance.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.Isocket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.manager_instance.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.socket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_event_log.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)service.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)time_event.definitions.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)time_event.manager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)time_event.server.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)time_event.server_operation.cpp" />
+  </ItemGroup>
+</Project>

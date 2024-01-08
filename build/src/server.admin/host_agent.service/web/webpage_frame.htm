@@ -1,0 +1,396 @@
+<HTML>
+<HEAD>
+    <META NAME='GENERATOR' Content='Microsoft Visual Studio'>
+    <TITLE></TITLE>
+
+    <style>
+        *:focus {
+            outline: none;
+        }
+        .top_bar {
+            width: 100%;
+            height: 45px;
+            box-shadow: 0px 5px 7px 0px rgba(0,0,0,0.4);
+        }
+        .top_bar_tag {
+            color: white;
+            font-weight: bold;
+            text-align: end;
+            font-size: 12px;
+            vertical-align: central;
+        }
+        .top_bar_value {
+            color: darkgray;
+            font-size: 11px;
+            font-weight: lighter;
+            vertical-align: central;
+        }
+        .top_bar_button {
+            width: 16px;
+            height: 14px;
+            color: #9f9f9f;
+            vertical-align: bottom;
+            border: none;
+            background-color: transparent;
+            margin: 0px;
+            padding: 0px;
+            cursor: pointer;
+        }
+        .top_bar_button:hover, .top_bar_button:focus {
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .server_status_th {
+            width: 100px;
+            margin: 0px;
+            padding: 0px;
+            border-width: 0px;
+            border-spacing: 0px;
+            align-content: start;
+            line-height: 100%;
+        }
+        .server_status_th span {
+            color: black;
+            font-weight: normal;
+            font-size: 12px;
+            margin: 0px;
+            padding: 0px;
+        }
+
+        .server_status_th meter {
+            width: 80px;
+            height: 15px;
+            margin: 0px;
+            padding: 0px;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #ffffff;
+            min-width: 160px;
+            box-shadow: 0px 4px 6px 0px rgba(0,0,0,0.4);
+            z-index: 1;
+        }
+        .dropdown-content a {
+            color: black;
+            padding: 8px 8px;
+            text-decoration: none;
+            display: block;
+        }
+        .dropdown-content a:hover {
+            background-color: #ddd;
+            cursor: pointer;
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
+            cursor: pointer;
+        }
+        .dropdown:hover .top_bar_button {
+            color: #fff;
+            cursor: pointer;
+        }
+        .show {
+            display: block;
+        }
+    </style>
+    <script language='javascript' type='text/javascript'>
+        var wsUri = "ws://127.0.0.1:22053/log";
+        var websocket;
+        var main_frame;
+        var main_frame_content;
+
+        function fucntion_button_mouseover_top_host() {
+            document.getElementById('button_top_dropdown_host').classList.toggle('show');
+        }
+        function fucntion_button_mouseout_top_host() {
+            document.getElementById('button_top_dropdown_host').classList.toggle('hide');
+        }
+
+        function function_button_mouseover_user() {
+            document.getElementById('button_top_dropdown_user').classList.toggle('show');
+        }
+        function function_button_mouseout_user() {
+            document.getElementById('button_top_dropdown_user').classList.toggle('hide');
+        }
+        window.onmouseover = function (event) {
+            if (!event.target.matches('.top_bar_button')) {
+                let dropdowns = document.getElementsByClassName('dropdown-content');
+                let i;
+                for (i = 0; i < dropdowns.length; i++) {
+                    let openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }
+        }
+        window.onmouseout = function (event) {
+            if (!event.target.matches('.top_bar_button')) {
+                let dropdowns = document.getElementsByClassName('dropdown-content');
+                let i;
+                for (i = 0; i < dropdowns.length; i++) {
+                    let openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('hide')) {
+                        openDropdown.classList.remove('hide');
+                    }
+                }
+            }
+        }
+
+        function init() {
+            init_websocket();
+
+            main_frame = document.getElementById("main_frame");
+            main_frame_content = main_frame.contentWindow || main_frame.contentDocument;
+        }
+        function init_websocket() {
+            websocket = new WebSocket(wsUri);
+            websocket.onopen = function (_event) { on_connect(_event) };
+            websocket.onclose = function (_event) { on_disconnect(_event) };
+            websocket.onmessage = function (_event) { on_message(_event) };
+            websocket.onerror = function (_event) { on_error(_event) };
+        }
+        function on_frame_load() {
+            if (websocket != null) {
+                main_frame_content.websocket = websocket;
+                websocket.send("AB00");
+            }
+
+            var frame_height = main_frame.contentWindow.document.body.scrollHeight;
+            frame_height.height = the_height;
+            //frame_height.scrolling = "no";
+            frame_height.style.overflow = "hidden";
+        }
+    </script>
+
+    <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css'>
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/xeicon@2.3.3/xeicon.min.css'>
+</HEAD>
+<BODY style='margin-top:0px; margin-left:0px; margin-right:0px'>
+    <div style='width:100%; height:50px; background-color:#222;'>
+        <table class="top_bar">
+            <tr>
+                <th width='400px' align='left' style='vertical-align:bottom'>
+                    <span style='color:white; font-weight:bold;font-size:12px'>&nbsp;CGC.II.</span><span style='color:white; font-weight:bold;font-size:24px'> HOST AGENT</span>
+                </th>
+                <th style='float:left;flex-grow:1;'>
+                </th>
+                <th width='200px' align='right' style='border-left-style:dotted;border-left-width:2px;border-left-color:#667;vertical-align:bottom'>
+                    <span class='dropdown'>
+                        <span id='title_host_info'></span>
+                        <button onmouseover='fucntion_button_mouseover_top_host()' onmouseout='fucntion_button_mouseout_top_host()' class='top_bar_button'><i class='fa fa-caret-down'></i></button>
+                        <div id='button_top_dropdown_host' class='dropdown-content'>
+                            <a href='#'>menu 1</a>
+                            <a href='#'>menu 2</a>
+                            <a href='#'>menu 3</a>
+                        </div>
+                    </span>
+                </th>
+                <th width='200px' align='right' style='border-left-style:dotted;border-left-width:2px;border-left-color:#667;vertical-align:bottom'>
+                    <span class='dropdown'>
+                        <span id='title_user_info'></span>
+                        <button onmouseover='function_button_mouseover_user()' onmouseout='function_button_mouseout_user()' class='top_bar_button'><i class='fa fa-caret-down'></i></button>
+                        <div id='button_top_dropdown_user' class='dropdown-content'>
+                            <a href='#'>menu 1</a>
+                            <a href='#'>menu 2</a>
+                            <a href='#'>logout</a>
+                        </div>
+                    </span>
+                </th>
+                <th width='20px' align='right'>
+                </th>
+            </tr>
+        </table>
+    </div>
+    <div style='width: 100%; height:36px; border-bottom-style:dashed; border-bottom-color:#000000; border-bottom-width:1px'>
+        <table width='100%' style='padding:0px;margin:0px;border-spacing:0px'>
+            <tr>
+                <th width='320px' align='left' style='vertical-align:central;margin:0px'>
+                    <button style="width:120px" onclick="onclick_host_info()">HOST INFO</button>
+                    <button style="width:120px" onclick="onclick_server_info()">SERVER INFO</button>
+                </th>
+                <th style='flex-grow:1;text-align:left;padding:0px;'>
+                </th>
+                <th width='150px' align='right' style='padding:0px;margin:0px;padding-right:15px'>
+                    <span style='color:white;margin:0px;font-size:13px;background-color:#555;border-radius:4px;padding:1px 10px 3px 10px;' id='title_os_info'>N/A</span>
+                </th>
+                <!--process-->
+                <th class='server_status_th' align='left'>
+                    <span><i class='fa fa-microchip'></i></span><span id='processor_count_v'></span> <span id='processor_usage_v'>x0 none</span>
+                    <meter id='progress_m' value='50' max='100' low='10' optimum='30' high='80' style="border-radius:0px"></meter>
+                </th>
+
+                <!--Memory-->
+                <th class='server_status_th' align='left'>
+                    <span><i class='fa fa-database'></i></span> <span id='mem_status_v'>none</span>
+                    <meter id='mem_status_m' value='50' max='100' low='10' optimum='30' high='80' style="border-radius:0px"></meter>
+                </th>
+
+                <!--Network-->
+                <th class='server_status_th' align='left'>
+                    <span><i class='fa fa-caret-left'></i></span> <span id='network_staus_v'>none</span>
+                    <meter id='network_staus_m' value='50' max='100' low='10' optimum='30' high='80' style="border-radius:0px"></meter>
+                </th>
+                <th width='5px' align='right'>
+                </th>
+            </tr>
+        </table>
+    </div>
+    <iframe style="width:100%;height:100%;border:none;" id="main_frame" onload="on_frame_load()" >
+    </iframe>
+
+    <div style='width:100%; height:30px; bottom:0px; background-color:#909090;'>
+        <table width='100%' style='height:30px'>
+            <tr>
+                <th width='400px' align='left'>
+                </th>
+                <th style='float:left;flex-grow:1;'>
+                </th>
+                <th width='300px' align='right'>
+                </th>
+                <th width='250px' align='right' style='vertical-align:bottom'>
+                    <p style='color: white; font-weight:normal;font-size: 13px'>copyright 2020. <span style='font-weight:bold;'>CGCII</span> all right reserved.</p>
+                </th>
+                <th width='5px' align='right'>
+                </th>
+            </tr>
+        </table>
+    </div>
+    <script language='javascript' type='text/javascript'>
+        var progress_text = document.getElementById('processor_usage_v');
+        var progress_meter = document.getElementById('progress_m');
+        var mem_status_text = document.getElementById('mem_status_v');
+        var mem_status_meter = document.getElementById('mem_status_m');
+        var network_staus_text = document.getElementById('network_staus_v');
+        var network_staus_meter = document.getElementById('network_staus_m');
+
+        function on_connect(_event) {
+        }
+
+        function on_disconnect(_event) {
+        }
+
+        function on_message(_event) {
+            if (_event.data[0] == 'A') {
+                // - get message
+                let message_type = _event.data.substring(0, 4);
+
+                // case) general setting 
+                if (message_type == 'ASGN') {
+                    on_messsage_event_general(_event.data);
+                }
+                // case) set main page
+                else if (message_type == 'ASST') {
+                    on_messsage_event_system_status(_event.data);
+                }
+                // case) set main page
+                else if (message_type == 'ASCF') {
+
+                    main_frame.src = _event.data.substring(4);
+                    main_frame_content = main_frame.contentWindow || main_frame.contentDocument;
+                }
+            }
+            else {
+                main_frame_content.on_message(_event);
+            }
+        }
+
+        function on_error(_event) {
+        }
+
+        function on_messsage_event_system_status(message) {
+            // 1) get buffer
+            let pos_buf = 4;
+            let len_buf = message.length;
+
+            // 2) set progress_value
+            {
+                // - value text
+                let pos_buf_new = message.indexOf('\n', pos_buf);
+                progress_text.innerHTML = message.substring(pos_buf, pos_buf_new);
+                pos_buf = pos_buf_new + 1;
+            }
+            {
+                // - value menu
+                let pos_buf_new = message.indexOf('\n', pos_buf);
+                progress_meter.value = parseFloat(message.substring(pos_buf, pos_buf_new));
+                pos_buf = pos_buf_new + 1;
+            }
+
+            // 3) set memory_status_value
+            {
+                // - value text
+                let pos_buf_new = message.indexOf('\n', pos_buf);
+                mem_status_text.innerHTML = message.substring(pos_buf, pos_buf_new);
+                pos_buf = pos_buf_new + 1;
+            }
+            {
+                // - value menu
+                let pos_buf_new = message.indexOf('\n', pos_buf);
+                mem_status_meter.value = parseFloat(message.substring(pos_buf, pos_buf_new));
+                pos_buf = pos_buf_new + 1;
+            }
+
+            // 4) set network status
+            {
+                // - value text
+                let pos_buf_new = message.indexOf('\n', pos_buf);
+                network_staus_text.innerHTML = message.substring(pos_buf, pos_buf_new);
+                pos_buf = pos_buf_new + 1;
+            }
+            {
+                // - value menu
+                let pos_buf_new = message.indexOf('\n', pos_buf);
+                network_staus_meter.value = parseFloat(message.substring(pos_buf, pos_buf_new));
+                pos_buf = pos_buf_new + 1;
+            }
+        }
+
+        function on_messsage_event_general(message) {
+            let pos_buf = 4;
+            let len_buf = message.length;
+
+            while (pos_buf < len_buf) {
+                // 1) get key
+                let pos_buf_new = message.indexOf('\n', pos_buf);
+                let key = message.substring(pos_buf, pos_buf_new);
+                pos_buf = pos_buf_new + 1;
+
+                // 2) get length
+                pos_buf_new = message.indexOf('\n', pos_buf);
+                let value_length = Number(message.substring(pos_buf, pos_buf_new));
+                pos_buf = pos_buf_new + 1;
+
+                // 3) get value;
+                let value = message.substring(pos_buf, pos_buf + value_length);
+                pos_buf = pos_buf + value_length;
+
+                // 4) fine element
+                let element_key = document.getElementById(key);
+
+                if (element_key == null)
+                    continue;
+
+                // 5) set value
+                element_key.innerHTML = value;
+            }
+        }
+
+        function onclick_host_info(message) {
+            websocket.send("AAA0");
+        }
+
+        function onclick_server_info(message) {
+            websocket.send("AAB0");
+        }
+
+        window.addEventListener("load", init, false);
+    </script>
+</BODY>
+</HTML>

@@ -1,0 +1,10 @@
+﻿  The vcpkg manifest was disabled, but we found a manifest file in D:\project_CGDK\CGDK10.C++\. You may want to enable vcpkg manifests in your properties page or pass /p:VcpkgEnableManifest=true to the msbuild invocation.
+  2phase-commit.cpp
+D:\project_CGDK\CGDK10.C++\tutorials\x.etc\2phase-commit\2phase-commit\2phase-commit.cpp(7,10): error C2059: 구문 오류: ')'
+D:\project_CGDK\CGDK10.C++\tutorials\x.etc\2phase-commit\2phase-commit\2phase-commit.cpp(7,11): error C3646: 'y': 알 수 없는 재정의 지정자입니다.
+D:\project_CGDK\CGDK10.C++\tutorials\x.etc\2phase-commit\2phase-commit\2phase-commit.cpp(19,9): error C2065: '_y': 선언되지 않은 식별자입니다.
+D:\project_CGDK\CGDK10.C++\tutorials\x.etc\2phase-commit\2phase-commit\2phase-commit.cpp(21,15): error C2039: 'm_y': 'test'의 멤버가 아닙니다.
+D:\project_CGDK\CGDK10.C++\tutorials\x.etc\2phase-commit\2phase-commit\2phase-commit.cpp(4,7): message : 'test' 선언을 참조하십시오.
+D:\project_CGDK\CGDK10.C++\tutorials\x.etc\2phase-commit\2phase-commit\2phase-commit.cpp(36,8): error C2660: 'test::do_something': 함수는 0개의 인수를 사용하지 않습니다.
+D:\project_CGDK\CGDK10.C++\tutorials\x.etc\2phase-commit\2phase-commit\2phase-commit.cpp(12,12): message : 'test::do_something' 선언을 참조하십시오.
+D:\project_CGDK\CGDK10.C++\tutorials\x.etc\2phase-commit\2phase-commit\2phase-commit.cpp(36,8): message : 인수 목록 '()'을(를) 일치시키는 동안

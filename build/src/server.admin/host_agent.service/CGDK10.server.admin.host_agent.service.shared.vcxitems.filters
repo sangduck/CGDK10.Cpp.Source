@@ -1,0 +1,300 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="admin server">
+      <UniqueIdentifier>{43a51584-d7a5-4d37-b2c8-56975f9fadd9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="control">
+      <UniqueIdentifier>{2fa994e7-4a1c-4c23-9140-44ae917c2905}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="control\web">
+      <UniqueIdentifier>{829238f5-fc67-429e-91c0-b98cca954dcf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="control\web\webpage">
+      <UniqueIdentifier>{9c76b440-5f0d-4a29-9621-00899733e91b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="control\web\webpage\converted to cpp">
+      <UniqueIdentifier>{dbc949a3-510c-43ec-a0ae-28448428fbb8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="control\web\observable">
+      <UniqueIdentifier>{3106f3a8-4072-4586-bee5-cadca62f2e5d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="server">
+      <UniqueIdentifier>{522ac4e7-91ce-4e35-b737-7170cf7324fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include=".configure">
+      <UniqueIdentifier>{6ce949a1-ba1f-40cb-a9d3-12bc8120c9cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="server\server_admin">
+      <UniqueIdentifier>{c2a7be98-ac30-47a4-97a9-3f7e54014524}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)service.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_web.cpp">
+      <Filter>control\web</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_websocket.cpp">
+      <Filter>control\web</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_websocket_immigration.cpp">
+      <Filter>control\web</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_websocket.cpp">
+      <Filter>control\web</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_host_info.cpp">
+      <Filter>control\web\observable</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_factory_info.cpp">
+      <Filter>control\web\observable</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_info.cpp">
+      <Filter>control\web\observable</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_system_info.cpp">
+      <Filter>control\web\observable</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_frame_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_host_info_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_host_log_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_reject_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_factory_info_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_info_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_setting_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_statistics_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_time_event_info_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_executor_info_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Iobservable_websocket.cpp">
+      <Filter>control\web\observable</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_executor_info.cpp">
+      <Filter>control\web\observable</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_crash_info.cpp">
+      <Filter>control\web\observable</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_crash_info_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_network_info_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_querier_info_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_network_info.cpp">
+      <Filter>control\web\observable</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_querier_info.cpp">
+      <Filter>control\web\observable</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_server_overview_info.cpp">
+      <Filter>control\web\observable</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_overview_info_htm.cpp">
+      <Filter>control\web\webpage\converted to cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_control.cpp">
+      <Filter>control</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_admin_server.cpp">
+      <Filter>admin server</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_server_immigration.cpp">
+      <Filter>server</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_server.cpp">
+      <Filter>server</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Igroup.cpp">
+      <Filter>server</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_manager.cpp">
+      <Filter>server\server_admin</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.Iinstance.cpp">
+      <Filter>server\server_admin</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_host.cpp">
+      <Filter>server\server_admin</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_service_local.cpp">
+      <Filter>server\server_admin</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_service_remote.cpp">
+      <Filter>server\server_admin</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_Iservice.cpp">
+      <Filter>server\server_admin</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_server.cpp">
+      <Filter>server</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)resource.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)service.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_web.h">
+      <Filter>control\web</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_websocket.h">
+      <Filter>control\web</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_websocket_immigration.h">
+      <Filter>control\web</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_websocket.h">
+      <Filter>control\web</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_host_info.h">
+      <Filter>control\web\observable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_factory_info.h">
+      <Filter>control\web\observable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_info.h">
+      <Filter>control\web\observable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_system_info.h">
+      <Filter>control\web\observable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Iobservable_websocket.h">
+      <Filter>control\web\observable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_executor_info.h">
+      <Filter>control\web\observable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)definition_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_crash_info.h">
+      <Filter>control\web\observable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_network_info.h">
+      <Filter>control\web\observable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_querier_info.h">
+      <Filter>control\web\observable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)observable_websocket_server_overview_info.h">
+      <Filter>control\web\observable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_control.h">
+      <Filter>control</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_admin_server.h">
+      <Filter>admin server</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_server.h">
+      <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_server.h">
+      <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_server_immigration.h">
+      <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Igroup.h">
+      <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_manager.h">
+      <Filter>server\server_admin</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.Iinstance.h">
+      <Filter>server\server_admin</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_host.h">
+      <Filter>server\server_admin</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_service_local.h">
+      <Filter>server\server_admin</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_service_remote.h">
+      <Filter>server\server_admin</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_Iservice.h">
+      <Filter>server\server_admin</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_frame.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_host_info.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_host_log.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_login.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_reject.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_executor_info.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_factory_info.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_info.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_log.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_setting.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_statistics.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_time_event_info.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_crash_info.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_querier.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_network.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)web\webpage_server_overview_info.htm">
+      <Filter>control\web\webpage</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\execute\host_agent_server_list.json">
+      <Filter>.configure</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\execute\host_agent_setting.json">
+      <Filter>.configure</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\execute\host_agent_setting_linux.json">
+      <Filter>.configure</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)read_me.txt" />
+  </ItemGroup>
+</Project>

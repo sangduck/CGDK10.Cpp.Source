@@ -1,0 +1,252 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#ifndef APSTUDIO_INVOKED
+#include "targetver.h"
+#endif
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// 한국어(대한민국) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_KOR)
+LANGUAGE LANG_KOREAN, SUBLANG_DEFAULT
+#pragma code_page(949)
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#ifndef APSTUDIO_INVOKED\r\n"
+    "#include ""targetver.h""\r\n"
+    "#endif\r\n"
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_KOR)\r\n"
+    "LANGUAGE 18, 1\r\n"
+    "#pragma code_page(949)\r\n"
+    "#include ""res\\SampleSocketClientTCPEcho.rc2""  // Microsoft Visual C++ 이외의 다른 도구에서 편집한 리소스입니다.\r\n"
+    "#include ""l.KOR\\afxres.rc""      // 표준 구성 요소입니다.\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\SampleSocketClientTCPEcho.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_SAMPLECGNETTCPECHOCLIENT_DIALOG DIALOGEX 0, 0, 406, 600
+STYLE DS_SETFONT | DS_MODALFRAME | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "CGCII Dummy Test Client"
+FONT 8, "Tahoma", 400, 0, 0x0
+BEGIN
+    PUSHBUTTON      "Con1",IDC_BUTTON_CONNECT1,151,13,23,14
+    PUSHBUTTON      "Dis",IDC_BUTTON_DISCONNECT,292,13,16,14
+    PUSHBUTTON      "Con100",IDC_BUTTON_CONNECT100,201,13,27,14
+    PUSHBUTTON      "Con10",IDC_BUTTON_CONNECT10,174,13,27,14
+    PUSHBUTTON      "Dis All",IDC_BUTTON_DISCONNECT_ALL,308,13,27,14
+    EDITTEXT        IDC_EDIT_TEST_INTERVAL,259,167,31,14,ES_AUTOHSCROLL | ES_NUMBER,WS_EX_RIGHT
+    EDITTEXT        IDC_EDIT_TEST_CONNECT_MIN,62,167,35,14,ES_AUTOHSCROLL | ES_NUMBER,WS_EX_RIGHT
+    EDITTEXT        IDC_EDIT_TEST_CONNECT_MAX,120,167,36,14,ES_AUTOHSCROLL | ES_NUMBER,WS_EX_RIGHT
+    LTEXT           "Range",IDC_STATIC,22,169,20,8
+    LTEXT           "~ max",IDC_STATIC,98,172,22,8
+    GROUPBOX        "Login Server Connection",IDC_STATIC_FRAME_CONNECTION,7,0,392,153
+    EDITTEXT        IDC_EDIT_ADDRESS,45,13,68,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_PORT,113,13,32,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Address",IDC_STATIC,17,15,26,8
+    CTEXT           "Interval",IDC_STATIC,225,169,31,8
+    GROUPBOX        "Traffice Info",IDC_STATIC_FRAME_TRAFFIC,7,350,392,110
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDVERT,289,13,1,13
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDVERT,148,13,1,13
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDHORZ,7,494,390,1
+    CTEXT           "CGCII Network Classes.  (C) CGLabs All right reserved",IDC_STATIC,100,530,199,9,WS_DISABLED
+    EDITTEXT        IDC_EDIT_CONNECT_TIMES,233,13,31,14,ES_AUTOHSCROLL | ES_NUMBER,WS_EX_RIGHT
+    PUSHBUTTON      "Con",IDC_BUTTON_CONNECT,265,13,19,14
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDVERT,230,14,1,12
+    CONTROL         "Start/Stop",IDC_CHECK_CONNECT_TEST_STARTSTOP,"Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,356,30,43,18
+    LTEXT           "Connect/Disconnet Test",IDC_STATIC,274,34,78,8
+    LTEXT           "min",IDC_STATIC,50,172,12,8
+    LTEXT           "ms",IDC_STATIC,291,172,12,8
+    PUSHBUTTON      "Pool",IDC_BUTTON_POOL,340,13,22,14
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDVERT,337,13,1,13
+    PUSHBUTTON      "Thread",IDC_BUTTON_THREAD,362,13,29,14
+    GROUPBOX        "Game Server Connection",IDC_STATIC_FRAME_CONNECTION_GAME,7,157,392,190
+    PUSHBUTTON      "Dis",IDC_BUTTON_GAMESERVER_DISCONNECT,159,166,23,14
+    PUSHBUTTON      "Dis All",IDC_BUTTON__GAMESERVER_DISCONNECT_ALL,183,166,27,14
+    EDITTEXT        IDC_EDIT_CONNECTIONS_PER_INTERVAL,214,31,39,14,ES_AUTOHSCROLL | ES_NUMBER
+    CTEXT           "Connections per Interval",IDC_STATIC,124,32,88,8
+    LTEXT           "Login Immigration",IDC_STATIC,27,302,62,8
+    LTEXT           "Game Immigration",IDC_STATIC,102,302,62,8
+    LTEXT           "Game Town",IDC_STATIC,174,302,44,8
+    LTEXT           "Game Stage",IDC_STATIC,234,302,44,8
+    LTEXT           "Game IW",IDC_STATIC,286,302,36,8
+    LTEXT           "Game MA",IDC_STATIC,337,302,36,8
+    RTEXT           "",IDC_STATIC_COUNT_LOGIN_IMMIGRATION,32,314,48,13,SS_SUNKEN
+    RTEXT           "",IDC_STATIC_COUNT_GAME_IMMIGRATION,106,314,48,13,SS_SUNKEN
+    RTEXT           "",IDC_STATIC_COUNT_GAME_TOWN,167,314,48,13,SS_SUNKEN
+    RTEXT           "",IDC_STATIC_COUNT_GAME_STAGE,228,314,48,13,SS_SUNKEN
+    RTEXT           "",IDC_STATIC_COUNT_GAME_IW,278,314,48,13,SS_SUNKEN
+    RTEXT           "",IDC_STATIC_COUNT_GAME_MA,329,314,48,13,SS_SUNKEN
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDVERT,92,304,1,29
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,1
+ PRODUCTVERSION 5,2,0,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "041203b5"
+        BEGIN
+            VALUE "CompanyName", "Cho sanghyun's Game Labs"
+            VALUE "FileDescription", "CGNetwork Client Sample - TCP Echo Client (MFC Controls version)"
+            VALUE "FileVersion", "1.0.0.1"
+            VALUE "InternalName", "SampleSocketClientTCPEcho.exe"
+            VALUE "LegalCopyright", "COPYRIGHT ⓒ 2010 Cho sanghyun's Game Labs. All rights reserved."
+            VALUE "OriginalFilename", "SampleSocketClientTCPEcho.exe"
+            VALUE "ProductName", "CGCII CGNetwork Socket Classes Client Samples"
+            VALUE "ProductVersion", "5.2.0.1"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x412, 949
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_SAMPLECGNETTCPECHOCLIENT_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 399
+        BOTTOMMARGIN, 508
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU_MAIN MENU
+BEGIN
+    POPUP "&System"
+    BEGIN
+        MENUITEM "E&xit",                       ID_SYSTEM_EXIT
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_SAMPLECGNETTCPECHOCLIENT_DIALOG AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDP_SOCKETS_INIT_FAILED "Windows 소켓을 초기화하지 못했습니다."
+END
+
+#endif    // 한국어(대한민국) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_KOR)
+LANGUAGE 18, 1
+#pragma code_page(949)
+#include "res\SampleSocketClientTCPEcho.rc2"  // Microsoft Visual C++ 이외의 다른 도구에서 편집한 리소스입니다.
+#include "l.KOR\afxres.rc"      // 표준 구성 요소입니다.
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

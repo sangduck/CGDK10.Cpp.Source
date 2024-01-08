@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{DCBEB671-9C41-4641-859D-3598838CC10B}</ItemsProjectGuid>
+    <ItemsProjectName>CGDK10.system.mfc_controls</ItemsProjectName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGDK10.system.mfc_controls.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_dialog.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_executor_list.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_reference_list.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_schedulable_list.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_thread_list.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_amount.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_amount_shrink.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_CGDK_component_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_object_factory_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_object_factory_status.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_reference_status.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_thread_status.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dllmain.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)listbox.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)listbox_log.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)static_graph.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)CGDK10.system.mfc_controls.def" />
+    <None Include="$(MSBuildThisFileDirectory)res\CGDK10.system.mfc_controls.rc2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="$(MSBuildThisFileDirectory)CGDK10.system.mfc_controls.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_dialog.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_executor_list.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_reference_list.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_schedulable_list.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_thread_list.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\dialog_CGDK_component_info.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\dialog_object_factory_info.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\dialog_object_factory_status.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\dialog_reference_status.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\dialog_thread_status.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\listbox.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\listbox_log.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\static_graph.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)dialog_amount.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)dialog_amount_shrink.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_ALLOCATOR_SYSTEM.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_ALLOCATOR_USER.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_DEFAULT.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_POOL_MEMORY.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_POOL_SYSTEM.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_POOL_USER.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\read_me.txt" />
+  </ItemGroup>
+</Project>

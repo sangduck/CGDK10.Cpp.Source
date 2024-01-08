@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{79a9e477-6827-4ea9-8834-b4146ee4485f}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)MSG_HTTP.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.definitions.http.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.http_request.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.Ihttp_request.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connective.acceptor_ssl.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connect_requestable.http.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connect_requestable.tcp_reconnect_ssl.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connect_requestable.tcp_ssl.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.Nhttp_client.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.Nhttp_server.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sender.http.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.socket.http_client.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.socket.http_server.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)WEBSOCKET_MESSAGE.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket.http.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\MSG_HTTP.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\MSG_HTTP_REQUEST.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\MSG_HTTP_RESPONSE.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\MSG_HTTP_WEBSOCKET.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.acceptor.http.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.acceptor.secure.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.connector.http.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.definitions.http.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.http_request.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.Ihttp_request.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.connective.acceptor_ssl.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.connect_requestable.http.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.connect_requestable.tcp_reconnect_ssl.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.connect_requestable.tcp_ssl.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.Nhttp_client.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.Nhttp_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.sender.http.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.socket.http_client.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.socket.http_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\WEBSOCKET_MESSAGE.h" />
+  </ItemGroup>
+</Project>

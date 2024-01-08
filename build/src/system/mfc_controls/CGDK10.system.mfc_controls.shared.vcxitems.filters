@@ -1,0 +1,138 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="resource">
+      <UniqueIdentifier>{630ab9e9-5e7c-44b3-bcd3-7f8c219e3ce2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="child_controls">
+      <UniqueIdentifier>{3ffc0ae5-b077-4417-bf2f-93422ba81e78}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dialog">
+      <UniqueIdentifier>{ba58316d-0f02-4e68-9776-2a213934968f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="controls">
+      <UniqueIdentifier>{92f19b68-0dea-48c6-bdca-8be98543eff1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)dllmain.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGDK10.system.mfc_controls.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_amount.cpp">
+      <Filter>dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_amount_shrink.cpp">
+      <Filter>dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_CGDK_component_info.cpp">
+      <Filter>dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_object_factory_info.cpp">
+      <Filter>dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_object_factory_status.cpp">
+      <Filter>dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_reference_status.cpp">
+      <Filter>dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_thread_status.cpp">
+      <Filter>dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_dialog.cpp">
+      <Filter>child_controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_executor_list.cpp">
+      <Filter>child_controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_reference_list.cpp">
+      <Filter>child_controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_schedulable_list.cpp">
+      <Filter>child_controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_thread_list.cpp">
+      <Filter>child_controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)listbox.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)listbox_log.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)static_graph.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)CGDK10.system.mfc_controls.def" />
+    <None Include="$(MSBuildThisFileDirectory)res\CGDK10.system.mfc_controls.rc2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="$(MSBuildThisFileDirectory)CGDK10.system.mfc_controls.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)resource.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)dialog_amount.h">
+      <Filter>dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)dialog_amount_shrink.h">
+      <Filter>dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\listbox.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\listbox_log.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\static_graph.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_dialog.h">
+      <Filter>child_controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_executor_list.h">
+      <Filter>child_controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_reference_list.h">
+      <Filter>child_controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_thread_list.h">
+      <Filter>child_controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_schedulable_list.h">
+      <Filter>child_controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\dialog_CGDK_component_info.h">
+      <Filter>dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\dialog_object_factory_info.h">
+      <Filter>dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\dialog_object_factory_status.h">
+      <Filter>dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\dialog_reference_status.h">
+      <Filter>dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\dialog_thread_status.h">
+      <Filter>dialog</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_ALLOCATOR_SYSTEM.bmp">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_ALLOCATOR_USER.bmp">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_DEFAULT.bmp">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_POOL_MEMORY.bmp">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_POOL_SYSTEM.bmp">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_POOL_USER.bmp">
+      <Filter>resource</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\read_me.txt" />
+  </ItemGroup>
+</Project>

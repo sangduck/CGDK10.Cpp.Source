@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{DCBEB671-9C41-4641-859D-3598838CC10B}</ItemsProjectGuid>
+    <ItemsProjectName>CGMFCControls.Shared</ItemsProjectName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGChildDialog.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGChildExecutorList.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGChildReferenceList.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGChildSchedulableList.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGChildThreadList.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGDialogCGDKComponentInfo.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGDialogObjectFactoryInfo.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGDialogObjectFactoryStatus.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGDialogReferenceStatus.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGDialogThreadStatus.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGListBox.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGListBoxLog.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGMFCControls.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGStaticGraph.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)DialogAmount.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)DialogAmountShrink.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dllmain.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGChildDialog.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGChildExecutorList.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGChildReferenceList.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGChildSchedulableList.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGChildThreadList.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGDialogCGDKComponentInfo.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGDialogObjectFactoryInfo.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGDialogObjectFactoryStatus.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGDialogReferenceStatus.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGDialogThreadStatus.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGListBox.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGListBoxLog.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\CGStaticGraph.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)DialogAmount.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)DialogAmountShrink.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="$(MSBuildThisFileDirectory)bitmap1.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)bitmapFACTORYTYPE_ALLOCATOR_SYSTEM.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)bitmapFACTORYTYPE_ALLOCATOR_USER.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)bitmapFACTORYTYPE_DEFAULT.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)bitmapFACTORYTYPE_POOL_MEMORY.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)bitmapFACTORYTYPE_POOL_SYSTEM.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)bitmapFACTORYTYPE_POOL_USER.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)bitmapPooltype_Memory.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)bitmapPooltype_System.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)bitmapPooltype_User.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)bitmap_f.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)bitmap_p.bmp" />
+    <Image Include="$(MSBuildThisFileDirectory)bmp00001.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)CGMFCControls.def" />
+    <None Include="$(MSBuildThisFileDirectory)res\CGMFCControls.rc2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="$(MSBuildThisFileDirectory)CGMFCControls.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\Include\CGMFCControls\ReadMe.txt" />
+  </ItemGroup>
+</Project>

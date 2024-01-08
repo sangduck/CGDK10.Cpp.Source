@@ -1,0 +1,117 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="child controls">
+      <UniqueIdentifier>{7544426a-6c13-4457-9f57-fa7f22e5f677}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dialog">
+      <UniqueIdentifier>{29a6236a-d68c-45e9-aa0d-d3a355d5c296}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)dllmain.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CGDK10.net.socket.mfc_controls.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_acceptor_control.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_binder_control.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_connectable_manager.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_connective_connector_control.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_connective_info.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_connective_info_mini.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_connective_list.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_connector_control.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_connector_control_ex.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_traffic_info.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_traffic_info_brief_receive.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_traffic_info_brief_send.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)child_traffic_info_mini.cpp">
+      <Filter>child controls</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)dalog_connectable_status.cpp">
+      <Filter>dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_connective_status.cpp">
+      <Filter>dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)combobox_connective.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_acceptor_control.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_binder_control.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_connectable_manager.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_connective_connector_control.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_connective_info.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_connective_info_mini.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_connective_list.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_connector_control.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_connector_control_ex.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_traffic_info.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_traffic_info_brief_receive.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_traffic_info_brief_send.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\child_traffic_info_mini.h">
+      <Filter>child controls</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\dialog_connective_status.h">
+      <Filter>dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\dialog_connectable_status.h">
+      <Filter>dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\combobox_connective.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket.mfc_controls.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)CGDK10.net.socket.mfc_controls.def" />
+    <None Include="$(MSBuildThisFileDirectory)res\CGDK10.net.socket.mfc_controls.rc2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\mfc_controls\read_me.txt" />
+  </ItemGroup>
+</Project>

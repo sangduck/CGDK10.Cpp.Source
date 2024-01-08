@@ -1,0 +1,81 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.definitioins.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.querier.cpp">
+      <Filter>querier</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.session.cpp">
+      <Filter>session</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.Iquery.cpp">
+      <Filter>query</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.data_source.cpp">
+      <Filter>session\data_source</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.manager.cpp">
+      <Filter>manager</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.Nquery.cpp">
+      <Filter>query</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.query_ODBC_GET_VALUE.cpp">
+      <Filter>query</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.transaction_guard.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="query">
+      <UniqueIdentifier>{cf2a8196-837e-401d-9f71-6772bf285b2e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="querier">
+      <UniqueIdentifier>{44ec9720-ad12-4ae4-81d3-44d4ba609eb5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="session">
+      <UniqueIdentifier>{7d8a8a6c-946b-4082-8cb7-e18409a3c776}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="session\data_source">
+      <UniqueIdentifier>{ce56ac4c-e2ea-4730-a7c7-db0da001e915}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="manager">
+      <UniqueIdentifier>{f04419cd-ee3b-422b-9880-ad78c5d01d3c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\read_me.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.definitions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.data_source.h">
+      <Filter>session\data_source</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.query_ODBC_SET_PARAM.h">
+      <Filter>query</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.query.h">
+      <Filter>query</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.query_ODBC_GET_PARAM.h">
+      <Filter>query</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.query_ODBC_GET_VALUE.h">
+      <Filter>query</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.Iquery.h">
+      <Filter>query</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.querier.h">
+      <Filter>querier</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.session.h">
+      <Filter>session</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query.rdb.odbc.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.Nquery.h">
+      <Filter>query</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.transaction_guard.h" />
+  </ItemGroup>
+</Project>

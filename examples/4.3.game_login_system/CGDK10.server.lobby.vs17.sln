@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33801.468
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK1.game_login.server.lobby.vs17", "server.lobby\CGDK1.game_login.server.lobby.vs17.vcxproj", "{9E1736DA-9674-472D-8A5C-A6B841ED0F92}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9E1736DA-9674-472D-8A5C-A6B841ED0F92}.Debug|x64.ActiveCfg = Debug|x64
+		{9E1736DA-9674-472D-8A5C-A6B841ED0F92}.Debug|x64.Build.0 = Debug|x64
+		{9E1736DA-9674-472D-8A5C-A6B841ED0F92}.Release|x64.ActiveCfg = Release|x64
+		{9E1736DA-9674-472D-8A5C-A6B841ED0F92}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EFC0BB9A-CF7E-403D-8B45-BABF5B068743}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,149 @@
+<HTML>
+<HEAD>
+    <META NAME="GENERATOR" Content="CGCII.host_agent.control.reject">
+    <TITLE></TITLE>
+
+    <style>
+        *:focus {
+            outline: none;
+        }
+        .reject_menu {
+            width: 560px;
+            height: 80px;
+            color: white;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            align-self: center;
+            vertical-align: bottom;
+            padding-bottom: 10px;
+            margin: 0px;
+            border-spacing: 0px;
+            background-color: #222;
+        }
+
+        .reject_menu_right {
+            width: 200px;
+            height: 80px;
+            color: white;
+            font-size: 16px;
+            align-self: center;
+            border-left-style: dotted;
+            border-left-width: 2px;
+            border-left-color: #505050;
+            vertical-align: bottom;
+            padding-bottom: 10px;
+            padding-right: 10px;
+            margin: 0px;
+            border-spacing: 0px;
+            background-color: #222;
+        }
+
+        .top_bar_tag {
+            color: white;
+            font-weight: bold;
+            text-align: end;
+            font-size: 12px;
+            vertical-align: central;
+        }
+
+        .top_bar_value {
+            color: darkgray;
+            font-size: 11px;
+            font-weight: lighter;
+            vertical-align: central;
+        }
+
+        .main_box {
+            box-shadow: 0px 4px 6px 0px rgba(0,0,0,0.4);
+        }
+        .input_box {
+            border-radius: 5px;
+            box-shadow: 0px 1px 2px 0px rgba(0,0,0,0.2);
+        }
+        .button_login {
+            font-size: 16px;
+            font-weight: bold;
+            width: 80px;
+            height: 24px;
+            color: #999;
+            vertical-align: central;
+            border: none;
+            background-color: transparent;
+            margin: 0px 5px 0px 0px;
+            padding: 0px;
+            cursor: pointer;
+            float: right;
+        }
+            .button_login:hover, .button_login:focus {
+                color: #000;
+                border-color: #000;
+                cursor: pointer;
+            }
+
+
+    </style>
+</HEAD>
+
+<BODY>
+    <table width='100%' height='45'>
+        <tr style="height:80px"></tr>
+        <tr>
+            <td style='float:left;flex-grow:1;'></td>
+            <td width="800px">
+                <table class="main_box" cellspacing="0px">
+                    <tr>
+                        <td>
+                            <table cellspacing="0px">
+                                <td class="reject_menu">
+                                    <span style='color:white; font-weight:bold;font-size:12px'>&nbsp;CGC.II.</span><span style='color:white; font-weight:bold;font-size:24'> HOST AGENT</span>
+                                </td>
+                                <td class="reject_menu_right" align='right'>
+                                    <span class='top_bar_tag'><i class='fa fa-server'></i> TAPUNG</span> <span class='top_bar_value'>192.168.0.1</span>
+                                </td>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr style="height:300px">
+                        <td>
+                            <div style="height:200px"></div>
+                            <table>
+                                <td style="width:200px;"></td>
+                                <td>
+                                    <div style="width:280px;line-height:40px;margin-left:30px">
+                                        <span style='color:black; font-size:14px;float:left;'> LOGIN ID</span> <span style="float:right;height:40px;padding-top:8px"><input class="input_box" /></span><br />
+                                        <span style='color:black; font-size:14px;float:left;margin-bottom:5px'> PASSWORD</span> <span style="float:right;height:40px;padding-top:0px"><input class="input_box" /></span><br />
+                                    </div>
+                                    <table width="320px">
+                                        <tr>
+                                            <td style="width:220px;border-right:dotted;border-right-width:2px;border-right-color:#ccc"></td>
+                                            <td style="width:80px"><button class="button_login" onclick="request_login()">LOGIN</button></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="height:80px;text-align:center;vertical-align:central">
+                            <p style="color:#f00">Error! fail to login</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><p align="right" style="padding-right:20px;font-size:12px;margin-bottom:5px">copyright 2020. <strong>CGCIII</strong> all right reserved.</p></td>
+                    </tr>
+                </table>
+            </td>
+            <td style='float:right;flex-grow:1;'></td>
+        </tr>
+        <tr></tr>
+    </table>
+    <script>
+        function request_login() {
+
+        }
+    </script>
+
+
+</BODY>
+</HTML>

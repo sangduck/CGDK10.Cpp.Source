@@ -1,0 +1,121 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.definitions.update.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.definitions.update.protocol.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\resource.Iupdatable.h">
+      <Filter>updater\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\resource.updatable.file.h">
+      <Filter>updater\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.sender.h">
+      <Filter>updater\sender</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.Isender.h">
+      <Filter>updater\sender</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.receiver.h">
+      <Filter>updater\receiver</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.Isendable.h">
+      <Filter>updater\sender\sendable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.sendable.file.h">
+      <Filter>updater\sender\sendable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.Nreceiver.h">
+      <Filter>updater\receiver</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\update.resource_manager.h">
+      <Filter>updater\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.Nsender.h">
+      <Filter>updater\sender</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.sender_lambda.h">
+      <Filter>updater\sender</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.receiver_lambda.h">
+      <Filter>updater\receiver</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\resource.updatable.file_stream.h">
+      <Filter>updater\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.Ireceivable.h">
+      <Filter>updater\receiver\receivable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\net.update.receivable.file.h">
+      <Filter>updater\receiver\receivable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\update.file_md5_caching..h">
+      <Filter>updater\receiver</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\resource.updatable.folder.h">
+      <Filter>updater\resource</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.update\update\readme.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="updater">
+      <UniqueIdentifier>{c2332fa2-5e44-4b49-907a-646e864e9568}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="updater\sender">
+      <UniqueIdentifier>{7e552cbb-3c6f-4dc5-ab50-353e0bd7acb6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="updater\receiver">
+      <UniqueIdentifier>{b9bf86a5-5360-40bd-ac4f-7e96af4eebb6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="updater\resource">
+      <UniqueIdentifier>{68b76c23-8ce2-4914-b94a-d4cb7c46e8e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="updater\sender\sendable">
+      <UniqueIdentifier>{872441b6-7b44-45ad-8506-f1159c4c22db}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="updater\resource\receibable">
+      <UniqueIdentifier>{89c02194-a0e9-4821-a3bb-c880d4172c4d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="updater\receiver\receivable">
+      <UniqueIdentifier>{916d9da5-eddb-4f7e-900a-94ed3d5000cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="configure">
+      <UniqueIdentifier>{b415215d-e958-4105-905a-4b1fdb93e0d0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.update.sender.cpp">
+      <Filter>updater\sender</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)resource.updatable.file.cpp">
+      <Filter>updater\resource</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.update.Nreceiver.cpp">
+      <Filter>updater\receiver</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.update.receiver.cpp">
+      <Filter>updater\receiver</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)update.resource_manager.cpp">
+      <Filter>updater\resource</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.update.Nsender.cpp">
+      <Filter>updater\sender</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)resource.updatable.file_stream.cpp">
+      <Filter>updater\resource</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.update.receivable.file.cpp">
+      <Filter>updater\receiver\receivable</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)update.file_md5_caching.cpp">
+      <Filter>updater\receiver</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)resource.updatable.folder.cpp">
+      <Filter>updater\resource</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.definitions.update.protocol.cpp" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,294 @@
+<HTML>
+<HEAD>
+    <META NAME='GENERATOR' Content='CGCII HostAgent'>
+    <TITLE></TITLE>
+
+    <style>
+        *:focus {
+            outline: none;
+        }
+       .table_server_list {
+            width: 100%;
+            vertical-align:top;
+        }
+
+        .table_server_list tr {
+            height: 100px;
+            margin-bottom:10px;
+        }
+        .table_server_list tr:hover {
+            background-color: #ddd;
+            cursor: pointer;
+        }
+        .table_server_list td {
+            table-layout: fixed;
+            vertical-align: top;
+            font-size: 14px;
+            padding-left: 2px 3px 3px 4px;
+            overflow-x: hidden;
+        }
+
+        .table_server_list_canvas {
+            width: 128px;
+            height: 40px;
+            border-width: 1px;
+            border-style: solid;
+        }
+
+        .button_top {
+            margin-left: 20px;
+            border-style: solid;
+            border-color: #fff;
+            border-width: 2px;
+            background-color: #fff;
+            color: #999;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .button_top_selected {
+            margin-left: 20px;
+            border-style: solid;
+            border-width: 2px;
+            border-color: #00f;
+            border-radius: 4px;
+            background-color: #fff;
+            color: #00f;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .button_top:hover {
+            border-style: solid;
+            border-width: 2px;
+            border-color: #00f;
+            border-radius: 4px;
+            color: #00f;
+        }
+
+
+    </style>
+    <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css'>
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/xeicon@2.3.3/xeicon.min.css'>
+</HEAD>
+<BODY style='margin-top:0px; margin-left:0px; margin-right:0px'>
+    <table width="100%" height="100%">
+        <tr>
+            <td width="220px" valign="top">
+                <table width="100%" class="table_server_list">
+                    <tbody id="server_server_list">
+                    </tbody>
+                </table>
+            </td>
+
+            <td valign="top">
+                <table width="100%" height="100%" style="vertical-align:top" id="td_frame">
+                    <tr>
+                        <td height="45px" valign="top">
+                            <button class="button_top" onclick="onclick_object_info()">OBJECT <i class='fa fa-caret-down'></i></button>
+                            <button class="button_top" onclick="onclick_factory_info()">FACTORY <i class='fa fa-caret-down'></i></button>
+                            <button class="button_top" onclick="onclick_executor_info()">EXECUTOR <i class='fa fa-caret-down'></i></button>
+                            <button class="button_top" onclick="onclick_network_info()">NETWORK <i class='fa fa-caret-down'></i></button>
+                            <button class="button_top" onclick="onclick_querier_info()">QUERIER <i class='fa fa-caret-down'></i></button>
+                            <button class="button_top" onclick="onclick_crash_info()">CRASH INFO <i class='fa fa-caret-down'></i></button>
+                        </td>
+                    </tr>
+                    <tr id="td_frame" style="height:100%">
+                        <td valign="top">
+                            <iframe style="width:100%;height:100%;border:none;" id="server_info_frame" onload="on_frame_load()" >
+                            </iframe>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+    <script>
+        var websocket;
+        var table_server_list_v;
+
+        var server_info_frame;
+        var server_info_frame_content;
+
+        function onclick_object_info() {
+            websocket.send("BAA0");
+        }
+        function onclick_factory_info() {
+            websocket.send("BAB0");
+        }
+        function onclick_executor_info() {
+            websocket.send("BAC0");
+        }
+        function onclick_network_info() {
+            websocket.send("BAD0");
+        }
+        function onclick_querier_info() {
+            websocket.send("BAE0");
+        }
+        function onclick_crash_info() {
+            websocket.send("BAF0");
+        }
+        function init() {
+            server_info_frame = document.getElementById("server_info_frame");
+            server_info_frame_content = server_info_frame.contentWindow || server_info_frame.contentDocument;
+            table_server_list_v = document.getElementById("server_server_list");
+        }
+
+        function on_frame_load() {
+            if (websocket != null) {
+                server_info_frame_content.websocket = websocket;
+                websocket.send("BB00");
+            }
+
+            resize_page_height();
+        }
+
+        function resize_page_height() {
+            let frame_height = server_info_frame.contentWindow.document.body.scrollHeight;
+            server_info_frame.height = frame_height;
+            //server_info_frame.scrolling = "no";
+            server_info_frame.style.overflow = "hidden";
+
+            let td_object = document.getElementById("td_frame");
+            td_object.height = frame_height;
+        }
+
+        function on_message(_event) {
+
+            if (_event.data[0] == 'B') {
+                let message_type = _event.data.substring(0, 4);
+
+                if (message_type == 'BSLA') {
+                    on_message_server_list(_event.data);
+                }
+                if (message_type == 'BSCF') {
+                    server_info_frame.src = _event.data.substring(4);
+                    server_info_frame_content = server_info_frame.contentWindow || server_info_frame.contentDocument;
+                }
+                else if (message_type == 'BNGR') {
+                }
+            }
+            else {
+                server_info_frame_content.on_message(_event);
+            }
+        }
+
+        function on_message_server_list(_message) {
+            let pos_buf = 4;
+            let len_buf = _message.length;
+
+            while (pos_buf < len_buf) {
+                // 1) get command type
+                let command = _message[pos_buf];
+                ++pos_buf;
+
+                // 2) get element id
+                let pos_buf_new = _message.indexOf('\n', pos_buf);
+                let element_id = _message.substring(pos_buf, pos_buf_new);
+                pos_buf = pos_buf_new + 1;
+
+                // 3) execute command
+                switch (command) {
+                    case 'A': // add new
+                        {
+                            // - get element length
+                            pos_buf_new = _message.indexOf('\n', pos_buf);
+                            let value_length = Number(_message.substring(pos_buf, pos_buf_new));
+                            pos_buf = pos_buf_new + 1;
+
+                            // - get element innnerHTML;
+                            let value = _message.substring(pos_buf, pos_buf + value_length);
+                            pos_buf = pos_buf + value_length;
+
+                            // - add
+                            let pre = document.createElement("tr");
+                            pre.innerHTML = value;
+                            pre.id = element_id;
+                            pre.addEventListener("click", onclick_table_server_list);
+                            pre.addEventListener("dblclick", ondblclick_table_server_list);
+                            table_server_list_v.appendChild(pre);
+                        }
+                        break;
+
+                    case 'D': // delete
+                        {
+                            // - delete 
+                            table_server_list_v.removeChild(document.getElementById(element_id));
+                        }
+                        break;
+
+                    case 'U':
+                        {
+                            // - get element innnerHTML length
+                            pos_buf_new = _message.indexOf('\n', pos_buf);
+                            let value_length = Number(_message.substring(pos_buf, pos_buf_new));
+                            pos_buf = pos_buf_new + 1;
+
+                            // - get element innnerHTML;
+                            let value = _message.substring(pos_buf, pos_buf + value_length);
+                            pos_buf = pos_buf + value_length;
+
+                            // - find element
+                            let element_update = document.getElementById(element_id);
+                            if (element_update != null) {
+                                element_update.innerHTML = value;
+                            }
+                        }
+                        break;
+
+                    case 'V': // Canvas update
+                        {
+                            let element_update = document.getElementById(element_id);
+                            if (element_update != null) {
+                                let canvas = element_update.getContext('2d');
+                                context.fillRect(0, 0, 100, 100);
+                            }
+                        }
+                        break;
+                }
+            }
+
+        }
+
+        function on_messsage_event_general(_message) {
+            let pos_buf = 4;
+            let len_buf = _message.length;
+
+            while (pos_buf < len_buf) {
+                // 1) get key
+                let pos_buf_new = _message.indexOf('\n', pos_buf);
+                let key = _message.substring(pos_buf, pos_buf_new);
+                pos_buf = pos_buf_new + 1;
+
+                // 2) get length
+                pos_buf_new = _message.indexOf('\n', pos_buf);
+                let value_length = Number(_message.substring(pos_buf, pos_buf_new));
+                pos_buf = pos_buf_new + 1;
+
+                // 3) get value;
+                let value = _message.substring(pos_buf, pos_buf + value_length);
+                pos_buf = pos_buf + value_length;
+
+                // 4) fine element
+                let element_key = document.getElementById(key);
+
+                if (element_key == null)
+                    continue;
+
+                // 5) set value
+                element_key.innerHTML = value;
+            }
+        }
+
+        function onclick_table_server_list() {
+            websocket.send("BSRS" + this.id);
+        }
+        function ondblclick_table_server_list() {
+
+        }
+
+        window.addEventListener("load", init, false);
+    </script>
+
+</BODY >
+</HTML >

@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="framework.h" />
+    <ClInclude Include="CGDK10.chatting.server.channel.dlg.h" />
+    <ClInclude Include="CGDK10.chatting.server.channel.mfc.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="CGDK10.chatting.server.channel.dlg.cpp" />
+    <ClCompile Include="CGDK10.chatting.server.channel.mfc.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\CGDK10.chatting.server.channel.mfc.rc2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="CGDK10.chatting.server.channel.mfc.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\CGDK10.chatting.server.channel.mfc.ico" />
+  </ItemGroup>
+</Project>

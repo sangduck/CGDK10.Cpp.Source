@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{1c99e051-bf9e-41d5-a5e5-d31bd5f80f16}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_host_agent.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_host_agent_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_server.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_server_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_websocket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_websocket_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Iobservable_websocket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Isocket_host_agent.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_entity.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)service.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_host_agent.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_server.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_web.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_websocket.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_host_agent.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_host_agent_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_server_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_websocket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_websocket_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Iobservable_websocket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Isocket_host_agent.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_entity.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)service.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_host_agent.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_web.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_websocket.h" />
+  </ItemGroup>
+</Project>

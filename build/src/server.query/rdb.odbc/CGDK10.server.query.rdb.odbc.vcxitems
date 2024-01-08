@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{4a90f49b-8059-4bbb-94ae-6355c5dc2a10}</ItemsProjectGuid>
+    <ItemsProjectName>CGDK10.server.query.rdb.odbc</ItemsProjectName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.data_source.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.definitioins.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.Iquery.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.manager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.Nquery.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.querier.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.query_ODBC_GET_VALUE.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.session.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.transaction_guard.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\read_me.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query.rdb.odbc.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.data_source.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.definitions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.Iquery.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.Nquery.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.querier.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.query.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.query_ODBC_GET_PARAM.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.query_ODBC_GET_VALUE.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.query_ODBC_SET_PARAM.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.session.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.transaction_guard.h" />
+  </ItemGroup>
+</Project>

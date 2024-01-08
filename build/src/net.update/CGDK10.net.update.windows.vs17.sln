@@ -1,0 +1,49 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31717.71
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.update.shared", "update\CGDK10.net.update.vcxitems", "{3F405DE5-5202-46B7-AF8B-7F5ACEFEC1D6}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.update", "update\CGDK10.net.update.windows.vs17.vcxproj", "{230CCD34-CB6E-4C71-8B63-992C441D469E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug.NDI|x64 = Debug.NDI|x64
+		Debug.NDI|x86 = Debug.NDI|x86
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release.NDI|x64 = Release.NDI|x64
+		Release.NDI|x86 = Release.NDI|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Debug.NDI|x86.ActiveCfg = Debug.NDI|Win32
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Debug.NDI|x86.Build.0 = Debug.NDI|Win32
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Debug|x64.ActiveCfg = Debug|x64
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Debug|x64.Build.0 = Debug|x64
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Debug|x86.ActiveCfg = Debug|Win32
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Debug|x86.Build.0 = Debug|Win32
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Release.NDI|x86.ActiveCfg = Release.NDI|Win32
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Release.NDI|x86.Build.0 = Release.NDI|Win32
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Release|x64.ActiveCfg = Release|x64
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Release|x64.Build.0 = Release|x64
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Release|x86.ActiveCfg = Release|Win32
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {32359564-E788-4111-BDA3-6ACADC951264}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		update\CGDK10.net.update.vcxitems*{230ccd34-cb6e-4c71-8b63-992c441d469e}*SharedItemsImports = 4
+		update\CGDK10.net.update.vcxitems*{3f405de5-5202-46b7-af8b-7f5acefec1d6}*SharedItemsImports = 9
+	EndGlobalSection
+EndGlobal

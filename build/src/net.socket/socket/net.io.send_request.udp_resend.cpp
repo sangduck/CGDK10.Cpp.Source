@@ -109,7 +109,7 @@ void net::io::send_request::Nudp_resend::clear_buffers() noexcept
 		this->m_retransmitted = 0;
 
 		// 4) Sended Queue
-		for(int i=0; i<SEND_QUEUE_SIZE; i++)
+		for(int i=0; i<SEND_QUEUE_SIZE; ++i)
 		{
 			this->m_queue_sended.at(i).powner.reset();
 		}

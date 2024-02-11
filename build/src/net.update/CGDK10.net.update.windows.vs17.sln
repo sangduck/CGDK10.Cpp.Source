@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.update.shared", 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.update", "update\CGDK10.net.update.windows.vs17.vcxproj", "{230CCD34-CB6E-4C71-8B63-992C441D469E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license_info", "..\common\cgdk__info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug.NDI|x64 = Debug.NDI|x64
@@ -43,7 +45,9 @@ Global
 		SolutionGuid = {32359564-E788-4111-BDA3-6ACADC951264}
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\common\cgdk__info.shared.vcxitems*{230ccd34-cb6e-4c71-8b63-992c441d469e}*SharedItemsImports = 4
 		update\CGDK10.net.update.vcxitems*{230ccd34-cb6e-4c71-8b63-992c441d469e}*SharedItemsImports = 4
 		update\CGDK10.net.update.vcxitems*{3f405de5-5202-46b7-af8b-7f5acefec1d6}*SharedItemsImports = 9
+		..\common\cgdk__info.shared.vcxitems*{f2b5df8c-26a7-4f26-bd80-933bb4870b0a}*SharedItemsImports = 9
 	EndGlobalSection
 EndGlobal

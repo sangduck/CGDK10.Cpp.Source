@@ -36,7 +36,7 @@ namespace CGDK
 		// 1) start thread
 		vector_thread.reserve(ITHREAD);
 
-		for (int i = 0; i < ITHREAD; i++)
+		for (int i = 0; i < ITHREAD; ++i)
 		{
 			vector_thread.emplace_back(std::make_shared<std::thread>(f_test));
 		}
@@ -74,7 +74,7 @@ namespace CGDK
 
 		// 1) start thread
 		vector_thread.reserve(ITHREAD);
-		for (int i = 0; i < ITHREAD; i++)
+		for (int i = 0; i < ITHREAD; ++i)
 		{
 			vector_thread.emplace_back(std::make_shared<std::thread>(f_test));
 		}
@@ -112,7 +112,7 @@ namespace CGDK
 
 		// 1) start thread
 		vector_thread.reserve(ITHREAD);
-		for (int i = 0; i < ITHREAD; i++)
+		for (int i = 0; i < ITHREAD; ++i)
 		{
 			vector_thread.emplace_back(std::make_shared<std::thread>(f_test));
 		}

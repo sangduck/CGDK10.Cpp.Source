@@ -9,15 +9,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.doss", "doss\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.doss", "doss\CGDK10.server.service.doss.windows.vs17.vcxproj", "{19ADD403-9984-4BDF-B526-2D25F943A12C}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license_info", "..\license\license_info\liccense_info.shared.vcxitems", "{D032106C-3C02-4F52-8D7E-4ED375F0B58F}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license_info", "..\common\cgdk__info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
 EndProject
 Global
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		..\license\license_info\liccense_info.shared.vcxitems*{19add403-9984-4bdf-b526-2d25f943a12c}*SharedItemsImports = 4
-		doss\CGDK10.server.service.doss.vcxitems*{19add403-9984-4bdf-b526-2d25f943a12c}*SharedItemsImports = 4
-		doss\CGDK10.server.service.doss.vcxitems*{44376a03-d13d-4fa2-bf33-afde63366174}*SharedItemsImports = 9
-		..\license\license_info\liccense_info.shared.vcxitems*{d032106c-3c02-4f52-8d7e-4ed375f0b58f}*SharedItemsImports = 9
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug.NDI|x64 = Debug.NDI|x64
 		Debug|x64 = Debug|x64
@@ -42,5 +36,11 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EF3446C1-11D1-4F8E-9FE2-B94854E18F41}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\common\cgdk__info.shared.vcxitems*{19add403-9984-4bdf-b526-2d25f943a12c}*SharedItemsImports = 4
+		doss\CGDK10.server.service.doss.vcxitems*{19add403-9984-4bdf-b526-2d25f943a12c}*SharedItemsImports = 4
+		doss\CGDK10.server.service.doss.vcxitems*{44376a03-d13d-4fa2-bf33-afde63366174}*SharedItemsImports = 9
+		..\common\cgdk__info.shared.vcxitems*{f2b5df8c-26a7-4f26-bd80-933bb4870b0a}*SharedItemsImports = 9
 	EndGlobalSection
 EndGlobal

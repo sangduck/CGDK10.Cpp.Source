@@ -43,7 +43,7 @@ void _get_system_memory_info(SYSTEM::sMEMORY& _memory) noexcept
 
 	while (file >> token)
 	{
-		for (std::size_t i = 0; i != 4; i++)
+		for (std::size_t i = 0; i != 4; ++i)
 		{
 			if (token == info[i])
 			{
@@ -79,7 +79,7 @@ uint64_t _get_memory_status() noexcept
 
 	while (file >> token)
 	{
-		for (std::size_t i = 0; i != 4; i++)
+		for (std::size_t i = 0; i != 4; ++i)
 		{
 			if (token == info[i])
 			{

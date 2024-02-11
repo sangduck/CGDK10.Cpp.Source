@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++에서 생성한 포함 파일입니다.
-// CGDK10.server.system.mfc_controls.rc에서 사용되고 있습니다.
+// CGDK10.server.mfc_controls.rc에서 사용되고 있습니다.
 //
 #define IDD_DIALOG_SERVER_LIST          940
 #define IDD_DIALOG_EVENT_LIST           941

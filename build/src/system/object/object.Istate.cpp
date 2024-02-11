@@ -6,7 +6,7 @@ bool _destroy_child_only(CGDK::object::Istate* _object);
 namespace CGDK
 {
 
-	result_code object::initialize(object::Istate* _object, context& _context)
+result_code object::initialize(object::Istate* _object, context& _context)
 {
 	// check)
 	THROW_IF(_object == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT));

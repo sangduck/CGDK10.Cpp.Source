@@ -423,7 +423,7 @@ std::string _dmi_system_uuid(const BYTE* _p, short _version)
 	// declare) 
 	int only0xFF = 1;
 	int only0x00 = 1;
-	for (int i = 0; i < 16 && (only0x00 || only0xFF); i++)
+	for (int i = 0; i < 16 && (only0x00 || only0xFF); ++i)
 	{
 		if (_p[i] != 0x00) only0x00 = 0;
 		if (_p[i] != 0xFF) only0xFF = 0;
@@ -503,7 +503,7 @@ std::string api::get_system_unique_id() noexcept
 	// check) 
 	RETURN_IF(Smbios->Length != static_cast<DWORD>(bufsize - 8), result);
 
-	for (int i = 0; i < static_cast<int>(Smbios->Length); i++)
+	for (int i = 0; i < static_cast<int>(Smbios->Length); ++i)
 	{
 		auto h = (dmi_header*)p;
 

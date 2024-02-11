@@ -21,10 +21,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.system.mfc_controls"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.system.mfc_controls", "mfc_controls\CGDK10.system.mfc_controls.shared.vcxitems", "{DCBEB671-9C41-4641-859D-3598838CC10B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license", "..\license\license_info\license.vcxitems", "{0B302BA8-5D86-4143-9A89-9541560FC123}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license_info", "..\license\license_info\liccense_info.shared.vcxitems", "{D032106C-3C02-4F52-8D7E-4ED375F0B58F}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.system.util.crypt", "util.crypt\CGDK10.system.util.crypt.shared.vcxitems", "{A8C1DCD6-2112-435F-9528-0922F66A1458}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.system.util.crypt", "util.crypt\CGDK10.system.util.crypt.windows.vs17.vcxproj", "{708FA86B-0F99-473D-BD10-BD51819328DC}"
@@ -87,6 +83,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.common.shared", "..\common\common.shared.vcxitems", "{CB1AC3A7-19D0-4C1B-80A8-825ABC3BDEB0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.containers", "..\..\..\include\cgdk\sdk10\containers\CGDK10.containers.vcxitems", "{30E6401C-AA1A-4845-AF11-95084FBE8945}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license_info", "..\common\cgdk__info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -518,19 +516,16 @@ Global
 		SolutionGuid = {F8E410AB-D332-407C-B0E6-394068CC236F}
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		..\license\license_info\license.vcxitems*{0b302ba8-5d86-4143-9a89-9541560fc123}*SharedItemsImports = 9
 		..\..\..\include\cgdk\sdk10\containers\CGDK10.containers.vcxitems*{30e6401c-aa1a-4845-af11-95084fbe8945}*SharedItemsImports = 9
 		mfc_controls\CGDK10.system.mfc_controls.shared.vcxitems*{3810221c-d6ce-4efd-a05f-97fb15d8ce61}*SharedItemsImports = 4
 		object\CGDK10.system.object.shared.vcxitems*{5243603e-52c6-49cc-ad61-9ad7161cde57}*SharedItemsImports = 9
-		..\license\license_info\liccense_info.shared.vcxitems*{708fa86b-0f99-473d-bd10-bd51819328dc}*SharedItemsImports = 4
-		..\license\license_info\license.vcxitems*{708fa86b-0f99-473d-bd10-bd51819328dc}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{708fa86b-0f99-473d-bd10-bd51819328dc}*SharedItemsImports = 4
 		util.crypt\CGDK10.system.util.crypt.shared.vcxitems*{708fa86b-0f99-473d-bd10-bd51819328dc}*SharedItemsImports = 4
-		..\license\license_info\liccense_info.shared.vcxitems*{8e08592b-8d9c-4dd9-91cc-a018560da8ce}*SharedItemsImports = 4
-		..\license\license_info\license.vcxitems*{8e08592b-8d9c-4dd9-91cc-a018560da8ce}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{8e08592b-8d9c-4dd9-91cc-a018560da8ce}*SharedItemsImports = 4
 		object\CGDK10.system.object.shared.vcxitems*{8e08592b-8d9c-4dd9-91cc-a018560da8ce}*SharedItemsImports = 4
 		util.crypt\CGDK10.system.util.crypt.shared.vcxitems*{a8c1dcd6-2112-435f-9528-0922f66a1458}*SharedItemsImports = 9
 		..\common\common.shared.vcxitems*{cb1ac3a7-19d0-4c1b-80a8-825abc3bdeb0}*SharedItemsImports = 9
-		..\license\license_info\liccense_info.shared.vcxitems*{d032106c-3c02-4f52-8d7e-4ed375f0b58f}*SharedItemsImports = 9
 		mfc_controls\CGDK10.system.mfc_controls.shared.vcxitems*{dcbeb671-9c41-4641-859d-3598838cc10b}*SharedItemsImports = 9
+		..\common\cgdk__info.shared.vcxitems*{f2b5df8c-26a7-4f26-bd80-933bb4870b0a}*SharedItemsImports = 9
 	EndGlobalSection
 EndGlobal

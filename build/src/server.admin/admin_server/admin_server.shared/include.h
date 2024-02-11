@@ -23,11 +23,11 @@
 // 2) CGCII Components
 #include "cgdk/sdk10/net.socket.h"
 #include "cgdk/sdk10/net.socket.http.h"
-#include "cgdk/sdk10/server.system.time_event.h"
-#include "cgdk/sdk10/server.system.log.h"
-#include "cgdk/sdk10/server.system.group.h"
+#include "cgdk/sdk10/server.time_event.h"
+#include "cgdk/sdk10/server.log.h"
+#include "cgdk/sdk10/server.group.h"
 #include "cgdk/sdk10/server.query.rdb.h"
-#include "cgdk/sdk10/server.system.service.h"
+#include "cgdk/sdk10/server.service.h"
 
 // 3) Version
 #if defined(_MSC_VER)

@@ -48,6 +48,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.query.mfc_con
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.query.mfc_controls", "mfc_controls\CGDK10.server.query.mfc_controls.shared.vcxitems", "{3CE81DD7-04AB-4FC4-A83C-5FDE39DC0620}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license_info", "..\common\cgdk__info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug.NDI|x64 = Debug.NDI|x64
@@ -121,21 +123,22 @@ Global
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		query\CGDK10.server.query.vcxitems*{08904c6e-aa8f-42dd-a3a9-3a398e7454ce}*SharedItemsImports = 9
-		..\license\license_info\liccense_info.shared.vcxitems*{0af3bdbd-016a-4c98-aa1b-e984630077e3}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{0af3bdbd-016a-4c98-aa1b-e984630077e3}*SharedItemsImports = 4
 		query\CGDK10.server.query.vcxitems*{0af3bdbd-016a-4c98-aa1b-e984630077e3}*SharedItemsImports = 4
 		rdb.oledb\CGDK10.server.query.rdb.oledb.vcxitems*{13af5304-e2b5-4460-a7ef-c7b8f46d2741}*SharedItemsImports = 9
-		..\license\license_info\liccense_info.shared.vcxitems*{29ddacd9-91cb-4180-a03e-899dc8b550f2}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{29ddacd9-91cb-4180-a03e-899dc8b550f2}*SharedItemsImports = 4
 		http\CGDK10.server.query.http.vcxitems*{29ddacd9-91cb-4180-a03e-899dc8b550f2}*SharedItemsImports = 4
 		mfc_controls\CGDK10.server.query.mfc_controls.shared.vcxitems*{3ce81dd7-04ab-4fc4-a83c-5fde39dc0620}*SharedItemsImports = 9
 		rdb.odbc\CGDK10.server.query.rdb.odbc.vcxitems*{4a90f49b-8059-4bbb-94ae-6355c5dc2a10}*SharedItemsImports = 9
-		..\license\license_info\liccense_info.shared.vcxitems*{644842be-d547-43dd-946b-3d1cf6edb51a}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{644842be-d547-43dd-946b-3d1cf6edb51a}*SharedItemsImports = 4
 		redis\CGDK10.server.query.redis.vcxitems*{644842be-d547-43dd-946b-3d1cf6edb51a}*SharedItemsImports = 4
-		..\license\license_info\liccense_info.shared.vcxitems*{9e121877-1300-4fec-b259-0243c74b4445}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{9e121877-1300-4fec-b259-0243c74b4445}*SharedItemsImports = 4
 		rdb.odbc\CGDK10.server.query.rdb.odbc.vcxitems*{9e121877-1300-4fec-b259-0243c74b4445}*SharedItemsImports = 4
-		..\license\license_info\liccense_info.shared.vcxitems*{a1fcb119-b590-4282-93e5-cfbf2dd459e9}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{a1fcb119-b590-4282-93e5-cfbf2dd459e9}*SharedItemsImports = 4
 		rdb.oledb\CGDK10.server.query.rdb.oledb.vcxitems*{a1fcb119-b590-4282-93e5-cfbf2dd459e9}*SharedItemsImports = 4
 		mfc_controls\CGDK10.server.query.mfc_controls.shared.vcxitems*{b7178181-5e51-42dc-9b5c-fa15f9870bd1}*SharedItemsImports = 4
 		http\CGDK10.server.query.http.vcxitems*{d075a614-23e6-4b1a-9f40-d7c29ebc5fba}*SharedItemsImports = 9
 		redis\CGDK10.server.query.redis.vcxitems*{db196ff8-ee17-4c7c-8490-13f2ff9b351b}*SharedItemsImports = 9
+		..\common\cgdk__info.shared.vcxitems*{f2b5df8c-26a7-4f26-bd80-933bb4870b0a}*SharedItemsImports = 9
 	EndGlobalSection
 EndGlobal

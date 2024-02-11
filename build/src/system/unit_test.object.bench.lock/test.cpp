@@ -105,7 +105,7 @@ namespace CGDK
 		if(_write_thread_count != 0)
 		{
 			auto f_write = [&test_object]() {
-				for (int i = 0; i < TEST_COUNT; i++)
+				for (int i = 0; i < TEST_COUNT; ++i)
 				{
 					test_object.write();
 				}
@@ -113,7 +113,7 @@ namespace CGDK
 
 			vector_thread_write.reserve(_write_thread_count);
 
-			for (int i = 0; i < _write_thread_count; i++)
+			for (int i = 0; i < _write_thread_count; ++i)
 			{
 				vector_thread_write.emplace_back(std::make_shared<std::thread>(f_write));
 			}
@@ -126,7 +126,7 @@ namespace CGDK
 		if (_read_thread_count != 0)
 		{
 			auto f_read = [&test_object, &temp_result]() {
-				for (int i = 0; i < TEST_COUNT; i++)
+				for (int i = 0; i < TEST_COUNT; ++i)
 				{
 					temp_result = test_object.read();
 				}
@@ -134,7 +134,7 @@ namespace CGDK
 
 			vector_thread_read.reserve(_read_thread_count);
 
-			for (int i = 0; i < _read_thread_count; i++)
+			for (int i = 0; i < _read_thread_count; ++i)
 			{
 				vector_thread_read.emplace_back(std::make_shared<std::thread>(f_read));
 			}

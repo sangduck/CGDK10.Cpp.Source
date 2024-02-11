@@ -40,7 +40,7 @@ CGMFCCONTROL_EXT_API INT_PTR WINAPI	DoModalReferenceStatus(Ireferenceable* _obje
 	return dlg.DoModal();
 }
 
-CGMFCCONTROL_EXT_API INT_PTR WINAPI	DoModalCGDKComponentInfo(const std::vector<CGDK::sCOMPONENT_LICENSE>& _vector_cgdk_components)
+CGMFCCONTROL_EXT_API INT_PTR WINAPI	DoModalCGDKComponentInfo(const std::vector<CGDK::sCOMPONENT_INFO>& _vector_cgdk_components)
 {
 	// 1) Dialog를 생성한다.
 	CDialog_CGDK_component_info	dlg(_vector_cgdk_components);

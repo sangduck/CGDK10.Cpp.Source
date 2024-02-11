@@ -37,7 +37,7 @@
 // Include
 // ----------------------------------------------------------------------------
 // 1) Main Include
-#include "cgdk/sdk10/server.system.mfc_controls.h"
+#include "cgdk/sdk10/server.mfc_controls.h"
 
 // 2) svn version file
 #if defined(_MSC_VER)

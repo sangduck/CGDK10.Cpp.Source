@@ -3,7 +3,7 @@
 #*                      Cho sanghyun's Game Classes II                       *
 #*                      Ver 10.0 / release 2019.12.11                        *
 #*                                                                           *
-#*                      CMake - CGDK10.server.system.log                     *
+#*                      CMake - CGDK10.server.log                            *
 #*                                                                           *
 #*                                                                           *
 #*                                                                           *
@@ -20,7 +20,7 @@
 # setting
 #-----------------------------------------------------------------------------
 # 1) project name
-PROJECT ( "CGDK10.server.system.log" )
+PROJECT ( "CGDK10.server.log" )
 
 # 2) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
@@ -64,27 +64,26 @@ SET (SRC_FILES
 # ...
 pch.cpp
 
-#CGDK/License
-${CMAKE_CURRENT_SOURCE_DIR}/../../license/license_info/license_info.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/../../license/license_info/license_file.cpp
+#common
+${CMAKE_CURRENT_SOURCE_DIR}/../../common/cgdk_info.cpp
 
 #definitions
-server.system.definitions.log.cpp
+server.definitions.log.cpp
 
 #logger
-server.system.Nlogger.cpp
-server.system.logger_acceptor.cpp
-server.system.logger_console.cpp
-server.system.logger_file.cpp
-server.system.logger_hub.cpp
-server.system.logger_hub_archive.cpp
-server.system.logger_slack.cpp
-server.system.logger_socket.cpp
-server.system.logger_buffer.cpp
-server.system.logger_syslog.cpp
+server.Nlogger.cpp
+server.logger_acceptor.cpp
+server.logger_console.cpp
+server.logger_file.cpp
+server.logger_hub.cpp
+server.logger_hub_archive.cpp
+server.logger_slack.cpp
+server.logger_socket.cpp
+server.logger_buffer.cpp
+server.logger_syslog.cpp
 
 #log_filter
-server.system.log_filter.default.cpp
+server.log_filter.default.cpp
 
 )
 

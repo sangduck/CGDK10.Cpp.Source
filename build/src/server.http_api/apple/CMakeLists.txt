@@ -65,9 +65,8 @@ SET (SRC_FILES
 #...
 pch.cpp
 
-#CGDK/License
-${CMAKE_CURRENT_SOURCE_DIR}/../../license/license_info/license_info.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/../../license/license_info/license_file.cpp
+#common
+${CMAKE_CURRENT_SOURCE_DIR}/../../common/cgdk_info.cpp
 
 #
 CGDK10.server.http_api.apple.cpp

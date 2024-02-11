@@ -100,4 +100,4 @@
 
 // 3) license files
 #include "../../common/version.h"
-#include "../../license/license_info/license_info.h"
+#include "../../common/cgdk_info.h"

@@ -33,7 +33,7 @@
 #define SVN_LOCAL_MODIFICATIONS       0	// 1 if there are modifications to the local working copy, 0 otherwise
 #define SVN_COMMIT_REVISION           9809		// Highest committed revision number in the working copy
 #define SVN_COMMIT_REVISION_STRING    "9809"		// Highest committed revision number in the working copy
-#define SVN_UPDATE_REVISION_STRING    "10003"	// Highest committed revision number in the working copy
-#define SVN_TIME_NOW_STRING           "2024/01/04 02:02:44"		// Current system date &amp; time
+#define SVN_UPDATE_REVISION_STRING    "10063"	// Highest committed revision number in the working copy
+#define SVN_TIME_NOW_STRING           "2024/02/12 07:48:59"		// Current system date &amp; time
 
 #endif

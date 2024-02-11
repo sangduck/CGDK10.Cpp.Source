@@ -17,8 +17,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.http_api.kaka
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.http_api.line", "line\CGDK10.server.http_api.line.vcxitems", "{3F3B5FA9-CDA7-49EA-840F-260834D180F2}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license_info", "..\license\license_info\liccense_info.shared.vcxitems", "{D032106C-3C02-4F52-8D7E-4ED375F0B58F}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.http_api.naver", "naver\CGDK10.server.http_api.naver.vcxitems", "{BAFE9667-EFD1-4259-B26A-2C05421A4D02}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.http_api.naver", "naver\CGDK10.server.http_api.naver.windows.vcxproj", "{7946334A-E25D-42BF-A29B-2C1378D5E91E}"
@@ -30,6 +28,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.http_api.apple", "apple\CGDK10.server.http_api.apple.windows.vcxproj", "{973D24CE-1811-4FD2-9D0E-9D260286BFB2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.http_api.google", "google\CGDK10.server.http_api.google.windows.vcxproj", "{C42BE74D-0906-44B6-838C-692C0A470674}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.cgdk_info", "..\common\cgdk__info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -155,20 +155,24 @@ Global
 		SolutionGuid = {5238712A-0A4A-4C66-BF04-A211755F32F4}
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		..\license\license_info\liccense_info.shared.vcxitems*{22cebbde-7a00-4c72-9c57-803b50085849}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{22cebbde-7a00-4c72-9c57-803b50085849}*SharedItemsImports = 4
 		bank\CGDK10.server.http_api.bank.vcxitems*{22cebbde-7a00-4c72-9c57-803b50085849}*SharedItemsImports = 4
-		..\license\license_info\liccense_info.shared.vcxitems*{24f279b8-d3c2-41b7-9e45-451e79c40768}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{24f279b8-d3c2-41b7-9e45-451e79c40768}*SharedItemsImports = 4
 		line\CGDK10.server.http_api.line.vcxitems*{24f279b8-d3c2-41b7-9e45-451e79c40768}*SharedItemsImports = 4
 		line\CGDK10.server.http_api.line.vcxitems*{3f3b5fa9-cda7-49ea-840f-260834d180f2}*SharedItemsImports = 9
-		..\license\license_info\liccense_info.shared.vcxitems*{7946334a-e25d-42bf-a29b-2c1378d5e91e}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{7946334a-e25d-42bf-a29b-2c1378d5e91e}*SharedItemsImports = 4
 		naver\CGDK10.server.http_api.naver.vcxitems*{7946334a-e25d-42bf-a29b-2c1378d5e91e}*SharedItemsImports = 4
 		google\CGDK10.server.http_api.google.vcxitems*{91a9b58c-de0e-455b-a276-2a2e2e06c616}*SharedItemsImports = 9
+		..\common\cgdk__info.shared.vcxitems*{973d24ce-1811-4fd2-9d0e-9d260286bfb2}*SharedItemsImports = 4
+		apple\CGDK10.server.http_api.apple.vcxitems*{973d24ce-1811-4fd2-9d0e-9d260286bfb2}*SharedItemsImports = 4
 		kakao\CGDK10.server.http_api.kakao.vcxitems*{9992c880-7ab1-405e-bc12-2666252e95d7}*SharedItemsImports = 9
 		bank\CGDK10.server.http_api.bank.vcxitems*{b7fe28b5-9886-4c1d-a316-6c456d817258}*SharedItemsImports = 9
 		naver\CGDK10.server.http_api.naver.vcxitems*{bafe9667-efd1-4259-b26a-2c05421a4d02}*SharedItemsImports = 9
 		apple\CGDK10.server.http_api.apple.vcxitems*{bcc2a5e9-5174-4334-aff0-2582e8858200}*SharedItemsImports = 9
-		..\license\license_info\liccense_info.shared.vcxitems*{d032106c-3c02-4f52-8d7e-4ed375f0b58f}*SharedItemsImports = 9
-		..\license\license_info\liccense_info.shared.vcxitems*{fe497e37-60af-45f5-8192-9281cb48cbdf}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{c42be74d-0906-44b6-838c-692c0a470674}*SharedItemsImports = 4
+		google\CGDK10.server.http_api.google.vcxitems*{c42be74d-0906-44b6-838c-692c0a470674}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{f2b5df8c-26a7-4f26-bd80-933bb4870b0a}*SharedItemsImports = 9
+		..\common\cgdk__info.shared.vcxitems*{fe497e37-60af-45f5-8192-9281cb48cbdf}*SharedItemsImports = 4
 		kakao\CGDK10.server.http_api.kakao.vcxitems*{fe497e37-60af-45f5-8192-9281cb48cbdf}*SharedItemsImports = 4
 	EndGlobalSection
 EndGlobal

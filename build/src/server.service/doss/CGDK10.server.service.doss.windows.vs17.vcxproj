@@ -96,7 +96,7 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
     <Import Project="CGDK10.server.service.doss.vcxitems" Label="Shared" />
-    <Import Project="..\..\license\license_info\liccense_info.shared.vcxitems" Label="Shared" />
+    <Import Project="..\..\common\cgdk__info.shared.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />

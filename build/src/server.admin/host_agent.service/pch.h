@@ -108,13 +108,13 @@ class observable_websocket_server_crash_info;
 // Include
 //----------------------------------------------------------------------------
 // 1) CGNetServer Header File
-#include "cgdk/sdk10/server.system.service.h"
+#include "cgdk/sdk10/server.service.h"
 #ifdef _USE_SVN_CONTROL
 #include "cgdk/sdk10/server.admin.version_control.h"
 #endif
-#include "cgdk/sdk10/server.system.log.h"
-#include "cgdk/sdk10/server.system.group.list.h"
-#include "cgdk/sdk10/server.system.observer.h"
+#include "cgdk/sdk10/server.log.h"
+#include "cgdk/sdk10/server.group.list.h"
+#include "cgdk/sdk10/server.observer.h"
 #include "cgdk/sdk10/net.socket.http.h"
 
 // using

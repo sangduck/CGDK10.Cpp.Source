@@ -152,9 +152,9 @@ TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:pch
 
 # 5) add library
 TARGET_LINK_LIBRARIES( ${PROJECT_NAME} 
-	CGDK10.server.system.service_linux.${BUILD_TYPE}
-	CGDK10.server.system.time_event_linux.${BUILD_TYPE}
-	CGDK10.server.system.log_linux.${BUILD_TYPE}
+	CGDK10.server.service_linux.${BUILD_TYPE}
+	CGDK10.server.time_event_linux.${BUILD_TYPE}
+	CGDK10.server.log_linux.${BUILD_TYPE}
 	CGDK10.net.socket.http_linux.${BUILD_TYPE}
 	CGDK10.net.socket_linux.${BUILD_TYPE}
 	CGDK10.system.util.crypt_linux.${BUILD_TYPE}

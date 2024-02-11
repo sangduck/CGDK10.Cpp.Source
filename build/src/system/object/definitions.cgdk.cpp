@@ -3,7 +3,7 @@
 namespace CGDK
 {
 
-extern	std::vector<sCOMPONENT_LICENSE>	g_vector_component;
+extern	std::vector<sCOMPONENT_INFO>	g_vector_component;
 
 
 template<>
@@ -114,14 +114,14 @@ std::string_view to_string<char>(CGDK::ePLATFORM _platform) noexcept
 	switch (_platform)
 	{
 	case	CGDK::ePLATFORM::NOT_DEFINED:			result = "not defined"; break;
-	case	CGDK::ePLATFORM::WINDOWS_X86:			result	= "Windows x86"; break;
-	case	CGDK::ePLATFORM::WINDOWS_X64:			result	= "Windows x64"; break;
-	case	CGDK::ePLATFORM::LINUX:					result	= "Linux"; break;
-	case	CGDK::ePLATFORM::ANDROID:				result	= "Android"; break;
-	case	CGDK::ePLATFORM::MACOS:					result	= "Macos"; break;
-	case	CGDK::ePLATFORM::IOS:					result	= "ios"; break;
+	case	CGDK::ePLATFORM::WINDOWS_X86:			result = "Windows x86"; break;
+	case	CGDK::ePLATFORM::WINDOWS_X64:			result = "Windows x64"; break;
+	case	CGDK::ePLATFORM::LINUX:					result = "Linux"; break;
+	case	CGDK::ePLATFORM::ANDROID:				result = "Android"; break;
+	case	CGDK::ePLATFORM::MACOS:					result = "Macos"; break;
+	case	CGDK::ePLATFORM::IOS:					result = "ios"; break;
 	case	CGDK::ePLATFORM::ALL:					result = "all"; break;
-	default:										result	= "Unknowned"; break;
+	default:										result = "Unknowned"; break;
 	}
 
 	// return)
@@ -151,83 +151,28 @@ std::wstring_view to_string<wchar_t>(CGDK::ePLATFORM _platform) noexcept
 	return result;
 }
 
-template<>
-std::string_view to_string<char>(CGDK::eLICENSE_TYPE _license_type) noexcept
-{
-	// declare)
-	std::string_view result;
-
-	switch (_license_type)
-	{
-	case	CGDK::eLICENSE_TYPE::NOT_DEFINED:		result = "not defined"; break;
-	case	CGDK::eLICENSE_TYPE::FREE:				result = "free"; break;
-	case	CGDK::eLICENSE_TYPE::INDIE:				result = "indie"; break;
-	case	CGDK::eLICENSE_TYPE::LIMITED_PROJECT:	result = "project limited"; break;
-	case	CGDK::eLICENSE_TYPE::LIMITED_COMPPANY:	result = "company limited"; break;
-	case	CGDK::eLICENSE_TYPE::UNLIMITED:			result = "unlimited"; break;
-	case	CGDK::eLICENSE_TYPE::DEVELOPER:			result = "developer"; break;
-	default:										result = "unknowned"; break;
-	}
-
-	// return) 
-	return result;
-}
-
-template<>
-std::wstring_view to_string<wchar_t>(CGDK::eLICENSE_TYPE _license_type) noexcept
-{
-	// declare)
-	std::wstring_view result;
-
-	switch (_license_type)
-	{
-	case	CGDK::eLICENSE_TYPE::NOT_DEFINED:		result = L"not defined"; break;
-	case	CGDK::eLICENSE_TYPE::FREE:				result = L"Free"; break;
-	case	CGDK::eLICENSE_TYPE::INDIE:				result = L"Indie"; break;
-	case	CGDK::eLICENSE_TYPE::LIMITED_PROJECT:	result = L"Project limited"; break;
-	case	CGDK::eLICENSE_TYPE::LIMITED_COMPPANY:	result = L"Company limited"; break;
-	case	CGDK::eLICENSE_TYPE::UNLIMITED:			result = L"Unlimited"; break;
-	case	CGDK::eLICENSE_TYPE::DEVELOPER:			result = L"Developer"; break;
-	default:										result = L"Unknowned"; break;
-	}
-
-	// return) 
-	return result;
-}
-
 int get_version() noexcept
 {
 	return SVN_COMMIT_REVISION;
 }
 
 // 13) CGDK Component Info
-sLICENSE_INFO& _get_license_info() noexcept
+std::vector<sCOMPONENT_INFO>& _get_component_info() noexcept
 {
-	static sLICENSE_INFO license_info;
-	return license_info;
-}
-
-const sLICENSE_INFO& get_license_info() noexcept
-{
-	return _get_license_info();
-}
-
-std::vector<sCOMPONENT_LICENSE>& _get_component_info() noexcept
-{
-	static std::vector<sCOMPONENT_LICENSE> vector_component;
+	static std::vector<sCOMPONENT_INFO> vector_component;
 	return vector_component;
 }
-const std::vector<sCOMPONENT_LICENSE>& get_component_info() noexcept
+const std::vector<sCOMPONENT_INFO>& get_component_info() noexcept
 {
 	return _get_component_info();
 }
 
-void add_component_info(sCOMPONENT_LICENSE&& _component) noexcept
+void add_component_info(sCOMPONENT_INFO&& _component) noexcept
 {
 	_get_component_info().emplace_back(std::move(_component));
 }
 
-sCOMPONENT_LICENSE get_component_info(std::string_view _name) noexcept
+sCOMPONENT_INFO get_component_info(std::string_view _name) noexcept
 {
 	auto vector_component = _get_component_info();
 
@@ -239,34 +184,7 @@ sCOMPONENT_LICENSE get_component_info(std::string_view _name) noexcept
 		}
 	}
 
-	return sCOMPONENT_LICENSE();
-}
-
-bool _has_expired_component(chrono::time::utc::time_point _time_now) noexcept
-{
-	auto vector_component = _get_component_info();
-
-	for (auto& iter : vector_component)
-	{
-		if (iter.license_type == eLICENSE_TYPE::FREE)
-			return true;
-
-		if (iter.license_type != eLICENSE_TYPE::UNLIMITED && iter.license_type != eLICENSE_TYPE::DEVELOPER)
-		{
-			if (iter.component_info.time_expire > _time_now)
-			{
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
-bool get_license_alert() noexcept
-{
-	static std::atomic<int> enable_license_aleart = 0;
-	return 1 == (++enable_license_aleart);
+	return sCOMPONENT_INFO();
 }
 
 std::string_view get_string_license() noexcept

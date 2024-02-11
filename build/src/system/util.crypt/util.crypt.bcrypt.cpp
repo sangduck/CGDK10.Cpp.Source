@@ -255,7 +255,7 @@ void node_bcrypt(char* _out_encrypted, std::string_view _key, std::string_view _
 		blowfish_enc(&state, cdata, BCRYPT_BLOCKS / 2);
 	}
 
-	for (uint32_t i = 0; i < BCRYPT_BLOCKS; i++)
+	for (uint32_t i = 0; i < BCRYPT_BLOCKS; ++i)
 	{
 		ciphertext[4 * i + 3] = cdata[i] & 0xff;
 		cdata[i] = cdata[i] >> 8;

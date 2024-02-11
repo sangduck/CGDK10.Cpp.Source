@@ -645,12 +645,6 @@ bool api::socket::init_socket()
 	// trace) ¼º°ø!! 
 	LOG_SYSTEM << "  - CGDK10.version: "sv << _CGDK_VERSION_PACKAGE << "."sv << _CGDK_VERSION_SUB << "."sv << _CGDK_VERSION_BUILD << "."sv << SVN_COMMIT_REVISION;
 	LOG_SYSTEM << "  - CGDK10.build: "sv << __DATE__;
-	LOG_SYSTEM << "  - CGDK10.license: "sv << to_string<char>(license_component.license_type) << "("sv << license_component.license_company << "/"sv << license_component.license_project << ")"sv;
-	if (license_component.license_type != eLICENSE_TYPE::UNLIMITED)
-	{
-		LOG_SYSTEM << "  - CGDK10.expire: "sv << to_string<char>(license_component.component_info.time_expire);
-	}
-
 
 	//-----------------------------------------------------------------
 	// 2. System Info

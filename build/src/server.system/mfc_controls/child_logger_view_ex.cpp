@@ -858,7 +858,7 @@ void CChild_logger_view_ex::OnBnClickedLogSaveSelected()
 				arrayListSel.SetSize(iCountSelected);
 				rLogListInfo.plist_log->GetSelItems(iCountSelected, arrayListSel.GetData());
 
-				for( int i=0; i< iCountSelected; i++ )
+				for( int i=0; i< iCountSelected; ++i )
 				{
 					// - String을 얻는다.
 					auto string_length = rLogListInfo.plist_log->GetText(arrayListSel.GetAt(i), str_text);

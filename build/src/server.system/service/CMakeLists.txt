@@ -3,7 +3,7 @@
 #*                      Cho sanghyun's Game Classes II                       *
 #*                      Ver 10.0 / release 2019.12.11                        *
 #*                                                                           *
-#*                   CMake - CGDK10.server.system.service                    *
+#*                   CMake - CGDK10.server.service                           *
 #*                                                                           *
 #*                                                                           *
 #*                                                                           *
@@ -20,7 +20,7 @@
 # setting
 #-----------------------------------------------------------------------------
 # 1) project name
-PROJECT ( "CGDK10.server.system.service" )
+PROJECT ( "CGDK10.server.service" )
 
 # 2) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
@@ -64,57 +64,56 @@ SET (SRC_FILES
 # ...
 pch.cpp
 
-#CGDK/License
-${CMAKE_CURRENT_SOURCE_DIR}/../../license/license_info/license_info.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/../../license/license_info/license_file.cpp
+#common
+${CMAKE_CURRENT_SOURCE_DIR}/../../common/cgdk_info.cpp
 
 #definitions
 api.manager_perfornamce_query.cpp
 api.performance_counter.cpp
-api.server.system.process_info.cpp
+api.server.process_info.cpp
 api.server_status_handle.cpp
 api.service_handle.cpp
 api.service.cpp
 
 # definitions
-server.system.definitions.admin.cpp
-server.system.definitions.admin.server_info.cpp
-server.system.definitions.admin.message.cpp
-server.system.definitions.admin.protocol.cpp
+server.definitions.admin.cpp
+server.definitions.admin.server_info.cpp
+server.definitions.admin.message.cpp
+server.definitions.admin.protocol.cpp
 
 # 
-server.system.system_info.cpp
-server.system.admin_info.binder.cpp
-server.system.admin_info.connective.cpp
-server.system.admin_info.factory.cpp
-server.system.admin_info.time_event.cpp
+server.system_info.cpp
+server.admin_info.binder.cpp
+server.admin_info.connective.cpp
+server.admin_info.factory.cpp
+server.admin_info.time_event.cpp
 
 
 # sockets
-server.system.Isocket.cpp
-server.system.admin.socket.to_admin.cpp
+server.Isocket.cpp
+server.admin.socket.to_admin.cpp
 
 # time_event for service
-server.system.time_event.object.service_destroy.cpp
-server.system.time_event.object.service_init.cpp
-server.system.time_event.object.service_start.cpp
-server.system.time_event.object.service_stop.cpp
-server.system.time_event.schedule.service_destroy.cpp
-server.system.time_event.schedule.service_init.cpp
-server.system.time_event.schedule.service_start.cpp
-server.system.time_event.schedule.service_stop.cpp
+server.time_event.object.service_destroy.cpp
+server.time_event.object.service_init.cpp
+server.time_event.object.service_start.cpp
+server.time_event.object.service_stop.cpp
+server.time_event.schedule.service_destroy.cpp
+server.time_event.schedule.service_init.cpp
+server.time_event.schedule.service_start.cpp
+server.time_event.schedule.service_stop.cpp
 
 # admin
 server_admin.host_instance.cpp
 server_admin.service_instance.cpp
 
 # service
-server.system.Nstatic_service_logger.cpp
-server.system.Nservice.cpp
-server.system.Nservice_application.cpp
-server.system.service.cpp
-server.system.service_ex.cpp
-server.system.system_info.cpp
+server.Nstatic_service_logger.cpp
+server.Nservice.cpp
+server.Nservice_application.cpp
+server.service.cpp
+server.service_ex.cpp
+server.system_info.cpp
 
 )
 

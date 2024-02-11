@@ -3,7 +3,7 @@
 #*                      Cho sanghyun's Game Classes II                       *
 #*                      Ver 10.0 / release 2019.12.11                        *
 #*                                                                           *
-#*                  CMake - CGDK10.server.system.time_event                  *
+#*                  CMake - CGDK10.server.time_event                         *
 #*                                                                           *
 #*                                                                           *
 #*                                                                           *
@@ -20,7 +20,7 @@
 # setting
 #-----------------------------------------------------------------------------
 # 1) project name
-PROJECT ( "CGDK10.server.system.time_event" )
+PROJECT ( "CGDK10.server.time_event" )
 
 # 2) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
@@ -64,28 +64,27 @@ SET (SRC_FILES
 #...
 pch.cpp
 
-#CGDK/License
-${CMAKE_CURRENT_SOURCE_DIR}/../../license/license_info/license_info.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/../../license/license_info/license_file.cpp
+#common
+${CMAKE_CURRENT_SOURCE_DIR}/../../common/cgdk_info.cpp
 
 #definitions
-server.system.definitions.time_event.cpp
+server.definitions.time_event.cpp
 
 # time_event entity manager
-server.system.time_event.manager.cpp
+server.time_event.manager.cpp
 
 # entity & event_object
-server.system.time_event.Ientity.cpp
-server.system.time_event.Ievent.cpp
+server.time_event.Ientity.cpp
+server.time_event.Ievent.cpp
 
 # entity & event_object
-server.system.time_event.entity.cpp
-server.system.time_event.event.cpp
+server.time_event.entity.cpp
+server.time_event.event.cpp
 
 # entity 
-server.system.time_event.Nentity_iteration.cpp
-server.system.time_event.Nentity_start_end.cpp
-server.system.time_event.Nentity_start_iteration_end.cpp
+server.time_event.Nentity_iteration.cpp
+server.time_event.Nentity_start_end.cpp
+server.time_event.Nentity_start_iteration_end.cpp
 )
 
 

@@ -65,6 +65,3 @@ ADD_SUBDIRECTORY (server.web)
 
 # 10) server admin
 ADD_SUBDIRECTORY (server.admin)
-
-# 11) license
-ADD_SUBDIRECTORY (license)

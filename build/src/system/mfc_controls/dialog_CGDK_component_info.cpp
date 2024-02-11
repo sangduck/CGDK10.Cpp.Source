@@ -17,7 +17,7 @@ CDialog_CGDK_component_info::CDialog_CGDK_component_info(CWnd* pnode_parent /*=N
 {
 }
 
-CDialog_CGDK_component_info::CDialog_CGDK_component_info(const std::vector<CGDK::sCOMPONENT_LICENSE>& _vector_components, CWnd* pnode_parent /*=NULL*/)
+CDialog_CGDK_component_info::CDialog_CGDK_component_info(const std::vector<CGDK::sCOMPONENT_INFO>& _vector_components, CWnd* pnode_parent /*=NULL*/)
 	: CDialogEx(IDD_DIALOG_CGDK_VERSION_INFO, pnode_parent),
 	m_is_enable_control(TRUE),
 	m_pvector_components(&_vector_components)
@@ -42,7 +42,7 @@ END_MESSAGE_MAP()
 
 
 // CDialog_CGDK_component_info 메시지 처리기입니다.
-BOOL CDialog_CGDK_component_info::CreateModaless(const std::vector<CGDK::sCOMPONENT_LICENSE>& _vector_components, CWnd* _pparent)
+BOOL CDialog_CGDK_component_info::CreateModaless(const std::vector<CGDK::sCOMPONENT_INFO>& _vector_components, CWnd* _pparent)
 {
 	// 1) Manager를 설정한다.
 	m_pvector_components = &_vector_components;
@@ -152,60 +152,12 @@ BOOL CDialog_CGDK_component_info::OnInitDialog()
 
 			// - Expire time
 			list_item.iSubItem = 6;
-			if(iter.component_info.time_expire != chrono::time::utc::time_point::min())
-			{
-				auto time_temp = chrono::to_date_time(iter.component_info.time_expire);
-
-				wsprintf(text, TEXT("%u/%02u/%02u"), time_temp.t_year, time_temp.t_month, time_temp.t_day);
-				list_item.pszText = text;
-			}
-			else
-			{
-				list_item.pszText = const_cast<LPWSTR>(TEXT("unlimited"));
-			}
+			list_item.pszText = const_cast<LPWSTR>(TEXT(" -"));
 			this->m_listctrl_components.SetItem(&list_item);
 
 			// - License
 			list_item.iSubItem = 7;
-			switch(iter.license_type)
-			{
-			case	CGDK::eLICENSE_TYPE::FREE:
-					wsprintf(text, TEXT("free"));
-					break;
-
-			case	CGDK::eLICENSE_TYPE::INDIE:
-					wsprintf(text, TEXT("indie licence"));
-					break;
-
-			case	CGDK::eLICENSE_TYPE::LIMITED_PROJECT:
-				#ifdef _USE_CHAR_STRING
-					wsprintf(text, TEXT("limiited [pj: %hs]"), iter.license_project.c_str());
-				#elif _USE_WCHAR_STRING
-					wsprintf(text, TEXT("limiited [pj: %ls]"), iter.license_project.c_str());
-				#else
-					#error
-				#endif
-					break;
-
-			case	CGDK::eLICENSE_TYPE::LIMITED_COMPPANY:
-				#ifdef _USE_CHAR_STRING
-					wsprintf(text, TEXT("limiited [co: %hs]"), iter.license_company.c_str());
-				#elif _USE_WCHAR_STRING
-					wsprintf(text, TEXT("limiited [co: %ls]"), iter.license_company.c_str());
-				#else
-					#error
-				#endif
-					break;
-
-			case	CGDK::eLICENSE_TYPE::UNLIMITED:
-					wsprintf(text, TEXT("unlimited"));
-					break;
-
-			case	CGDK::eLICENSE_TYPE::DEVELOPER:
-					wsprintf(text, TEXT("developer edition"));
-					break;
-			}
-			//chrono::time::utc::time_point	license_time_expire;
+			wsprintf(text, TEXT(" -"));
 			list_item.pszText = text;
 			this->m_listctrl_components.SetItem(&list_item);
 		}

@@ -311,7 +311,7 @@ result_code net::io::connective::acceptor::Ntcp::_process_starting(context& _con
 				throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 			}
 
-			// - get one
+			// - get first one
 			parameter.accept_endpoint = *resolve_result.begin();
 
 			// - if str_address is nullptr, set address as public ip in host
@@ -437,7 +437,7 @@ result_code net::io::connective::acceptor::Ntcp::_process_starting(context& _con
 		parameter.local_endpoint.port(default_port);
 
 		// log) 
-		EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << "  ! 'listen port' set as default port (loopback, port:"sv << default_port << ")  "sv);
+		EXECUTE_IF(parameter.enable_progress_log, LOG_WARNING << "  ! 'listen port' set as default port (loopback, port:"sv << default_port << ")  "sv);
 	}
 
 	// check) 

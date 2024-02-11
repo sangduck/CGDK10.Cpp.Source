@@ -39,7 +39,7 @@ std::string crypt::encode_base64(const_buffer_view _source)
 			arrayChar4[2] = static_cast<unsigned char>(((arrayChar3[1] & 0x0f) << 2) + ((arrayChar3[2] & 0xc0) >> 6));
 			arrayChar4[3] = static_cast<unsigned char>  (arrayChar3[2] & 0x3f);
 
-			for(i = 0; (i <4) ; i++)
+			for(i = 0; (i <4) ; ++i)
 				ret += charBase64.at(arrayChar4[i]);
 			i = 0;
 		}
@@ -90,7 +90,7 @@ shared_buffer crypt::decode_base64(const std::string_view _source)
 
 		if (i == 4) 
 		{
-			for (i = 0; i <4; i++)
+			for (i = 0; i <4; ++i)
 			{
 				arrayChar4[i] = (unsigned char)charBase64.find(arrayChar4[i]);
 			}
@@ -99,7 +99,7 @@ shared_buffer crypt::decode_base64(const std::string_view _source)
 			arrayChar3[1] = static_cast<unsigned char>(((arrayChar4[1] & 0xf) << 4) + ((arrayChar4[2] & 0x3c) >> 2));
 			arrayChar3[2] = static_cast<unsigned char>(((arrayChar4[2] & 0x3) << 6) +   arrayChar4[3]);
 
-			for (i = 0; (i < 3); i++)
+			for (i = 0; (i < 3); ++i)
 			{
 				ret.append<unsigned char>(arrayChar3[i]);
 			}

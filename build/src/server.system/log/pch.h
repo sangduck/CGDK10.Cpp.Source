@@ -72,15 +72,15 @@
 // include
 //----------------------------------------------------------------------------
 // 1) CGDK Include
-#include "cgdk/sdk10/server.system.log.h"
+#include "cgdk/sdk10/server.log.h"
 
 
 //----------------------------------------------------------------------------
 // License Info
 //----------------------------------------------------------------------------
 // 1) definitions
-#define		CGDK_INFO_CLASS				CInfo_server_system_log
-#define		CGDK_COMPONENT_NAME			"CGDK10.server.system.log"
+#define		CGDK_INFO_CLASS				CInfo_server_log
+#define		CGDK_COMPONENT_NAME			"CGDK10.server.log"
 
 // 2) svn version file
 #if defined(_MSC_VER)
@@ -100,4 +100,4 @@
 
 // 3) license files
 #include "../../common/version.h"
-#include "../../license/license_info/license_info.h"
+#include "../../common/cgdk_info.h"

@@ -314,7 +314,7 @@ uint32_t blowfish_stream_to_word(const uint8_t* _data, size_t _data_bytes, uint1
 	uint32_t temp = 0x00000000;
 	uint16_t j = *_current;
 
-	for (int i = 0; i < 4; i++, j++)
+	for (int i = 0; i < 4; ++i, ++j)
 	{
 		if (j >= _data_bytes)
 			j = 0;
@@ -329,7 +329,7 @@ void blowfish_expand_0state(blowfish_context* _ctx, const uint8_t* _key, size_t 
 {
 	uint16_t j = 0;
 
-	for (int i = 0; i < BLOWFISH_SUBKEY_COUNT + 2; i++) 
+	for (int i = 0; i < BLOWFISH_SUBKEY_COUNT + 2; ++i) 
 	{
 		// extract 4 int8 to 1 int32 from keystream
 		auto temp = blowfish_stream_to_word(_key, _key_bytes, &j);
@@ -347,7 +347,7 @@ void blowfish_expand_0state(blowfish_context* _ctx, const uint8_t* _key, size_t 
 		_ctx->P[i + 1] = datar;
 	}
 
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 4; ++i)
 	{
 		for (int k = 0; k < 256; k += 2) 
 		{
@@ -363,7 +363,7 @@ void blowfish_expand_0state(blowfish_context* _ctx, const uint8_t* _key, size_t 
 void blowfish_expand_state(blowfish_context* _ctx, const uint8_t* _data, size_t _data_bytes, const uint8_t* _key, size_t _key_bytes)
 {
 	uint16_t j = 0;
-	for (int i = 0; i < BLOWFISH_SUBKEY_COUNT + 2; i++)
+	for (int i = 0; i < BLOWFISH_SUBKEY_COUNT + 2; ++i)
 	{
 		// extract 4 int8 to 1 int32 from keystream
 		auto temp = blowfish_stream_to_word(_key, _key_bytes, &j);
@@ -383,7 +383,7 @@ void blowfish_expand_state(blowfish_context* _ctx, const uint8_t* _data, size_t 
 		_ctx->P[i + 1] = datar;
 	}
 
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 4; ++i)
 	{
 		for (int k = 0; k < 256; k += 2)
 		{
@@ -409,7 +409,7 @@ void blowfish_key(blowfish_context* _ctx, const uint8_t* _key, size_t _key_bytes
 void blowfish_enc(blowfish_context* _ctx, uint32_t* _data, size_t _data_len)
 {
 	auto data = _data;
-	for (size_t i = 0; i < _data_len; i++)
+	for (size_t i = 0; i < _data_len; ++i)
 	{
 		blowfish_encipher(_ctx, data, data + 1);
 		data += 2;

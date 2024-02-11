@@ -9,19 +9,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.web", "web\CG
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.common.shared", "..\common\common.shared.vcxitems", "{CB1AC3A7-19D0-4C1B-80A8-825ABC3BDEB0}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license", "..\license\license_info\license.vcxitems", "{0B302BA8-5D86-4143-9A89-9541560FC123}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "windows", "windows", "{BF72F4ED-07C3-45DF-A598-89EDBE45C265}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license_info", "..\common\cgdk__info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
+EndProject
 Global
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		..\license\license_info\license.vcxitems*{0b302ba8-5d86-4143-9a89-9541560fc123}*SharedItemsImports = 9
-		web\CGDK10.server.web.vcxitems*{61d0bde3-cb02-4dd5-93a6-8bd3d01b7dc8}*SharedItemsImports = 9
-		..\common\common.shared.vcxitems*{cb1ac3a7-19d0-4c1b-80a8-825abc3bdeb0}*SharedItemsImports = 9
-		..\common\common.shared.vcxitems*{e9ade5f7-6e56-448d-987b-943341835f0f}*SharedItemsImports = 4
-		..\license\license_info\license.vcxitems*{e9ade5f7-6e56-448d-987b-943341835f0f}*SharedItemsImports = 4
-		web\CGDK10.server.web.vcxitems*{e9ade5f7-6e56-448d-987b-943341835f0f}*SharedItemsImports = 4
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug.NDI|x64 = Debug.NDI|x64
 		Debug.NDI|x86 = Debug.NDI|x86
@@ -58,5 +50,13 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E5EA1D38-8FBA-4991-B708-1919C70BD5EA}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		web\CGDK10.server.web.vcxitems*{61d0bde3-cb02-4dd5-93a6-8bd3d01b7dc8}*SharedItemsImports = 9
+		..\common\common.shared.vcxitems*{cb1ac3a7-19d0-4c1b-80a8-825abc3bdeb0}*SharedItemsImports = 9
+		..\common\cgdk__info.shared.vcxitems*{e9ade5f7-6e56-448d-987b-943341835f0f}*SharedItemsImports = 4
+		..\common\common.shared.vcxitems*{e9ade5f7-6e56-448d-987b-943341835f0f}*SharedItemsImports = 4
+		web\CGDK10.server.web.vcxitems*{e9ade5f7-6e56-448d-987b-943341835f0f}*SharedItemsImports = 4
+		..\common\cgdk__info.shared.vcxitems*{f2b5df8c-26a7-4f26-bd80-933bb4870b0a}*SharedItemsImports = 9
 	EndGlobalSection
 EndGlobal

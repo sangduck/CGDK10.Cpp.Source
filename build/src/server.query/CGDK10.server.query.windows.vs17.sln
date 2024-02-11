@@ -48,8 +48,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.query.mfc_con
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.query.mfc_controls", "mfc_controls\CGDK10.server.query.mfc_controls.shared.vcxitems", "{3CE81DD7-04AB-4FC4-A83C-5FDE39DC0620}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license_info", "..\license\license_info\liccense_info.shared.vcxitems", "{D032106C-3C02-4F52-8D7E-4ED375F0B58F}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug.NDI|x64 = Debug.NDI|x64
@@ -137,7 +135,6 @@ Global
 		..\license\license_info\liccense_info.shared.vcxitems*{a1fcb119-b590-4282-93e5-cfbf2dd459e9}*SharedItemsImports = 4
 		rdb.oledb\CGDK10.server.query.rdb.oledb.vcxitems*{a1fcb119-b590-4282-93e5-cfbf2dd459e9}*SharedItemsImports = 4
 		mfc_controls\CGDK10.server.query.mfc_controls.shared.vcxitems*{b7178181-5e51-42dc-9b5c-fa15f9870bd1}*SharedItemsImports = 4
-		..\license\license_info\liccense_info.shared.vcxitems*{d032106c-3c02-4f52-8d7e-4ed375f0b58f}*SharedItemsImports = 9
 		http\CGDK10.server.query.http.vcxitems*{d075a614-23e6-4b1a-9f40-d7c29ebc5fba}*SharedItemsImports = 9
 		redis\CGDK10.server.query.redis.vcxitems*{db196ff8-ee17-4c7c-8490-13f2ff9b351b}*SharedItemsImports = 9
 	EndGlobalSection

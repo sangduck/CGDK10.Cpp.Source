@@ -67,7 +67,7 @@ namespace CGDK
 //----------------------------------------------------------------------------
 // 1) CGDK base header files
 #include "cgdk/sdk10/net.socket.http.h"
-#include "cgdk/sdk10/server.system.group.h"
+#include "cgdk/sdk10/server.group.h"
 
 // 2) filesystem
 #include <filesystem>

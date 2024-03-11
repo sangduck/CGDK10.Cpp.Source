@@ -41,7 +41,7 @@
 //  head files
 //----------------------------------------------------------------------------
 // 1) CGDK base header files
-#include "cgdk/sdk10/server.system.mfc_controls.h"
+#include "cgdk/sdk10/server.mfc_controls.h"
 #include "cgdk/sdk10/server.query.h"
 
 // 2) Child Dialog

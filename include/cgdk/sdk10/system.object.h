@@ -314,6 +314,12 @@ namespace CGDK
 //----------------------------------------------------------------------------
 namespace CGDK
 {
+	class CGDK_INFO_CLASS
+	{
+	public:
+		CGDK_INFO_CLASS();
+	};
+
 	namespace api
 	{
 

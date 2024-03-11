@@ -69,7 +69,7 @@ namespace CGDK
 // ----------------------------------------------------------------------------
 // 1) base classes
 #include "cgdk/sdk10/net.socket.h"
-#include "cgdk/sdk10/server.system.group.h"
+#include "cgdk/sdk10/server.group.h"
 #include "cgdk/sdk10/server.query.h"
 
 // 2) definitions

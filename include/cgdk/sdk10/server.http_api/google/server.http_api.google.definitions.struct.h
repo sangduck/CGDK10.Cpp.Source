@@ -20,7 +20,4 @@
 
 namespace CGDK::http_api::google
 {
-
-
-
 }

@@ -211,7 +211,7 @@ result_code CGDK::query::rdb::odbc::Nquery::move_first()
 	RETURN_IF(result != SQL_SUCCESS && result != SQL_SUCCESS_WITH_INFO, eRESULT::FAIL);
 
 	// return) ¼º°ø
-	return	eRESULT::SUCCESS;
+	return eRESULT::SUCCESS;
 }
 
 result_code CGDK::query::rdb::odbc::Nquery::move_next() noexcept

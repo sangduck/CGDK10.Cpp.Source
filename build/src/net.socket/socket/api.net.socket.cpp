@@ -8,13 +8,68 @@
 
 using namespace CGDK;
 
-net::sockaddr CGDK::from_string(const std::string_view _address, uint16_t _port, ADDRESS_FAMILY _af_prefer) noexcept
+net::sockaddr CGDK::from_string(const std::string_view _address, uint16_t _port, ADDRESS_FAMILY _af_prefer) 
 {
 	// 1) 
 	api::socket::instance();
 
+	// check)
+	THROW_IF(_address.size() > 127, throwable::failure(eRESULT::LENGTH_ERROR));
+
 	// declare)
 	static_string<128> address = _address;
+
+	// 2) Hints
+	{
+	#if defined(_WIN32)
+		if(_strnicmp(address.c_str(), "localhost", 10)==0 || _strnicmp(address.c_str(), "loopback", 9) == 0)
+	#else
+		if(strncasecmp(address.c_str(), "localhost", 10)==0 || strncasecmp(address.c_str(), "loopback", 9) == 0)
+	#endif
+		{
+			switch (_af_prefer)
+			{
+			case	AF_INET:
+					return net::sockaddr(net::ip::address_v4::loopback(), _port);
+			case	AF_INET6:
+					return net::sockaddr(net::ip::address_v6::loopback(), _port);
+			default:
+					return net::sockaddr(net::ip::address_v6::loopback(), _port);
+			}
+		}
+	#if defined(_WIN32)
+		else if (_strnicmp(address.c_str(), "any", 4) == 0)
+	#else
+		else if (strncasecmp(address.c_str(), "any", 4) == 0)
+	#endif
+		{
+			switch (_af_prefer)
+			{
+			case	AF_INET:
+					return net::sockaddr(net::ip::address_v4::any(), _port);
+			case	AF_INET6:
+					return net::sockaddr(net::ip::address_v6::any(), _port);
+			default:
+					return net::sockaddr(net::ip::address_v6::any(), _port);
+			}
+		}
+	#if defined(_WIN32)
+		else if (_strnicmp(address.c_str(), "broadcast", 10) == 0)
+	#else
+		else if (strncasecmp(address.c_str(), "broadcast", 10) == 0)
+	#endif
+		{
+			switch (_af_prefer)
+			{
+			case	AF_INET:
+					return net::sockaddr(net::ip::address_v4::broadcast(), _port);
+			case	AF_INET6:
+					throw throwable::failure(eRESULT::LENGTH_ERROR);
+			default:
+					throw throwable::failure(eRESULT::LENGTH_ERROR);
+			}
+		}
+	}
 
 	// declare) 
 	net::sockaddr addr_result;
@@ -97,7 +152,7 @@ net::sockaddr CGDK::from_string(const std::string_view _address, uint16_t _port,
 	return	addr_result;
 }
 
-net::sockaddr CGDK::from_string( std::wstring_view _wstr_address, uint16_t _port, ADDRESS_FAMILY _af_prefer) noexcept
+net::sockaddr CGDK::from_string( std::wstring_view _wstr_address, uint16_t _port, ADDRESS_FAMILY _af_prefer)
 {
 	// 1) 
 	api::socket::instance();
@@ -112,7 +167,7 @@ net::sockaddr CGDK::from_string( std::wstring_view _wstr_address, uint16_t _port
 	return from_string(str_address, _port, _af_prefer);
 }
 
-net::sockaddr CGDK::from_string( std::u16string_view _wstr_address, uint16_t _port, ADDRESS_FAMILY _af_prefer) noexcept
+net::sockaddr CGDK::from_string( std::u16string_view _wstr_address, uint16_t _port, ADDRESS_FAMILY _af_prefer)
 {
 	// 1) 
 	api::socket::instance();
@@ -127,7 +182,7 @@ net::sockaddr CGDK::from_string( std::u16string_view _wstr_address, uint16_t _po
 	return from_string(str_address, _port, _af_prefer);
 }
 
-net::sockaddr CGDK::from_string( std::u32string_view _wstr_address, uint16_t _port, ADDRESS_FAMILY _af_prefer) noexcept
+net::sockaddr CGDK::from_string( std::u32string_view _wstr_address, uint16_t _port, ADDRESS_FAMILY _af_prefer)
 {
 	// 1) 
 	api::socket::instance();
@@ -142,10 +197,13 @@ net::sockaddr CGDK::from_string( std::u32string_view _wstr_address, uint16_t _po
 	return from_string(str_address, _port, _af_prefer);
 }
 
-net::sockaddr CGDK::from_string(const std::string_view _address, uint16_t _port, const addrinfo* _hints) noexcept
+net::sockaddr CGDK::from_string(const std::string_view _address, uint16_t _port, const addrinfo* _hints)
 {
 	// check) 
 	api::socket::instance();
+
+	// check)
+	THROW_IF(_address.size() > 127, throwable::failure(eRESULT::LENGTH_ERROR));
 
 	// declare) 
 	addrinfo tempHints;
@@ -175,6 +233,14 @@ net::sockaddr CGDK::from_string(const std::string_view _address, uint16_t _port,
 			__zero_memory(&tempHints, sizeof(tempHints));
 			tempHints.ai_family = AF_INET6;
 			_hints = &tempHints;
+		}
+	#if defined(_WIN32)
+		else if (_strnicmp(address.c_str(), "any", 9) == 0)
+	#else
+		else if (strncasecmp(address.c_str(), "any", 9) == 0)
+	#endif
+		{
+			return net::sockaddr{ net::ip::address_v6::any(), 0 };
 		}
 	}
 
@@ -235,7 +301,7 @@ net::sockaddr CGDK::from_string(const std::string_view _address, uint16_t _port,
 	return addr_result;
 }
 
-net::sockaddr CGDK::from_string( std::wstring_view _wstr_address, uint16_t _port, const addrinfo* _hints) noexcept
+net::sockaddr CGDK::from_string( std::wstring_view _wstr_address, uint16_t _port, const addrinfo* _hints)
 {
 	// 1) initialize socket
 	api::socket::instance();
@@ -250,7 +316,7 @@ net::sockaddr CGDK::from_string( std::wstring_view _wstr_address, uint16_t _port
 	return from_string(str_address, _port, _hints);
 }
 
-net::sockaddr CGDK::from_string (std::u16string_view _wstr_address, uint16_t _port, const addrinfo* _hints) noexcept
+net::sockaddr CGDK::from_string (std::u16string_view _wstr_address, uint16_t _port, const addrinfo* _hints)
 {
 	// 1) initialize socket
 	api::socket::instance();
@@ -265,7 +331,7 @@ net::sockaddr CGDK::from_string (std::u16string_view _wstr_address, uint16_t _po
 	return from_string(str_address, _port, _hints);
 }
 
-net::sockaddr CGDK::from_string (std::u32string_view _wstr_address, uint16_t _port, const addrinfo* _hints) noexcept
+net::sockaddr CGDK::from_string (std::u32string_view _wstr_address, uint16_t _port, const addrinfo* _hints)
 {
 	// 1) initialize socket
 	api::socket::instance();
@@ -280,10 +346,13 @@ net::sockaddr CGDK::from_string (std::u32string_view _wstr_address, uint16_t _po
 	return from_string(str_address, _port, _hints);
 }
 
-net::sockaddr CGDK::from_string (const std::string_view _address, const std::string_view _service, int _socket_type, int _protocol) noexcept
+net::sockaddr CGDK::from_string (const std::string_view _address, const std::string_view _service, int _socket_type, int _protocol)
 {
 	// 1) 혹시 초기화가 안되었으면 초기화한다.
 	api::socket::instance();
+
+	// check)
+	THROW_IF(_address.size() > 127, throwable::failure(eRESULT::LENGTH_ERROR));
 
 	// declare) 
 	addrinfo addrinfoHints;
@@ -335,7 +404,7 @@ net::sockaddr CGDK::from_string (const std::string_view _address, const std::str
 	return addr_result;
 }
 
-net::sockaddr CGDK::from_string (std::wstring_view _wstr_address, std::wstring_view _str_service, int _socket_type, int _protocol) noexcept
+net::sockaddr CGDK::from_string (std::wstring_view _wstr_address, std::wstring_view _str_service, int _socket_type, int _protocol)
 {
 	// 1) 
 	api::socket::instance();
@@ -352,7 +421,7 @@ net::sockaddr CGDK::from_string (std::wstring_view _wstr_address, std::wstring_v
 	return from_string(str_address, str_service, _socket_type, _protocol);
 }
 
-net::sockaddr from_string (std::u16string_view _wstr_address, std::u16string_view _str_service, int _socket_type, int _protocol) noexcept
+net::sockaddr from_string (std::u16string_view _wstr_address, std::u16string_view _str_service, int _socket_type, int _protocol)
 {
 	// 1) 
 	api::socket::instance();
@@ -369,7 +438,7 @@ net::sockaddr from_string (std::u16string_view _wstr_address, std::u16string_vie
 	return from_string(str_address, str_service, _socket_type, _protocol);
 }
 
-net::sockaddr CGDK::from_string (std::u32string_view _wstr_address, std::u32string_view _str_service, int _socket_type, int _protocol) noexcept
+net::sockaddr CGDK::from_string (std::u32string_view _wstr_address, std::u32string_view _str_service, int _socket_type, int _protocol)
 {
 	// 1) 
 	api::socket::instance();
@@ -387,7 +456,7 @@ net::sockaddr CGDK::from_string (std::u32string_view _wstr_address, std::u32stri
 }
 
 template<>
-std::string_view CGDK::to_string<char>(char* _str_address, size_t _max_length, const net::sockaddr& _socket_address) noexcept
+std::string_view CGDK::to_string<char>(char* _str_address, size_t _max_length, const net::sockaddr& _socket_address)
 {
 	// declare)
 	std::string_view result;
@@ -398,7 +467,7 @@ std::string_view CGDK::to_string<char>(char* _str_address, size_t _max_length, c
 	}
 	else if(_socket_address.is_bind_any())
 	{
-		result = "bind_any";
+		result = "any";
 	}
 	else
 	{
@@ -418,7 +487,7 @@ std::string_view CGDK::to_string<char>(char* _str_address, size_t _max_length, c
 }
 
 template<>
-std::wstring_view CGDK::to_string<wchar_t>(wchar_t* _str_address, size_t _max_length, const net::sockaddr& _socket_address) noexcept
+std::wstring_view CGDK::to_string<wchar_t>(wchar_t* _str_address, size_t _max_length, const net::sockaddr& _socket_address)
 {
 	// declare)
 	std::wstring_view result;
@@ -429,7 +498,7 @@ std::wstring_view CGDK::to_string<wchar_t>(wchar_t* _str_address, size_t _max_le
 	}
 	else if (_socket_address.is_bind_any())
 	{
-		result = L"bind_any";
+		result = L"any";
 	}
 	else
 	{
@@ -457,7 +526,7 @@ std::wstring_view CGDK::to_string<wchar_t>(wchar_t* _str_address, size_t _max_le
 	return result;
 }
 
-std::string api::get_host_name() noexcept
+std::string api::get_host_name()
 {
 	// declare) 
 	char str_value[256] {0};
@@ -476,7 +545,7 @@ std::string api::get_host_name() noexcept
 	return std::string(str_value);
 }
 	
-std::string api::get_host_id() noexcept
+std::string api::get_host_id()
 {
 #if defined(_WIN32)
 	// declare)
@@ -495,7 +564,7 @@ std::string api::get_host_id() noexcept
 #endif
 }
 
-std::vector<sMAC_ADDRESS> api::get_mac_address() noexcept
+std::vector<sMAC_ADDRESS> api::get_mac_address()
 {
 	// declare)
 	std::vector<sMAC_ADDRESS> vector_MAC;
@@ -600,7 +669,7 @@ std::vector<sMAC_ADDRESS> api::get_mac_address() noexcept
 	return vector_MAC;
 }
 
-api::socket::socket() noexcept
+api::socket::socket()
 {
 	init_socket();
 }
@@ -1081,7 +1150,7 @@ std::vector<api::socket::resolver_entry> api::socket::resolve(int _protocol_fami
 					api::socket::resolver_entry temp_address;
 
 					temp_address.addr = net::sockaddr(net::ip::address_v6::any(), __from_string<uint16_t>(_service_name));
-					temp_address.hostname = "bind_any";
+					temp_address.hostname = "any";
 					temp_address.servicename = service_name;
 
 					result_addr.push_back(temp_address);
@@ -1093,7 +1162,7 @@ std::vector<api::socket::resolver_entry> api::socket::resolve(int _protocol_fami
 					api::socket::resolver_entry temp_address;
 
 					temp_address.addr = net::sockaddr(net::ip::address_v4::any(), __from_string<uint16_t>(_service_name));
-					temp_address.hostname = "bind_any";
+					temp_address.hostname = "any";
 					temp_address.servicename = service_name;
 
 					result_addr.push_back(temp_address);
@@ -1105,7 +1174,7 @@ std::vector<api::socket::resolver_entry> api::socket::resolve(int _protocol_fami
 					api::socket::resolver_entry temp_address;
 
 					temp_address.addr = net::sockaddr(net::ip::address_v6::any(), __from_string<uint16_t>(_service_name));
-					temp_address.hostname = "bind_any";
+					temp_address.hostname = "any";
 					temp_address.servicename = service_name;
 
 					result_addr.push_back(temp_address);

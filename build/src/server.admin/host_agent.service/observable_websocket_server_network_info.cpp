@@ -494,7 +494,7 @@ shared_buffer _make_webmessage_binder_list_update(const std::vector<server_admin
 
 
 
-void observable_websocket_server_network_info::request_update_webpage_connective(uint64_t /*_flag*/)
+void observable_websocket_peer_network_info::request_update_webpage_connective(uint64_t /*_flag*/)
 {
 	// check)
 	CGASSERT_ERROR(this->m_pservice_entity != nullptr);
@@ -518,7 +518,7 @@ void observable_websocket_server_network_info::request_update_webpage_connective
 	send_queue.send();
 }
 
-void observable_websocket_server_network_info::request_update_webpage_binder(uint64_t /*_flag*/)
+void observable_websocket_peer_network_info::request_update_webpage_binder(uint64_t /*_flag*/)
 {
 	// check)
 	CGASSERT_ERROR(m_pservice_entity != nullptr);
@@ -542,7 +542,7 @@ void observable_websocket_server_network_info::request_update_webpage_binder(uin
 	send_queue.send();
 }
 
-observable_websocket_server_network_info::observable_websocket_server_network_info(const std::string_view _name)	
+observable_websocket_peer_network_info::observable_websocket_peer_network_info(const std::string_view _name)	
 {
 	this->set_name(_name);
 
@@ -550,17 +550,17 @@ observable_websocket_server_network_info::observable_websocket_server_network_in
 	this->m_webpage_index = 'D';
 }
 
-observable_websocket_server_network_info::~observable_websocket_server_network_info()
+observable_websocket_peer_network_info::~observable_websocket_peer_network_info()
 {
 }
 
-result_code observable_websocket_server_network_info::on_observer_registering(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
+result_code observable_websocket_peer_network_info::on_observer_registering(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
 {
 	// return) 
 	return eRESULT::SUCCESS;
 }
 
-void observable_websocket_server_network_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
+void observable_websocket_peer_network_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
 {
 	// 1) register mediator
 	_pobserver->register_messageable(this);
@@ -581,7 +581,7 @@ void observable_websocket_server_network_info::on_observer_registered(socket_web
 	_pobserver->send(buf_send_2);
 }
 
-uintptr_t observable_websocket_server_network_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
+uintptr_t observable_websocket_peer_network_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
 {
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);

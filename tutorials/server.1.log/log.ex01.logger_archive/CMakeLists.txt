@@ -96,7 +96,7 @@ ADD_EXECUTABLE(${PROJECT_NAME}.${BUILD_TYPE} ${SRC_FILES})
 
 # 4) link
 TARGET_LINK_LIBRARIES( ${PROJECT_NAME}.${BUILD_TYPE}
-	CGDK10.server.system.log_linux.${BUILD_TYPE}
+	CGDK10.server.log_linux.${BUILD_TYPE}
 	CGDK10.net.socket_linux.${BUILD_TYPE}
 	CGDK10.system.object_linux.${BUILD_TYPE}
 	rt

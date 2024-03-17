@@ -68,7 +68,7 @@ net::io::socket::Nudp::~Nudp() noexcept
 	this->process_close_socket(DISCONNECT_REASON_NONE);
 
 	// check) 
-	CGASSERT_ERROR(this->native_handle() != INVALID_SOCKET);
+	CGASSERT_ERROR(this->native_handle() == INVALID_SOCKET);
 }
 
 void net::io::socket::Nudp::process_create_socket(ADDRESS_FAMILY _address_family)

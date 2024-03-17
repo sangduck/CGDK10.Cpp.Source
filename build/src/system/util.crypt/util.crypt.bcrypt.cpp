@@ -114,9 +114,9 @@ void encode_salt(char* _out_salt, uint8_t* _csalt, char _minor, size_t _csalt_le
 
     // Max rounds are 31
 #ifdef _WIN32
-	_snprintf_s(_out_salt + 4, 4, 4, "%2.2u$", ((uint32_t)_rounds) & 0x001F);
+	_snprintf_s(_out_salt + 4, 5, 4, "%2.2u$", ((uint32_t)_rounds) & 0x001F);
 #else
-	snprintf(_out_salt + 4, 4, "%2.2u$", ((uint32_t)_rounds) & 0x001F);
+	snprintf(_out_salt + 4, 5, "%2.2u$", ((uint32_t)_rounds) & 0x001F);
 #endif
 
 	encode_base64((uint8_t*)_out_salt + 7, _csalt, _csalt_len);
@@ -275,9 +275,9 @@ void node_bcrypt(char* _out_encrypted, std::string_view _key, std::string_view _
 		_out_encrypted[i++] = '$';
 
 	#ifdef _WIN32
-		_snprintf_s(_out_encrypted + i, 4, 4, "%2.2u$", logr & 0x001F);
+		_snprintf_s(_out_encrypted + i, 5, 4, "%2.2u$", logr & 0x001F);
 	#else
-		snprintf(_out_encrypted + i, 4, "%2.2u$", logr & 0x001F);
+		snprintf(_out_encrypted + i, 5, "%2.2u$", logr & 0x001F);
 	#endif
 		encode_base64((uint8_t*)_out_encrypted + i + 3, csalt, BCRYPT_MAXSALT);
 		encode_base64((uint8_t*)_out_encrypted + strlen(_out_encrypted), ciphertext, 4 * BCRYPT_BLOCKS - 1);

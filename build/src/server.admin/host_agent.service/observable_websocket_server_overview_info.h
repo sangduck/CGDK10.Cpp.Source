@@ -19,15 +19,15 @@
 #pragma once
 // ----------------------------------------------------------------------------
 //
-// observable_websocket_server_overview_info
+// observable_websocket_peer_overview_info
 //
 //
 // ----------------------------------------------------------------------------
-class observable_websocket_server_overview_info : public Iobservable_websocket
+class observable_websocket_peer_overview_info : public Iobservable_websocket
 {
 protected:
-	explicit observable_websocket_server_overview_info(const std::string_view _name);
-	virtual ~observable_websocket_server_overview_info();
+	explicit observable_websocket_peer_overview_info(const std::string_view _name);
+	virtual ~observable_websocket_peer_overview_info();
 
 public:
 			void				request_update_webpage_time_event();

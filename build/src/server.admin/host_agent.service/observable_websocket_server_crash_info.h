@@ -19,17 +19,17 @@
 #pragma once
 // ----------------------------------------------------------------------------
 //
-// observable_websocket_server_crash_info
+// observable_websocket_peer_crash_info
 //
 //
 // ----------------------------------------------------------------------------
-class observable_websocket_server_crash_info :
+class observable_websocket_peer_crash_info :
 	public						Iobservable_websocket,
 	public						schedulable::Nexecutable
 {
 public:
-	explicit observable_websocket_server_crash_info(const std::string_view _name);
-	virtual ~observable_websocket_server_crash_info();
+	explicit observable_websocket_peer_crash_info(const std::string_view _name);
+	virtual ~observable_websocket_peer_crash_info();
 
 private:
 	virtual	result_code			on_observer_registering(socket_websocket* _pobserver, observer_channel_t _ocid, observer_data_t& _observer_data) override;

@@ -270,7 +270,7 @@ shared_buffer _make_web_message_log(const std::vector<object_ptr<LOG_RECORD>>& _
 
 
 
-observable_websocket_server_info::observable_websocket_server_info(const std::string_view _name)
+observable_websocket_peer_info::observable_websocket_peer_info(const std::string_view _name)
 {
 	// 1) set name
 	this->set_name(_name);
@@ -278,11 +278,11 @@ observable_websocket_server_info::observable_websocket_server_info(const std::st
 	this->m_webpage_str_target = "webpage_server_info.htm";
 }
 
-observable_websocket_server_info::~observable_websocket_server_info()
+observable_websocket_peer_info::~observable_websocket_peer_info()
 {
 }
 
-void observable_websocket_server_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
+void observable_websocket_peer_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
 {
 	// 1) register mediator
 	_pobserver->register_messageable(this);
@@ -291,7 +291,7 @@ void observable_websocket_server_info::on_observer_registered(socket_websocket* 
 	_pobserver->send(make_webmessage_server_info_server_list());
 }
 
-uintptr_t observable_websocket_server_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
+uintptr_t observable_websocket_peer_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
 {
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);
@@ -304,7 +304,7 @@ uintptr_t observable_websocket_server_info::on_observer_unregistering(socket_web
 	return 0;
 }
 
-result_code observable_websocket_server_info::on_message(sMESSAGE_NETWORK& _msg)
+result_code observable_websocket_peer_info::on_message(sMESSAGE_NETWORK& _msg)
 {
 	// 1) websocket message 
 	sMESSAGE_HTTP_WEBSOCKET& msg = static_cast<sMESSAGE_HTTP_WEBSOCKET&>(_msg);
@@ -340,7 +340,7 @@ result_code observable_websocket_server_info::on_message(sMESSAGE_NETWORK& _msg)
 	return eRESULT::BYPASS;
 }
 
-void observable_websocket_server_info::notify_to_web_controls_INSTANCE_ENTER(server_admin::Iinstance* _pinstance)
+void observable_websocket_peer_info::notify_to_web_controls_INSTANCE_ENTER(server_admin::Iinstance* _pinstance)
 {
 	// declare) 
 	shared_buffer buf_send;
@@ -354,7 +354,7 @@ void observable_websocket_server_info::notify_to_web_controls_INSTANCE_ENTER(ser
 	// 2) send
 	this->send(buf_send);
 }
-void observable_websocket_server_info::notify_to_web_controls_INSTANCE_LEAVE(server_admin::Iinstance* _pinstance)
+void observable_websocket_peer_info::notify_to_web_controls_INSTANCE_LEAVE(server_admin::Iinstance* _pinstance)
 {
 	// declare) 
 	shared_buffer buf_send;
@@ -369,7 +369,7 @@ void observable_websocket_server_info::notify_to_web_controls_INSTANCE_LEAVE(ser
 	this->send(buf_send);
 }
 
-void observable_websocket_server_info::notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_admin::Iinstance* _pinstance)
+void observable_websocket_peer_info::notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_admin::Iinstance* _pinstance)
 {
 	// declare) 
 	shared_buffer buf_send;
@@ -384,7 +384,7 @@ void observable_websocket_server_info::notify_to_web_controls_INSTANCE_STATUS_UP
 	this->send(buf_send);
 }
 
-void observable_websocket_server_info::notify_to_web_controls_INSTANCE_STATUS_UPDATE()
+void observable_websocket_peer_info::notify_to_web_controls_INSTANCE_STATUS_UPDATE()
 {
 	//this->send(_make_webmessage_server_info_service_instance_update(_pinstance, 0xffffffff));
 }

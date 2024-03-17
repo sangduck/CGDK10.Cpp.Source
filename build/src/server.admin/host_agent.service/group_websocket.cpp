@@ -11,9 +11,9 @@ group_websocket::group_websocket()
 	this->m_pobservable_websocket_host_info->set_name("observable_websocket_host_info");
 	Nattachable<object::Istate>::process_attach(this->m_pobservable_websocket_host_info);
 
-	this->m_pobservable_websocket_server_info = make_own<observable_websocket_server_info>("observable_websocket_server_info");
-	this->m_pobservable_websocket_server_info->set_name("observable_websocket_server_info");
-	Nattachable<object::Istate>::process_attach(this->m_pobservable_websocket_server_info);
+	this->m_pobservable_websocket_peer_info = make_own<observable_websocket_peer_info>("observable_websocket_peer_info");
+	this->m_pobservable_websocket_peer_info->set_name("observable_websocket_peer_info");
+	Nattachable<object::Istate>::process_attach(this->m_pobservable_websocket_peer_info);
 }
 
 group_websocket::~group_websocket()
@@ -110,7 +110,7 @@ result_code group_websocket::on_message(sMESSAGE_NETWORK& _msg)
 							pobservable_webpage = this->m_pobservable_websocket_host_info;
 							break;
 					case	'B':
-							pobservable_webpage = this->m_pobservable_websocket_server_info;
+							pobservable_webpage = this->m_pobservable_websocket_peer_info;
 							break;
 					};
 
@@ -149,23 +149,23 @@ result_code group_websocket::on_message(sMESSAGE_NETWORK& _msg)
 
 void group_websocket::notify_to_web_controls_INSTANCE_ENTER(server_admin::Iinstance* _pinstance)
 {
-	this->m_pobservable_websocket_server_info->notify_to_web_controls_INSTANCE_ENTER(_pinstance);
+	this->m_pobservable_websocket_peer_info->notify_to_web_controls_INSTANCE_ENTER(_pinstance);
 	this->m_pobservable_websocket_host_info->notify_to_web_controls_INSTANCE_ENTER(_pinstance);
 }
 void group_websocket::notify_to_web_controls_INSTANCE_LEAVE(server_admin::Iinstance* _pinstance)
 {
-	this->m_pobservable_websocket_server_info->notify_to_web_controls_INSTANCE_LEAVE(_pinstance);
+	this->m_pobservable_websocket_peer_info->notify_to_web_controls_INSTANCE_LEAVE(_pinstance);
 	this->m_pobservable_websocket_host_info->notify_to_web_controls_INSTANCE_LEAVE(_pinstance);
 }
 
 void group_websocket::notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_admin::Iinstance* _pinstance)
 {
-	this->m_pobservable_websocket_server_info->notify_to_web_controls_INSTANCE_STATUS_UPDATE(_pinstance);
+	this->m_pobservable_websocket_peer_info->notify_to_web_controls_INSTANCE_STATUS_UPDATE(_pinstance);
 	this->m_pobservable_websocket_host_info->notify_to_web_controls_INSTANCE_STATUS_UPDATE(_pinstance);
 }
 
 void group_websocket::notify_to_web_controls_INSTANCE_STATUS_UPDATE()
 {
-	this->m_pobservable_websocket_server_info->notify_to_web_controls_INSTANCE_STATUS_UPDATE();
+	this->m_pobservable_websocket_peer_info->notify_to_web_controls_INSTANCE_STATUS_UPDATE();
 	this->m_pobservable_websocket_host_info->notify_to_web_controls_INSTANCE_STATUS_UPDATE();
 }

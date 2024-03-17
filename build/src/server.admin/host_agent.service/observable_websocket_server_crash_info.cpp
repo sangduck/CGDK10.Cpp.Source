@@ -142,7 +142,7 @@ shared_buffer _make_webmessage_crash_remove(const DUMP_INFO& _crash_info)
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-observable_websocket_server_crash_info::observable_websocket_server_crash_info(const std::string_view _name)
+observable_websocket_peer_crash_info::observable_websocket_peer_crash_info(const std::string_view _name)
 {
 	set_name(_name);
 
@@ -150,11 +150,11 @@ observable_websocket_server_crash_info::observable_websocket_server_crash_info(c
 	m_webpage_index = 'F';
 }
 
-observable_websocket_server_crash_info::~observable_websocket_server_crash_info()
+observable_websocket_peer_crash_info::~observable_websocket_peer_crash_info()
 {
 }
 
-result_code observable_websocket_server_crash_info::on_observer_registering(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
+result_code observable_websocket_peer_crash_info::on_observer_registering(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
 {
 	// 1) register schedulable
 	if (empty())
@@ -167,7 +167,7 @@ result_code observable_websocket_server_crash_info::on_observer_registering(sock
 	return eRESULT::SUCCESS;
 }
 
-void observable_websocket_server_crash_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
+void observable_websocket_peer_crash_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
 {
 	// 1) register mediator
 	_pobserver->register_messageable(this);
@@ -176,7 +176,7 @@ void observable_websocket_server_crash_info::on_observer_registered(socket_webso
 	_pobserver->send(make_webmessage_crash_info_list_add());
 }
 
-uintptr_t observable_websocket_server_crash_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
+uintptr_t observable_websocket_peer_crash_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
 {
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);
@@ -194,27 +194,27 @@ uintptr_t observable_websocket_server_crash_info::on_observer_unregistering(sock
 	return 0;
 }
 
-void observable_websocket_server_crash_info::on_observer_unregistered(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, uintptr_t /*_result*/)
+void observable_websocket_peer_crash_info::on_observer_unregistered(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, uintptr_t /*_result*/)
 {
 }
 
-uintptr_t observable_websocket_server_crash_info::on_observer_data_updating(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
+uintptr_t observable_websocket_peer_crash_info::on_observer_data_updating(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
 {
 	// return) 
 	return 0;
 }
 
-void observable_websocket_server_crash_info::on_observer_data_update(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, uintptr_t /*_result*/)
+void observable_websocket_peer_crash_info::on_observer_data_update(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, uintptr_t /*_result*/)
 {
 }
 
-void observable_websocket_server_crash_info::on_execute()
+void observable_websocket_peer_crash_info::on_execute()
 {
 	// 1) send factory list
 	//send(make_webmessaged_list_update());
 }
 
-shared_buffer observable_websocket_server_crash_info::make_webmessage_crash_info_list_add()
+shared_buffer observable_websocket_peer_crash_info::make_webmessage_crash_info_list_add()
 {
 	// 1) 
 	object_ptr<service> pservice = service::instance();
@@ -260,7 +260,7 @@ shared_buffer observable_websocket_server_crash_info::make_webmessage_crash_info
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-shared_buffer observable_websocket_server_crash_info::make_webmessage_crash_info_list_update()
+shared_buffer observable_websocket_peer_crash_info::make_webmessage_crash_info_list_update()
 {
 	// 1) 
 	object_ptr<service> pservice = service::instance();

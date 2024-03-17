@@ -96,7 +96,7 @@ ADD_EXECUTABLE(${PROJECT_NAME}.${BUILD_TYPE} ${SRC_FILES})
 
 # 4) link
 TARGET_LINK_LIBRARIES( ${PROJECT_NAME}.${BUILD_TYPE}
-	CGDK10.server.system.time_event_linux.${BUILD_TYPE}
+	CGDK10.server.time_event_linux.${BUILD_TYPE}
 	CGDK10.system.object_linux.${BUILD_TYPE}
 	rt
 	pthread

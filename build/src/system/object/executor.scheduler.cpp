@@ -566,7 +566,7 @@ bool executor::scheduler::process_execute(chrono::tick::duration /*_tick_diff*/,
 					pthread->statistics_executing_end();
 
 					// check)
-					BREAK_IF(this->m_flag_run == false)
+					BREAK_IF(this->m_flag_run == 0)
 				}
 
 				// - process idle
@@ -590,7 +590,7 @@ void executor::scheduler::process_push_executable(EXECUTION_AT&& _executable)
 	scoped_lock(this->m_lockable_priorityqueue)
 	{
 		// check) 
-		RETURN_IF(this->m_flag_run == false, );
+		RETURN_IF(this->m_flag_run == 0, );
 
 		// 1) store pos_now
 		auto pos_now = this->m_priorityqueue_executable.size();

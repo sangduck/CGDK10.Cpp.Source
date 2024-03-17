@@ -129,7 +129,7 @@ shared_buffer _make_web_message_log(std::string_view _command, circular_list<obj
 	return _make_webmessage_log(_command, _list_plog_record.begin(), _list_plog_record.end());
 }
 
-observable_websocket_server_overview_info::observable_websocket_server_overview_info(const std::string_view _name) :
+observable_websocket_peer_overview_info::observable_websocket_peer_overview_info(const std::string_view _name) :
 	m_is_count_log_count_updating(false),
 	m_array_log_count_last{ 0,0,0,0,0,0,0,0 }
 {
@@ -139,11 +139,11 @@ observable_websocket_server_overview_info::observable_websocket_server_overview_
 	m_webpage_index = 'A';
 }
 
-observable_websocket_server_overview_info::~observable_websocket_server_overview_info()
+observable_websocket_peer_overview_info::~observable_websocket_peer_overview_info()
 {
 }
 
-void observable_websocket_server_overview_info::request_update_webpage_time_event()
+void observable_websocket_peer_overview_info::request_update_webpage_time_event()
 {
 	// check)
 	CGASSERT_ERROR(this->m_pservice_entity != nullptr);
@@ -167,7 +167,7 @@ void observable_websocket_server_overview_info::request_update_webpage_time_even
 	}
 }
 
-void observable_websocket_server_overview_info::add_log_records(const circular_list<object_ptr<LOG_RECORD>>& _list_log_record)
+void observable_websocket_peer_overview_info::add_log_records(const circular_list<object_ptr<LOG_RECORD>>& _list_log_record)
 {
 	// 1) send log message
 	this->send(_make_webmessage_log(MESSAGE_WEB_LOG_OBJECT_INFO, _list_log_record.begin(), _list_log_record.end()));
@@ -183,10 +183,10 @@ void observable_websocket_server_overview_info::add_log_records(const circular_l
 	//}
 
 	//// 3) request
-	//system_executor::post(make_executable(this, &observable_websocket_server_overview_info::process_send_webmessage_log_count_update));
+	//system_executor::post(make_executable(this, &observable_websocket_peer_overview_info::process_send_webmessage_log_count_update));
 }
 
-void observable_websocket_server_overview_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
+void observable_websocket_peer_overview_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
 {
 	// 1) register mediator
 	_pobserver->register_messageable(this);
@@ -212,7 +212,7 @@ void observable_websocket_server_overview_info::on_observer_registered(socket_we
 		_pobserver->send(iter);
 }
 
-uintptr_t observable_websocket_server_overview_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
+uintptr_t observable_websocket_peer_overview_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
 {
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);
@@ -259,7 +259,7 @@ uintptr_t observable_websocket_server_overview_info::on_observer_unregistering(s
 //_make_webmessage_log(list_log_record.begin(), list_log_record.end());
 //_make_webmessage_log_count(std::array<size_t, MAX_LOG_TYPE>& _array_count_last);
 
-result_code observable_websocket_server_overview_info::on_message(sMESSAGE_NETWORK& _msg)
+result_code observable_websocket_peer_overview_info::on_message(sMESSAGE_NETWORK& _msg)
 {
 	// 1) websocket message
 	auto& msg = static_cast<sMESSAGE_HTTP_WEBSOCKET&>(_msg);
@@ -287,7 +287,7 @@ result_code observable_websocket_server_overview_info::on_message(sMESSAGE_NETWO
 	return eRESULT::BYPASS;
 }
 
-result_code observable_websocket_server_overview_info::on_message_time_event(sMESSAGE_HTTP_WEBSOCKET& _msg)
+result_code observable_websocket_peer_overview_info::on_message_time_event(sMESSAGE_HTTP_WEBSOCKET& _msg)
 {
 	// 1) get message type
 	auto message_type = _msg.buf_message.extract_text<char>(size(4));
@@ -359,7 +359,7 @@ result_code observable_websocket_server_overview_info::on_message_time_event(sME
 	return eRESULT::BYPASS;
 }
 
-void observable_websocket_server_overview_info::process_send_webmessage_log_count_update()
+void observable_websocket_peer_overview_info::process_send_webmessage_log_count_update()
 {
 	// declare) 
 	size_t log_count_total = 0;
@@ -433,5 +433,5 @@ void observable_websocket_server_overview_info::process_send_webmessage_log_coun
 	}
 
 	// 9) request
-	system_executor::post(make_executable(this, &observable_websocket_server_overview_info::process_send_webmessage_log_count_update));
+	system_executor::post(make_executable(this, &observable_websocket_peer_overview_info::process_send_webmessage_log_count_update));
 }

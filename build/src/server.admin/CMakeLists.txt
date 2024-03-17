@@ -40,4 +40,4 @@ CMAKE_POLICY( VERSION 3.20 )
 ADD_SUBDIRECTORY (./CGDK.html_to_cpp)
 
 # 2) system
-ADD_SUBDIRECTORY (./host_agent.service)
+#ADD_SUBDIRECTORY (./host_agent.service)

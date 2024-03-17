@@ -537,7 +537,7 @@ result_code net::io::connective::acceptor::Ntcp::_process_starting(context& _con
 
 		// trace)
 		EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << NFMT::format("  > listen on {}:{}",
-			(local_endpoint().is_bind_any() == false) ? to_string<char>(local_endpoint()).c_str() : "bind_any",
+			(local_endpoint().is_bind_any() == false) ? to_string<char>(local_endpoint()).c_str() : "any",
 			parameter.local_endpoint.port()));
 	}
 
@@ -1068,10 +1068,7 @@ bool net::io::connective::acceptor::Ntcp::process_close_socket(uint64_t _disconn
 	// 7) socket을 Delete한다.
 	api::socket::closesocket(socket_handle);
 
-	// 8) 모든 accepted된 socket을 종료한다.
-	this->close_connectable_all();
-
-	// 9) io_context를 돌려 IOCP의 I/O를 처리한다. (최대 MAX_LOOP만큼만 돈다.)
+	// 8) io_context를 돌려 IOCP의 I/O를 처리한다. (최대 MAX_LOOP만큼만 돈다.)
 #ifndef NDEBUG
 	// definitions) 
 	const int MAX_LOOP = 10000;
@@ -1081,6 +1078,9 @@ bool net::io::connective::acceptor::Ntcp::process_close_socket(uint64_t _disconn
 	while(this->m_socket_count_prepared_to_accept != 0 || count()!=0)
 #endif
 	{
+		// - 모든 accepted된 socket을 종료한다.
+		this->close_connectable_all();
+
 		// - execute를 실행한다.
 		pio_context->execute_all();
 

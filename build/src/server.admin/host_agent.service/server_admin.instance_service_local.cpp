@@ -1118,7 +1118,7 @@ void server_admin::instance_service_local::save()
 	this->m_instance.setting.save();
 }
 
-bool server_admin::instance_service_local::process_sservice_disconnected(socket_server* _psocket)
+bool server_admin::instance_service_local::process_sservice_disconnected(socket_peer* _psocket)
 {
 	scoped_lock(this->m_cs_instance)
 	{

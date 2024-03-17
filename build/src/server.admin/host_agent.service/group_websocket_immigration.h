@@ -19,9 +19,9 @@
 #pragma once
 // ----------------------------------------------------------------------------
 //
-// group_server_immigration
+// group_peer_immigration
 //
-// 1. group_server_immigration는...
+// 1. group_peer_immigration는...
 //     접속된 Server의 Socket을 관리하는 group이다.
 //    내부적으로 Admin Client Socket을 관리하는 Admin Client group을 가지고 있다.
 //

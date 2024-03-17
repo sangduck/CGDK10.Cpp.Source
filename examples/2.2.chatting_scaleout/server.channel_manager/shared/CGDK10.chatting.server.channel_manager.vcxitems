@@ -14,4 +14,29 @@
   <ItemGroup>
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)include.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_channel.group.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_channel.group_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_channel.socket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)service.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)user.group_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)user.manager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)user.socket.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)include.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server.channel_manager.definition.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_channel.group.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_channel.group_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_channel.socket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)service.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)targetver.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)user.group_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)user.manager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)user.socket.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)readme.txt" />
+  </ItemGroup>
 </Project>

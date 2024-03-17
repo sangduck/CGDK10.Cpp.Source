@@ -443,7 +443,7 @@ bool schedulable::manager::process_execute(chrono::tick::duration /*_ticks_wait*
 						}
 
 						// - remove 'executable'
-						_pop_schedulable();
+						this->_pop_schedulable();
 
 						// - get executor
 						auto& pexecutor = pschedulable->m_pexecutor;
@@ -457,7 +457,7 @@ bool schedulable::manager::process_execute(chrono::tick::duration /*_ticks_wait*
 						// - execute 'executable'
 						auto pexecutable_scheduler = make_object<executable_schedulable>();
 						pexecutable_scheduler->pscheduler = this;
-						pexecutable_scheduler->pschedulable = std::move(pschedulable);
+						pexecutable_scheduler->pschedulable = pschedulable;
 
 						// - post execut
 						pexecutor->post(std::move(pexecutable_scheduler));
@@ -520,7 +520,7 @@ bool schedulable::manager::process_attach(object_ptr<Ischedulable>&& _pschedulab
 			}
 
 			// 3) push schedulable
-			_push_schedulable(std::move(_pschedulable));
+			this->_push_schedulable(_pschedulable);
 		}
 		catch (...)
 		{
@@ -672,7 +672,7 @@ bool schedulable::manager::process_detach(Ischedulable* _pschedulable) noexcept
 	return true;
 }
 
-void schedulable::manager::_push_schedulable(object_ptr<Ischedulable>&& _pschedulable)
+void schedulable::manager::_push_schedulable(Ischedulable* _pschedulable)
 {
 	// check)
 	CGASSERT_ERROR(_pschedulable->m_pschedulable_manager == this);
@@ -790,7 +790,7 @@ void schedulable::manager::process_execute_schedulable(object_ptr<Ischedulable>&
 		RETURN_IF(_pschedulable->m_pschedulable_manager != this);
 
 		// - push again
-		this->_push_schedulable(std::move(_pschedulable));
+		this->_push_schedulable(_pschedulable);
 	}
 }
 

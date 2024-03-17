@@ -195,7 +195,7 @@ std::basic_string<wchar_t> to_string<wchar_t>(const tm& _time)
     return NFMT::format(L"{:04}-{:02}-{:02} {:02}:{:02}:{:02}"sv, _time.tm_year, _time.tm_mon, _time.tm_mday, _time.tm_hour, _time.tm_min, _time.tm_sec);
 }
 
-#if !defined(__GNUC__)
+#if !defined(FMT_FORMAT_H_)
 template< class... ARGS >
 constexpr std::string temp_format(std::string_view _format, ARGS&&... _args)
 {
@@ -212,7 +212,7 @@ constexpr std::wstring temp_format(std::wstring_view _format, ARGS&&... _args)
 template <>
 std::basic_string<char> to_string<char>(const chrono::date_time& _time, const std::string_view _format)
 {
-#if !defined(__GNUC__)
+#if !defined(FMT_FORMAT_H_)
     if (_format.empty())
         return to_string<char>(_time);
     else
@@ -221,14 +221,14 @@ std::basic_string<char> to_string<char>(const chrono::date_time& _time, const st
     if (_format.empty())
         return to_string<char>(_time);
     else
-        return NFMT::format(_format, _time.t_year, _time.t_month, _time.t_day, _time.t_hour, _time.t_minute, _time.t_second, _time.t_fraction);
+        return fmt::format(_format, _time.t_year, _time.t_month, _time.t_day, _time.t_hour, _time.t_minute, _time.t_second, _time.t_fraction);
 #endif
 }
 
 template <>
 std::basic_string<wchar_t> to_string<wchar_t>(const chrono::date_time& _time, const std::wstring_view _format)
 {
-#if !defined(__GNUC__)
+#if !defined(FMT_FORMAT_H_)
     if (_format.empty())
         return to_string<wchar_t>(_time);
     else
@@ -237,14 +237,14 @@ std::basic_string<wchar_t> to_string<wchar_t>(const chrono::date_time& _time, co
     if (_format.empty())
         return to_string<wchar_t>(_time);
     else
-        return NFMT::format(_format, _time.t_year, _time.t_month, _time.t_day, _time.t_hour, _time.t_minute, _time.t_second, _time.t_fraction);
+        return fmt::format(_format, _time.t_year, _time.t_month, _time.t_day, _time.t_hour, _time.t_minute, _time.t_second, _time.t_fraction);
 #endif
 }
 
 template <>
 std::basic_string<char> to_string<char>(const tm& _time, const std::string_view _format)
 {
-#if !defined(__GNUC__)
+#if !defined(FMT_FORMAT_H_)
     if (_format.empty())
         return to_string<char>(_time);
     else
@@ -253,23 +253,23 @@ std::basic_string<char> to_string<char>(const tm& _time, const std::string_view 
     if (_format.empty())
         return to_string<char>(_time);
     else
-        return NFMT::format(_format, _time.tm_year, _time.tm_mon, _time.tm_mday, _time.tm_hour, _time.tm_min, _time.tm_sec);
+        return fmt::format(_format, _time.tm_year, _time.tm_mon, _time.tm_mday, _time.tm_hour, _time.tm_min, _time.tm_sec);
 #endif
 }
 
 template <>
 std::basic_string<wchar_t> to_string<wchar_t>(const tm& _time, const std::wstring_view _format)
 {
-#if !defined(__GNUC__)
+#if !defined(FMT_FORMAT_H_)
     if (_format.empty())
         return to_string<wchar_t>(_time);
     else
         return temp_format(_format, _time.tm_year, _time.tm_mon, _time.tm_mday, _time.tm_hour, _time.tm_min, _time.tm_sec);
 #else
-    if (_format.empty())
-        return to_string<wchar_t>(_time);
-    else
-        return NFMT::format(_format, _time.tm_year, _time.tm_mon, _time.tm_mday, _time.tm_hour, _time.tm_min, _time.tm_sec);
+        if (_format.empty())
+            return to_string<wchar_t>(_time);
+        else
+            return fmt::format(_format, _time.tm_year, _time.tm_mon, _time.tm_mday, _time.tm_hour, _time.tm_min, _time.tm_sec);
 #endif
 }
 

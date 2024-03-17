@@ -11,14 +11,14 @@ IMPLEMENT_DYNAMIC(CChild_traffic_info, CChildDialog)
 CChild_traffic_info::CChild_traffic_info(const statistics::unit_traffic* _pinfo, CWnd* pParent)
 	: CChildDialog(IDD_DIALOG_TRAFFIC_INFO, pParent)
 {
-	m_pstatistics			 = _pinfo;
+	this->m_pstatistics				 = _pinfo;
 
-	m_count_sended			 = 0;
-	m_count_received		 = 0;
-	m_count_sendedByte		 = 0;
-	m_count_receivedByte	 = 0;
-	m_count_send_io_call	 = 0;
-	m_count_receive_io_call	 = 0;
+	this->m_count_sended			 = 0;
+	this->m_count_received			 = 0;
+	this->m_count_sendedByte		 = 0;
+	this->m_count_receivedByte		 = 0;
+	this->m_count_send_io_call		 = 0;
+	this->m_count_receive_io_call	 = 0;
 }
 
 CChild_traffic_info::~CChild_traffic_info()
@@ -46,16 +46,16 @@ END_MESSAGE_MAP()
 BOOL CChild_traffic_info::CreateChild(const statistics::unit_traffic* _pinfo, CWnd* _pwnd)
 {
 	// 1) Statistics의 포인터를 저장~
-	m_pstatistics = _pinfo;
+	this->m_pstatistics = _pinfo;
 
 	// 2) 윈도우를 생성한다.
-	auto result = Create(IDD_DIALOG_TRAFFIC_INFO, _pwnd);
+	auto result = this->Create(IDD_DIALOG_TRAFFIC_INFO, _pwnd);
 
 	// check) 생성에 실패했으면 FALSE를 Return한다.
-	RETURN_IF(result==FALSE, FALSE);
+	RETURN_IF(result == FALSE, FALSE);
 
 	// 3) Show Window를 한다.
-	ShowWindow(SW_SHOW);
+	this->ShowWindow(SW_SHOW);
 
 	// return) 성공!!!
 	return result;
@@ -63,36 +63,36 @@ BOOL CChild_traffic_info::CreateChild(const statistics::unit_traffic* _pinfo, CW
 
 BOOL CChild_traffic_info::OnInitDialog()
 {
-	CChildDialog::OnInitDialog();
+	this->CChildDialog::OnInitDialog();
 
 
 	//-----------------------------------------------------------------
 	// 1. control 초기화.
 	//-----------------------------------------------------------------
 	// 1) Graph
-	m_graph_traffic.AddGraph(1024, RGB(0xff, 0x00, 0x00));
-	m_graph_traffic.AddGraph(1024, RGB(0x00, 0xff, 0x00));
+	this->m_graph_traffic.AddGraph(1024, RGB(0xff, 0x00, 0x00));
+	this->m_graph_traffic.AddGraph(1024, RGB(0x00, 0xff, 0x00));
 
 	// 2) Slider
-	m_slider_scale_traffic.SetRange(0, 20);
-	m_slider_scale_traffic.SetPos(0);			// 1024/32=32해서 얻은 값
+	this->m_slider_scale_traffic.SetRange(0, 20);
+	this->m_slider_scale_traffic.SetPos(0);			// 1024/32=32해서 얻은 값
 
 	// 3) Check를 Checked로...
 	((CButton*)GetDlgItem(IDC_CHECK_GRAPH_SENDED))->SetCheck(BST_CHECKED);
 	((CButton*)GetDlgItem(IDC_CHECK_GRAPH_RECEIVED))->SetCheck(BST_CHECKED);
 
 	// 4) Tick 초기화.
-	m_tick_last = chrono::tick::now();
+	this->m_tick_last = chrono::tick::now();
 
 
 	//-----------------------------------------------------------------
 	// 2. Update한다.
 	//-----------------------------------------------------------------
 	// 1) 
-	PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);
+	this->PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);
 
 
-	// return) 
+	// return)  
 	return TRUE;  // return TRUE unless you set the focus to a control
 }
 
@@ -105,8 +105,8 @@ void CChild_traffic_info::OnBnClickedCheckSend()
 	RETURN_IF(status == BST_INDETERMINATE);
 
 	// 2) Graph의 상태를 설정한다.
-	m_graph_traffic.EnableGraph(0, status == BST_CHECKED);
-	m_graph_traffic.Invalidate(FALSE);
+	this->m_graph_traffic.EnableGraph(0, status == BST_CHECKED);
+	this->m_graph_traffic.Invalidate(FALSE);
 }
 
 void CChild_traffic_info::OnBnClickedCheckReceive()
@@ -118,8 +118,8 @@ void CChild_traffic_info::OnBnClickedCheckReceive()
 	RETURN_IF(status == BST_INDETERMINATE);
 
 	// 2) Graph의 상태를 설정한다.
-	m_graph_traffic.EnableGraph(1, status == BST_CHECKED);
-	m_graph_traffic.Invalidate(FALSE);
+	this->m_graph_traffic.EnableGraph(1, status == BST_CHECKED);
+	this->m_graph_traffic.Invalidate(FALSE);
 }
 
 
@@ -137,7 +137,7 @@ void CChild_traffic_info::OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pscroll
 					iScale *= 2;
 				}
 				
-				m_graph_traffic.SetVerticalScale(iScale);
+				this->m_graph_traffic.SetVerticalScale(iScale);
 			}
 			break;
 	};
@@ -151,29 +151,29 @@ void CChild_traffic_info::OnTimer(UINT_PTR nIDEvent)
 	if(nIDEvent==0)
 	{
 		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
-		RETURN_IF(IsWindowEnabled() == FALSE)
+		RETURN_IF(this->IsWindowEnabled() == FALSE)
 
 		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
-		RETURN_IF(IsWindowVisible() == FALSE)
+		RETURN_IF(this->IsWindowVisible() == FALSE)
 
 		// 1) Update한다.
-		UpdateTrafficInfo();
+			this->UpdateTrafficInfo();
 	}
 
 
 	//-----------------------------------------------------------------
 	// 2. MFC Default
 	//-----------------------------------------------------------------
-	CChildDialog::OnTimer(nIDEvent);
+	this->CChildDialog::OnTimer(nIDEvent);
 }
 
 void CChild_traffic_info::UpdateTrafficInfo()
 {
 	// check) 
-	RETURN_IF(m_pstatistics == nullptr);
+	RETURN_IF(this->m_pstatistics == nullptr);
 
 	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
-	RETURN_IF(IsWindowEnabled() == FALSE)
+	RETURN_IF(this->IsWindowEnabled() == FALSE)
 
 
 	//-----------------------------------------------------------------
@@ -187,35 +187,35 @@ void CChild_traffic_info::UpdateTrafficInfo()
 	RETURN_IF(tick_differ<chrono::milliseconds(10));
 
 	// 2) 최종 시간을 Update한다.
-	m_tick_last = tick_now;
+	this->m_tick_last = tick_now;
 
 
 	//-----------------------------------------------------------------
 	// 2. Traffice Info 계산하기.
 	//-----------------------------------------------------------------
 	// 1) 이전과 현재의 차이를 구한다. (Overflow가 났을 경우를 대비하여 계산해야 한다.)
-	uint64_t	countSended				 = m_pstatistics->count_sended_message;
-	uint64_t	countSendedByte			 = m_pstatistics->count_sended_bytes;
-	uint64_t	countSendIOCall			 = m_pstatistics->count_send_io;
-	uint64_t	countReceived			 = m_pstatistics->count_received_message;
-	uint64_t	countReceivedByte		 = m_pstatistics->count_received_bytes;
-	uint64_t	countReceiveIOCall		 = m_pstatistics->count_receive_io;
+	uint64_t	countSended				 = this->m_pstatistics->count_sended_message;
+	uint64_t	countSendedByte			 = this->m_pstatistics->count_sended_bytes;
+	uint64_t	countSendIOCall			 = this->m_pstatistics->count_send_io;
+	uint64_t	countReceived			 = this->m_pstatistics->count_received_message;
+	uint64_t	countReceivedByte		 = this->m_pstatistics->count_received_bytes;
+	uint64_t	countReceiveIOCall		 = this->m_pstatistics->count_receive_io;
 
 	// 2) 초당 전송률을 구한다.
-	float	totalSended_Message_PerSec	 = ((float)(countSended-m_count_sended))*1000.0f/tick_differ.count();
-	float	totalSended_Byte_PerSec		 = ((float)(countSendedByte-m_count_sendedByte))*1000.0f/tick_differ.count();
-	float	totalSend_IOCall_PerSec		 = ((float)(countSendIOCall-m_count_send_io_call))*1000.0f/tick_differ.count();
-	float	totalReceive_Message_PerSec	 = ((float)(countReceived-m_count_received))*1000.0f/tick_differ.count();
-	float	totalReceive_Byte_PerSec	 = ((float)(countReceivedByte-m_count_receivedByte))*1000.0f/tick_differ.count();
-	float	totalReceive_IOCall_PerSec	 = ((float)(countReceiveIOCall-m_count_receive_io_call))*1000.0f/tick_differ.count();
+	float	totalSended_Message_PerSec	 = ((float)(countSended - this->m_count_sended))*1000.0f/tick_differ.count();
+	float	totalSended_Byte_PerSec		 = ((float)(countSendedByte - this->m_count_sendedByte))*1000.0f/tick_differ.count();
+	float	totalSend_IOCall_PerSec		 = ((float)(countSendIOCall - this->m_count_send_io_call))*1000.0f/tick_differ.count();
+	float	totalReceive_Message_PerSec	 = ((float)(countReceived - this->m_count_received))*1000.0f/tick_differ.count();
+	float	totalReceive_Byte_PerSec	 = ((float)(countReceivedByte - this->m_count_receivedByte))*1000.0f/tick_differ.count();
+	float	totalReceive_IOCall_PerSec	 = ((float)(countReceiveIOCall - this->m_count_receive_io_call))*1000.0f/tick_differ.count();
 
 	// 3) 이전 값을 현재 값으로 Update한다.(다음 Frame에서의 계산을 위해)
-	m_count_sended						 = countSended;
-	m_count_sendedByte					 = countSendedByte;
-	m_count_send_io_call				 = countSendIOCall;
-	m_count_received					 = countReceived;
-	m_count_receivedByte				 = countReceivedByte;
-	m_count_receive_io_call				 = countReceiveIOCall;
+	this->m_count_sended				 = countSended;
+	this->m_count_sendedByte			 = countSendedByte;
+	this->m_count_send_io_call			 = countSendIOCall;
+	this->m_count_received				 = countReceived;
+	this->m_count_receivedByte			 = countReceivedByte;
+	this->m_count_receive_io_call		 = countReceiveIOCall;
 
 
 	//-----------------------------------------------------------------

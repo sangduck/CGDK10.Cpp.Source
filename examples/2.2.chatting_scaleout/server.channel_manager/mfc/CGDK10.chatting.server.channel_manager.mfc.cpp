@@ -8,7 +8,7 @@
 #include "CGDK10.chatting.server.channel_manager.dlg.h"
 
 #if defined(_DEBUG) && !defined(NDEBUG)
-#define new DEBUG_NEW
+#define new DEBUG_make_object
 #endif
 
 

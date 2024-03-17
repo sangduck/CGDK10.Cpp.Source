@@ -296,7 +296,7 @@ shared_buffer make_webmessage_querier_list_update()
 
 
 
-observable_websocket_server_querier_info::observable_websocket_server_querier_info(const std::string_view _name)
+observable_websocket_peer_querier_info::observable_websocket_peer_querier_info(const std::string_view _name)
 {
 	this->set_name(_name);
 
@@ -304,11 +304,11 @@ observable_websocket_server_querier_info::observable_websocket_server_querier_in
 	this->m_webpage_index = 'E';
 }
 
-observable_websocket_server_querier_info::~observable_websocket_server_querier_info()
+observable_websocket_peer_querier_info::~observable_websocket_peer_querier_info()
 {
 }
 
-void observable_websocket_server_querier_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
+void observable_websocket_peer_querier_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
 {
 	// 1) register mediator
 	_pobserver->register_messageable(this);
@@ -317,7 +317,7 @@ void observable_websocket_server_querier_info::on_observer_registered(socket_web
 	_pobserver->send(_make_webmessage_querier_list_add());
 }
 
-uintptr_t observable_websocket_server_querier_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
+uintptr_t observable_websocket_peer_querier_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
 {
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);

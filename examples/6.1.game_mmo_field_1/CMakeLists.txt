@@ -20,7 +20,7 @@
 # setting
 #-----------------------------------------------------------------------------
 # 1) project name
-PROJECT ( "CGDK10.game_mmo_field" )
+PROJECT ( "CGDK10.game_mmo_field_lockstep" )
 
 # 2) project version
 SET ( PROJECT_VERSION_MAJOR 10 )

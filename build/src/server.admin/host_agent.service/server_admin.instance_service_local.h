@@ -45,7 +45,7 @@ public:
 			void				load(const std::string_view p_str_path = "."sv);
 			void				save();
 private:
-	virtual bool				process_sservice_disconnected(socket_server* _psocket) override;
+	virtual bool				process_sservice_disconnected(socket_peer* _psocket) override;
 
 			PROCESS_HANDLE		process_handle{ INVALID_PROCESS_HANDLE };
 			std::atomic<int>	status{ 0 };

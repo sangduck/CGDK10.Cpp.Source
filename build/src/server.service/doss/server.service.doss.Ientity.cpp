@@ -47,32 +47,39 @@ bool doss::Ientity::complete_transaction(Itransactable* _ptransactable) noexcept
 void doss::Ientity::checkout_all() noexcept
 {
 	// declare) 
-	std::vector<std::pair<sCHECKIN_ID, object_ptr<Isession>>> list_cid;
+	decltype(this->m_list_cid) list_cid;
 
 	// 1) copy
-	scoped_lock(m_lockable_entity)
+	scoped_lock(this->m_lockable_entity)
 	{
-		list_cid = m_list_cid;
+		// check)
+		RETURN_IF(this->m_list_cid.empty(), );
+
+		// - copy
+		list_cid = this->m_list_cid;
 	}
 
-	// check)
-	RETURN_IF(list_cid.empty());
-
 	// 2) checkout all
-	for (auto& iter : m_list_cid)
+	for (auto& iter : list_cid)
 	{
-		// - Transactable을 생성한다.
-		auto ptransactable = make_object<Itransactable>();
+		try
+		{
+			// - Transactable을 생성한다.
+			auto ptransactable = make_object<Itransactable>();
 
-		// - 값을 설정한다.
-		ptransactable->m_type = eTRANSACTION_TYPE::CHECKOUT;
-		ptransactable->m_prepository = m_prepository;
-		ptransactable->m_psession = iter.second;
-		ptransactable->m_pentity = this;
-		ptransactable->m_cid = iter.first;
+			// - 값을 설정한다.
+			ptransactable->m_type = eTRANSACTION_TYPE::CHECKOUT;
+			ptransactable->m_prepository = this->m_prepository;
+			ptransactable->m_psession = iter.second;
+			ptransactable->m_pentity = this;
+			ptransactable->m_cid = iter.first;
 
-		// - request transaction
-		request_transaction(ptransactable);
+			// - request transaction
+			this->request_transaction(ptransactable);
+		}
+		catch (...)
+		{
+		}
 	}
 }
 

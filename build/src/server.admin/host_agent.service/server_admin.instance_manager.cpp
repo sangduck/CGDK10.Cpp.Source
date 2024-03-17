@@ -51,7 +51,7 @@ object_ptr<server_admin::Iinstance> server_admin::instance_manager::register_ins
 	return pinstance;
 }
 
-bool server_admin::instance_manager::unregister_instance(server_admin::iid_t _iid, socket_server* _psocket) noexcept
+bool server_admin::instance_manager::unregister_instance(server_admin::iid_t _iid, socket_peer* _psocket) noexcept
 {
 	// declare) 
 	object_ptr<Iinstance> pinstance;
@@ -94,7 +94,7 @@ bool server_admin::instance_manager::unregister_instance(server_admin::iid_t _ii
 	if (is_not_removed == true)
 	{
 		// - notify
-		//service::pgroup_control->send(server_admin::message_SERVER_ADMIN_INSTANCE_UPDATE(_iid, pinstance));
+		//service::pgroup_client->send(server_admin::message_SERVER_ADMIN_INSTANCE_UPDATE(_iid, pinstance));
 		service::pgroup_websocket->notify_to_web_controls_INSTANCE_STATUS_UPDATE(pinstance);
 
 		// log) 
@@ -103,7 +103,7 @@ bool server_admin::instance_manager::unregister_instance(server_admin::iid_t _ii
 	else
 	{
 		// - notify
-		service::pgroup_control->send(server_admin::message_SERVER_ADMIN_INSTANCE_UNREGISTER(_iid));
+		service::pgroup_client->send(server_admin::message_SERVER_ADMIN_INSTANCE_UNREGISTER(_iid));
 		service::pgroup_websocket->notify_to_web_controls_INSTANCE_LEAVE(pinstance);
 
 		// log) 
@@ -158,7 +158,7 @@ void server_admin::instance_manager::unregister_instance_all() noexcept
 //	LOG_INFO << " - SERVER_REGISTER info updated '"sv << _server_register_info.setting.nickname << "'[server_id:"sv << _server_register_info.iid << "]"sv;
 //
 //	// notify) Server가 Update되었음을 notify한다.
-//	service::pgroup_control->send(server_admin::message_SERVER_ADMIN_SERVER_INSTANCE_SETTING_UPDATE(m_host_instance_info.host_iid, _server_register_info.iid, _server_register_info));
+//	service::pgroup_client->send(server_admin::message_SERVER_ADMIN_SERVER_INSTANCE_SETTING_UPDATE(m_host_instance_info.host_iid, _server_register_info.iid, _server_register_info));
 //
 //	// return) 
 //	return pfind_server_setting;
@@ -457,7 +457,7 @@ result_code server_admin::instance_manager::on_message(sMESSAGE_NETWORK& _msg)
 //	pregistered->request_update();
 //
 //	// notify) Server가 Update되었음을 notify한다.
-//	service::pgroup_control->send(server_admin::message_SERVER_ADMIN_SERVER_INSTANCE_SETTING_UPDATE(m_host_instance_info.host_iid, pregistered->m_service_instance.server_info.registered.iid, pregistered->m_service_instance.server_info.registered));
+//	service::pgroup_client->send(server_admin::message_SERVER_ADMIN_SERVER_INSTANCE_SETTING_UPDATE(m_host_instance_info.host_iid, pregistered->m_service_instance.server_info.registered.iid, pregistered->m_service_instance.server_info.registered));
 //
 //	// return) 
 //	return true;
@@ -899,7 +899,7 @@ result_code server_admin::instance_manager::on_message_SERVER_ADMIN_REQUEST_STOP
 //	buf_send.front<uint32_t>() = buf_send.size<uint32_t>();
 //
 //	// 5) 전송.
-//	service::pgroup_control->send(buf_send);
+//	service::pgroup_client->send(buf_send);
 //	//m_psocket_to_admin_server->send(buf_send);
 //}
 
@@ -945,10 +945,10 @@ result_code server_admin::instance_manager::on_message_SYSTEM_LOG(sMESSAGE_LOG& 
 	RETURN_IF(_msg.plog_record.empty(), 1);
 
 	// check)
-	RETURN_IF(service::pgroup_control.empty(), 1);
+	RETURN_IF(service::pgroup_client.empty(), 1);
 
 	//// 2) 전송한다.
-	//service::pgroup_control->send(server_admin::message_SYSTEM_LOG(_msg.plog_record));
+	//service::pgroup_client->send(server_admin::message_SYSTEM_LOG(_msg.plog_record));
 
 	// return) 
 	return eRESULT::DONE;
@@ -1037,7 +1037,7 @@ void server_admin::instance_manager::process_update_system_status_info()
 	phost_instance_self->m_instance.status.vector_status.push_back(status_now);
 
 	// 7) Update한 정보를 전송한다.
-	service::pgroup_control->send(service::pmanager_instance->message_SERVER_ADMIN_HOST_STATUS_UPDATE());
+	service::pgroup_client->send(service::pmanager_instance->message_SERVER_ADMIN_HOST_STATUS_UPDATE());
 	service::pgroup_websocket->notify_to_web_controls_INSTANCE_STATUS_UPDATE();
 }
 
@@ -1087,7 +1087,7 @@ object_ptr<server_admin::Iinstance> server_admin::instance_manager::process_regi
 	}
 
 	// 5) Server가 추가되었음을 notify한다.
-	service::pgroup_control->send(server_admin::message_SERVER_ADMIN_INSTANCE_REGISTER(pinstance_host));
+	service::pgroup_client->send(server_admin::message_SERVER_ADMIN_INSTANCE_REGISTER(pinstance_host));
 	service::pgroup_websocket->notify_to_web_controls_INSTANCE_ENTER(pinstance_host);
 
 	// 6) 접속 종료 처리
@@ -1245,7 +1245,7 @@ object_ptr<server_admin::Iinstance> server_admin::instance_manager::process_regi
 			LOG_INFO << "  - INSTANCE('"sv << pinstance_service->get_name() << "') > registered [LOCAL,'instance id':"sv << iid << "]"sv;
 
 			// - instance가 추가되었음을 notify한다.
-			service::pgroup_control->send(server_admin::message_SERVER_ADMIN_INSTANCE_REGISTER(pinstance_service));
+			service::pgroup_client->send(server_admin::message_SERVER_ADMIN_INSTANCE_REGISTER(pinstance_service));
 			service::pgroup_websocket->notify_to_web_controls_INSTANCE_ENTER(pinstance_service);
 		}
 		else
@@ -1284,7 +1284,7 @@ object_ptr<server_admin::Iinstance> server_admin::instance_manager::process_regi
 			LOG_INFO << "  - INSTANCE('"sv << pinstance_service->get_name() << "') > connected [LOCAL,'instance id':"sv << pinstance_service->get_iid() << "]"sv;
 
 			// - instance update 되었음을 notify한다.
-			//service::pgroup_control->send(server_admin::message_SERVER_ADMIN_INSTANCE_REGISTER(pinstance_service));
+			//service::pgroup_client->send(server_admin::message_SERVER_ADMIN_INSTANCE_REGISTER(pinstance_service));
 			service::pgroup_websocket->notify_to_web_controls_INSTANCE_STATUS_UPDATE(pinstance_service);
 		}
 	}

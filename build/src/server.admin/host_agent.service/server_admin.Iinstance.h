@@ -45,11 +45,11 @@ public:
 					return std::move(this->m_psocket);
 				}
 			}
-			object_ptr<socket_server> set_socket(object_ptr<socket_server>&& _psocket) noexcept
+			object_ptr<socket_peer> set_socket(object_ptr<socket_peer>&& _psocket) noexcept
 			{
 				scoped_lock(this->m_cs_instance)
 				{
-					object_ptr<socket_server> psocket_old = std::move(this->m_psocket);
+					object_ptr<socket_peer> psocket_old = std::move(this->m_psocket);
 					this->m_psocket = std::move(_psocket);
 
 					return psocket_old;
@@ -58,12 +58,12 @@ public:
 	virtual	iid_t				get_iid() const PURE;
 	virtual std::string			get_name() const PURE;
 	virtual int					get_instance_type() const PURE;
-	virtual bool				process_sservice_disconnected(socket_server* _psocket);
+	virtual bool				process_sservice_disconnected(socket_peer* _psocket);
 	virtual	eOBJECT_STATE		set_instance_state(eOBJECT_STATE) PURE;
 
 public:
 	virtual	bool				process_send(shared_buffer&& _buffer, std::size_t _count_message, uint64_t _option) override;
 
 			lockable<>			m_cs_instance;
-			object_ptr<socket_server> m_psocket;
+			object_ptr<socket_peer> m_psocket;
 };

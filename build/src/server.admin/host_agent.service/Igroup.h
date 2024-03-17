@@ -23,7 +23,7 @@
 //
 // ----------------------------------------------------------------------------
 class Igroup : 
-	public						group::list_sender<socket_server>,
+	public						group::list_sender<socket_peer>,
 	public						object::Nnameable,
 	public						object::Ninitializable_startable,
 	virtual public				Nmessage_transmitter_single,

@@ -111,9 +111,9 @@ TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME}.${BUILD_TYPE} PRIVATE "$<$<COMPILE_LAN
 
 # 4) link
 TARGET_LINK_LIBRARIES( ${PROJECT_NAME}.${BUILD_TYPE}
-	CGDK10.server.system.service_linux.${BUILD_TYPE}
-	CGDK10.server.system.time_event_linux.${BUILD_TYPE}
-	CGDK10.server.system.log_linux.${BUILD_TYPE}
+	CGDK10.server.service_linux.${BUILD_TYPE}
+	CGDK10.server.time_event_linux.${BUILD_TYPE}
+	CGDK10.server.log_linux.${BUILD_TYPE}
 	CGDK10.net.socket_linux.${BUILD_TYPE}
 	CGDK10.system.object_linux.${BUILD_TYPE}
 	rt

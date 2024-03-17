@@ -210,15 +210,15 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo()
 	m_listctrl_object.SetRedraw(FALSE);
 
 	//// declare) Index를 0으로...
-	//int		index	 = 0;
+	//int index = 0;
 
-	//chrono::tick::time_point	tick_now	 = chrono::tick::now();
+	//chrono::tick::time_point tick_now = chrono::tick::now();
 
 	//// 2) Thread list Iterator의 begin과 end를 얻는다.
 	//for(auto iter=pexecutor_schedulable->get_iterator(); iter.is_ended()==false; ++iter, ++index)
 	//{
 	//	// 3) pSchedulable를 얻는다.
-	//	Ischedulable* pSchedulable	 = *iter;
+	//	Ischedulable* pSchedulable = *iter;
 
 	//	// check) pSchedulable가 nullptr이면 다음으로 넘긴다.(이럴리는 없다!)
 	//	CONTINUE_IF(pSchedulable==nullptr);
@@ -227,7 +227,7 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo()
 	//	while(index <m_listctrl_object.GetItemCount())
 	//	{
 	//		// - Connectable을 얻는다.
-	//		auto* pSchedulableCompare	 = reinterpret_cast<Ischedulable*>(m_listctrl_object.GetItemData(index));
+	//		auto* pSchedulableCompare = reinterpret_cast<Ischedulable*>(m_listctrl_object.GetItemData(index));
 
 	//		// check) 같으면 끝낸다~
 	//		BREAK_IF(pSchedulableCompare == pSchedulable);
@@ -240,7 +240,7 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo()
 	//	if(index>=m_listctrl_object.GetItemCount())
 	//	{
 	//		// - Nameable을 얻는다.
-	//		auto*	pnameable	 = dynamic_cast<object::Inameable*>(pSchedulable);
+	//		auto* pnameable = dynamic_cast<object::Inameable*>(pSchedulable);
 
 	//		// - 값을 추가하고 데이타를 설정한다.
 	//		if(pnameable!=nullptr)

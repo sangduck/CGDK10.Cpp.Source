@@ -80,7 +80,7 @@ result_code server_admin::instance_host::on_message_SERVER_ADMIN_INSTANCE_UPDATE
 		this->set_instance_state(state_new);
 
 		// 3) notify message
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 
 		// log) 
 		LOG_INFO << "  - INSTANCE('"sv << this->get_name() << "') state changed ["sv << to_string<char>(state_old) << "] -> ["sv << to_string<char>(state_new) << "]"sv;
@@ -274,7 +274,7 @@ result_code server_admin::instance_host::on_message_SYSTEM_LOG(sMESSAGE_NETWORK&
 	//this->update_log_records_add(std::move(list_log_record));
 
 	// 5) send to admin server
-	service::pgroup_control->send(_msg.buf_message);
+	service::pgroup_client->send(_msg.buf_message);
 
 	// return)
 	return eRESULT::DONE;

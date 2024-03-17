@@ -1,5 +1,7 @@
 //{{NO_DEPENDENCIES}}
-
+// Microsoft Visual C++에서 생성한 포함 파일입니다.
+// CGDK10.net.socket.mfc_controls.rc에서 사용되고 있습니다.
+//
 #define IDD_DIALOG_CONNECTIVE_INFO      921
 #define IDD_DIALOG_TRAFFIC_INFO         922
 #define IDD_DIALOG_CONNECTIVE_STATUS    923
@@ -139,6 +141,8 @@
 #define IDC_STATIC_SEPERATOR_1          1124
 #define IDC_STATIC_SEPERATOR_2          1125
 #define IDC_STATIC_IO_CALL_PERSEC       1127
+#define IDC_BUTTON1                     1128
+#define IDC_BUTTON_RESET                1128
 #define IDC_STATIC_T1                   1180
 #define IDC_STATIC_T2                   1181
 #define IDC_STATIC_T3                   1182
@@ -169,9 +173,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        1014
+#define _APS_NEXT_RESOURCE_VALUE        1015
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1128
+#define _APS_NEXT_CONTROL_VALUE         1129
 #define _APS_NEXT_SYMED_VALUE           1000
 #endif
 #endif

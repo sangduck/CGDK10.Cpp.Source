@@ -15,9 +15,9 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(MSBuildThisFileDirectory)group_control.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_client.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_peer_immigration.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)group_server.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)group_server_immigration.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)group_websocket.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)group_websocket_immigration.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Igroup.cpp" />
@@ -39,7 +39,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_service_remote.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)service.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)socket_admin_server.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)socket_server.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_peer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)socket_web.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)socket_websocket.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)webpage_frame_htm.cpp" />
@@ -59,9 +59,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)definition_server.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)group_control.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_client.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_peer_immigration.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)group_server.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)group_server_immigration.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)group_websocket.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)group_websocket_immigration.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Igroup.h" />
@@ -84,7 +84,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_service_remote.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)service.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)socket_admin_server.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)socket_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_peer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)socket_web.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)socket_websocket.h" />
   </ItemGroup>

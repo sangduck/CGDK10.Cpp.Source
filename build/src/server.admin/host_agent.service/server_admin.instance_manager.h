@@ -19,9 +19,9 @@
 #pragma once
 // ----------------------------------------------------------------------------
 //
-// group_server_immigration
+// group_peer_immigration
 //
-// 1. group_server_immigration는...
+// 1. group_peer_immigration는...
 //     접속된 Server의 Socket을 관리하는 group이다.
 //    내부적으로 Admin Client Socket을 관리하는 Admin Client group을 가지고 있다.
 //
@@ -35,7 +35,7 @@ class server_admin::instance_manager :
 {
 public:
 			object_ptr<Iinstance> register_instance(own_ptr<Iinstance>&& _pinstance);
-			bool				unregister_instance(iid_t, socket_server* _psocket) noexcept;
+			bool				unregister_instance(iid_t, socket_peer* _psocket) noexcept;
 			void				unregister_instance_all() noexcept;
 
 			object_ptr<Iinstance> find_instance(iid_t _id) const noexcept;
@@ -77,7 +77,7 @@ public:
 			lockable<>			m_cs_instance;
 			std::map<iid_t, own_ptr<Iinstance>> m_map_instance;
 public:
-	static	auto&				self() noexcept { return m_instance_host_self; }
+	static	auto&				self() noexcept { return this->m_instance_host_self; }
 
 	static	own_ptr<instance_host>					m_instance_host_self;
 	static	object_ptr<api::performance_counter>	m_perfornamce_processor;

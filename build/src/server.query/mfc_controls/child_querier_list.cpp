@@ -359,6 +359,7 @@ void CChild_querier_list::OnSize(UINT _nType, int _cx, int _cy)
 		CRect tempRectOriginal;
 		GetClientRect(tempRectOriginal);
 
+		// TODO: Add your message handler code here
 		CRect tempRect;
 		m_list_querier.GetWindowRect(tempRect);
 
@@ -376,6 +377,8 @@ void CChild_querier_list::OnSize(UINT _nType, int _cx, int _cy)
 void CChild_querier_list::OnSizing(UINT _fwSide, LPRECT _pRect)
 {
 	CChildDialog::OnSizing(_fwSide, _pRect);
+
+	// TODO: Add your message handler code here
 }
 
 

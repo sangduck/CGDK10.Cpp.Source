@@ -5,7 +5,7 @@
 #include "afxdialogex.h"
 
 #if defined(_DEBUG) && !defined(NDEBUG)
-	#define new DEBUG_NEW
+	#define new DEBUG_make_object
 #endif
 
 class CAboutDlg : public CDialogEx
@@ -108,7 +108,7 @@ void channel_manager_server_dlg::OnPaint()
 	{
 		CPaintDC dc(this);
 
-		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
+		sendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);

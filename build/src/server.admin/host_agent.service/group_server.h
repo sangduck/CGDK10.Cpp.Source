@@ -30,10 +30,10 @@ private:
 	virtual	void				on_start(context& _context) override;
 	virtual	void				on_stop() override;
 
-	virtual	result_code			on_member_entering(socket_server* _pmember, sMESSAGE& _param);
-	virtual	void				on_member_entered(socket_server* _pmember, sMESSAGE& _param);
-	virtual	uintptr_t			on_member_leaving(socket_server* _pmember, uintptr_t _param);
-	virtual	void				on_member_leaved(socket_server* _pmember, uintptr_t _result);
+	virtual	result_code			on_member_entering(socket_peer* _pmember, sMESSAGE& _param);
+	virtual	void				on_member_entered(socket_peer* _pmember, sMESSAGE& _param);
+	virtual	uintptr_t			on_member_leaving(socket_peer* _pmember, uintptr_t _param);
+	virtual	void				on_member_leaved(socket_peer* _pmember, uintptr_t _result);
 
 	virtual result_code			on_message(sMESSAGE_NETWORK& _msg);
 			result_code			on_message_passby_to_instance(sMESSAGE_NETWORK& _msg);

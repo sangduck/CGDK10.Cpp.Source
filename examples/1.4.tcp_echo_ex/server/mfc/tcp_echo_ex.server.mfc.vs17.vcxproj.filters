@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="framework.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="socket_tcp_async.h" />
+    <ClInclude Include="socket_tcp_async_gather_buffered.h" />
+    <ClInclude Include="socket_tcp_async_gather.h" />
+    <ClInclude Include="tcp_echo_ex.server.mfc.h" />
+    <ClInclude Include="tcp_echo_ex.server.mfc.dlg.h" />
+    <ClInclude Include="..\..\common\packatable.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="tcp_echo_ex.server.mfc.cpp" />
+    <ClCompile Include="tcp_echo_ex.server.mfc.dlg.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="tcp_echo_ex.server.mfc.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\tcp_echo_ex.server.mfc.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\tcp_echo_ex.server.mfc.rc2" />
+  </ItemGroup>
+</Project>

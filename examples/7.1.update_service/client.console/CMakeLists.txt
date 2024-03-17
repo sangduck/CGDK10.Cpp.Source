@@ -38,10 +38,8 @@ IF (NOT DEFINED CMAKE_BULD_TYPE)
 ENDIF()
 
 # 5) directories
-SET ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../../../CGDK10.C++/lib/cgdk/sdk10 )
-SET ( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../../../CGDK10.C++/lib/cgdk/sdk10 )
-SET ( CMAKE_RUNTIME_OTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../../execute )
-SET ( EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../execute/account_server )
+SET ( CMAKE_RUNTIME_OTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../execute/client )
+SET ( EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../execute/client )
 
 # 6) compile options
 set ( CMAKE_CXX_STANDARD 20)
@@ -52,14 +50,15 @@ SET ( CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -Wall -Wextra" )
 
 # 7) include directories
 INCLUDE_DIRECTORIES(
-	${CMAKE_CURRENT_SOURCE_DIR}/../../../../CGDK10.C++/include
+	${CMAKE_CURRENT_SOURCE_DIR}/../../../include
 	./
 	${CMAKE_CURRENT_SOURCE_DIR}/../shared
+
 )
 
 # 8) library directories
 LINK_DIRECTORIES(
-	${CMAKE_CURRENT_SOURCE_DIR}/../../../../CGDK10.C++/lib/cgdk/sdk10
+	${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/cgdk/sdk10
 )
 
 

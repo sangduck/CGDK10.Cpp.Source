@@ -1,10 +1,10 @@
 #include "pch.h"
 
 own_ptr<server_admin::instance_manager>		service::pmanager_instance;
-own_ptr<net::acceptor<socket_server>>		service::pacceptor_server;
-own_ptr<group_server_immigration>			service::pgroup_server_immigration;
+own_ptr<net::acceptor<socket_peer>>		service::pacceptor_server;
+own_ptr<group_peer_immigration>			service::pgroup_peer_immigration;
 own_ptr<group_server>						service::pgroup_server;
-own_ptr<group_control>						service::pgroup_control;
+own_ptr<group_client>						service::pgroup_client;
 own_ptr<net::acceptor<socket_web>>			service::pacceptor_web;
 own_ptr<net::acceptor<socket_websocket>>	service::pacceptor_websocket;
 own_ptr<group_websocket_immigration>		service::pgroup_websocket_immigration;
@@ -17,19 +17,19 @@ service::service()
 	pmanager_instance->set_name("server_entity_manager"sv);
 	this->Nattachable<object::Istate>::process_attach(pmanager_instance);
 
-	pgroup_server_immigration = make_own<group_server_immigration>();
-	pgroup_server_immigration->set_name("group_server_immigration"sv);
-	this->Nattachable<object::Istate>::process_attach(pgroup_server_immigration);
+	pgroup_peer_immigration = make_own<group_peer_immigration>();
+	pgroup_peer_immigration->set_name("group_peer_immigration"sv);
+	this->Nattachable<object::Istate>::process_attach(pgroup_peer_immigration);
 	
 	pgroup_server = make_own<group_server>();
 	pgroup_server->set_name("group_server"sv);
 	this->Nattachable<object::Istate>::process_attach(pgroup_server);
 	
-	pgroup_control = make_own<group_control>();
-	pgroup_control->set_name("group_control"sv );
-	this->Nattachable<object::Istate>::process_attach(pgroup_control);
+	pgroup_client = make_own<group_client>();
+	pgroup_client->set_name("group_client"sv );
+	this->Nattachable<object::Istate>::process_attach(pgroup_client);
 
-	pacceptor_server = make_own<net::acceptor<socket_server>>();
+	pacceptor_server = make_own<net::acceptor<socket_peer>>();
 	pacceptor_server->set_name("acceptor_server"sv);
 	this->Nattachable<object::Istate>::process_attach(pacceptor_server);
 

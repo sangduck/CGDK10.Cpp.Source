@@ -29,7 +29,7 @@ void group_server::on_stop()
 	this->disable_member_enter();
 }
 
-result_code group_server::on_member_entering(socket_server* /*_pmember*/, sMESSAGE& /*_param*/)
+result_code group_server::on_member_entering(socket_peer* /*_pmember*/, sMESSAGE& /*_param*/)
 {
 	return eRESULT::SUCCESS;
 }
@@ -52,13 +52,13 @@ shared_buffer message_SERVER_ADMIN_ERROR(int _error_code, uint64_t _handle_proce
 	return buf_temp;
 }
 
-void group_server::on_member_entered(socket_server* _pmember, sMESSAGE& /*_param*/)
+void group_server::on_member_entered(socket_peer* _pmember, sMESSAGE& /*_param*/)
 {
 	// 1) _pmember의 Mediator를 this로 설정한다.
 	_pmember->register_messageable(this);
 }
 
-uintptr_t group_server::on_member_leaving(socket_server* _pmember, uintptr_t /*_param*/)
+uintptr_t group_server::on_member_leaving(socket_peer* _pmember, uintptr_t /*_param*/)
 {
 	// 2) _pmember의 Mediator에서 떼낸다.
 	_pmember->unregister_messageable(this);
@@ -67,10 +67,10 @@ uintptr_t group_server::on_member_leaving(socket_server* _pmember, uintptr_t /*_
 	return 0;
 }
 
-void group_server::on_member_leaved(socket_server* /*_pmember*/, uintptr_t /*_result*/)
+void group_server::on_member_leaved(socket_peer* /*_pmember*/, uintptr_t /*_result*/)
 {
 	// 1) unregister 혹은 update한다.
-	//service::pgroup_control->send(_pmember->message_SERVER_ADMIN_SERVER_INSTANCE_LEAVE());
+	//service::pgroup_client->send(_pmember->message_SERVER_ADMIN_SERVER_INSTANCE_LEAVE());
 }
 
 result_code group_server::on_message(sMESSAGE_NETWORK& _msg)

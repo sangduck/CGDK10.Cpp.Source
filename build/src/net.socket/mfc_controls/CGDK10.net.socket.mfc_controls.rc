@@ -52,7 +52,7 @@ BEGIN
     "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
     "LANGUAGE 9, 1\r\n"
     "#pragma code_page(949)\r\n"
-    "#include ""res\\CGDK.net.socket.mfc_controls.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""res\\CGDK10.net.socket.mfc_controls.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
     "#include ""afxres.rc""     // Standard components\r\n"
     "#endif\r\n"
     "\0"
@@ -197,6 +197,7 @@ BEGIN
     CONTROL         "Try",IDC_CHECK_GRAPH_TRY,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,67,12,27,10
     CONTROL         "Connect",IDC_CHECK_GRAPH_CONNECT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,67,25,41,10
     CONTROL         "disconnect",IDC_CHECK_GRAPH_DISCONNECT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,67,38,45,10
+    PUSHBUTTON      "reset",IDC_BUTTON_RESET,9,34,27,14
 END
 
 IDD_DIALOG_ACCEPTOR_CONTROL DIALOGEX 0, 0, 203, 12
@@ -607,6 +608,11 @@ BEGIN
 END
 
 IDD_DIALOG_CONNECTABLE_STATUS AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_DIALOG_TRAFFIC_INFO AFX_DIALOG_LAYOUT
 BEGIN
     0
 END

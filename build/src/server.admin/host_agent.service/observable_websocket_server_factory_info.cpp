@@ -298,7 +298,7 @@ shared_buffer make_webmessage_factory_list_update(const std::vector<server_admin
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-observable_websocket_server_factory_info::observable_websocket_server_factory_info(const std::string_view _name)
+observable_websocket_peer_factory_info::observable_websocket_peer_factory_info(const std::string_view _name)
 {
 	set_name(_name);
 
@@ -306,11 +306,11 @@ observable_websocket_server_factory_info::observable_websocket_server_factory_in
 	m_webpage_index = 'B';
 }
 
-observable_websocket_server_factory_info::~observable_websocket_server_factory_info()
+observable_websocket_peer_factory_info::~observable_websocket_peer_factory_info()
 {
 }
 
-void observable_websocket_server_factory_info::request_update_webpage_factory()
+void observable_websocket_peer_factory_info::request_update_webpage_factory()
 {
 	// check)
 	CGASSERT_ERROR(m_pservice_entity != nullptr);
@@ -334,13 +334,13 @@ void observable_websocket_server_factory_info::request_update_webpage_factory()
 	send_queue.send();
 }
 
-result_code observable_websocket_server_factory_info::on_observer_registering(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
+result_code observable_websocket_peer_factory_info::on_observer_registering(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
 {
 	// return) 
 	return eRESULT::SUCCESS;
 }
 
-void observable_websocket_server_factory_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
+void observable_websocket_peer_factory_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
 {
 	// check)
 	CGASSERT_ERROR(m_pservice_entity != nullptr);
@@ -360,7 +360,7 @@ void observable_websocket_server_factory_info::on_observer_registered(socket_web
 	_pobserver->send(buf_send);
 }
 
-uintptr_t observable_websocket_server_factory_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
+uintptr_t observable_websocket_peer_factory_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
 {
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);
@@ -372,21 +372,21 @@ uintptr_t observable_websocket_server_factory_info::on_observer_unregistering(so
 	return 0;
 }
 
-void observable_websocket_server_factory_info::on_observer_unregistered(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, uintptr_t /*_result*/)
+void observable_websocket_peer_factory_info::on_observer_unregistered(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, uintptr_t /*_result*/)
 {
 }
 
-uintptr_t observable_websocket_server_factory_info::on_observer_data_updating(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
+uintptr_t observable_websocket_peer_factory_info::on_observer_data_updating(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
 {
 	// return) 
 	return 0;
 }
 
-void observable_websocket_server_factory_info::on_observer_data_update(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, uintptr_t /*_result*/)
+void observable_websocket_peer_factory_info::on_observer_data_update(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, uintptr_t /*_result*/)
 {
 }
 
-result_code observable_websocket_server_factory_info::on_message(sMESSAGE_NETWORK& _msg)
+result_code observable_websocket_peer_factory_info::on_message(sMESSAGE_NETWORK& _msg)
 {
 	// 1) websocket message 
 	sMESSAGE_HTTP_WEBSOCKET& msg = static_cast<sMESSAGE_HTTP_WEBSOCKET&>(_msg);

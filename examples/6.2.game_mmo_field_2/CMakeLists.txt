@@ -20,7 +20,7 @@
 # setting
 #-----------------------------------------------------------------------------
 # 1) project name
-PROJECT ( "CGDK10.example.game_mmo_field_system_2" )
+PROJECT ( "CGDK10.game_mmo_field_async" )
 
 # 2) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
@@ -37,5 +37,8 @@ CMAKE_POLICY( VERSION 3.20 )
 #-----------------------------------------------------------------------------
 # compile
 #-----------------------------------------------------------------------------
-# 1) tcp_echo
-#ADD_SUBDIRECTORY (1.tcp_echo)
+# 1) client
+ADD_SUBDIRECTORY (client)
+
+# 2) server
+ADD_SUBDIRECTORY (server)

@@ -296,43 +296,46 @@ bool api::io_context_epoll::post_executable(uint32_t /*_bytes_transferred*/, uin
 
 void api::io_context_epoll::_process_register_handle(CGHANDLE _handle, Iexecutable* _pexecutable)
 {
-	// 1) get bucket
+	// 1) bucket을 얻는다.t
 	auto& bucket = this->m_manager_attached[_handle & BUCKET_MASK];
 
+	// 2) push_back
 	scoped_unique_lock(bucket.cs_register)
 	{
-		// 2) emplace_back
+		// - find key
+
+		// - ...
 		bucket.vector_register.emplace_back(_handle, _pexecutable);
 
-		// 3) add ref
+		// - add reef
 		_pexecutable->add_ref();
 	}
 }
 
 void api::io_context_epoll::_process_unregister_handle(CGHANDLE _handle) noexcept
 {
-	// 1) get bucket
+	// 1) bucket을 얻는다.
 	auto& bucket = this->m_manager_attached[_handle & BUCKET_MASK];
 
 	scoped_unique_lock_named(bucket.cs_register, cs)
 	{
-		// 2) find handle node
+		// 2) _handle을 제거한다.
 		auto iter = bucket.vector_register.begin();
 		auto iter_end = bucket.vector_register.end();
 
-		for (; iter!=iter_end; ++iter)
+		for (; iter != iter_end; ++iter)
 		{
 			if ((*iter).handle == _handle)
 			{
 				auto pexecutable = (*iter).pexecutable;
 
-				// 3) remove handle node
+				// - erase
 				bucket.vector_register.erase(iter);
 
-				// 4) lock leave
+				// - lock leave
 				scoped_lock_leave(cs);
 
-				// 5) release
+				// - add reef
 				pexecutable->release();
 
 				// return) 
@@ -376,7 +379,6 @@ bool api::io_context_epoll::_process_update_handle(CGHANDLE _handle, Iexecutable
 
 	scoped_unique_lock_named(bucket.cs_register, cs)
 	{
-		// 2) find node
 		auto iter = bucket.vector_register.begin();
 		auto iter_end = bucket.vector_register.end();
 
@@ -384,19 +386,19 @@ bool api::io_context_epoll::_process_update_handle(CGHANDLE _handle, Iexecutable
 		{
 			if ((*iter).handle == _handle)
 			{
-				// 3)  get old executablee
+				// - get old executablee
 				auto pexecutable_old = (*iter).pexecutable;
 
-				// 4) set new executable
+				// - set new executable
 				(*iter).pexecutable = _pexecutable;
 
-				// 5) add ref
+				// - add ref
 				_pexecutable->add_ref();
 
 				// - scoped_lock leave
 				scoped_lock_leave(cs);
 
-				// 6) release old executable
+				// - release old executable
 				pexecutable_old->release();
 
 				// return)

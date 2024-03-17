@@ -59,5 +59,5 @@ public:
 public:
 			own_ptr<observable_websocket_system_info>	m_pobservable_websocket_system_info;
 			own_ptr<observable_websocket_host_info>		m_pobservable_websocket_host_info;
-			own_ptr<observable_websocket_server_info>	m_pobservable_websocket_server_info;
+			own_ptr<observable_websocket_peer_info>	m_pobservable_websocket_peer_info;
 };

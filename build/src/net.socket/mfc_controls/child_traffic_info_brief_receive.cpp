@@ -206,7 +206,6 @@ LRESULT CChild_traffic_info_brief_receive::OnCGMessageNotify(WPARAM _wparam, LPA
 	};
 
 	return	0;
-
 }
 
 

@@ -97,8 +97,8 @@ ADD_EXECUTABLE(${PROJECT_NAME}.${BUILD_TYPE} ${SRC_FILES})
 # 4) link
 TARGET_LINK_LIBRARIES( ${PROJECT_NAME}.${BUILD_TYPE}
 	CGDK10.server.service.doss_linux.${BUILD_TYPE}
-	CGDK10.server.system.service_linux.${BUILD_TYPE}
-	CGDK10.server.system.log_linux.${BUILD_TYPE}
+	CGDK10.server.service_linux.${BUILD_TYPE}
+	CGDK10.server.log_linux.${BUILD_TYPE}
 	CGDK10.server.query.rdb.odbc_linux.${BUILD_TYPE}
 	CGDK10.server.query_linux.${BUILD_TYPE}
 	CGDK10.net.socket_linux.${BUILD_TYPE}

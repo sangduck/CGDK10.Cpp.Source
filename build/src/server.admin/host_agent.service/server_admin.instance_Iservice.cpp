@@ -11,18 +11,18 @@
 server_admin::instance_Iservice::instance_Iservice()
 {
 	// 1) create observable
-	this->pobservable_websocket_server_overview_info = make_own<observable_websocket_server_overview_info>("observable_websocket_server_overview_info"); // Nattachable<Iobject_state>::process_attach(m_pobservable_websocket_server_overview_info);
-	this->pobservable_websocket_server_overview_info->m_pservice_entity = this;
-	this->pobservable_websocket_server_factory_info = make_own<observable_websocket_server_factory_info>("observable_websocket_server_factory_info"); // Nattachable<Iobject_state>::process_attach(m_pobservable_websocket_server_factory_info);
-	this->pobservable_websocket_server_factory_info->m_pservice_entity = this;
-	this->pobservable_websocket_server_executor_info = make_own<observable_websocket_server_executor_info>("observable_websocket_server_executor_info"); // Nattachable<Iobject_state>::process_attach(m_pobservable_websocket_server_executor_info);
-	this->pobservable_websocket_server_executor_info->m_pservice_entity = this;
-	this->pobservable_websocket_server_network_info = make_own<observable_websocket_server_network_info>("observable_websocket_server_network_info"); // Nattachable<Iobject_state>::process_attach(m_pobservable_websocket_server_network_info);
-	this->pobservable_websocket_server_network_info->m_pservice_entity = this;
-	this->pobservable_websocket_server_querier_info = make_own<observable_websocket_server_querier_info>("observable_websocket_server_querier_info"); // Nattachable<Iobject_state>::process_attach(m_pobservable_websocket_server_querier_info);
-	this->pobservable_websocket_server_querier_info->m_pservice_entity = this;
-	this->pobservable_websocket_server_crash_info = make_own<observable_websocket_server_crash_info>("observable_websocket_server_crash_info"); // Nattachable<Iobject_state>::process_attach(m_pobservable_websocket_server_crash_info);
-	this->pobservable_websocket_server_crash_info->m_pservice_entity = this;
+	this->pobservable_websocket_peer_overview_info = make_own<observable_websocket_peer_overview_info>("observable_websocket_peer_overview_info"); // Nattachable<Iobject_state>::process_attach(m_pobservable_websocket_peer_overview_info);
+	this->pobservable_websocket_peer_overview_info->m_pservice_entity = this;
+	this->pobservable_websocket_peer_factory_info = make_own<observable_websocket_peer_factory_info>("observable_websocket_peer_factory_info"); // Nattachable<Iobject_state>::process_attach(m_pobservable_websocket_peer_factory_info);
+	this->pobservable_websocket_peer_factory_info->m_pservice_entity = this;
+	this->pobservable_websocket_peer_executor_info = make_own<observable_websocket_peer_executor_info>("observable_websocket_peer_executor_info"); // Nattachable<Iobject_state>::process_attach(m_pobservable_websocket_peer_executor_info);
+	this->pobservable_websocket_peer_executor_info->m_pservice_entity = this;
+	this->pobservable_websocket_peer_network_info = make_own<observable_websocket_peer_network_info>("observable_websocket_peer_network_info"); // Nattachable<Iobject_state>::process_attach(m_pobservable_websocket_peer_network_info);
+	this->pobservable_websocket_peer_network_info->m_pservice_entity = this;
+	this->pobservable_websocket_peer_querier_info = make_own<observable_websocket_peer_querier_info>("observable_websocket_peer_querier_info"); // Nattachable<Iobject_state>::process_attach(m_pobservable_websocket_peer_querier_info);
+	this->pobservable_websocket_peer_querier_info->m_pservice_entity = this;
+	this->pobservable_websocket_peer_crash_info = make_own<observable_websocket_peer_crash_info>("observable_websocket_peer_crash_info"); // Nattachable<Iobject_state>::process_attach(m_pobservable_websocket_peer_crash_info);
+	this->pobservable_websocket_peer_crash_info->m_pservice_entity = this;
 }
 
 server_admin::instance_Iservice::~instance_Iservice() noexcept
@@ -57,12 +57,12 @@ void server_admin::instance_Iservice::update_instance_info(server_admin::sSERVIC
 	}
 
 	// notify) to alll
-	this->pobservable_websocket_server_overview_info->request_update_webpage_time_event();
-	this->pobservable_websocket_server_executor_info->request_update_webpage_executable();
-	this->pobservable_websocket_server_factory_info->request_update_webpage_factory();
-	this->pobservable_websocket_server_executor_info->request_update_webpage_executor();
-	this->pobservable_websocket_server_network_info->request_update_webpage_connective();
-	this->pobservable_websocket_server_network_info->request_update_webpage_binder();
+	this->pobservable_websocket_peer_overview_info->request_update_webpage_time_event();
+	this->pobservable_websocket_peer_executor_info->request_update_webpage_executable();
+	this->pobservable_websocket_peer_factory_info->request_update_webpage_factory();
+	this->pobservable_websocket_peer_executor_info->request_update_webpage_executor();
+	this->pobservable_websocket_peer_network_info->request_update_webpage_connective();
+	this->pobservable_websocket_peer_network_info->request_update_webpage_binder();
 }
 
 void server_admin::instance_Iservice::update_revision_info()
@@ -163,31 +163,31 @@ object_ptr<Iobservable_websocket> server_admin::instance_Iservice::_get_pobserva
 	switch (_select)
 	{
 	case	'A':
-			pobservable_webpage = pobservable_websocket_server_overview_info;
+			pobservable_webpage = pobservable_websocket_peer_overview_info;
 			break;
 
 	case	'B':
-			pobservable_webpage = pobservable_websocket_server_factory_info;
+			pobservable_webpage = pobservable_websocket_peer_factory_info;
 			break;
 
 	case	'C':
-			pobservable_webpage = pobservable_websocket_server_executor_info;
+			pobservable_webpage = pobservable_websocket_peer_executor_info;
 			break;
 
 	case	'D':
-			pobservable_webpage = pobservable_websocket_server_network_info;
+			pobservable_webpage = pobservable_websocket_peer_network_info;
 			break;
 
 	case	'E':
-			pobservable_webpage = pobservable_websocket_server_querier_info;
+			pobservable_webpage = pobservable_websocket_peer_querier_info;
 			break;
 
 	case	'F':
-			pobservable_webpage = pobservable_websocket_server_crash_info;
+			pobservable_webpage = pobservable_websocket_peer_crash_info;
 			break;
 
 	default:
-			pobservable_webpage = pobservable_websocket_server_overview_info;
+			pobservable_webpage = pobservable_websocket_peer_overview_info;
 			break;
 	};
 
@@ -314,7 +314,7 @@ result_code server_admin::instance_Iservice::on_message_SERVER_ADMIN_INSTANCE_UP
 		this->set_instance_state(state_new);
 
 		// 3) notify message
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 
 		// log) 
 		LOG_INFO << "  - INSTANCE('"sv << this->get_name() << "') state changed ["sv << to_string<char>(state_old) << "] -> ["sv << to_string<char>(state_new) << "]"sv;
@@ -350,7 +350,7 @@ result_code server_admin::instance_Iservice::on_message_SERVER_ADMIN_INSTANCE_UP
 		this->update_instance_info(std::move(temp_info));
 
 		// 7) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -383,10 +383,10 @@ result_code server_admin::instance_Iservice::on_message_SERVER_TIME_EVENT_EVENT_
 		}
 
 		// 4) notify to web
-		this->pobservable_websocket_server_overview_info->request_update_webpage_time_event();
+		this->pobservable_websocket_peer_overview_info->request_update_webpage_time_event();
 
 		// 5) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -419,10 +419,10 @@ result_code server_admin::instance_Iservice::on_message_SERVER_TIME_EVENT_EVENT_
 		}
 
 		// 4) notify to web
-		this->pobservable_websocket_server_overview_info->request_update_webpage_time_event();
+		this->pobservable_websocket_peer_overview_info->request_update_webpage_time_event();
 
 		// 5) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -455,10 +455,10 @@ result_code server_admin::instance_Iservice::on_message_SERVER_TIME_EVENT_EVENT_
 		}
 
 		// 4) notify to web
-		this->pobservable_websocket_server_overview_info->request_update_webpage_time_event();
+		this->pobservable_websocket_peer_overview_info->request_update_webpage_time_event();
 
 		// 5) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -491,11 +491,11 @@ result_code server_admin::instance_Iservice::on_message_FACTORY_FACTORY_LIST_UPD
 		}
 
 		// 5) notify to web
-		this->pobservable_websocket_server_executor_info->request_update_webpage_executable();
-		this->pobservable_websocket_server_factory_info->request_update_webpage_factory();
+		this->pobservable_websocket_peer_executor_info->request_update_webpage_executable();
+		this->pobservable_websocket_peer_factory_info->request_update_webpage_factory();
 
 		// 6) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -528,11 +528,11 @@ result_code server_admin::instance_Iservice::on_message_FACTORY_FACTORY_REGISTER
 		}
 
 		// 4) nofity
-		this->pobservable_websocket_server_executor_info->request_update_webpage_executable();
-		this->pobservable_websocket_server_factory_info->request_update_webpage_factory();
+		this->pobservable_websocket_peer_executor_info->request_update_webpage_executable();
+		this->pobservable_websocket_peer_factory_info->request_update_webpage_factory();
 
 		// 5) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -565,11 +565,11 @@ result_code server_admin::instance_Iservice::on_message_FACTORY_FACTORY_UNREGIST
 		}
 
 		// 4) notify to web 
-		this->pobservable_websocket_server_executor_info->request_update_webpage_executable();
-		this->pobservable_websocket_server_factory_info->request_update_webpage_factory();
+		this->pobservable_websocket_peer_executor_info->request_update_webpage_executable();
+		this->pobservable_websocket_peer_factory_info->request_update_webpage_factory();
 
 		// 5) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -602,10 +602,10 @@ result_code server_admin::instance_Iservice::on_message_EXECUTOR_LIST_UPDATE(sME
 		}
 
 		// 4) notify web 
-		this->pobservable_websocket_server_executor_info->request_update_webpage_executor();
+		this->pobservable_websocket_peer_executor_info->request_update_webpage_executor();
 
 		// 5) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -638,10 +638,10 @@ result_code server_admin::instance_Iservice::on_message_EXECUTOR_REGISTER(sMESSA
 		}
 
 		// 5) notify to web
-		this->pobservable_websocket_server_executor_info->request_update_webpage_executor();
+		this->pobservable_websocket_peer_executor_info->request_update_webpage_executor();
 
 		// 6) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -673,10 +673,10 @@ result_code server_admin::instance_Iservice::on_message_EXECUTOR_UNREGISTER(sMES
 		}
 
 		// 4) notify to web
-		this->pobservable_websocket_server_executor_info->request_update_webpage_executor();
+		this->pobservable_websocket_peer_executor_info->request_update_webpage_executor();
 
 		// 5) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -709,10 +709,10 @@ result_code server_admin::instance_Iservice::on_message_NETWORK_SOCKET_CONNECTIV
 		}
 
 		// 5) notify to web
-		this->pobservable_websocket_server_network_info->request_update_webpage_connective();
+		this->pobservable_websocket_peer_network_info->request_update_webpage_connective();
 
 		// 6) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -745,10 +745,10 @@ result_code server_admin::instance_Iservice::on_message_NETWORK_SOCKET_CONNECTIV
 		}
 
 		// 5) notify to web
-		this->pobservable_websocket_server_network_info->request_update_webpage_connective();
+		this->pobservable_websocket_peer_network_info->request_update_webpage_connective();
 
 		// 6) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -780,10 +780,10 @@ result_code server_admin::instance_Iservice::on_message_NETWORK_SOCKET_CONNECTIV
 		}
 
 		// 5) notify to web
-		this->pobservable_websocket_server_network_info->request_update_webpage_connective();
+		this->pobservable_websocket_peer_network_info->request_update_webpage_connective();
 
 		// 6) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -816,10 +816,10 @@ result_code server_admin::instance_Iservice::on_message_NETWORK_SOCKET_BINDER_LI
 		}
 
 		// 4) notify to web
-		this->pobservable_websocket_server_network_info->request_update_webpage_binder();
+		this->pobservable_websocket_peer_network_info->request_update_webpage_binder();
 
 		// 5) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -852,10 +852,10 @@ result_code server_admin::instance_Iservice::on_message_NETWORK_SOCKET_BINDER_RE
 		}
 
 		// 4) notify to web
-		this->pobservable_websocket_server_network_info->request_update_webpage_binder();
+		this->pobservable_websocket_peer_network_info->request_update_webpage_binder();
 
 		// 5) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -888,10 +888,10 @@ result_code server_admin::instance_Iservice::on_message_NETWORK_SOCKET_BINDER_UN
 		}
 
 		// 4) notify to web
-		this->pobservable_websocket_server_network_info->request_update_webpage_binder();
+		this->pobservable_websocket_peer_network_info->request_update_webpage_binder();
 
 		// 5) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -924,10 +924,10 @@ result_code server_admin::instance_Iservice::on_message_NETWORK_SOCKET_CONNECTIV
 		}
 
 		// 4) notify to web
-		this->pobservable_websocket_server_network_info->request_update_webpage_connective();
+		this->pobservable_websocket_peer_network_info->request_update_webpage_connective();
 
 		// 5) send to admin server
-		service::pgroup_control->send(_msg.buf_message);
+		service::pgroup_client->send(_msg.buf_message);
 	}
 	catch (...)
 	{
@@ -955,7 +955,7 @@ result_code server_admin::instance_Iservice::on_message_SYSTEM_LOG(sMESSAGE_NETW
 	//auto list_log_record = buf_temp.extract<circular_list<object_ptr<LOG_RECORD>>>();
 
 	//// 5) notify to web (log를 놓지는 경우가 없도록 하기 위해 여기에..)
-	//this->pobservable_websocket_server_overview_info->add_log_records(list_log_record);
+	//this->pobservable_websocket_peer_overview_info->add_log_records(list_log_record);
 
 	//// 6) set data
 	//scoped_lock(this->m_cs_instance)
@@ -964,7 +964,7 @@ result_code server_admin::instance_Iservice::on_message_SYSTEM_LOG(sMESSAGE_NETW
 	//}
 
 	//// 7) send to admin server
-	//service::pgroup_control->send(_msg.buf_message);
+	//service::pgroup_client->send(_msg.buf_message);
 
 	// return)
 	return eRESULT::DONE;

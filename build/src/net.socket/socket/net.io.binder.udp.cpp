@@ -13,14 +13,21 @@ bool net::io::binder::Nudp::process_request_bind( const net::sockaddr& _socketad
 
 	try
 	{
-		// 1) socket reset(ProcessResetSocket()함수를 호출한다.)
-		this->prepare_socket(_socketaddr.u_v4.sin_family);
+		// 1) sockaddr
+		auto socketaddr = _socketaddr;
 
-		// 2) socket 핸들을 얻는다.
+		// check) 
+		if (socketaddr.u_v4.sin_family == AF_UNSPEC)
+			socketaddr.u_v4.sin_family = AF_INET6;
+
+		// 2) socket reset(ProcessResetSocket()함수를 호출한다.)
+		this->prepare_socket(socketaddr.u_v4.sin_family);
+
+		// 3) socket 핸들을 얻는다.
 		CGSOCKET handle_socket = this->native_handle();
 
-		// 3) bind한다.
-		int result_bind = api::socket::bind(handle_socket, reinterpret_cast<const ::sockaddr*>(&_socketaddr), _socketaddr.length);
+		// 4) bind한다.
+		int result_bind = api::socket::bind(handle_socket, reinterpret_cast<const ::sockaddr*>(&socketaddr), socketaddr.length);
 
 		// check) result_bind가 false이면 bind 실패다!!!
 		if(result_bind != SOCKET_ERROR)
@@ -28,10 +35,10 @@ bool net::io::binder::Nudp::process_request_bind( const net::sockaddr& _socketad
 			// trace) 
 			LOG_INFO << "(info) CGDK.net.socket: success to binding udp socket (" << to_string<char>(local_endpoint()) << ")";
 
-			// 4) socket reset(ProcessResetSocket()함수를 호출한다.)
+			// 5) socket reset(ProcessResetSocket()함수를 호출한다.)
 			this->prepare_receive();
 
-			// 5) on_bind함수를 호출한다.
+			// 6) on_bind함수를 호출한다.
 			this->on_bind();
 		}
 		else
@@ -40,7 +47,7 @@ bool net::io::binder::Nudp::process_request_bind( const net::sockaddr& _socketad
 			this->m_last_socket_error = api::get_last_error();
 
 			// trace) 
-			LOG_DEBUG << "(err ) CGDK.net.socket: fail to binding on " << static_cast<int>(htons(_socketaddr.u_v4.sin_port)) << " port(socket:" << static_cast<int64_t>(handle_socket) << "/ error_code:" << api::get_last_error() << ") " __CGFUNCTION__;
+			LOG_DEBUG << "(err ) CGDK.net.socket: fail to binding on " << static_cast<int>(htons(socketaddr.u_v4.sin_port)) << " port(socket:" << static_cast<int64_t>(handle_socket) << "/ error_code:" << api::get_last_error() << ") " __CGFUNCTION__;
 
 			// - Return값을 false로 설정한다.
 			result = false;

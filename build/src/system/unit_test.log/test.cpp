@@ -48,7 +48,7 @@ namespace CGDK
 		EXPECT_EQ(1, 1);
 		EXPECT_TRUE(true);
 	}
-#elif (defined(__cpp_lib_format) && defined(_FORMAT_))
+#elif defined(__cpp_lib_format)
 
 #endif
 }

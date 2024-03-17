@@ -43,6 +43,9 @@ private:
 		// 1) process_connective_connect
 		pconnective->process_connective_connect(pconnectable, _result);
 	#else
+		// check)
+		RETURN_IF(this->m_pconnective.empty(), intptr_t(0));
+
 		// 1) process_connective_connect
 		this->m_pconnective->process_connective_connect(this->m_pconnectable, _result);
 		

@@ -141,7 +141,7 @@ inline const wchar_t* to_string(eCHANNEL_TYPE _ChannelType)
 	default:							str = L"(n/a)";		break;
 	}
 
-	// Return) 
+	// return) 
 	return	str;
 }
 

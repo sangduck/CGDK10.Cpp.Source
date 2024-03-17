@@ -19,16 +19,16 @@
 #pragma once
 // ----------------------------------------------------------------------------
 //
-// observable_websocket_server_executor_info
+// observable_websocket_peer_executor_info
 //
 //
 // ----------------------------------------------------------------------------
-class observable_websocket_server_executor_info : 
+class observable_websocket_peer_executor_info : 
 	public						Iobservable_websocket
 {
 protected:
-	explicit observable_websocket_server_executor_info(const std::string_view _name);
-	virtual ~observable_websocket_server_executor_info();
+	explicit observable_websocket_peer_executor_info(const std::string_view _name);
+	virtual ~observable_websocket_peer_executor_info();
 
 public:
 			void				request_update_webpage_executor(uint64_t _flag = 0xffffffff);

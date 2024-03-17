@@ -1,5 +1,123 @@
 #include "pch.h"
+#include <cstring>
 
+
+// ----------------------------------------------------------------------------
+// to_string scaled_dotted
+// ----------------------------------------------------------------------------
+std::string_view to_string_dot_seperated_char(char* _buffer, size_t /*_size*/, uint64_t _value)
+{
+	// check)
+	if (_value == 0)
+	{
+		_buffer[0] = '0';
+		_buffer[1] = 0;
+		return std::string_view(_buffer, 1);
+	}
+
+	char result[128];
+	int pos = 127;
+	result[pos--] = 0;
+	while (_value)
+	{
+		if (!((pos - 3) % 4))
+			result[pos--] = ',';
+		result[pos--] = (_value % 10) + '0';
+		_value /= 10;
+	}
+
+	auto len = 126 - pos;
+	std::memcpy(_buffer, result + pos + 1, (len + 1) * sizeof(char));
+
+	// return) 
+	return std::string_view(_buffer, len);
+}
+
+std::string_view to_string_dot_seperated_char(char* _buffer, size_t /*_size*/, float _value)
+{
+	// check)
+	if (_value == 0)
+	{
+		_buffer[0] = '0';
+		_buffer[1] = 0;
+		return std::string_view(_buffer, 1);
+	}
+
+	uint64_t temp_value = static_cast<uint64_t>(_value);
+	char result[128];
+	int pos = 127;
+	result[pos--] = 0;
+	while (temp_value)
+	{
+		if (!((pos - 3) % 4))
+			result[pos--] = ',';
+		result[pos--] = (temp_value % 10) + '0';
+		temp_value /= 10;
+	}
+
+	auto len = 126 - pos;
+	std::memcpy(_buffer, result + pos + 1, (len + 1) * sizeof(char));
+
+	// return) 
+	return std::string_view(_buffer, len);
+}
+
+std::wstring_view to_string_dot_seperated_wchar(wchar_t* _buffer, size_t /*_size*/, uint64_t _value)
+{
+	// check)
+	if (_value == 0)
+	{
+		_buffer[0] = L'0';
+		_buffer[1] = 0;
+		return std::wstring_view(_buffer, 1);
+	}
+
+	wchar_t result[128];
+	int pos = 127;
+	result[pos--] = 0;
+	while (_value)
+	{
+		if (!((pos - 3) % 4))
+			result[pos--] = L',';
+		result[pos--] = (_value % 10) + L'0';
+		_value /= 10;
+	}
+
+	auto len = 126 - pos;
+	std::memcpy(_buffer, result + pos + 1, (len + 1) * sizeof(wchar_t));
+
+	// return) 
+	return std::wstring_view(_buffer, len);
+}
+
+std::wstring_view to_string_dot_seperated_wchar(wchar_t* _buffer, size_t /*_size*/, float _value)
+{
+	// check)
+	if (_value == 0)
+	{
+		_buffer[0] = L'0';
+		_buffer[1] = 0;
+		return std::wstring_view(_buffer, 1);
+	}
+
+	uint64_t temp_value = static_cast<uint64_t>(_value);
+	wchar_t result[128];
+	int pos = 127;
+	result[pos--] = 0;
+	while (temp_value)
+	{
+		if (!((pos - 3) % 4))
+			result[pos--] = L',';
+		result[pos--] = (temp_value % 10) + L'0';
+		temp_value /= 10;
+	}
+
+	auto len = 126 - pos;
+	std::memcpy(_buffer, result + pos + 1, (len + 1) * sizeof(wchar_t));
+
+	// return) 
+	return std::wstring_view(_buffer, len);
+}
 
 // ----------------------------------------------------------------------------
 // to_string scaled
@@ -20,7 +138,7 @@ std::string_view CGDK::to_string_scaled<char, int32_t>(char* _buffer, size_t _si
 	else
 		__sprintf(_buffer, _size, "%.2f"sv, ((float)_value));
 
-	return	std::string_view(_buffer);
+	return std::string_view(_buffer);
 }
 template<>
 std::string_view CGDK::to_string_scaled<char, uint32_t>(char* _buffer, size_t _size, uint32_t _value)

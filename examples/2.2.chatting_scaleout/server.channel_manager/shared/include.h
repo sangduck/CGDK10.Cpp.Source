@@ -37,10 +37,10 @@
 //-----------------------------------------------------------------
 // 1) Engine 
 #include "cgdk/sdk10/net.socket.h"
-#include "cgdk/sdk10/server.system.time_event.h"
-#include "cgdk/sdk10/server.system.log.h"
-#include "cgdk/sdk10/server.system.service.h"
-#include "cgdk/sdk10/server.system.group.h"
+#include "cgdk/sdk10/server.time_event.h"
+#include "cgdk/sdk10/server.log.h"
+#include "cgdk/sdk10/server.service.h"
+#include "cgdk/sdk10/server.group.h"
 
 using namespace CGDK;
 
@@ -84,15 +84,15 @@ const uint32_t	CGNOTIFY_CHANNEL_UPDATE		 = (eMESSAGE::USER | 4);
 #include "../../common/definition_message.h"
 
 // 2) user
-#include "user_socket.h"
-#include "user_group_immigration.h"
-#include "user_manager.h"
+#include "user.socket.h"
+#include "user.group_immigration.h"
+#include "user.manager.h"
 
 // 3) channels
-#include "channel_Igroup.h"
-#include "channel_group_waiting.h"
-#include "channel_group_chatting.h"
-#include "channel_manager.h"
+#include "server_channel.socket.h"
+#include "server_channel.group.h"
+#include "server_channel_group_waiting.h"
+#include "server_channel_group_chatting.h"
 
 // 4) service
 #include "service.h"

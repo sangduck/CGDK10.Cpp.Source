@@ -37,6 +37,7 @@ BEGIN_MESSAGE_MAP(CChild_connective_info, CChildDialog)
 	ON_BN_CLICKED(IDC_CHECK_GRAPH_TRY, &CChild_connective_info::OnBnClickedCheckGraphTry)
 	ON_BN_CLICKED(IDC_CHECK_GRAPH_CONNECT, &CChild_connective_info::OnBnClickedCheckGraphConnect)
 	ON_BN_CLICKED(IDC_CHECK_GRAPH_DISCONNECT, &CChild_connective_info::OnBnClickedCheckGraphDisconnect)
+	ON_BN_CLICKED(IDC_BUTTON_RESET, &CChild_connective_info::OnBnClickedResetStatistics)
 END_MESSAGE_MAP()
 
 BOOL CChild_connective_info::CreateChild(const statistics::unit_connective* _pinfo, CWnd* _pwnd)
@@ -122,42 +123,42 @@ void CChild_connective_info::UpdateConnectiveInfo()
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 	// check) 
-	RETURN_IF(m_pstatistics == nullptr);
+	RETURN_IF(this->m_pstatistics == nullptr);
 
 	// - 현재 Tick과 Tick Gap을 구한다.
 	chrono::tick::time_point tick_now = chrono::tick::now();
-	chrono::milliseconds	 tick_differ = std::chrono::duration_cast<chrono::milliseconds>(tick_now - m_tick_last);
+	chrono::milliseconds	 tick_differ = std::chrono::duration_cast<chrono::milliseconds>(tick_now - this->m_tick_last);
 
 	// - 최종 시간을 last에 넣는다.
-	m_tick_last = tick_now;
+	this->m_tick_last = tick_now;
 
 
 	//-----------------------------------------------------------------
 	// 1. Traffice Info 계산하기.
 	//-----------------------------------------------------------------
 	// 1) 이전과 현재의 차이를 구한다. (Overflow가 났을 경우를 대비하여 계산해야 한다.)
-	LONGLONG countTry			 = m_pstatistics->count_try.load();
-	LONGLONG countConnect		 = m_pstatistics->count_success_connect.load();
-	LONGLONG countDisconnect	 = m_pstatistics->count_disconnect.load();
-	LONGLONG countFailConnect	 = m_pstatistics->count_fail_connect.load();
-	LONGLONG countErrorDisconnect= m_pstatistics->count_error_disconnect.load();
+	LONGLONG countTry			 = this->m_pstatistics->count_try.load() - this->m_statistics_offet_count_try;
+	LONGLONG countConnect		 = this->m_pstatistics->count_success_connect.load() - this->m_statistics_offet_success_connect;
+	LONGLONG countDisconnect	 = this->m_pstatistics->count_disconnect.load() - this->m_statistics_offet_disconnect;
+	LONGLONG countFailConnect	 = this->m_pstatistics->count_fail_connect.load() - this->m_statistics_offet_fail_connect;
+	LONGLONG countErrorDisconnect= this->m_pstatistics->count_error_disconnect.load() - this->m_statistics_offet_error_disconnect;
 
 	// 2) 초당 전송률을 구한다.
-	float fTry_PerSec			 = static_cast<float>(countTry-m_countTry)*1000/tick_differ.count();
-	float fConnected_PerSec		 = static_cast<float>(countConnect-m_count_connect)*1000/tick_differ.count();
-	float fDisconnected_PerSec	 = static_cast<float>(countDisconnect-m_count_disconnect)*1000/tick_differ.count();
+	float fTry_PerSec			 = (countTry > this->m_countTry) ? static_cast<float>(countTry - this->m_countTry)*1000/tick_differ.count() : 0;
+	float fConnected_PerSec		 = (countConnect > this->m_count_connect) ? static_cast<float>(countConnect - this->m_count_connect)*1000/tick_differ.count() : 0;
+	float fDisconnected_PerSec	 = (countDisconnect > this->m_count_disconnect) ? static_cast<float>(countDisconnect - this->m_count_disconnect)*1000/tick_differ.count() : 0;
 
 	// 3) 이전 값을 현재 값으로 Update한다.(다음 Frame에서의 계산을 위해)
-	m_countTry					 = countTry;
-	m_count_connect				 = countConnect;
-	m_count_disconnect			 = countDisconnect;
+	this->m_countTry			 = countTry;
+	this->m_count_connect		 = countConnect;
+	this->m_count_disconnect	 = countDisconnect;
 
 
 	//-----------------------------------------------------------------
 	// 2.control에 표시하기.
 	//-----------------------------------------------------------------
 	TCHAR		temp_string[256]={};
-	LONGLONG	countKeep = m_pstatistics->count_keep.load();
+	LONGLONG	countKeep = this->m_pstatistics->count_keep.load();
 
 	// 1) Connection Info
 	m_graph_tcp_connect.AppendData(0, static_cast<int>(countKeep));
@@ -167,17 +168,17 @@ void CChild_connective_info::UpdateConnectiveInfo()
 	m_graph_tcp_connect.Scroll(1);
 
 	// 2) Connection Info
-	__to_string(temp_string, countKeep);			SetDlgItemText(IDC_STATIC_KEEP_CONNECT,	temp_string);
-	__to_string(temp_string, countTry);				SetDlgItemText(IDC_STATIC_TRY,			temp_string);
-	__to_string(temp_string, countConnect);			SetDlgItemText(IDC_STATIC_CONNECTED,	temp_string);
-	__to_string(temp_string, countDisconnect);		SetDlgItemText(IDC_STATIC_DISCONNECTED,	temp_string);
-	__to_string(temp_string, countFailConnect);		SetDlgItemText(IDC_STATIC_FAIL_CONNECT,	temp_string);
-	__to_string(temp_string, countErrorDisconnect);	SetDlgItemText(IDC_STATIC_ERROR_CLOSE,	temp_string);
+	__to_string(temp_string, countKeep);			this->SetDlgItemText(IDC_STATIC_KEEP_CONNECT,	temp_string);
+	__to_string(temp_string, countTry);				this->SetDlgItemText(IDC_STATIC_TRY,			temp_string);
+	__to_string(temp_string, countConnect);			this->SetDlgItemText(IDC_STATIC_CONNECTED,		temp_string);
+	__to_string(temp_string, countDisconnect);		this->SetDlgItemText(IDC_STATIC_DISCONNECTED,	temp_string);
+	__to_string(temp_string, countFailConnect);		this->SetDlgItemText(IDC_STATIC_FAIL_CONNECT,	temp_string);
+	__to_string(temp_string, countErrorDisconnect);	this->SetDlgItemText(IDC_STATIC_ERROR_CLOSE,	temp_string);
 
 	// 3) 초당 전송률 표시.
-	__sprintf(temp_string, TEXT("%.2f"), fTry_PerSec);			SetDlgItemText(IDC_STATIC_TRY_PERSEC,			temp_string);
-	__sprintf(temp_string, TEXT("%.2f"), fConnected_PerSec);	SetDlgItemText(IDC_STATIC_CONNECTED_PERSEC,		temp_string);
-	__sprintf(temp_string, TEXT("%.2f"), fDisconnected_PerSec);	SetDlgItemText(IDC_STATIC_DISCONNECTED_PERSEC,	temp_string);
+	__sprintf(temp_string, TEXT("%.2f"), fTry_PerSec);			this->SetDlgItemText(IDC_STATIC_TRY_PERSEC,				temp_string);
+	__sprintf(temp_string, TEXT("%.2f"), fConnected_PerSec);	this->SetDlgItemText(IDC_STATIC_CONNECTED_PERSEC,		temp_string);
+	__sprintf(temp_string, TEXT("%.2f"), fDisconnected_PerSec);	this->SetDlgItemText(IDC_STATIC_DISCONNECTED_PERSEC,	temp_string);
 }
 
 void CChild_connective_info::OnTimer(UINT_PTR nIDEvent)
@@ -366,6 +367,20 @@ void CChild_connective_info::OnBnClickedCheckGraphDisconnect()
 	// 2) Graph의 상태를 설정한다.
 	m_graph_tcp_connect.EnableGraph(3, iStatus==BST_CHECKED);
 	m_graph_tcp_connect.Invalidate(FALSE);
+}
+
+void CChild_connective_info::OnBnClickedResetStatistics()
+{
+	// 1) reset
+	this->m_statistics_offet_count_try = this->m_pstatistics->count_try.load() ;
+	this->m_statistics_offet_success_connect = this->m_pstatistics->count_success_connect.load();
+	this->m_statistics_offet_disconnect = this->m_pstatistics->count_disconnect.load();
+	this->m_statistics_offet_fail_connect = this->m_pstatistics->count_fail_connect.load();
+	this->m_statistics_offet_error_disconnect = this->m_pstatistics->count_error_disconnect.load();
+	this->m_tick_last = chrono::tick::now();
+
+	// 2) 최종 시간을 last에 넣는다.
+	this->UpdateConnectiveInfo();
 }
 
 

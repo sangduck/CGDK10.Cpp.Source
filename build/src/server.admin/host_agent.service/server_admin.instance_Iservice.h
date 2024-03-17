@@ -85,12 +85,12 @@ private:
 	virtual	void				on_observer_registered(socket_websocket* _pobserver, observer_channel_t _ocid, const observer_data_t& _observer_data) override;
 	virtual	uintptr_t			on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t _ocid) override;
 
-			own_ptr<observable_websocket_server_overview_info>	pobservable_websocket_server_overview_info;
-			own_ptr<observable_websocket_server_factory_info>	pobservable_websocket_server_factory_info;
-			own_ptr<observable_websocket_server_executor_info>	pobservable_websocket_server_executor_info;
-			own_ptr<observable_websocket_server_network_info>	pobservable_websocket_server_network_info;
-			own_ptr<observable_websocket_server_querier_info>	pobservable_websocket_server_querier_info;
-			own_ptr<observable_websocket_server_crash_info>		pobservable_websocket_server_crash_info;
+			own_ptr<observable_websocket_peer_overview_info>	pobservable_websocket_peer_overview_info;
+			own_ptr<observable_websocket_peer_factory_info>	pobservable_websocket_peer_factory_info;
+			own_ptr<observable_websocket_peer_executor_info>	pobservable_websocket_peer_executor_info;
+			own_ptr<observable_websocket_peer_network_info>	pobservable_websocket_peer_network_info;
+			own_ptr<observable_websocket_peer_querier_info>	pobservable_websocket_peer_querier_info;
+			own_ptr<observable_websocket_peer_crash_info>		pobservable_websocket_peer_crash_info;
 
 			object_ptr<Iobservable_websocket> _get_pobservable_webpage(char _select) const noexcept;
 };

@@ -5,7 +5,7 @@ server_admin::Iinstance::~Iinstance() noexcept
 {
 }
 
-bool server_admin::Iinstance::process_sservice_disconnected(socket_server* _psocket)
+bool server_admin::Iinstance::process_sservice_disconnected(socket_peer* _psocket)
 {
 	scoped_lock(this->m_cs_instance)
 	{
@@ -26,7 +26,7 @@ bool server_admin::Iinstance::process_sservice_disconnected(socket_server* _psoc
 bool server_admin::Iinstance::process_send(shared_buffer&& _buffer, std::size_t _count_message, uint64_t _option)
 {
 	// declare) 
-	object_ptr<socket_server> psocket;
+	object_ptr<socket_peer> psocket;
 
 	// 1) socket
 	scoped_lock(this->m_cs_instance)

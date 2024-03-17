@@ -1,27 +1,5 @@
 ﻿#include "pch.h"
 
-
-#if !defined(__linux__)
-	#pragma warning (disable:5054)
-	#pragma warning (disable:6340)
-	#pragma warning (disable:6313)
-	//#pragma diag_suppress 177 // supress #177-D function  was declared but never referenced
-	#include "../../common/rapidjson/document.h"
-	#include "../../common/rapidjson/writer.h"
-	#include "../../common/rapidjson/stringbuffer.h"
-	#include "../../common/rapidjson/filereadstream.h"
-	#include "../../common/rapidjson/filewritestream.h"
-	#pragma warning (default:6340)
-	#pragma warning (default:6313)
-	#pragma warning (default:5054)
-#else
-	#include "../../common/rapidjson/document.h"
-	#include "../../common/rapidjson/writer.h"
-	#include "../../common/rapidjson/stringbuffer.h"
-	#include "../../common/rapidjson/filereadstream.h"
-	#include "../../common/rapidjson/filewritestream.h"
-#endif
-
 namespace CGDK
 {
 

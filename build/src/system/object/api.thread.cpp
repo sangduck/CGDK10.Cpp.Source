@@ -113,7 +113,7 @@ void api::Nthread::statistics_executing_begin() noexcept
 	statistics_executing_begin(chrono::tick::now());
 }
 
-void api::Nthread::statistics_executing_begin(const chrono::tick::time_point& _tick ) noexcept
+void api::Nthread::statistics_executing_begin(chrono::tick::time_point _tick ) noexcept
 {
 	this->m_statistics_thread.is_executing = true;
 

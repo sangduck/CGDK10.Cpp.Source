@@ -78,9 +78,9 @@
 //----------------------------------------------------------------------------
 #define DEFAULT_BUFFER_FOR_WEB_PAGE	16384
 
-class socket_server;
+class socket_peer;
 class socket_websocket;
-class group_server_immigration;
+class group_peer_immigration;
 class group_server;
 
 namespace CGDK
@@ -97,12 +97,12 @@ namespace CGDK
 }
 
 class Iobservable_websocket;
-class observable_websocket_server_overview_info;
-class observable_websocket_server_factory_info;
-class observable_websocket_server_executor_info;
-class observable_websocket_server_network_info;
-class observable_websocket_server_querier_info;
-class observable_websocket_server_crash_info;
+class observable_websocket_peer_overview_info;
+class observable_websocket_peer_factory_info;
+class observable_websocket_peer_executor_info;
+class observable_websocket_peer_network_info;
+class observable_websocket_peer_querier_info;
+class observable_websocket_peer_crash_info;
 
 //----------------------------------------------------------------------------
 // Include
@@ -169,13 +169,13 @@ using namespace CGDK;
 #include "Iobservable_websocket.h"
 #include "observable_websocket_system_info.h"
 #include "observable_websocket_host_info.h"
-#include "observable_websocket_server_overview_info.h"
-#include "observable_websocket_server_factory_info.h"
-#include "observable_websocket_server_executor_info.h"
-#include "observable_websocket_server_network_info.h"
-#include "observable_websocket_server_querier_info.h"
-#include "observable_websocket_server_crash_info.h"
-#include "observable_websocket_server_info.h"
+#include "observable_websocket_peer_overview_info.h"
+#include "observable_websocket_peer_factory_info.h"
+#include "observable_websocket_peer_executor_info.h"
+#include "observable_websocket_peer_network_info.h"
+#include "observable_websocket_peer_querier_info.h"
+#include "observable_websocket_peer_crash_info.h"
+#include "observable_websocket_peer_info.h"
 #include "group_websocket.h"
 
 // 3) server entity
@@ -191,11 +191,11 @@ using namespace CGDK;
 #include "socket_admin_server.h"
 
 // 5) for server
-#include "socket_server.h"
-#include "group_server_immigration.h"
+#include "socket_peer.h"
+#include "group_peer_immigration.h"
 #include "Igroup.h"
 #include "group_server.h"
-#include "group_control.h"
+#include "group_client.h"
 
 // 6) service
 #include "service.h"

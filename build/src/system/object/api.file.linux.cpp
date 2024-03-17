@@ -84,7 +84,7 @@ FILE_HANDLE api::file::open(const std::filesystem::path& _filename, eFILE_OPERAT
 		for (auto& iter : *resource::manager::instance())
 		{
 			// - path + filename
-			auto temp_string = fmt::format("{}/{}", iter, _filename.c_str());
+			auto temp_string = NFMT::format("{}/{}", iter, _filename.c_str());
 
 			// - 파일을 open한다.
 			hFile = fopen(temp_string.c_str(), str_access);

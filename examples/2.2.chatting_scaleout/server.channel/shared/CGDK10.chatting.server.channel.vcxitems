@@ -14,4 +14,26 @@
   <ItemGroup>
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)include.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_chatting_manager.socket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)service.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)stdafx.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)user.group.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)user.group_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)user.socket.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)chatting_channel.definition.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)include.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_chatting_manager.socket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)service.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)stdafx.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)user.group.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)user.group_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)user.socket.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)ReadMe.txt" />
+  </ItemGroup>
 </Project>

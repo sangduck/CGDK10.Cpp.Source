@@ -167,7 +167,7 @@ void _append_schedulable_entity_update(buffer& _buf_dest, const server_admin::sc
 	_buf_dest.append_text<char>("\n");
 }
 
-observable_websocket_server_executor_info::observable_websocket_server_executor_info(const std::string_view _name)
+observable_websocket_peer_executor_info::observable_websocket_peer_executor_info(const std::string_view _name)
 {
 	set_name(_name);
 
@@ -175,11 +175,11 @@ observable_websocket_server_executor_info::observable_websocket_server_executor_
 	m_webpage_index = 'C';
 }
 
-observable_websocket_server_executor_info::~observable_websocket_server_executor_info()
+observable_websocket_peer_executor_info::~observable_websocket_peer_executor_info()
 {
 }
 
-void observable_websocket_server_executor_info::request_update_webpage_executor(uint64_t /*_flag*/)
+void observable_websocket_peer_executor_info::request_update_webpage_executor(uint64_t /*_flag*/)
 {
 	// check)
 	CGASSERT_ERROR(this->m_pservice_entity != nullptr);
@@ -203,7 +203,7 @@ void observable_websocket_server_executor_info::request_update_webpage_executor(
 	send_queue.send();
 }
 
-void observable_websocket_server_executor_info::request_update_webpage_schedulable(uint64_t /*_flag*/)
+void observable_websocket_peer_executor_info::request_update_webpage_schedulable(uint64_t /*_flag*/)
 {
 	// check)
 	CGASSERT_ERROR(this->m_pservice_entity != nullptr);
@@ -227,7 +227,7 @@ void observable_websocket_server_executor_info::request_update_webpage_schedulab
 	send_queue.send();
 }
 
-void observable_websocket_server_executor_info::request_update_webpage_executable(uint64_t /*_flag*/)
+void observable_websocket_peer_executor_info::request_update_webpage_executable(uint64_t /*_flag*/)
 {
 	// check)
 	CGASSERT_ERROR(this->m_pservice_entity != nullptr);
@@ -252,13 +252,13 @@ void observable_websocket_server_executor_info::request_update_webpage_executabl
 }
 
 
-result_code observable_websocket_server_executor_info::on_observer_registering(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
+result_code observable_websocket_peer_executor_info::on_observer_registering(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
 {
 	// return) 
 	return eRESULT::SUCCESS;
 }
 
-void observable_websocket_server_executor_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
+void observable_websocket_peer_executor_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
 {
 	// 1) register mediator
 	_pobserver->register_messageable(this);
@@ -282,7 +282,7 @@ void observable_websocket_server_executor_info::on_observer_registered(socket_we
 		_pobserver->send(iter);
 }
 
-uintptr_t observable_websocket_server_executor_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
+uintptr_t observable_websocket_peer_executor_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
 {
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);
@@ -294,21 +294,21 @@ uintptr_t observable_websocket_server_executor_info::on_observer_unregistering(s
 	return 0;
 }
 
-void observable_websocket_server_executor_info::on_observer_unregistered(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, uintptr_t /*_result*/)
+void observable_websocket_peer_executor_info::on_observer_unregistered(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, uintptr_t /*_result*/)
 {
 }
 
-uintptr_t observable_websocket_server_executor_info::on_observer_data_updating(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
+uintptr_t observable_websocket_peer_executor_info::on_observer_data_updating(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
 {
 	// return) 
 	return 0;
 }
 
-void observable_websocket_server_executor_info::on_observer_data_update(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, uintptr_t /*_result*/)
+void observable_websocket_peer_executor_info::on_observer_data_update(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, uintptr_t /*_result*/)
 {
 }
 
-result_code observable_websocket_server_executor_info::on_message(sMESSAGE_NETWORK& _msg)
+result_code observable_websocket_peer_executor_info::on_message(sMESSAGE_NETWORK& _msg)
 {
 	// 1) websocket message
 	auto& msg = static_cast<sMESSAGE_HTTP_WEBSOCKET&>(_msg);
@@ -326,7 +326,7 @@ result_code observable_websocket_server_executor_info::on_message(sMESSAGE_NETWO
 	return eRESULT::BYPASS;
 }
 
-result_code observable_websocket_server_executor_info::on_message_server_button_toggle(sMESSAGE_HTTP_WEBSOCKET& _msg)
+result_code observable_websocket_peer_executor_info::on_message_server_button_toggle(sMESSAGE_HTTP_WEBSOCKET& _msg)
 {
 	// 1) get source
 	auto pmember = _msg.get_source<socket_websocket>();
@@ -428,7 +428,7 @@ result_code observable_websocket_server_executor_info::on_message_server_button_
 	return eRESULT::DONE;
 }
 
-shared_buffer observable_websocket_server_executor_info::make_webmessage_executor_list(const std::vector<server_admin::executor_snap>& _vector_executor_snap, uint64_t _flag)
+shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_list(const std::vector<server_admin::executor_snap>& _vector_executor_snap, uint64_t _flag)
 {
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -483,7 +483,7 @@ shared_buffer observable_websocket_server_executor_info::make_webmessage_executo
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-shared_buffer observable_websocket_server_executor_info::make_webmessage_schedulable_list(const std::vector<server_admin::schedulable_snap>& _vector_schedulable_info, uint64_t _flag)
+shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulable_list(const std::vector<server_admin::schedulable_snap>& _vector_schedulable_info, uint64_t _flag)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -536,7 +536,7 @@ shared_buffer observable_websocket_server_executor_info::make_webmessage_schedul
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-shared_buffer observable_websocket_server_executor_info::make_webmessage_executable_list(const std::vector<server_admin::factory_snap>& _vector_executable_info, uint64_t _flag)
+shared_buffer observable_websocket_peer_executor_info::make_webmessage_executable_list(const std::vector<server_admin::factory_snap>& _vector_executable_info, uint64_t _flag)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -589,7 +589,7 @@ shared_buffer observable_websocket_server_executor_info::make_webmessage_executa
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-//shared_buffer observable_websocket_server_executor_info::make_webmessage_executor_list_add(uint64_t _flag)
+//shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_list_add(uint64_t _flag)
 //{
 //	// 1) 
 //	object_ptr<service> pservice = service::instance();
@@ -645,7 +645,7 @@ shared_buffer observable_websocket_server_executor_info::make_webmessage_executa
 //	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 //}
 
-shared_buffer observable_websocket_server_executor_info::make_webmessage_executor_list_update(const std::vector<server_admin::executor_snap>& _vector_executor_snap, uint64_t _flag)
+shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_list_update(const std::vector<server_admin::executor_snap>& _vector_executor_snap, uint64_t _flag)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -689,7 +689,7 @@ shared_buffer observable_websocket_server_executor_info::make_webmessage_executo
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-//shared_buffer observable_websocket_server_executor_info::make_webmessage_schedulable_list_add(uint64_t _flag)
+//shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulable_list_add(uint64_t _flag)
 //{
 //	// 1) 
 //	object_ptr<service> pservice = service::instance();
@@ -743,7 +743,7 @@ shared_buffer observable_websocket_server_executor_info::make_webmessage_executo
 //	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 //}
 
-shared_buffer observable_websocket_server_executor_info::make_webmessage_schedulable_list_update(const std::vector<server_admin::schedulable_snap>& _vector_schedulable, uint64_t _flag)
+shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulable_list_update(const std::vector<server_admin::schedulable_snap>& _vector_schedulable, uint64_t _flag)
 {
 	// 1) 
 	object_ptr<service> pservice = service::instance();
@@ -790,7 +790,7 @@ shared_buffer observable_websocket_server_executor_info::make_webmessage_schedul
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-//shared_buffer observable_websocket_server_executor_info::make_webmessage_executable_list_add(uint64_t _flag)
+//shared_buffer observable_websocket_peer_executor_info::make_webmessage_executable_list_add(uint64_t _flag)
 //{
 //	// 1) 
 //	object_ptr<service> pservice = service::instance();
@@ -844,7 +844,7 @@ shared_buffer observable_websocket_server_executor_info::make_webmessage_schedul
 //	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 //}
 
-shared_buffer observable_websocket_server_executor_info::make_webmessage_executable_list_update(const std::vector<server_admin::factory_snap>& _vector_schedulable_snap, uint64_t _flag)
+shared_buffer observable_websocket_peer_executor_info::make_webmessage_executable_list_update(const std::vector<server_admin::factory_snap>& _vector_schedulable_snap, uint64_t _flag)
 {
 	// 1) 
 	object_ptr<service> pservice = service::instance();

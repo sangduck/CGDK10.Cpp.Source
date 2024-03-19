@@ -20,10 +20,10 @@
 // ----------------------------------------------------------------------------
 // group_system.group
 // ----------------------------------------------------------------------------
-#include "cgdk/sdk10/server.system.group.no_manage.h"
-#include "cgdk/sdk10/server.system.group.count.h"
-#include "cgdk/sdk10/server.system.group.list.h"
-#include "cgdk/sdk10/server.system.group.array.h"
-#include "cgdk/sdk10/server.system.group.array_seat.h"
-#include "cgdk/sdk10/server.system.group.map.h"
+#include "cgdk/sdk10/server.group.no_manage.h"
+#include "cgdk/sdk10/server.group.count.h"
+#include "cgdk/sdk10/server.group.list.h"
+#include "cgdk/sdk10/server.group.array.h"
+#include "cgdk/sdk10/server.group.array_seat.h"
+#include "cgdk/sdk10/server.group.map.h"
 #include "cgdk/sdk10/server.system/group/server.group.preset.h"

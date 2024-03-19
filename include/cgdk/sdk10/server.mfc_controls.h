@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                            Server Log Classes                             *
+//*                         Server Admin MFC Controls                         *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -18,52 +18,37 @@
 
 #pragma once
 //----------------------------------------------------------------------------
-// Definitions
+//  Prototype
 //----------------------------------------------------------------------------
-#define	CGSERVER_LOG_CLASSES
+#define	CGSERVERMFCCONTROL_CONTROLS
 
-namespace CGDK
-{
-	class Nlogger;
-	class logger_acceptor;
-	class logger_console;
-	class logger_file;
-	class logger_hub;
-	class logger_hub_archive;
-	class logger_slack;
-	class logger_socket;
-	class logger_buffer;
-	class log_archive;
-
-	class log_filter;
-}
-
+#ifdef _CGSERVERMFCCONTROL_EXT
+	#define CGSERVERMFCCONTROL_EXT_API		__declspec(dllexport)
+	#define CGSERVERMFCCONTROL_EXT_CLASS	__declspec(dllexport)
+	#define CGSERVERMFCCONTROL_EXT_DATA		__declspec(dllexport)
+#else
+	#define CGSERVERMFCCONTROL_EXT_API		__declspec(dllimport)
+	#define CGSERVERMFCCONTROL_EXT_CLASS	__declspec(dllimport)
+	#define CGSERVERMFCCONTROL_EXT_DATA		__declspec(dllimport)
+#endif
 
 
 //----------------------------------------------------------------------------
-// head Fileµé
+//  head Fileµé                                                               
 //----------------------------------------------------------------------------
-// 1) CGDK headers
-#include "cgdk/sdk10/net.socket.h"
+// 1) CGServerAdminClasees
+#include "cgdk/sdk10/server.log.h"
+#include "cgdk/sdk10/server.time_event.h"
+#include "cgdk/sdk10/server.service.h"
+#include "cgdk/sdk10/system.mfc_controls.h"
 
-// 2) definitions
-#include "cgdk/sdk10/server.system/log/server.system.definitions.log.h"
-#include "cgdk/sdk10/server.system/log/server.system.definitions.log.protocol.h"
+// 2) Child Dialog
+#include "cgdk/sdk10/server.system/mfc_controls/child_event_list.h"
+#include "cgdk/sdk10/server.system/mfc_controls/child_logger_view.h"
+#include "cgdk/sdk10/server.system/mfc_controls/child_logger_view_ex.h"
 
-// 3) logger
-#include "cgdk/sdk10/server.system/log/server.system.Nlogger.h"
-#include "cgdk/sdk10/server.system/log/server.system.logger_acceptor.h"
-#include "cgdk/sdk10/server.system/log/server.system.logger_console.h"
-#include "cgdk/sdk10/server.system/log/server.system.logger_file.h"
-#include "cgdk/sdk10/server.system/log/server.system.logger_hub.h"
-#include "cgdk/sdk10/server.system/log/server.system.logger_hub_archive.h"
-#include "cgdk/sdk10/server.system/log/server.system.logger_slack.h"
-#include "cgdk/sdk10/server.system/log/server.system.logger_socket.h"
-#include "cgdk/sdk10/server.system/log/server.system.logger_buffer.h"
-#include "cgdk/sdk10/server.system/log/server.system.logger_syslog.h"
-
-// 4) log filter
-#include "cgdk/sdk10/server.system/log/server.system.log_filter.default.h"
+// 3) ...
+#include "cgdk/sdk10/server.system/mfc_controls/time_event_info_dlg.h"
 
 
 //----------------------------------------------------------------------------
@@ -71,7 +56,7 @@ namespace CGDK
 // Libraries
 //
 //----------------------------------------------------------------------------
-#if defined(_MSC_VER)
+#ifndef _CGSERVERMFCCONTROL_EXT
 
 	#if !defined(_MSC_PLATFORM_TOOLSET)
 		#if _MSC_VER>=_MSC_VER_2022
@@ -95,11 +80,6 @@ namespace CGDK
 		#endif
 	#endif
 
-	#if !defined(_LIB) || defined(_CONSOLE)
-
-	// 1) Windows Internet Library
-	#pragma comment(lib,"Wininet.lib")
-
 
 	//----------------------------------------------------------------------------
 	// * WinSDK 10
@@ -116,14 +96,19 @@ namespace CGDK
 			#error "[CGDK10] No Multi-Thread(/MT) or Multi-Thread Debug(/MTd). use Multi-thread DLL(/MD) or Multi-thread DLL Debug(/MDd)"
 		#endif
 
+		// check) 
+		#ifndef _UNICODE 
+			#error "[CGDK10] No Multibyte character set. use UNICODE character set"
+		#endif
+
 		// WinSDK 10
 		#if WDK_NTDDI_VERSION >= NTDDI_WIN10
 			#ifdef NDEBUG
-				#pragma message("[CGDK10] 'CGDK10.server.system.log_Windows10.0_x64_Release.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/CGDK10.server.system.log_Windows10.0_x64_Release.lib")
+				#pragma message("[CGDK10] 'CGDK10.server.mfc_controls_Windows10.0_x64_Release_Dynamic.lib' will be linked")
+				#pragma comment(lib, "cgdk/sdk10/CGDK10.server.mfc_controls_Windows10.0_x64_Release_Dynamic.lib")
 			#else
-				#pragma message("[CGDK10] 'CGDK10.server.system.log_Windows10.0_x64_Debug.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/CGDK10.server.system.log_Windows10.0_x64_Debug.lib")
+				#pragma message("[CGDK10] 'CGDK10.server.mfc_controls_Windows10.0_x64_Debug_Dynamic.lib' will be linked")
+				#pragma comment(lib, "cgdk/sdk10/CGDK10.server.mfc_controls_Windows10.0_x64_Debug_Dynamic.lib")
 			#endif
 		// Error - No supported
 		#else
@@ -133,18 +118,4 @@ namespace CGDK
 	#else
 		#error "[CGDK10] Not supported Platform toolset (Need Visual studio 2019 or higher)"
 	#endif
-
-	#endif
-
-#elif defined(__ANDROID__)
-	#error "[CGDK10] Not supported Android Platform"
-
-#elif defined(__APPLE__)
-	#error "[CGDK10] Not supported APPLE Platform"
-
-#elif defined(__linux__)
-
-#else
-	#error "[CGDK10] Not supported platform"
 #endif
-

@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                           Server Event Classes                            *
+//*                            Server Log Classes                             *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -20,59 +20,50 @@
 //----------------------------------------------------------------------------
 // Definitions
 //----------------------------------------------------------------------------
-#define	CGSERVER_EVENT_CLASSES
+#define	CGSERVER_LOG_CLASSES
 
 namespace CGDK
 {
-	namespace time_event
-	{
-		class entity_manager;
+	class Nlogger;
+	class logger_acceptor;
+	class logger_console;
+	class logger_file;
+	class logger_hub;
+	class logger_hub_archive;
+	class logger_slack;
+	class logger_socket;
+	class logger_buffer;
+	class log_archive;
 
-		class Ientity;
-		class Ievent;
-
-		class entity;
-		class Nentity_iteration;
-		template <class TFUNCTION>
-		class entity_iteration;
-		class Nentity_start_end;
-		template <class TFUNCTION>
-		class entity_start_end;
-		class Nentity_start_iteration_end;
-		template <class TFUNCTION>
-		class entity_start_iteration_end;
-
-		class event;
-	}
+	class log_filter;
 }
+
 
 
 //----------------------------------------------------------------------------
 // head Fileµé
 //----------------------------------------------------------------------------
-// 1) execute
-#include "cgdk/sdk10/system.object.h"
+// 1) CGDK headers
+#include "cgdk/sdk10/net.socket.h"
 
-// 2) event system
-#include "cgdk/sdk10/server.system/time_event/server.system.definitions.time_event.h"
-#include "cgdk/sdk10/server.system/time_event/server.system.definitions.time_event.protocol.h"
+// 2) definitions
+#include "cgdk/sdk10/server.system/log/server.definitions.log.h"
+#include "cgdk/sdk10/server.system/log/server.definitions.log.protocol.h"
 
-// 3) time event - interfaces
-#include "cgdk/sdk10/server.system/time_event/server.system.time_event.Ievent.h"
-#include "cgdk/sdk10/server.system/time_event/server.system.time_event.Ientity.h"
+// 3) logger
+#include "cgdk/sdk10/server.system/log/server.Nlogger.h"
+#include "cgdk/sdk10/server.system/log/server.logger_acceptor.h"
+#include "cgdk/sdk10/server.system/log/server.logger_console.h"
+#include "cgdk/sdk10/server.system/log/server.logger_file.h"
+#include "cgdk/sdk10/server.system/log/server.logger_hub.h"
+#include "cgdk/sdk10/server.system/log/server.logger_hub_archive.h"
+#include "cgdk/sdk10/server.system/log/server.logger_slack.h"
+#include "cgdk/sdk10/server.system/log/server.logger_socket.h"
+#include "cgdk/sdk10/server.system/log/server.logger_buffer.h"
+#include "cgdk/sdk10/server.system/log/server.logger_syslog.h"
 
-// 4) time event - entity
-#include "cgdk/sdk10/server.system/time_event/server.system.time_event.event.h"
-#include "cgdk/sdk10/server.system/time_event/server.system.time_event.entity.h"
-#include "cgdk/sdk10/server.system/time_event/server.system.time_event.Nentity_iteration.h"
-#include "cgdk/sdk10/server.system/time_event/server.system.time_event.entity_iteration.h"
-#include "cgdk/sdk10/server.system/time_event/server.system.time_event.Nentity_start_end.h"
-#include "cgdk/sdk10/server.system/time_event/server.system.time_event.entity_start_end.h"
-#include "cgdk/sdk10/server.system/time_event/server.system.time_event.Nentity_start_iteration_end.h"
-#include "cgdk/sdk10/server.system/time_event/server.system.time_event.entity_start_iteration_end.h"
-
-// 5) time event - manager
-#include "cgdk/sdk10/server.system/time_event/server.system.time_event.manager.h"
+// 4) log filter
+#include "cgdk/sdk10/server.system/log/server.log_filter.default.h"
 
 
 //----------------------------------------------------------------------------
@@ -106,6 +97,9 @@ namespace CGDK
 
 	#if !defined(_LIB) || defined(_CONSOLE)
 
+	// 1) Windows Internet Library
+	#pragma comment(lib,"Wininet.lib")
+
 
 	//----------------------------------------------------------------------------
 	// * WinSDK 10
@@ -125,11 +119,11 @@ namespace CGDK
 		// WinSDK 10
 		#if WDK_NTDDI_VERSION >= NTDDI_WIN10
 			#ifdef NDEBUG
-				#pragma message("[CGDK10] 'CGDK10.server.system.time_event_Windows10.0_x64_Release.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/CGDK10.server.system.time_event_Windows10.0_x64_Release.lib")
+				#pragma message("[CGDK10] 'CGDK10.server.log_Windows10.0_x64_Release.lib' will be linked")
+				#pragma comment(lib, "cgdk/sdk10/CGDK10.server.log_Windows10.0_x64_Release.lib")
 			#else
-				#pragma message("[CGDK10] 'CGDK10.server.system.time_event_Windows10.0_x64_Debug.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/CGDK10.server.system.time_event_Windows10.0_x64_Debug.lib")
+				#pragma message("[CGDK10] 'CGDK10.server.log_Windows10.0_x64_Debug.lib' will be linked")
+				#pragma comment(lib, "cgdk/sdk10/CGDK10.server.log_Windows10.0_x64_Debug.lib")
 			#endif
 		// Error - No supported
 		#else

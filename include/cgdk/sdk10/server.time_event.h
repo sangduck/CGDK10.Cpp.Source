@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                         Server Admin MFC Controls                         *
+//*                           Server Event Classes                            *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -18,37 +18,61 @@
 
 #pragma once
 //----------------------------------------------------------------------------
-//  Prototype
+// Definitions
 //----------------------------------------------------------------------------
-#define	CGSERVERMFCCONTROL_CONTROLS
+#define	CGSERVER_EVENT_CLASSES
 
-#ifdef _CGSERVERMFCCONTROL_EXT
-	#define CGSERVERMFCCONTROL_EXT_API		__declspec(dllexport)
-	#define CGSERVERMFCCONTROL_EXT_CLASS	__declspec(dllexport)
-	#define CGSERVERMFCCONTROL_EXT_DATA		__declspec(dllexport)
-#else
-	#define CGSERVERMFCCONTROL_EXT_API		__declspec(dllimport)
-	#define CGSERVERMFCCONTROL_EXT_CLASS	__declspec(dllimport)
-	#define CGSERVERMFCCONTROL_EXT_DATA		__declspec(dllimport)
-#endif
+namespace CGDK
+{
+	namespace time_event
+	{
+		class entity_manager;
+
+		class Ientity;
+		class Ievent;
+
+		class entity;
+		class Nentity_iteration;
+		template <class TFUNCTION>
+		class entity_iteration;
+		class Nentity_start_end;
+		template <class TFUNCTION>
+		class entity_start_end;
+		class Nentity_start_iteration_end;
+		template <class TFUNCTION>
+		class entity_start_iteration_end;
+
+		class event;
+	}
+}
 
 
 //----------------------------------------------------------------------------
-//  head Fileµé                                                               
+// head Fileµé
 //----------------------------------------------------------------------------
-// 1) CGServerAdminClasees
-#include "cgdk/sdk10/server.system.log.h"
-#include "cgdk/sdk10/server.system.time_event.h"
-#include "cgdk/sdk10/server.system.service.h"
-#include "cgdk/sdk10/system.mfc_controls.h"
+// 1) execute
+#include "cgdk/sdk10/system.object.h"
 
-// 2) Child Dialog
-#include "cgdk/sdk10/server.system/mfc_controls/child_event_list.h"
-#include "cgdk/sdk10/server.system/mfc_controls/child_logger_view.h"
-#include "cgdk/sdk10/server.system/mfc_controls/child_logger_view_ex.h"
+// 2) event system
+#include "cgdk/sdk10/server.system/time_event/server.definitions.time_event.h"
+#include "cgdk/sdk10/server.system/time_event/server.definitions.time_event.protocol.h"
 
-// 3) ...
-#include "cgdk/sdk10/server.system/mfc_controls/time_event_info_dlg.h"
+// 3) time event - interfaces
+#include "cgdk/sdk10/server.system/time_event/server.time_event.Ievent.h"
+#include "cgdk/sdk10/server.system/time_event/server.time_event.Ientity.h"
+
+// 4) time event - entity
+#include "cgdk/sdk10/server.system/time_event/server.time_event.event.h"
+#include "cgdk/sdk10/server.system/time_event/server.time_event.entity.h"
+#include "cgdk/sdk10/server.system/time_event/server.time_event.Nentity_iteration.h"
+#include "cgdk/sdk10/server.system/time_event/server.time_event.entity_iteration.h"
+#include "cgdk/sdk10/server.system/time_event/server.time_event.Nentity_start_end.h"
+#include "cgdk/sdk10/server.system/time_event/server.time_event.entity_start_end.h"
+#include "cgdk/sdk10/server.system/time_event/server.time_event.Nentity_start_iteration_end.h"
+#include "cgdk/sdk10/server.system/time_event/server.time_event.entity_start_iteration_end.h"
+
+// 5) time event - manager
+#include "cgdk/sdk10/server.system/time_event/server.time_event.manager.h"
 
 
 //----------------------------------------------------------------------------
@@ -56,7 +80,7 @@
 // Libraries
 //
 //----------------------------------------------------------------------------
-#ifndef _CGSERVERMFCCONTROL_EXT
+#if defined(_MSC_VER)
 
 	#if !defined(_MSC_PLATFORM_TOOLSET)
 		#if _MSC_VER>=_MSC_VER_2022
@@ -80,6 +104,8 @@
 		#endif
 	#endif
 
+	#if !defined(_LIB) || defined(_CONSOLE)
+
 
 	//----------------------------------------------------------------------------
 	// * WinSDK 10
@@ -96,19 +122,14 @@
 			#error "[CGDK10] No Multi-Thread(/MT) or Multi-Thread Debug(/MTd). use Multi-thread DLL(/MD) or Multi-thread DLL Debug(/MDd)"
 		#endif
 
-		// check) 
-		#ifndef _UNICODE 
-			#error "[CGDK10] No Multibyte character set. use UNICODE character set"
-		#endif
-
 		// WinSDK 10
 		#if WDK_NTDDI_VERSION >= NTDDI_WIN10
 			#ifdef NDEBUG
-				#pragma message("[CGDK10] 'CGDK10.server.system.mfc_controls_Windows10.0_x64_Release_Dynamic.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/CGDK10.server.system.mfc_controls_Windows10.0_x64_Release_Dynamic.lib")
+				#pragma message("[CGDK10] 'CGDK10.server.time_event_Windows10.0_x64_Release.lib' will be linked")
+				#pragma comment(lib, "cgdk/sdk10/CGDK10.server.time_event_Windows10.0_x64_Release.lib")
 			#else
-				#pragma message("[CGDK10] 'CGDK10.server.system.mfc_controls_Windows10.0_x64_Debug_Dynamic.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/CGDK10.server.system.mfc_controls_Windows10.0_x64_Debug_Dynamic.lib")
+				#pragma message("[CGDK10] 'CGDK10.server.time_event_Windows10.0_x64_Debug.lib' will be linked")
+				#pragma comment(lib, "cgdk/sdk10/CGDK10.server.time_event_Windows10.0_x64_Debug.lib")
 			#endif
 		// Error - No supported
 		#else
@@ -118,4 +139,18 @@
 	#else
 		#error "[CGDK10] Not supported Platform toolset (Need Visual studio 2019 or higher)"
 	#endif
+
+	#endif
+
+#elif defined(__ANDROID__)
+	#error "[CGDK10] Not supported Android Platform"
+
+#elif defined(__APPLE__)
+	#error "[CGDK10] Not supported APPLE Platform"
+
+#elif defined(__linux__)
+
+#else
+	#error "[CGDK10] Not supported platform"
 #endif
+

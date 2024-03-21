@@ -289,7 +289,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <ImportLibrary>../../../../lib/cgdk/sdk10/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../../../lib/cgdk/sdk10/windows/$(TargetName).lib</ImportLibrary>
       <AdditionalLibraryDirectories>../../../../lib</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
@@ -327,7 +327,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <ImportLibrary>../../../../lib.NDI/cgdk/sdk10/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../../../lib.NDI/cgdk/sdk10/windows/$(TargetName).lib</ImportLibrary>
       <AdditionalLibraryDirectories>../../../../lib.NDI</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
@@ -454,7 +454,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <ImportLibrary>../../../../lib/cgdk/sdk10/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../../../lib/cgdk/sdk10/windows/$(TargetName).lib</ImportLibrary>
       <AdditionalLibraryDirectories>../../../../lib</AdditionalLibraryDirectories>
       <FullProgramDatabaseFile>true</FullProgramDatabaseFile>
     </Link>
@@ -500,7 +500,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <ImportLibrary>../../../../lib.NDI/cgdk/sdk10/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../../../lib.NDI/cgdk/sdk10/windows/$(TargetName).lib</ImportLibrary>
       <AdditionalLibraryDirectories>../../../../lib.NDI</AdditionalLibraryDirectories>
       <FullProgramDatabaseFile>true</FullProgramDatabaseFile>
     </Link>

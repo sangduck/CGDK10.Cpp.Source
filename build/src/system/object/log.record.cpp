@@ -124,7 +124,9 @@ void LOG_RECORD::add_message(const std::string_view _message, eCHARACTER_SET _ch
 					}
 					break;
 
-			default:	CGASSERT_ERROR(false);	throw throwable::failure(eRESULT::INVALID_ARGUMENT);
+			default: 
+					CGASSERT_ERROR(false);
+					throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 			}
 			break;
 
@@ -154,7 +156,9 @@ void LOG_RECORD::add_message(const std::string_view _message, eCHARACTER_SET _ch
 			}
 					break;
 
-			default:	CGASSERT_ERROR(false); throw throwable::failure(eRESULT::INVALID_ARGUMENT);
+			default:
+					CGASSERT_ERROR(false);
+					throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 			}
 			break;
 
@@ -192,7 +196,9 @@ void LOG_RECORD::add_message(const std::string_view _message, eCHARACTER_SET _ch
 					}
 					break;
 
-			default:	CGASSERT_ERROR(false); throw throwable::failure(eRESULT::INVALID_ARGUMENT);
+			default:
+					CGASSERT_ERROR(false);
+					throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 			}
 			break;
 
@@ -202,7 +208,7 @@ void LOG_RECORD::add_message(const std::string_view _message, eCHARACTER_SET _ch
 	}
 
 	// 6) store result
-	buf_message	 = buf_target;
+	buf_message = buf_target;
 }
 
 void LOG_RECORD::add_message(const std::wstring_view _message, eCHARACTER_SET _character_set)
@@ -364,12 +370,12 @@ object_ptr<LOG_RECORD> LOG_RECORD::clone(eCHARACTER_SET _character_set) const
 	auto plog_record = make_object<LOG_RECORD>();
 
 	// 2) 값을 복사한다.
-	plog_record->type		 = type;
-	plog_record->level		 = level;
-	plog_record->result		 = result;
-	plog_record->origin		 = origin;
-	plog_record->attribute	 = attribute;
-	plog_record->source		 = source;
+	plog_record->type = type;
+	plog_record->level = level;
+	plog_record->result = result;
+	plog_record->origin = origin;
+	plog_record->attribute = attribute;
+	plog_record->source = source;
 	plog_record->destination = destination;
 	plog_record->time_occure = time_occure;
 
@@ -665,9 +671,9 @@ size_t LOG_RECORD::process_get_message(shared_buffer& _buf_dst, size_t _pos, eCH
 
 	switch (char_encoding)
 	{
-	case	eCHARACTER_SET::MBCS:	size_result = process_get_message_from_mbcs		(_buf_dst, _pos, _character_set); break;
-	case	eCHARACTER_SET::UCS2:	size_result = process_get_message_from_windows_unicode	(_buf_dst, _pos, _character_set); break;
-	case	eCHARACTER_SET::UTF8:	size_result = process_get_message_from_utf8		(_buf_dst, _pos, _character_set); break;
+	case	eCHARACTER_SET::MBCS:	size_result = process_get_message_from_mbcs (_buf_dst, _pos, _character_set); break;
+	case	eCHARACTER_SET::UCS2:	size_result = process_get_message_from_windows_unicode (_buf_dst, _pos, _character_set); break;
+	case	eCHARACTER_SET::UTF8:	size_result = process_get_message_from_utf8 (_buf_dst, _pos, _character_set); break;
 	default:						size_result = 0; CGASSERT_ERROR(false);	break;
 	}
 
@@ -692,9 +698,7 @@ size_t LOG_RECORD::process_get_message_from_mbcs(shared_buffer& _buf_dst, size_t
 			break;
 
 	case	eCHARACTER_SET::UCS2:
-			{
-				buf_dst.add_size(encode_string(reinterpret_cast<wchar_t*>(buf_dst.data() + buf_dst.size()), str_src, buf_dst.get_remained_size()).size() * sizeof(wchar_t));
-			}
+			buf_dst.add_size(encode_string(reinterpret_cast<wchar_t*>(buf_dst.data() + buf_dst.size()), str_src, buf_dst.get_remained_size()).size() * sizeof(wchar_t));
 			break;
 
 	case	eCHARACTER_SET::UTF8:
@@ -741,9 +745,7 @@ size_t LOG_RECORD::process_get_message_from_windows_unicode(shared_buffer& _buf_
 	switch (_character_set)
 	{
 	case	eCHARACTER_SET::MBCS:
-			{
-				buf_dst.add_size(encode_string(buf_dst.data() + buf_dst.size(), str_src, buf_dst.get_remained_size()).size());
-			}
+			buf_dst.add_size(encode_string(buf_dst.data() + buf_dst.size(), str_src, buf_dst.get_remained_size()).size());
 			break;
 
 	case	eCHARACTER_SET::UCS2:
@@ -795,9 +797,7 @@ size_t LOG_RECORD::process_get_message_from_utf8(shared_buffer& _buf_dst, size_t
 			break;
 
 	case	eCHARACTER_SET::UCS2:
-			{
-				buf_dst.add_size(encode_string(reinterpret_cast<wchar_t*>(buf_dst.data() + buf_dst.size()), str_src).size() * sizeof(wchar_t));
-			}
+			buf_dst.add_size(encode_string(reinterpret_cast<wchar_t*>(buf_dst.data() + buf_dst.size()), str_src).size() * sizeof(wchar_t));
 			break;
 
 	case	eCHARACTER_SET::UTF8:

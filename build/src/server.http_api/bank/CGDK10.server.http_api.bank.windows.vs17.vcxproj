@@ -143,13 +143,13 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>../../../../lib/cgdk/sdk10/</OutDir>
+    <OutDir>../../../../lib/cgdk/sdk10/windows/</OutDir>
     <IntDir>../../../output/$(ProjectName)/$(TargetPlatformIdentifier)_$(PlatformTarget)_$(PlatformToolset)_$(Configuration)/</IntDir>
     <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_$(Configuration)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug.NDI|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>../../../../lib.NDI/cgdk/sdk10/</OutDir>
+    <OutDir>../../../../lib.NDI/cgdk/sdk10/windows/</OutDir>
     <IntDir>../../../output/$(ProjectName)/$(TargetPlatformIdentifier)_$(PlatformTarget)_$(PlatformToolset)_$(Configuration)/</IntDir>
     <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_Debug</TargetName>
   </PropertyGroup>
@@ -167,13 +167,13 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../../../../lib/cgdk/sdk10/</OutDir>
+    <OutDir>../../../../lib/cgdk/sdk10/windows/</OutDir>
     <IntDir>../../../output/$(ProjectName)/$(TargetPlatformIdentifier)_$(PlatformTarget)_$(PlatformToolset)_$(Configuration)/</IntDir>
     <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_$(Configuration)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release.NDI|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../../../../lib.NDI/cgdk/sdk10/</OutDir>
+    <OutDir>../../../../lib.NDI/cgdk/sdk10/windows/</OutDir>
     <IntDir>../../../output/$(ProjectName)/$(TargetPlatformIdentifier)_$(PlatformTarget)_$(PlatformToolset)_$(Configuration)/</IntDir>
     <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_Release</TargetName>
   </PropertyGroup>

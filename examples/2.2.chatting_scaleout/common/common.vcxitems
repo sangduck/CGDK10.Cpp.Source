@@ -16,5 +16,6 @@
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)definitions.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)definition_message.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Igroup_list.h" />
   </ItemGroup>
 </Project>

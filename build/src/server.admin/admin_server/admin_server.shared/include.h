@@ -121,7 +121,7 @@ class querier_server;
 // 4. Header files - Project
 //-----------------------------------------------------------------
 // 1) Commons
-#include "./../../common/common.server.h"
+#include "../../common/common.server.h"
 
 // 2) definitions
 #include "definition_admin_server.h"

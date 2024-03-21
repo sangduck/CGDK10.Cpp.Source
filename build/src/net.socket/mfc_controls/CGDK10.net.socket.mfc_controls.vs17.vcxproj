@@ -130,7 +130,7 @@
       <SubSystem>Windows</SubSystem>
       <ModuleDefinitionFile>.\CGDK10.net.socket.mfc_controls.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>../../../../lib</AdditionalLibraryDirectories>
-      <ImportLibrary>../../../../lib/cgdk/sdk10/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../../../lib/cgdk/sdk10/windows/$(TargetName).lib</ImportLibrary>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -166,7 +166,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
       <SubSystem>Windows</SubSystem>
       <ModuleDefinitionFile>.\CGDK10.net.socket.mfc_controls.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>../../../../lib.NDI</AdditionalLibraryDirectories>
-      <ImportLibrary>../../../../lib.NDI/cgdk/sdk10/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../../../lib.NDI/cgdk/sdk10/windows/$(TargetName).lib</ImportLibrary>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -208,7 +208,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>.\CGDK10.net.socket.mfc_controls.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>../../../../lib</AdditionalLibraryDirectories>
-      <ImportLibrary>../../../../lib/cgdk/sdk10/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../../../lib/cgdk/sdk10/windows/$(TargetName).lib</ImportLibrary>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -251,7 +251,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>.\CGDK10.net.socket.mfc_controls.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>../../../../lib.NDI</AdditionalLibraryDirectories>
-      <ImportLibrary>../../../../lib.NDI/cgdk/sdk10/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../../../lib.NDI/cgdk/sdk10/windows/$(TargetName).lib</ImportLibrary>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>

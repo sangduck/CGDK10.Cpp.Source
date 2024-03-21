@@ -40,6 +40,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CGDK10systemutilcryptwindowsvs16</RootNamespace>
     <ProjectName>CGDK10.system.util.crypt</ProjectName>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -134,14 +135,14 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>../../../../lib/cgdk/sdk10/</OutDir>
+    <OutDir>../../../../lib/cgdk/sdk10/windows/</OutDir>
     <IntDir>../../../output/$(ProjectName)/$(TargetPlatformIdentifier)_$(PlatformTarget)_$(PlatformToolset)_$(Configuration)/</IntDir>
     <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_$(Configuration)</TargetName>
     <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug.NDI|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>../../../../lib.NDI/cgdk/sdk10/</OutDir>
+    <OutDir>../../../../lib.NDI/cgdk/sdk10/windows/</OutDir>
     <IntDir>../../../output/$(ProjectName)/$(TargetPlatformIdentifier)_$(PlatformTarget)_$(PlatformToolset)_$(Configuration)/</IntDir>
     <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_Debug</TargetName>
     <RunCodeAnalysis>false</RunCodeAnalysis>
@@ -161,13 +162,13 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../../../../lib/cgdk/sdk10/</OutDir>
+    <OutDir>../../../../lib/cgdk/sdk10/windows/</OutDir>
     <IntDir>../../../output/$(ProjectName)/$(TargetPlatformIdentifier)_$(PlatformTarget)_$(PlatformToolset)_$(Configuration)/</IntDir>
     <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_$(Configuration)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release.NDI|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../../../../lib.NDI/cgdk/sdk10/</OutDir>
+    <OutDir>../../../../lib.NDI/cgdk/sdk10/windows/</OutDir>
     <IntDir>../../../output/$(ProjectName)/$(TargetPlatformIdentifier)_$(PlatformTarget)_$(PlatformToolset)_$(Configuration)/</IntDir>
     <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_Release</TargetName>
     <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>

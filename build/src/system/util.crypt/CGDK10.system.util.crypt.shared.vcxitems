@@ -43,7 +43,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)util.crypt.ssl.definitions.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project\CGDK10.C++\include\cgdk\sdk10\system.util.crypt.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system.util.crypt.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\util.crypt\definitions.util.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\util.crypt\util.crypt.bcrypt.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\util.crypt\util.crypt.pn_code.h" />

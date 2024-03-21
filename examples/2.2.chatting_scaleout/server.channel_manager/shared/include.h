@@ -16,20 +16,38 @@
 //*****************************************************************************
 
 #pragma once
-//-----------------------------------------------------------------------------
-//
-// service
-//
-//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------
+// 1. setting
+//-----------------------------------------------------------------
+// definition) 
+#define	LOG_FILE		"log/chatting_scaleoutserver_channel_manager_{}{}{}-{}{}{}.log"sv
+#define	CONFIGURE_FILE	"configure/chatting_scaleoutserver_channel_manager.json"sv
+
 
 //-----------------------------------------------------------------
-// 1. Definitions
+// 2. definitions
 //-----------------------------------------------------------------
-#if defined(_DEBUG) && !defined(NDEBUG)
-	#define	SERVER_CONFIGURE	L"debug"
-#else
-	#define	SERVER_CONFIGURE	L"release"
-#endif
+namespace channel
+{
+	class manager;
+
+	namespace server
+	{
+		class group;
+		class group_immigration;
+		class socket:
+	}
+}
+
+
+namespace user
+{
+	class manager;
+
+	class group_immigration;
+	class socket;
+}
+
 
 
 //-----------------------------------------------------------------
@@ -44,44 +62,21 @@
 
 using namespace CGDK;
 
-
 //-----------------------------------------------------------------
 // 3. 
 //-----------------------------------------------------------------
-namespace channel
-{
-	class manager;
-
-	class Igroup;
-	class group_chatting;
-	class group_waiting;
-}
-
-namespace user
-{
-	class manager;
-
-	class group_immigration;
-	class socket;
-}
-
-
-//-----------------------------------------------------------------
-// 4. 
-//-----------------------------------------------------------------
 const uint32_t	CGNOTIFY_SERVER_UPDATE		 = (eMESSAGE::USER | 1);
-
 const uint32_t	CGNOTIFY_CHANNEL_ADD		 = (eMESSAGE::USER | 2);
 const uint32_t	CGNOTIFY_CHANNEL_REMOVE		 = (eMESSAGE::USER | 3);
 const uint32_t	CGNOTIFY_CHANNEL_UPDATE		 = (eMESSAGE::USER | 4);
 
-
 //-----------------------------------------------------------------
-// 5. 
+// 4. 
 //-----------------------------------------------------------------
 // 1) definitions
 #include "../../common/definitions.h"
 #include "../../common/definition_message.h"
+#include "../../common/Igroup_list.h"
 
 // 2) user
 #include "user.socket.h"

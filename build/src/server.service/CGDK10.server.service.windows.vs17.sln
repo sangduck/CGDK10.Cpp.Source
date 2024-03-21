@@ -9,7 +9,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.doss", "doss\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.doss", "doss\CGDK10.server.service.doss.windows.vs17.vcxproj", "{19ADD403-9984-4BDF-B526-2D25F943A12C}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.license_info", "..\common\cgdk__info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.cgdk_info", "..\common\cgdk__info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,8 +23,8 @@ Global
 		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
 		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Debug|x64.ActiveCfg = Debug|x64
 		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Debug|x64.Build.0 = Debug|x64
-		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Release.NDI|x64.ActiveCfg = Release.NDI|Win32
-		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Release.NDI|x64.Build.0 = Release.NDI|Win32
+		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Release.NDI|x64.Build.0 = Release.NDI|x64
 		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Release|x64.ActiveCfg = Release|x64
 		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection

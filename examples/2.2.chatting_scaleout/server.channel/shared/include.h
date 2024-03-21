@@ -82,6 +82,7 @@ const uint32_t	CGNOTIFY_CHANNEL_UPDATE		 = (eMESSAGE::USER | 4);
 // 1) definitions
 #include "../../common/definitions.h"
 #include "../../common/definition_message.h"
+#include "../../common/Igroup_list.h"
 
 // 2) user
 #include "user.socket.h"

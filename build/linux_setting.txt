@@ -1,0 +1,18 @@
+1. gcc-12
+sudo apt install gcc-12
+
+2. build essential
+sudo apt install build-essential
+
+3. cmake
+sudo apt install cmake
+
+4. openssl
+sudo apt install libssl-dev
+
+5. boost
+sudo apt install libboost-all-dev
+
+6. odbc
+sudo apt install odbcinst libodbc1 unixodbc unixodbc-dev
+

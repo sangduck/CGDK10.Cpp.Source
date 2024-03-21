@@ -41,6 +41,7 @@
     <ResourceCompile Include="$(MSBuildThisFileDirectory)CGDK10.system.mfc_controls.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system.mfc_controls.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_dialog.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_executor_list.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\child_reference_list.h" />

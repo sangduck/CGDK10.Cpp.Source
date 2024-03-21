@@ -358,7 +358,7 @@
       <Filter>bcrypt</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\util.crypt\util.crypt.bcrypt.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project\CGDK10.C++\include\cgdk\sdk10\system.util.crypt.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system.util.crypt.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)openssl\crypt.ssl.context.cpp" />

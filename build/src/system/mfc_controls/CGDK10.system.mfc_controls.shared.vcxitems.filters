@@ -111,6 +111,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\mfc_controls\dialog_thread_status.h">
       <Filter>dialog</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system.mfc_controls.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)res\bitmapFACTORYTYPE_ALLOCATOR_SYSTEM.bmp">

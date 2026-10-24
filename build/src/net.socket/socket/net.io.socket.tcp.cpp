@@ -4,13 +4,18 @@ using namespace CGDK;
 
 std::size_t net::io::socket::Ntcp::m_s_default_maximum_send_buffer_size = MAX_TCP_SEND_BUFFER_SIZE;
 std::size_t net::io::socket::Ntcp::m_default_maximum_receive_buffer_size = MAX_TCP_RECEIVE_BUFFER_SIZE;
+#if defined(_WINSOCK2API_)
+bool net::io::socket::Ntcp::m_s_enable_explicit_socket_buffer_size = true;		// - windows : SO_SNDBUF/SO_RCVBUF are set like before
+#else
+bool net::io::socket::Ntcp::m_s_enable_explicit_socket_buffer_size = false;	// - linux : the kernel sizes the buffers (autotuning). enable_explicit_socket_buffer_size(true) sets them
+#endif
 
 
 #if defined(_SYS_EPOLL_H)
 intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size_t _param)
 {
 	// 1) clear signaled event flag
-	scoped_lock(this->m_epoll_event_cs)
+	SCOPED_LOCK(this->m_epoll_event_cs)
 	{
 		// check)
 		RETURN_IF(this->socket_state() == eSOCKET_STATE::CLOSED, 0);
@@ -35,7 +40,11 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 		this->m_epoll_event_processing_now = true;
 	}
 
-	// declare) 
+	// 1.1) EPOLLERR : the MSG_ZEROCOPY notifications come through the error queue (sendable::Ntcp_async_gather_buffered). handled => not an error
+	if ((_event & EPOLLERR) != 0 && this->m_psendable != nullptr && this->m_psendable->process_complete_error_queue())
+		_event &= ~static_cast<intptr_t>(EPOLLERR);
+
+	// declare)
 	uint32_t flag_epoll_event_added = 0;
 
 	for (;;)
@@ -44,7 +53,7 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 		{
 			// 2) EPOLLOUT - event signaled on sendable
 			//    - send시 WOULDBLOCK이 뜬 이후 다시 전송하는해졌을 때 뜨는 이벤트다.
-			//    - 이럴 경우 버퍼에 큐잉 중인 전송 대기중 데이터들을 전송처리하게 된다.
+			//    - 이럴 경우 버퍼에 큐잉 중인 전송 대기 중 데이터들을 전송처리하게 된다.
 			if (_event & EPOLLOUT)
 			{
 				// check) 
@@ -59,12 +68,12 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 
 			// 3) EPOLLIN - 
 			//    - 받을 데이터가 존재하거나 접속이 종료되었을 경우 뜨게 된다.
-			//    - 접속이 종료된 경우 읽어 낼수 있는 데이터가 0byte가 된다.
+			//    - 접속이 종료된 경우 읽어 낼 수 있는 데이터가 0byte가 된다.
 			//      만약 접속이 종료되면 process_complete_receivable에서 접속 종료처리가 호출된다.
 			if (_event & EPOLLIN)
 			{
 				// check) 
-				CGASSERT_ERROR(this->m_preceivable_stream != nullptr);
+				CGASSERT_FATAL(this->m_preceivable_stream != nullptr);
 
 				// - call 'process_complete_receivable'
 				auto result = this->m_preceivable_stream->process_complete_receivable(_event, _param);
@@ -83,9 +92,9 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 		{
 		}
 
-		scoped_lock_named(this->m_epoll_event_cs, cs)
+		SCOPED_LOCK_NAMED(this->m_epoll_event_cs, cs)
 		{
-			// 4) queing된 event가 있는지 확인후 있으면 다시 반복 처리
+			// 4) queing된 event가 있는지 확인 후 있으면 다시 반복 처리
 			if (this->m_epoll_event_flag_queued != 0)
 			{
 				// - EPOLLIN이나 EPOLLOUT flag는 처릳되었을 것이므로 제거한다.
@@ -97,7 +106,7 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 				// - reset 'm_epoll_event_flag_queued'
 				this->m_epoll_event_flag_queued = 0;
 
-				// - remove processeed events
+				// - remove processed events
 				this->remove_epoll_event_flag(_event);
 
 				// continue) EPOLLIN이나 EPOLLOUT이 있으면 다시한번 실행한다.
@@ -111,10 +120,12 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 				CGASSERT_ERROR((flag_epoll_event_added & (EPOLLHUP | EPOLLRDHUP)) == 0);
 
 				// - get io_context
-				auto pio_context = this->io_context();
+				//   (raw pointer : event마다 모든 socket이 공유하는 io_context의 참조 count를 올리고 내리지 않는다.
+				//    처리 중(m_epoll_event_processing_now)에는 close가 detach(m_pio_context 해제)를 하지 못하므로 바뀌지 않는다)
+				auto pio_context = this->m_pio_context.get();
 
-				// check) 
-				CGASSERT_ERROR(pio_context.exist());
+				// check)
+				CGASSERT_ERROR(pio_context != nullptr);
 
 				// - get io_context
 				auto epoll_handle = this->get_epoll_handle();
@@ -122,20 +133,22 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 				// check) 
 				CGASSERT_ERROR(epoll_handle != INVALID_SOCKET);
 
-				// cheeck) 이미 EPOLLOUT이 설정되어 있는데 신규로 EPOLLOUT의 설정이 될수는 없다.
+				// check) 이미 EPOLLOUT이 설정되어 있는데 신규로 EPOLLOUT의 설정이 될 수는 없다.
 				CGASSERT_ERROR(((this->get_epoll_event_flag() & EPOLLOUT) == 0) || ((flag_epoll_event_added & EPOLLOUT) == 0));
 
 				// - set flag
 				this->add_epoll_event_flag((EPOLLONESHOT | EPOLLWAKEUP | EPOLLHUP | EPOLLRDHUP | EPOLLERR) | flag_epoll_event_added);
 
 				// - event를 설정한다.
-				auto result = pio_context->set_event(epoll_handle, this->get_epoll_event_flag(), this->m_pexecutable_socket);
+				//   (executable은 attach(또는 접속 완료 시 set_event)로 등록된 m_pexecutable_socket을 그대로 쓴다 : nullptr.
+				//    재등록마다 bucket을 unique lock하고 add_ref/release하지 않는다)
+				auto result = pio_context->set_event(epoll_handle, this->get_epoll_event_flag(), nullptr);
 
 				// check)
 				if (result == false)
 				{
 					// lock leave)
-					scoped_lock_leave(cs);
+					SCOPED_LOCK_LEAVE(cs);
 
 					// - fail
 					this->m_disconnect_reason |= DISCONNECT_REASON_FAIL;
@@ -149,7 +162,7 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 					// - call 'process_complete_connectable'
 					this->m_pconnectable->process_complete_disconnect();
 
-					scoped_lock(this->m_epoll_event_cs)
+					SCOPED_LOCK(this->m_epoll_event_cs)
 					{
 						// check)
 						CGASSERT_ERROR(this->io_context().empty());
@@ -178,12 +191,12 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 			else
 			{
 				// lock leave)
-				scoped_lock_leave(cs);
+				SCOPED_LOCK_LEAVE(cs);
 
 				// check)
 				CGASSERT_ERROR(this->m_pconnectable != nullptr);
 
-				// - if error is occured, add socket reason DISCONNECT_REASON_FAIL 
+				// - if error occurred, add socket reason DISCONNECT_REASON_FAIL 
 				if (_event & EPOLLERR)
 				{
 					this->m_disconnect_reason |= DISCONNECT_REASON_FAIL;
@@ -198,7 +211,7 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 				// - call 'process_complete_connectable'
 				this->m_pconnectable->process_complete_disconnect();
 
-				scoped_lock(this->m_epoll_event_cs)
+				SCOPED_LOCK(this->m_epoll_event_cs)
 				{
 					// check)
 					CGASSERT_ERROR(this->io_context().empty());
@@ -222,8 +235,24 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 		break;
 	}
 
-	// return) 
+	// return)
 	return 0;
+}
+
+bool net::io::socket::Ntcp::process_is_io_completion_supported() const noexcept
+{
+	// - the receivable (receivable::Nstream) and the sendable (sendable::Ntcp_async_gather) of the socket do their I/O with the ops
+	return this->m_preceivable_stream != nullptr && this->m_preceivable_stream->is_io_completion_supported()
+		&& this->m_psendable != nullptr && this->m_psendable->is_io_completion_supported();
+}
+
+bool net::io::socket::Ntcp::process_start_io_completion() noexcept
+{
+	// check)
+	CGASSERT_ERROR(this->m_preceivable_stream != nullptr);
+
+	// 1) the first RECV op
+	return this->m_preceivable_stream->process_start_receive();
 }
 #endif
 
@@ -301,7 +330,7 @@ void net::io::socket::Ntcp::process_create_socket(ADDRESS_FAMILY _address_family
 		LOG_DEBUG << "(err ) CGDK.net.socket: fail to creating socket. error:"sv << api::get_last_error() << " " __CGFUNCTION__ ""sv;
 
 		// raise) 
-		throw throwable::failure(eRESULT::API_FAILURE, api::get_last_error(), "fail to creating socket handle"sv);
+		throw throwable::failure(eRESULT::API_FAILURE, api::get_last_error(), CGDK::stream_string("fail to creating socket handle errcode:", api::get_last_error()));
 	}
 
 	// 2) set new socket handle
@@ -324,8 +353,10 @@ void net::io::socket::Ntcp::process_create_socket(ADDRESS_FAMILY _address_family
 	// 4) set address family
 	this->address_family(_address_family);
 
-	// 5) set socket option
+	// 5) set socket option (linux : nonblocking already. create_socket() uses SOCK_NONBLOCK)
+#if defined(_WINSOCK2API_)
 	api::socket::set_nonblock(handle_socket_new, true);
+#endif
 
 	// 6) get_io_context
 	auto pio_context = this->io_context();
@@ -350,7 +381,7 @@ void net::io::socket::Ntcp::process_create_socket(ADDRESS_FAMILY _address_family
 	// check) 
 	THROW_IF(result == false, throwable::failure(eRESULT::FAIL, 0, "fail to attaching TCP socket to io_context"sv), LOG_DEBUG << "(err ) CGDK.net.socket: fail to attaching tcp socket to io_context " __CGFUNCTION__ ""sv);
 #elif defined(_SYS_EPOLL_H)
-	// 8) prepare exeecutable socket
+	// 8) prepare executable socket
 	this->process_prepare_executable_socket();
 #endif
 }
@@ -369,8 +400,57 @@ bool net::io::socket::Ntcp::process_close_socket(uint64_t _disconnect_reason) no
 	// statistics) 통계처리
 	this->statistics_check_error_disconnect();
 
+	// - send defer : 모아 둔 송신(그룹 락 안 / send cork)이 있으면 닫기 전에 보낸다. (다른 thread가 모아 둔 것도)
+	//   (그룹 락 안에서 send한 뒤 closesocket하거나, 다른 thread가 그룹 락 안에서 보낸 직후 closesocket해도 보낸 것이 먼저 간다)
+	if (this->m_psendable != nullptr)
+	{
+		this->m_psendable->process_flush_deferred_send_on_close();
+	}
+
 	// 1) 먼저 socket_handle을 INVALID_SOCKET으로 바꾸고 이전 socket_handle을 받아온다.
-	auto handle_socket = this->native_handle(INVALID_SOCKET);
+	//    - 송신 lock 안에서 바꾼다. 송신은 같은 lock 안에서 handle을 읽고 send까지 하므로
+	//      바꾸기 전에 읽은 송신은 send가 끝났고, 바꾼 뒤의 송신은 INVALID_SOCKET을 본다.
+	//      (닫은 뒤 같은 handle 값으로 다시 만들어진 다른 socket에 보내지 않는다)
+	//      (windows : iocp 송신. epoll은 송신 lock 밖에서 send하므로 잡지 않는다)
+	CGSOCKET handle_socket;
+#if defined(_WINSOCK2API_)
+	if (auto plockable = (this->m_psendable != nullptr) ? this->m_psendable->process_get_lockable_sending() : nullptr; plockable != nullptr)
+	{
+		std::lock_guard lock(*plockable);
+		std::lock_guard lock_receiving(this->get_lockable_receiving());	// - 수신도 같은 방식 (receive : _call_receiving)
+		handle_socket = this->native_handle(INVALID_SOCKET);
+	}
+	else
+	{
+		std::lock_guard lock_receiving(this->get_lockable_receiving());
+		handle_socket = this->native_handle(INVALID_SOCKET);
+	}
+#else
+	// - io_uring completion : like windows (the ops are posted under the locks). is_receiving_op : a RECV op is in flight (its
+	//   completion completes the disconnect of the closed socket. none : completed below)
+	bool is_receiving_op = false;
+
+	if (this->is_io_completion())
+	{
+		if (auto plockable = (this->m_psendable != nullptr) ? this->m_psendable->process_get_lockable_sending() : nullptr; plockable != nullptr)
+		{
+			std::lock_guard lock(*plockable);
+			std::lock_guard lock_receiving(this->get_lockable_receiving());
+			handle_socket = this->native_handle(INVALID_SOCKET);
+			is_receiving_op = this->m_is_receiving_op;
+		}
+		else
+		{
+			std::lock_guard lock_receiving(this->get_lockable_receiving());
+			handle_socket = this->native_handle(INVALID_SOCKET);
+			is_receiving_op = this->m_is_receiving_op;
+		}
+	}
+	else
+	{
+		handle_socket = this->native_handle(INVALID_SOCKET);
+	}
+#endif
 
 	// check) 기존 설정되어 있던 소켓핸들이 INVALID_SOCKET면 그냥 끝낸다.
 	RETURN_IF(handle_socket == INVALID_SOCKET, false);
@@ -403,10 +483,15 @@ bool net::io::socket::Ntcp::process_close_socket(uint64_t _disconnect_reason) no
 	// declare) 
 	bool result = true;
 
-	// 4.A) 접속중인 경우 => epoll은 recv 처리 이후에 처리되록 하기 위하 shutdown을 무조건 먼저 건다.
+	// - the state is read once : a connect completed by another thread between two reads (SYN, then ESTABLISHED) took none of
+	//   the branches below (the handle taken, the fd never closed, no disconnect : stop() waited 30s and the peer stayed connected).
+	//   SYN here goes to 4.B, whose process_complete_connecting(EPOLLHUP) completes the disconnect of a socket connected meanwhile
+	const auto socket_state_close = this->socket_state();
+
+	// 4.A) 접속 중인 경우 => epoll은 recv 처리 이후에 처리되록 하기 위하 shutdown을 무조건 먼저 건다.
 	//      - EPOLLRDHUP 신호가 뜨면 그 이후에 접속해제한다.
 	//      - PASSIVE close일 경우 바로 호출되는 process_complete_disconnect()에서 접속 종료 처리된다.
-	if (this->socket_state() > eSOCKET_STATE::SYN)
+	if (socket_state_close > eSOCKET_STATE::SYN)
 	{
 		// - hold를 한다.(disconnect 처리로 객체가 소멸되버릴 수도 있으므로...)
 		object_ptr<net::io::socket::Ntcp> phold(this);
@@ -414,7 +499,25 @@ bool net::io::socket::Ntcp::process_close_socket(uint64_t _disconnect_reason) no
 		// - shutdown
 		api::socket::shutdown(handle_socket, SD_SEND);
 
-		scoped_lock(this->m_epoll_event_cs)
+		// - io_uring completion : the ops of the handle are cancelled (they complete with -ECANCELED through their executables) and
+		//   the handle is closed now (an op holds the file : closing right after the cancel is safe. the fd number may be reused at
+		//   once : nothing of this socket refers to it any more). the disconnect is completed by the RECV op in flight (-ECANCELED,
+		//   or the bytes received and the receive() after that fails on the closed handle). none in flight => below, like epoll
+		if (this->is_io_completion())
+		{
+			if (auto* pio_context = this->m_pio_context.get(); pio_context != nullptr)
+				pio_context->submit_cancel_fd(static_cast<CGHANDLE>(handle_socket));
+
+			if (this->get_epoll_handle() == static_cast<CGHANDLE>(handle_socket))
+				this->reset_epoll_handle();
+
+			if (this->m_disconnect_reason & (DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ABORTIVE))
+				api::socket::abortive_closesocket(handle_socket);
+			else
+				api::socket::graceful_closesocket(handle_socket);
+		}
+
+		SCOPED_LOCK(this->m_epoll_event_cs)
 		{
 			// - 처리 중 => flag만 설정해 준다.
 			if (this->m_epoll_event_processing_now == true)
@@ -426,6 +529,10 @@ bool net::io::socket::Ntcp::process_close_socket(uint64_t _disconnect_reason) no
 				return result;
 			}
 
+			// - io_uring completion : a RECV op in flight completes the disconnect
+			if (is_receiving_op)
+				return result;
+
 			// - 처리 중이 아닐 때 => 즉시 종료 처리한다.
 			this->m_epoll_event_processing_now = true;
 		}
@@ -436,29 +543,48 @@ bool net::io::socket::Ntcp::process_close_socket(uint64_t _disconnect_reason) no
 		// - call 'process_complete_connectable'
 		this->m_pconnectable->process_complete_disconnect();
 
-		scoped_lock(this->m_epoll_event_cs)
+		SCOPED_LOCK(this->m_epoll_event_cs)
 		{
 			this->m_epoll_event_processing_now = false;
 		}
 	}
 	// 4.B) 접속시도중인 경우 => 바로 닫는다.
-	else if (this->socket_state() == eSOCKET_STATE::SYN)
+	else if (socket_state_close == eSOCKET_STATE::SYN)
 	{
+		// - detach from epoll first (process_complete_connecting can't : the handle is INVALID_SOCKET already)
+		//   a closed fd is reused at once : the registration left stops the next connect
+		if (auto pio_context = this->io_context(); pio_context.exist())
+		{
+			pio_context->detach(static_cast<CGHANDLE>(handle_socket));
+
+			// - io_uring completion : the CONNECT op in flight is cancelled (it completes with -ECANCELED : dropped by the sequence or the state)
+			if (pio_context->backend() == executor::io_backend::io_uring_completion)
+				pio_context->submit_cancel_fd(static_cast<CGHANDLE>(handle_socket));
+		}
+
+		// - reset the epoll handle too (the destructor detaches and closes it : the closed fd may be another socket's by then)
+		if (this->get_epoll_handle() == static_cast<CGHANDLE>(handle_socket))
+			this->reset_epoll_handle();
+
 		// - closesocket
 		api::socket::abortive_closesocket(handle_socket);
 
-		// - get connect_requestable 
+		// - get connect_requestable
 		auto pconnect_requestable = dynamic_cast<net::io::Iconnect_requestable*>(this);
 
-		// - completee connecting
+		// - complete connecting (being processed by another thread => the close is queued and that thread completes the disconnect)
 		if (pconnect_requestable != nullptr)
 		{
 			pconnect_requestable->process_complete_connecting(EPOLLHUP);
 		}
 	}
 	// 4.C) bind만 되거나 접속 종료된 상태일 경우( 접속 중이거나 접속 시도 중이 아닌 경우)
-	else if(this->socket_state() <= eSOCKET_STATE::BINDED)
+	else if (socket_state_close <= eSOCKET_STATE::BINDED)
 	{
+		// - reset the epoll handle too (same as above)
+		if (this->get_epoll_handle() == static_cast<CGHANDLE>(handle_socket))
+			this->reset_epoll_handle();
+
 		// - closesocket
 		api::socket::abortive_closesocket(handle_socket);
 	}

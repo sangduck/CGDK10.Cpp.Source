@@ -29,14 +29,16 @@ namespace eMESSAGE
 	const uint32_t	ACCEPT_CERTIFICATION = eMESSAGE::NETWORK::USER::BASE + 101;
 	const uint32_t	SEND_LOBBYSERVER_STATUS = eMESSAGE::NETWORK::USER::BASE + 102;
 
-	const uint32_t	REQUEST_USER_CHECKIN = eMESSAGE::NETWORK::USER::BASE + 103;
-	const uint32_t	RESPONSE_USER_CHECKIN = eMESSAGE::NETWORK::USER::BASE + 104;
-	const uint32_t	SEND_CHATTING_MESSAGE = eMESSAGE::NETWORK::USER::BASE + 105;
+	const uint32_t	REQUEST_ACCOUNT_CHECKIN = eMESSAGE::NETWORK::USER::BASE + 103;
+	const uint32_t	RESPONSE_ACCOUNT_CHECKIN = eMESSAGE::NETWORK::USER::BASE + 104;
+	const uint32_t	REQUEST_ACCOUNT_CHECKOUT = eMESSAGE::NETWORK::USER::BASE + 105;
+	const uint32_t	RESPONSE_ACCOUNT_CHECKOUT = eMESSAGE::NETWORK::USER::BASE + 106;
+	const uint32_t	SEND_CHATTING_MESSAGE = eMESSAGE::NETWORK::USER::BASE + 107;
 
-	const uint32_t	REQUEST_ENTER_CHANNEL = eMESSAGE::NETWORK::USER::BASE + 106;
-	const uint32_t	RESPONSE_ENTER_CHANNEL = eMESSAGE::NETWORK::USER::BASE + 107;	// Fail to Enter
-	const uint32_t	NOTIFY_ENTER_CHANNEL = eMESSAGE::NETWORK::USER::BASE + 108;	// Success on Enter Channel
-	const uint32_t	NOTIFY_LEAVE_CHANNEL = eMESSAGE::NETWORK::USER::BASE + 109;	// 
+	const uint32_t	REQUEST_ENTER_CHANNEL = eMESSAGE::NETWORK::USER::BASE + 108;
+	const uint32_t	RESPONSE_ENTER_CHANNEL = eMESSAGE::NETWORK::USER::BASE + 109; // Fail to Enter
+	const uint32_t	NOTIFY_ENTER_CHANNEL = eMESSAGE::NETWORK::USER::BASE + 110;	// Success on Enter Channel
+	const uint32_t	NOTIFY_LEAVE_CHANNEL = eMESSAGE::NETWORK::USER::BASE + 111;	// 
 }
 }
 
@@ -58,14 +60,14 @@ inline shared_buffer message_REQUEST_ENTER_CHANNEL(CHANNEL_ID _cid, eCHANNEL_OPT
 	return buf_temp;
 }
 
-inline shared_buffer message_REQUEST_USER_CHECKIN(ACCOUNT_ID _aid, std::string_view _nickname)
+inline shared_buffer message_REQUEST_ACCOUNT_CHECKIN(ACCOUNT_ID _aid, std::string_view _nickname)
 {
 	// 1) alloc memory buffer
 	auto buf_temp = alloc_shared_buffer(1024);
 
 	// 2) write message context
 	buf_temp.append<uint32_t>();
-	buf_temp.append<uint32_t>(eMESSAGE::REQUEST_USER_CHECKIN);
+	buf_temp.append<uint32_t>(eMESSAGE::REQUEST_ACCOUNT_CHECKIN);
 	buf_temp.append<ACCOUNT_ID>(_aid);
 	buf_temp.append<std::string_view>(_nickname);
 
@@ -76,14 +78,14 @@ inline shared_buffer message_REQUEST_USER_CHECKIN(ACCOUNT_ID _aid, std::string_v
 	return buf_temp;
 }
 
-inline shared_buffer message_RESPONSE_USER_CHECKIN(eRESULT _result)
+inline shared_buffer message_RESPONSE_ACCOUNT_CHECKIN(eRESULT _result)
 {
 	// 1) alloc memory buffer
 	auto buf_temp = alloc_shared_buffer(64);
 
 	// 2) write message context
 	buf_temp.append<uint32_t>();
-	buf_temp.append<uint32_t>(eMESSAGE::RESPONSE_USER_CHECKIN);
+	buf_temp.append<uint32_t>(eMESSAGE::RESPONSE_ACCOUNT_CHECKIN);
 	buf_temp.append<eRESULT>(_result);
 
 	// 3) set message length

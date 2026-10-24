@@ -63,12 +63,12 @@ public:
 protected:
 			CComboBox			m_comboUpdateInterval;
 			CComboBox			m_comboConnective;
-	static int					m_s_iUpdateInverval;
+	static int					m_s_iUpdateInterval;
 			CChild_connectable_manager	m_ChildConnectableManager;
 
 			object_ptr<net::io::connective::manager> m_pmangerConnective;
 			object_ptr<net::io::Iconnective> m_pconnective;
-			lockable<>			m_csConnective;
+	mutable	lock_object			m_csConnective;
 		
 
 			void				SetConnective(net::io::Iconnective* _pconnective);

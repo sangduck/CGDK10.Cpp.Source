@@ -33,41 +33,52 @@
   1) initialize		eOBJECT_STATE::NONE    ->eOBJECT_STATE::INITIALIZING_PENDING ->eOBJECT_STATE::STOPPED
   2) start			eOBJECT_STATE::STOPPED ->eOBJECT_STATE::START_PENDING        ->eOBJECT_STATE::RUNNING
   3) stop			eOBJECT_STATE::RUNNING ->eOBJECT_STATE::STOP_PENDING		 ->eOBJECT_STATE::STOPPED
-  4) Destory		eOBJECT_STATE::STOPPED ->eOBJECT_STATE::DESTROYING_PENDING   ->eOBJECT_STATE::NONE
+  4) Destroy		eOBJECT_STATE::STOPPED ->eOBJECT_STATE::DESTROYING_PENDING   ->eOBJECT_STATE::NONE
   5) pause			eOBJECT_STATE::RUNNING ->eOBJECT_STATE::PAUSE_PENDING		 ->eOBJECT_STATE::PAUSED
   6) continue		eOBJECT_STATE::PAUSED  ->eOBJECT_STATE::CONTINUE_PENDING	 ->eOBJECT_STATE::RUNNING
 
 */
 //-----------------------------------------------------------------------------
-class CGDK::object::Istate : public object::Nattachable<object::Istate>
+class CGDK::object::Istate : public Iattachable<Istate>
 {
 public:
 	virtual ~Istate() noexcept {}
 
-// public) 
 public:
-	virtual	bool				attach_child_object(object_ptr<object::Istate>&& _pchild) { return this->object::Nattachable<object::Istate>::process_attach(std::move(_pchild));}
-	virtual	bool				detach_child_object(object::Istate* _pchild) noexcept { return this->object::Nattachable<object::Istate>::process_detach(_pchild);}
+	public:
+	[[nodiscard]] bool			is_attached_empty() const noexcept { return this->m_container.empty();}
+	[[nodiscard]] bool			is_attached_exist() const noexcept { return !this->m_container.empty();}
+	[[nodiscard]] size_t		attached_size() const noexcept { return this->m_container.size();}
+	[[nodiscard]] auto			find_attachable(Istate* _child) noexcept -> object_ptr<Istate>;
+			int					clear() noexcept;
 
-	[[nodiscard]] virtual eOBJECT_STATE get_object_state() const noexcept PURE;
-	virtual	eOBJECT_STATE		set_object_state(eOBJECT_STATE _state) noexcept PURE;
+	virtual	bool				attach_child_object(object_ptr<Istate>&& _pchild) { return this->process_attach(std::move(_pchild));}
+	virtual	bool				detach_child_object(Istate* _pchild) noexcept { return this->process_detach(_pchild);}
+
+	[[nodiscard]] virtual auto	get_object_state() const noexcept -> eOBJECT_STATE PURE;
+	virtual	auto				set_object_state(eOBJECT_STATE _state) noexcept -> eOBJECT_STATE PURE;
 	virtual	bool				set_object_state_if(eOBJECT_STATE _state_compare, eOBJECT_STATE _state) noexcept PURE;
+
+private:
+	virtual	bool				process_attach(object_ptr<Istate>&& _child) override;
+	virtual	bool				process_detach(Istate* _child) noexcept override;
 
 public:
 			struct WAIT_INFO
 			{
-				object_ptr<object::Istate> pobject;
+				object_ptr<Istate> pobject;
 				result_code		result;
 			};
 			std::vector<WAIT_INFO> m_queue_pended;
+			circular_list<object_ptr<Istate>> m_container;
 };
 
 namespace CGDK::object
 {
-	result_code initialize	(object::Istate* _object, context& _context);
-	result_code start		(object::Istate* _object, context& _context);
-	result_code stop		(object::Istate* _object) noexcept;
-	result_code destroy		(object::Istate* _object) noexcept;
-	result_code pause		(object::Istate* _object);
-	result_code resume		(object::Istate* _object);
+	result_code initialize	(Istate* _object, context& _context);
+	result_code start		(Istate* _object, context& _context);
+	result_code stop		(Istate* _object) noexcept;
+	result_code destroy		(Istate* _object) noexcept;
+	result_code pause		(Istate* _object);
+	result_code resume		(Istate* _object);
 }

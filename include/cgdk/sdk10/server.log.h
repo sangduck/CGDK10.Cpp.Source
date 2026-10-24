@@ -17,6 +17,8 @@
 //*****************************************************************************
 
 #pragma once
+
+#include "cgdk/sdk10/lib_path.h"
 //----------------------------------------------------------------------------
 // Definitions
 //----------------------------------------------------------------------------
@@ -30,7 +32,6 @@ namespace CGDK
 	class logger_file;
 	class logger_hub;
 	class logger_hub_archive;
-	class logger_slack;
 	class logger_socket;
 	class logger_buffer;
 	class log_archive;
@@ -57,13 +58,16 @@ namespace CGDK
 #include "cgdk/sdk10/server.system/log/server.logger_file.h"
 #include "cgdk/sdk10/server.system/log/server.logger_hub.h"
 #include "cgdk/sdk10/server.system/log/server.logger_hub_archive.h"
-#include "cgdk/sdk10/server.system/log/server.logger_slack.h"
 #include "cgdk/sdk10/server.system/log/server.logger_socket.h"
 #include "cgdk/sdk10/server.system/log/server.logger_buffer.h"
 #include "cgdk/sdk10/server.system/log/server.logger_syslog.h"
+#include "cgdk/sdk10/server.system/log/server.logger_system.h"
 
 // 4) log filter
 #include "cgdk/sdk10/server.system/log/server.log_filter.default.h"
+
+
+
 
 
 //----------------------------------------------------------------------------
@@ -119,15 +123,13 @@ namespace CGDK
 		// WinSDK 10
 		#if WDK_NTDDI_VERSION >= NTDDI_WIN10
 			#ifdef NDEBUG
-				#pragma message("[CGDK10] 'CGDK10.server.log_Windows10.0_x64_Release.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.server.log_Windows10.0_x64_Release.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.server.log_Windows10.0_x64_Release.lib")
 			#else
-				#pragma message("[CGDK10] 'CGDK10.server.log_Windows10.0_x64_Debug.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.server.log_Windows10.0_x64_Debug.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.server.log_Windows10.0_x64_Debug.lib")
 			#endif
 		// Error - No supported
 		#else
-			#error "[CGDK10] Not supported Windonws SDK version (Need Windows SDK 10.0 or higher)"
+			#error "[CGDK10] Not supported Windows SDK version (Need Windows SDK 10.0 or higher)"
 		#endif
 
 	#else

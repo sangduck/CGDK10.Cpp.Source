@@ -25,7 +25,7 @@ namespace CGDK
 // CGDK::MD5
 //
 // 1. CGDK::MD5
-//    1) md5(Message Diegest 5)를 얻는 클래스이다.
+//    1) md5(Message Digest 5)를 얻는 클래스이다.
 //    2) 
 //    3) 
 //
@@ -121,8 +121,6 @@ public:
 	// 2) File을 이용해서 한꺼번에 일련과정을 처리한다.
 			bool				calculate_md5(const std::string_view _filename);
 			bool				calculate_md5(const std::wstring_view _filename);
-			bool				calculate_md5(const std::u16string_view _filename);
-			bool				calculate_md5(const std::u32string_view _filename);
 
 	// 3) MD5값 얻기(MD5는 16Byte이므로 이것을 감안해야 한다.)
 			void				get_md5(MD5* _out) const noexcept { *_out = m_state;}

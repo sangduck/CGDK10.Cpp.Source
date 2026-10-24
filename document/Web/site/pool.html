@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pool system · CGDK10 기술 문서</title>
+<meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - 소스 기준 기술 설명·빌드·릴리즈 노트">
+<link rel="icon" href="assets/CGCII_logo.PNG">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
+  <div class="ver">Game Server Engine</div>
+  <ul>
+    <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
+    <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
+    <li class="sub"><a href="pool.html" class="cur"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Pool system</a></li>
+    <li class="sub"><a href="object.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l6 3v7l-6 3-6-3v-7z"/><path d="M2 4.5l6 3 6-3M8 7.5v7"/></svg>Object system</a></li>
+    <li class="sub"><a href="log.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h6l3 3v10H4z"/><path d="M6.5 8h4M6.5 10.5h4M6.5 5.5h2"/></svg>Log system</a></li>
+    <li class="sub"><a href="socket.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1.5v3.5M10 1.5v3.5"/><path d="M3.5 5h9v3.5a4.5 4.5 0 0 1-9 0z"/><path d="M8 13v1.5"/></svg>Socket system</a></li>
+    <li class="sub"><a href="socket.io_uring.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 1.5L3.5 9h4.5l-1 5.5L12.5 7H8z"/></svg>io_uring</a></li>
+    <li class="sub"><a href="socket.uds.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.6-1.6a2.8 2.8 0 0 1 4 4L11 8.5"/><path d="M9 11.5l-1.6 1.6a2.8 2.8 0 0 1-4-4L5 7.5"/></svg>UDS (같은 host 접속)</a></li>
+    <li class="sub"><a href="socket.send.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 1.5L7 9"/><path d="M14.5 1.5l-4.5 13-2.2-5.3L2.5 6z"/></svg>send 최적화</a></li>
+    <li class="sub"><a href="socket.recv.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9.5v4h12v-4"/><path d="M8 2v8M5 7.5l3 3 3-3"/></svg>Receive 최적화</a></li>
+    <li class="sub"><a href="p2p.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="8" cy="12" r="2"/><path d="M5.6 5.2l1.6 5.2M10.4 5.2l-1.6 5.2M6 4h4"/></svg>P2P system</a></li>
+    <li class="sub"><a href="update.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5V5.2h-2.7"/></svg>Update system</a></li>
+    <li class="sub"><a href="server.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="4.5" rx="1"/><rect x="2" y="9.5" width="12" height="4.5" rx="1"/><path d="M4.5 4.25h.01M4.5 11.75h.01"/></svg>Server system</a></li>
+    <li class="sub"><a href="group.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 2.8a2.3 2.3 0 0 1 0 4.4M13.5 14c0-1.8-1-3.1-2.5-3.6"/></svg>Group system</a></li>
+    <li class="sub"><a href="query.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Query system</a></li>
+    <li class="head"><a href="build.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-3.8 3.8L2.8 12.2a1.4 1.4 0 0 0 2 2l5.9-3.9a3 3 0 0 0 3.8-3.8l-2 2-2-2z"/></svg>빌드 · 플랫폼</a></li>
+    <li class="head"><a href="tests.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5.5 8.2l2 2 3.2-4"/></svg>단위 테스트 · CI</a></li>
+    <li class="head"><a href="benchmarks.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V9M8 13.5V4M13 13.5V7"/><path d="M1.5 13.5h13"/></svg>벤치마크</a></li>
+    <li class="sub"><a href="benchmarks.push.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4 3 3 6-6"/><path d="M10.5 5.5h4v4"/></svg>큰 묶음 push 처리량</a></li>
+    <li class="sub"><a href="benchmarks.cork.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h8M2 11.5h5"/><path d="M12 9.5l2 2-2 2"/></svg>send cork · 서버 push</a></li>
+    <li class="head"><a href="samples.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4"/></svg>예제 · 튜토리얼</a></li>
+    <li class="head"><a href="releases.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h5.5l6.5 6.5-5.5 5.5L2 8z"/><circle cx="5.2" cy="5.2" r=".9"/></svg>릴리즈 노트</a></li>
+    <li class="head"><a href="status.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3M8 11.5h.01"/></svg>미구현 · 알려진 문제</a></li>
+  </ul>
+</aside>
+<main>
+<h1 id="pool">Pool system <small>system/object/factory.*, Npoolable.h, definitions.factory*.h</small></h1>
+<ul>
+  <li><code>Npoolable&lt;T&gt;</code> — 정적 <code>get_factory()</code>(<code>default_factory_pool_t&lt;T&gt;</code>), <code>alloc()</code>, <code>dealloc()</code>. <code>process_dispose()</code> 가 객체를 풀로 돌려보낸다. <code>make_object&lt;T&gt;</code> 는 T 가 Npoolable 이면 <code>T::alloc()</code> 을 쓴다.</li>
+  <li><code>default_factory_pool_t&lt;T&gt;</code> = <code>factory::object_pool_tls&lt;T&gt;</code>(<code>definitions.factory.h:30</code>). 비 TLS <code>factory::object_pool&lt;T&gt;</code> 는 사용처가 없고 통계 TLS 분기가 컴파일되지 않는 상태였으므로 r11415 에서 삭제.</li>
+</ul>
+<h3>object_pool_tls&lt;T&gt;</h3>
+<ul>
+  <li>thread 마다 풀별 <code>sTLS_DATA</code>(64바이트 정렬)에 TLS 스택을 두고 <code>thread_local m_tls_data[54]</code> 로 선택.</li>
+  <li>뒤에 중앙 스택 <code>LOCKFREE_SELF_STACK&lt;T*&gt;</code>. 이 매크로는 현재 모든 플랫폼에서 <code>locked_self_stack</code> 으로 매핑된다(<code>sharded_self_stack</code> 도 있으나 채택 안 됨).</li>
+  <li>TLS ↔ 중앙 이동은 chain 단위 배치: 크기 = <code>TLS_BATCH_BYTES(64 KiB) / sizeof(T)</code>, 상한 <code>TLS_BATCH_MAX = 32</code>(r11348).</li>
+  <li>API: <code>prepare(n)</code>, <code>shrink(n)</code>, <code>sustain(eFACTORY_GC_LEVEL)</code>, <code>stacked_count()</code>.</li>
+  <li>GC: <code>eFACTORY_GC_TYPE</code> {NO_POOLING, POOLING, POOLING_NO_GC, <b>TLS_POOLING(기본)</b>, TLS_POOLING_NO_GC}. <code>schedulable::system::factory_sustain</code> 이 주기적으로 돌며 thread idle 시 thread 별로 정리(r9719). <code>system_executor::start_factory_garbage_collection()</code> 으로 켠다. 종료 시 TLS 잔여 객체 누수는 r11411 에서 수정.</li>
+  <li>팩터리 종류 <code>eFACTORY_TYPE</code> {POOL_MEMORYBLOCK, POOL_SYSTEM, POOL_USER}. 등록부 <code>factory::manager</code>, <code>print_statistics()</code>.</li>
+</ul>
+<h3>memory_block</h3>
+<p><code>factory::memory_block</code> 은 size-class 메모리 풀. 균등/배율 프리셋(TINY ~ HUGE, 최대 1 MB)이 <code>definitions.factory.pool.memory_block.h</code> 에 정의되어 있고, <code>alloc_shared_buffer(size)</code> / <code>mem_pool_alloc / mem_pool_free</code> 가 이 풀을 쓴다. 소켓 수신 버퍼의 최대 크기 <code>MEMORYPOOL_MAX_SIZE_OF_MEMORY_BLOCK</code> 도 여기서 온다.</p>
+<h3>통계</h3>
+<p><code>statistics::factory / unit_factory / unit_factory_tls</code>, <code>sSTATISTICS_TLS</code>. <code>_USE_TLS_FACTORY_STATISTICS</code> 가 켜져 있어 thread 별 풀 통계를 모은다(<code>factory::object</code> 통계 TLS 는 r11412). 벤치: <code>unit_test.object.bench.object_pool</code>, <code>bench.mem_tcmalloc</code>(Windows).</p>
+<h3 id="pool-bench">성능 비교</h3>
+<p><b>측정 조건</b></p>
+<ul>
+  <li>객체 : payload 48 B. 실제 크기는 <code>Npoolable</code> 풀 객체 128 B, new/delete 는 64 B 구조체(MSVC 기준).</li>
+  <li>빌드 : Release. MSVC v145 <code>/O2</code>, g++ 15.2 <code>-O3</code>.</li>
+  <li>머신 : Windows 24 코어 데스크톱, Linux 32 코어 서버(Ubuntu 26.04).</li>
+  <li>값 : 항목마다 5회 중앙값을 2회 돌려 다시 중앙값.</li>
+  <li>같은 thread : alloc 직후 같은 thread 가 dealloc.</li>
+  <li>교차 thread : A 가 alloc 한 객체를 SPSC 링으로 넘겨 B 가 dealloc. 로직 thread 할당 → I/O thread 해제 패턴.</li>
+  <li>new/delete : 각 플랫폼 기본 할당자(UCRT heap, glibc malloc). CGDK 와 무관한 독립 바이너리. thread 간 공유 변수 없음(포인터는 컴파일러 배리어로만 유지).</li>
+  <li>tcmalloc : gperftools 2.10(Windows, vcpkg) / 2.18(Linux) 의 <code>tcmalloc_minimal</code>.</li>
+</ul>
+<table class="bench">
+<tr><th>Windows (MSVC, 24 코어)</th><th>new/delete (UCRT)</th><th>tcmalloc 2.10</th><th class="hl">CGDK::object_pool_tls</th></tr>
+<tr><td class="lbl">같은 thread burst 1, 1 thread (ns/쌍)</td><td>18.0</td><td>4.13</td><td class="hl"><b>3.26</b></td></tr>
+<tr><td class="lbl">같은 thread burst 16, 1 thread</td><td>29.9</td><td>4.85</td><td class="hl"><b>3.72</b></td></tr>
+<tr><td class="lbl">같은 thread burst 1, 4 thread</td><td>19.5</td><td>4.18</td><td class="hl"><b>3.17</b></td></tr>
+<tr><td class="lbl">같은 thread burst 1, 16 thread</td><td>21.6</td><td>5.18</td><td class="hl"><b>3.72</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍 (ns/객체)</td><td>148</td><td>43.1</td><td class="hl"><b>46.8</b></td></tr>
+<tr><td class="lbl">교차 thread 2 쌍</td><td>141</td><td>93.2</td><td class="hl"><b>50.7</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>139</td><td>292</td><td class="hl"><b>55.6</b></td></tr>
+</table>
+<table class="bench">
+<tr><th>Linux (g++ 15.2, 32 코어)</th><th>new/delete (glibc)</th><th>tcmalloc 2.18</th><th class="hl">CGDK::object_pool_tls</th></tr>
+<tr><td class="lbl">같은 thread burst 1, 1 thread (ns/쌍)</td><td>3.47</td><td>2.35</td><td class="hl"><b>2.54</b></td></tr>
+<tr><td class="lbl">같은 thread burst 16, 1 thread</td><td>4.67</td><td>3.62</td><td class="hl"><b>3.73</b></td></tr>
+<tr><td class="lbl">같은 thread burst 1, 4 thread</td><td>4.94</td><td>3.64</td><td class="hl"><b>4.14</b></td></tr>
+<tr><td class="lbl">같은 thread burst 1, 16 thread</td><td>6.63</td><td>4.36</td><td class="hl"><b>5.28</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍 (ns/객체)</td><td>350</td><td>111</td><td class="hl"><b>38.8</b></td></tr>
+<tr><td class="lbl">교차 thread 2 쌍</td><td>364</td><td>308</td><td class="hl"><b>46.4</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>390</td><td>839</td><td class="hl"><b>53.4</b></td></tr>
+</table>
+<ul>
+  <li><b><code>object_pool_tls</code></b><br>
+    thread 수와 교차 여부에 거의 영향을 받지 않는다. 같은 thread 2.5 ~ 5 ns, 교차 thread 40 ~ 60 ns.<br>
+    교차 thread 2쌍 이상에서는 가장 빠르다. tcmalloc 의 1/2 ~ 1/15, 기본 할당자의 1/3 ~ 1/8.<br>
+    같은 thread 와 교차 1쌍에서는 tcmalloc 과 1 ns 안팎 차이다.<br>
+    교차 thread 가 평평한 이유는 TLS ↔ 중앙 스택을 chain 단위로 옮기는 배치 이동이다.</li>
+  <li><b>tcmalloc</b><br>
+    같은 thread 에서는 기본 할당자보다 빠르다. Windows 4 ~ 5 ns(UCRT 의 1/4), Linux 는 glibc 보다 1 ~ 2 ns 빠름.<br>
+    같은 thread 경로에서는 <code>object_pool_tls</code> 와 1 ~ 1.5 ns 차이다.<br>
+    교차 thread 1쌍은 43 / 111 ns 로 기본 할당자의 1/3 이다.<br>
+    쌍이 늘면 급격히 나빠진다. 4쌍에서 292 / 839 ns 로 기본 할당자보다 느리다.<br>
+    원인은 같은 size class 의 중앙 free list 락 경합이다.</li>
+  <li><b>기본 할당자</b><br>
+    같은 thread 는 thread 수와 무관하게 일정하다. UCRT 18 ~ 22 ns, glibc tcache 3.5 ~ 6.6 ns.<br>
+    교차 thread 는 가장 느리다. UCRT 140 ns, glibc 350 ~ 390 ns.<br>
+    glibc 는 다른 thread 가 free 한 청크를 원래 arena 로 돌려보내는 경로가 비싸다.</li>
+</ul>
+<h4 class="sec">할당 크기별 비교</h4>
+<p><b>측정 조건</b></p>
+<ul>
+  <li>payload 64 B · 128 B · 1 KB · 4 KB · 64 KB · 128 KB · 256 KB.</li>
+  <li>new/delete 와 tcmalloc 은 payload 크기의 구조체. <code>object_pool_tls</code> 는 <code>Npoolable</code> 헤더 80 B + payload.</li>
+  <li>어느 쪽도 생성 시 0 으로 채우지 않는다. 풀은 재사용 때 생성자를 다시 부르지 않기 때문이다.</li>
+  <li>같은 thread 1·16 thread 는 ns/alloc+dealloc 쌍. 교차 thread 1·4 쌍은 ns/객체.</li>
+  <li>교차 thread 의 전송 중 객체 상한은 쌍마다 16,384개 또는 64 MB(64 KB 1,024개, 128 KB 512개, 256 KB 256개). 각 항목 3회 중앙값.</li>
+</ul>
+<table class="bench">
+<tr><th>Windows (MSVC, 24 코어)</th><th class="lbl">항목</th><th>new/delete (UCRT)</th><th>tcmalloc 2.10</th><th>CGDK::object_pool_tls</th></tr>
+<tr><td rowspan="4">64 B</td><td class="lbl">같은 thread 1 thread</td><td>18.6</td><td>6.27</td><td class="hl"><b>4.04</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>21.8</td><td>6.50</td><td class="hl"><b>4.63</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>155</td><td>44.8</td><td class="hl"><b>48.2</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>178</td><td>455</td><td class="hl"><b>68.6</b></td></tr>
+<tr><td rowspan="4">128 B</td><td class="lbl">같은 thread 1 thread</td><td>18.6</td><td>6.31</td><td class="hl"><b>3.89</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>22.1</td><td>6.88</td><td class="hl"><b>5.08</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>145</td><td>49.1</td><td class="hl"><b>40.5</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>174</td><td>339</td><td class="hl"><b>59.4</b></td></tr>
+<tr><td rowspan="4">1 KB</td><td class="lbl">같은 thread 1 thread</td><td>18.7</td><td>6.30</td><td class="hl"><b>3.95</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>22.5</td><td>6.79</td><td class="hl"><b>4.74</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>156</td><td>70.8</td><td class="hl"><b>47.0</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>187</td><td>340</td><td class="hl"><b>60.9</b></td></tr>
+<tr><td rowspan="4">4 KB</td><td class="lbl">같은 thread 1 thread</td><td>19.1</td><td>6.34</td><td class="hl"><b>4.01</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>22.4</td><td>6.67</td><td class="hl"><b>4.73</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>159</td><td>51.6</td><td class="hl"><b>45.4</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>197</td><td>1,047</td><td class="hl"><b>152</b></td></tr>
+<tr><td rowspan="4">64 KB</td><td class="lbl">같은 thread 1 thread</td><td>60.5</td><td>6.34</td><td class="hl"><b>3.98</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>24,727</td><td>6.47</td><td class="hl"><b>4.57</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>1,741</td><td>8,617</td><td class="hl"><b>226</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>18,026</td><td>30,924</td><td class="hl"><b>2,282</b></td></tr>
+<tr><td rowspan="4">128 KB</td><td class="lbl">같은 thread 1 thread</td><td>63.0</td><td>6.39</td><td class="hl"><b>3.94</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>11,009</td><td>6.66</td><td class="hl"><b>4.28</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>3,824</td><td>10,149</td><td class="hl"><b>224</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>32,670</td><td>22,853</td><td class="hl"><b>2,251</b></td></tr>
+<tr><td rowspan="4">256 KB</td><td class="lbl">같은 thread 1 thread</td><td>4,594</td><td>6.54</td><td class="hl"><b>4.11</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>106,947</td><td>6.88</td><td class="hl"><b>7.53</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>9,830</td><td>7,222</td><td class="hl"><b>193</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>55,442</td><td>24,150</td><td class="hl"><b>2,726</b></td></tr>
+</table>
+<table class="bench">
+<tr><th>Linux (g++ 15.2, 32 코어)</th><th class="lbl">항목</th><th>new/delete (glibc)</th><th>tcmalloc 2.18</th><th>CGDK::object_pool_tls</th></tr>
+<tr><td rowspan="4">64 B</td><td class="lbl">같은 thread 1 thread</td><td>3.69</td><td>2.86</td><td class="hl"><b>2.77</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>7.71</td><td>4.77</td><td class="hl"><b>4.37</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>364</td><td>127</td><td class="hl"><b>37.6</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>395</td><td>777</td><td class="hl"><b>56.0</b></td></tr>
+<tr><td rowspan="4">128 B</td><td class="lbl">같은 thread 1 thread</td><td>4.01</td><td>2.30</td><td class="hl"><b>2.71</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>6.90</td><td>5.61</td><td class="hl"><b>4.68</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>302</td><td>115</td><td class="hl"><b>39.5</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>336</td><td>844</td><td class="hl"><b>56.2</b></td></tr>
+<tr><td rowspan="4">1 KB</td><td class="lbl">같은 thread 1 thread</td><td>4.02</td><td>2.27</td><td class="hl"><b>2.79</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>7.72</td><td>5.41</td><td class="hl"><b>4.58</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>299</td><td>145</td><td class="hl"><b>44.4</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>346</td><td>846</td><td class="hl"><b>53.3</b></td></tr>
+<tr><td rowspan="4">4 KB</td><td class="lbl">같은 thread 1 thread</td><td>19.5</td><td>2.53</td><td class="hl"><b>2.94</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>27.2</td><td>7.01</td><td class="hl"><b>5.84</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>285</td><td>199</td><td class="hl"><b>44.8</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>365</td><td>949</td><td class="hl"><b>128</b></td></tr>
+<tr><td rowspan="4">64 KB</td><td class="lbl">같은 thread 1 thread</td><td>20.1</td><td>2.52</td><td class="hl"><b>2.99</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>27.4</td><td>6.77</td><td class="hl"><b>4.79</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>318</td><td>385</td><td class="hl"><b>220</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>392</td><td>2,944</td><td class="hl"><b>1,675</b></td></tr>
+<tr><td rowspan="4">128 KB</td><td class="lbl">같은 thread 1 thread</td><td>20.0</td><td>2.55</td><td class="hl"><b>2.82</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>28.1</td><td>7.02</td><td class="hl"><b>6.08</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>337</td><td>420</td><td class="hl"><b>185</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>443</td><td>3,108</td><td class="hl"><b>1,608</b></td></tr>
+<tr><td rowspan="4">256 KB</td><td class="lbl">같은 thread 1 thread</td><td>20.2</td><td>2.68</td><td class="hl"><b>2.79</b></td></tr>
+<tr><td class="lbl">같은 thread 16 thread</td><td>29.0</td><td>6.79</td><td class="hl"><b>5.68</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍</td><td>345</td><td>411</td><td class="hl"><b>199</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍</td><td>473</td><td>2,912</td><td class="hl"><b>1,537</b></td></tr>
+</table>
+<ul>
+  <li><b>같은 thread</b><br>
+    <code>object_pool_tls</code> 는 크기와 무관하게 3 ~ 6 ns 다. 포인터만 돌려주므로 크기가 비용에 들어가지 않는다.<br>
+    기본 할당자는 Windows 19 ns(4 KB 까지). Linux 는 1 KB 까지 4 ns, 4 KB 부터 20 ns(glibc tcache 상한 초과).<br>
+    glibc 는 64 KB 이상도 20 ns 다. 64 KB 는 mmap 임계값(128 KB) 아래라 heap 에서 꺼낸다. 128 KB 이상은 처음 한 번 mmap 으로 받지만 그 청크를 free 할 때 임계값이 동적으로 올라가(최대 32 MB) 그 뒤로는 heap 에서 꺼낸다. free 된 청크가 top chunk 에 합쳐져 다음 할당이 포인터 조작뿐이다.<br>
+    tcmalloc 은 2.3 ~ 6.5 ns 로 크기 영향이 작다.</li>
+  <li><b>64 KB 이상</b><br>
+    Windows 기본 heap 은 다중 thread 에서 1.5 ~ 25 µs(64 KB) · 1.8 ~ 11 µs(128 KB) 로 무너진다. 큰 블록은 LFH 밖이라 heap 락을 탄다. 256 KB 는 단일 thread 도 4.6 µs, 16 thread 107 µs 다(VirtualAlloc 경로).<br>
+    tcmalloc 은 같은 thread 는 6 ~ 7 ns 를 지키지만 교차 thread 는 Windows 7 ~ 31 µs, Linux 0.4 ~ 3.1 µs 다.<br>
+    <code>object_pool_tls</code> 는 같은 thread 3 ~ 8 ns 를 유지한다. 교차 thread 는 1쌍 190 ~ 230 ns, 4쌍 1,500 ~ 2,700 ns 로 나빠진다.<br>
+    원인은 chain 크기다. chain = <code>TLS_BATCH_BYTES(64 KiB) / sizeof(T)</code> 라 64 KB 객체는 chain 이 1개가 되어 교차 해제마다 중앙 락을 탄다. 4 KB 는 chain 16개로 128 ~ 152 ns.<br>
+    64 KB · 128 KB · 256 KB 모두 chain 1개라 값이 비슷하다. 큰 객체에 chain 최소 개수를 두면 줄일 수 있다.</li>
+  <li><b>교차 thread</b><br>
+    4 KB 까지는 <code>object_pool_tls</code> 가 40 ~ 70 ns 로 가장 빠르다. 64 KB 이상에서도 가장 빠르지만 절대값은 200 ns ~ 2.7 µs 다.<br>
+    tcmalloc 은 4쌍에서 340 ~ 1,050 ns. 기본 할당자는 Windows 150 ~ 200 ns, Linux 300 ~ 400 ns.</li>
+</ul>
+<h4 id="pool-improve" class="sec">CGDK::object_pool_tls 업데이트와 성능향상</h4>
+<p>2026년 10월 풀 작업의 효과. 같은 <code>object_pool_tls</code> 의 세 리비전을 각각 export 해 같은 설정(Release, 64 B payload, 위와 같은 벤치)으로 쟀다.</p>
+<ul>
+  <li>r11200 (2026-07-13) : 작업 전, 3달 전 상태.</li>
+  <li>r11319 (2026-10-17) : 풀 작업 직전.</li>
+  <li>r11414 (2026-10-22) : 작업이 모두 들어간 현재.</li>
+</ul>
+<table class="bench">
+<tr><th>CGDK::object_pool_tls (ns)</th><th>Win r11200</th><th>Win r11319</th><th>Win r11414</th><th>Linux r11200</th><th>Linux r11319</th><th>Linux r11414</th></tr>
+<tr><td class="lbl">같은 thread burst 1, 1 thread</td><td>3.96</td><td>3.88</td><td><b>3.07</b></td><td>4.62</td><td>2.17</td><td><b>2.41</b></td></tr>
+<tr><td class="lbl">같은 thread burst 1, 16 thread</td><td>5.22</td><td>5.32</td><td><b>3.61</b></td><td>5.43</td><td>3.82</td><td><b>3.78</b></td></tr>
+<tr><td class="lbl">교차 thread 1 쌍 (객체당)</td><td>81.8</td><td>68.1</td><td><b>45.8</b></td><td>196.6</td><td>188.8</td><td><b>41.9</b></td></tr>
+<tr><td class="lbl">교차 thread 4 쌍 (객체당)</td><td>399.7</td><td>463.9</td><td><b>61.2</b></td><td>831.2</td><td>824.9</td><td><b>54.5</b></td></tr>
+<tr><td><code>make_object&lt;T&gt;</code>(비풀 factory::object) 생성+해제</td><td>45.3</td><td>48.9</td><td><b>44.0</b></td><td>22.1</td><td>22.6</td><td><b>21.2</b></td></tr>
+</table>
+<p><b>리비전 사이에 들어간 변경과 효과</b></p>
+<ul>
+  <li><b>r11283 원자 연산 정리</b> (r11200 → r11319 구간)<br>
+    통계 카운터를 relaxed 원자 연산으로. 참조 카운트를 add_ref relaxed · release acq_rel 로. 싱글턴 공개를 acquire/release 로.<br>
+    효과 : Linux 같은 thread 4.62 → 2.17 ns. seq_cst 원자 연산은 x86 에서 full fence 라 Linux 에서 특히 비쌌다.<br>
+    Windows 와 교차 thread 는 변화 없음.</li>
+  <li><b>r11336 chain 배치 이동</b> (r11319 → r11414 구간)<br>
+    TLS 스택 ↔ 중앙 스택 이동을 객체 하나씩에서 chain(<code>64 KiB / sizeof(T)</code>, 최대 32개) 단위로.<br>
+    해제 전용 thread 도 chain 크기만큼 TLS 에 모았다가 한 번에 반환.<br>
+    중앙 스택의 <code>std::mutex</code> 를 4바이트 CAS + atomic wait 락으로.<br>
+    효과 : 매 alloc/free 가 타던 중앙 락이 chain 당 한 번이 됐다. 교차 thread Windows 68 → 46 ns · 464 → 61 ns, Linux 189 → 42 ns · 825 → 55 ns. 쌍 수가 늘어도 평평하다.<br>
+    같은 thread 도 Windows 에서 약 20% 빨라졌다(코드 배치 변화).</li>
+  <li><b>r11348 풀 해제 후 접근 수정</b><br>
+    종료 때 객체 삭제가 풀의 마지막 참조를 놓으면 풀이 지워진 뒤 통계를 쓰던 use-after-free. 삭제 직전 풀을 잡아 두는 방식으로 수정.<br>
+    정확성 수정. 성능 변화 없음.</li>
+  <li><b>r11411 · r11412 TLS data 소유 모델</b><br>
+    고친 문제 1 : close 뒤 TLS 스택에 남은 객체가 종료까지 해제되지 않던 누수.<br>
+    고친 문제 2 : 같은 T 의 풀·팩토리를 다시 만들면 thread 의 <code>thread_local</code> 포인터가 지워진 data 를 가리키던 use-after-free.<br>
+    방법 : sTLS_DATA 를 thread 와 풀이 공동 소유(refs 2). <code>_get_tls_data()</code> 가 소유자를 확인.<br>
+    비용 : 그 확인(load 1회 + 비교 1회)이 Linux 같은 thread 에서 r11319 대비 0.2 ~ 0.3 ns. 3달 전보다는 빠르다. 교차 thread 와 <code>make_object</code> 는 변화 없음.</li>
+</ul>
+<p><b>정리</b></p>
+<ul>
+  <li>교차 thread 4 ~ 15배, 같은 thread Windows 약 20% · Linux 약 48% 개선.</li>
+  <li>정확성 수정 두 건(r11348, r11411·r11412)의 비용은 측정 오차 안.</li>
+  <li>남은 개선 지점 : 64 KB 같은 큰 객체의 교차 thread 경로. chain 이 1개가 되지 않도록 chain 최소 개수를 둔다.</li>
+</ul>
+<h4 class="sec">테스트 코드</h4>
+<p>위 표를 만든 하네스. 64 B 표는 같은 하네스의 burst 16·2 쌍 항목을 더한 판이고, 리비전 비교는 같은 코드를 각 리비전의 헤더·라이브러리로 빌드한 것이다.</p>
+<details>
+<summary>size_bench.cpp (펼치기)</summary>
+<pre><code>// size bench : payload 64B .. 256KB, new/delete (or tcmalloc when linked with -DUSE_TCMALLOC) vs CGDK::object_pool_tls
+// - no zero-init (the pool reuses objects without re-constructing them), the pointer is kept alive with a compiler barrier only (no shared variable between threads)
+// - cross-thread : producer allocs and pushes into an SPSC ring, consumer pops and frees. in-flight objects per pair limited to 16,384 / 64 MB
+#define UNW_LOCAL_ONLY
+#define _CGDK_NO_ASSERT_ON_BOUND_CHECK
+#include &lt;string&gt;
+#include &lt;vector&gt;
+#include &lt;memory&gt;
+#include &lt;span&gt;
+#include &lt;map&gt;
+#include &lt;thread&gt;
+#include &lt;atomic&gt;
+#include &lt;chrono&gt;
+#include &lt;algorithm&gt;
+#include &lt;cstdio&gt;
+#include "cgdk/sdk10/system.object.h"
+#ifdef USE_TCMALLOC
+#include &lt;gperftools/tcmalloc.h&gt;
+#endif
+
+using namespace CGDK;
+
+template &lt;size_t P&gt; struct obj_raw { char data[P]; };
+template &lt;size_t P&gt; class obj_tls : public Npoolable&lt;obj_tls&lt;P&gt;&gt; { public: char data[P]; };
+
+#if defined(__GNUC__)
+static inline void escape(void* p) { asm volatile("" : : "r"(p) : "memory"); }
+#else
+static inline void escape(void*) {}
+#endif
+
+template &lt;size_t P&gt; struct A_NEW { using T = obj_raw&lt;P&gt;; static T* alloc() { auto p = new T; escape(p); return p; } static void free(T* p) { escape(p); delete p; } };
+template &lt;size_t P&gt; struct A_TLS { using T = obj_tls&lt;P&gt;; static T* alloc() { return T::alloc(); } static void free(T* p) { T::dealloc(p); } };
+
+static double now_ns() { return std::chrono::duration&lt;double, std::nano&gt;(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+
+template &lt;class F&gt;
+static double median_of(int _repeat, F&amp;&amp; _f)
+{
+	std::vector&lt;double&gt; v;
+	for (int i = 0; i &lt; _repeat; ++i) v.push_back(_f());
+	std::sort(v.begin(), v.end());
+	return v[v.size() / 2];
+}
+
+template &lt;class A&gt;
+static double bench_same_thread(int64_t _pairs)
+{
+	for (int i = 0; i &lt; 1000; ++i) { auto p = A::alloc(); A::free(p); }
+	auto t0 = now_ns();
+	for (int64_t i = 0; i &lt; _pairs; ++i) { auto p = A::alloc(); A::free(p); }
+	return (now_ns() - t0) / double(_pairs);
+}
+
+template &lt;class A&gt;
+static double bench_mt_same_thread(int _threads, int64_t _pairs)
+{
+	std::atomic&lt;bool&gt; go{ false };
+	std::vector&lt;std::thread&gt; th;
+	std::vector&lt;double&gt; ns(_threads);
+	for (int i = 0; i &lt; _threads; ++i)
+		th.emplace_back([&amp;, i]() { while (!go.load()) {} ns[i] = bench_same_thread&lt;A&gt;(_pairs); });
+	go.store(true);
+	for (auto&amp; t : th) t.join();
+	std::sort(ns.begin(), ns.end());
+	return ns[ns.size() / 2];
+}
+
+template &lt;class T, size_t N&gt;
+struct spsc_ring
+{
+	T* slots[N];
+	alignas(64) std::atomic&lt;size_t&gt; head{ 0 };
+	alignas(64) std::atomic&lt;size_t&gt; tail{ 0 };
+	bool push(T* p) { auto t = tail.load(std::memory_order_relaxed); if (t - head.load(std::memory_order_acquire) == N) return false; slots[t &amp; (N - 1)] = p; tail.store(t + 1, std::memory_order_release); return true; }
+	T* pop() { auto h = head.load(std::memory_order_relaxed); if (h == tail.load(std::memory_order_acquire)) return nullptr; auto p = slots[h &amp; (N - 1)]; head.store(h + 1, std::memory_order_release); return p; }
+};
+
+template &lt;class A, size_t RING&gt;
+static double bench_cross_thread(int _pairs, int64_t _objects)
+{
+	using T = typename A::T;
+	std::vector&lt;std::unique_ptr&lt;spsc_ring&lt;T, RING&gt;&gt;&gt; rings;
+	for (int i = 0; i &lt; _pairs; ++i) rings.push_back(std::make_unique&lt;spsc_ring&lt;T, RING&gt;&gt;());
+	std::atomic&lt;int&gt; ready{ 0 };
+	std::atomic&lt;bool&gt; go{ false };
+	std::vector&lt;std::thread&gt; th;
+	for (int i = 0; i &lt; _pairs; ++i)
+	{
+		auto* r = rings[i].get();
+		th.emplace_back([&amp;, r]() { ++ready; while (!go.load()) {} for (int64_t n = 0; n &lt; _objects;) { auto p = A::alloc(); while (!r-&gt;push(p)) {} ++n; } });
+		th.emplace_back([&amp;, r]() { ++ready; while (!go.load()) {} for (int64_t n = 0; n &lt; _objects;) { auto p = r-&gt;pop(); if (p == nullptr) continue; A::free(p); ++n; } });
+	}
+	while (ready.load() != _pairs * 2) {}
+	auto t0 = now_ns();
+	go.store(true);
+	for (auto&amp; t : th) t.join();
+	return (now_ns() - t0) / double(_objects);
+}
+
+template &lt;size_t P, template &lt;size_t&gt; class A&gt;
+static void run(const char* _name)
+{
+	const int R = 3;
+	constexpr size_t RING = ((64u * 1024 * 1024) / P &lt; 16384) ? (64u * 1024 * 1024) / P : 16384;	// in-flight objects per pair
+	printf("%-16s %7zu : same1t %9.2f  same4t %9.2f  same16t %9.2f  cross1 %9.2f  cross4 %9.2f\n", _name, P,
+		median_of(R, [] { return bench_same_thread&lt;A&lt;P&gt;&gt;(2'000'000); }),
+		median_of(R, [] { return bench_mt_same_thread&lt;A&lt;P&gt;&gt;(4, 500'000); }),
+		median_of(R, [] { return bench_mt_same_thread&lt;A&lt;P&gt;&gt;(16, 200'000); }),
+		median_of(R, [] { return bench_cross_thread&lt;A&lt;P&gt;, RING&gt;(1, 500'000); }),
+		median_of(R, [] { return bench_cross_thread&lt;A&lt;P&gt;, RING&gt;(4, 200'000); }));
+	fflush(stdout);
+}
+
+template &lt;size_t P&gt; static void run_size()
+{
+#ifdef USE_TCMALLOC
+	run&lt;P, A_NEW&gt;("tcmalloc");
+#else
+	run&lt;P, A_NEW&gt;("new/delete");
+#endif
+	run&lt;P, A_TLS&gt;("object_pool_tls");
+}
+
+int main(int, char**)
+{
+#ifdef USE_TCMALLOC
+	printf("[tcmalloc %s]\n", tc_version(nullptr, nullptr, nullptr));
+#endif
+	printf("%-16s %7s : ns/pair same-thread 1t/4t/16t, ns/object cross-thread 1/4 pairs\n", "allocator", "bytes");
+	run_size&lt;64&gt;();
+	run_size&lt;128&gt;();
+	run_size&lt;1024&gt;();
+	run_size&lt;4096&gt;();
+	run_size&lt;65536&gt;();
+	run_size&lt;131072&gt;();
+	run_size&lt;262144&gt;();
+	return 0;
+}
+</code></pre>
+</details>
+<details>
+<summary>빌드·실행 명령 (펼치기)</summary>
+<pre><code># Windows (MSVC v145, Release)
+cl /O2 /Ob2 /Oi /Ot /Oy /GL /MD /EHa /bigobj /std:c++20 /DNDEBUG /D_CONSOLE /DX64 /DWIN32 /D_WIN32_WINNT=0x0A00 /I &lt;CGDK&gt;include size_bench.cpp /link /LTCG /LIBPATH:&lt;CGDK&gt;ib advapi32.lib
+cl ... /DUSE_TCMALLOC /I &lt;vcpkg&gt;include size_bench.cpp /link ... /LIBPATH:&lt;vcpkg&gt;ib libtcmalloc_minimal.lib advapi32.lib   (libtcmalloc_minimal.dll 을 exe 옆에)
+
+# Linux (g++ 15.2, Release)
+g++ -O3 -std=c++20 -DNDEBUG -I &lt;CGDK&gt;/include size_bench.cpp -o sb_default  -L&lt;CGDK&gt;/lib/cgdk/sdk10/&lt;platform&gt; -lCGDK10.system.object_linux.Release -lrt -lpthread -ldl
+g++ -O3 -std=c++20 -DNDEBUG -DUSE_TCMALLOC -I &lt;CGDK&gt;/include size_bench.cpp -o sb_tcmalloc -L... -lCGDK10.system.object_linux.Release -ltcmalloc_minimal -lrt -lpthread -ldl</code></pre>
+</details>
+<div class="note">풀로 재사용되는 객체에 새 필드를 넣으면 재사용 시점의 초기화를 같이 넣어야 한다. socket 의 <code>m_socket_option</code> 이 직전 acceptor 값을 그대로 가진 채 재사용된 사례(r11400).</div>
+
+
+<footer>CGDK10 · 소스 기준 정리 (r11415, 2026-10-22) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+</main>
+</div>
+</body>
+</html>

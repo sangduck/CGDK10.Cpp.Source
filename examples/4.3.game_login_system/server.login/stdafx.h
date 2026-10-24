@@ -127,5 +127,5 @@ const uint32_t	CGNOTIFY_LOBBYSERVER_UPDATE		 = (CGMESSAGE::USER | 4);
 // 6. extern
 //-----------------------------------------------------------------
 // 1) ...
-extern	CGPTR<CService>		g_pService;
+extern	CGPTR<CService>		g_pservice;
 extern	CGPTR<CCGLogHub>	g_pLog;

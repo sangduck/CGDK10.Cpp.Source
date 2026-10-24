@@ -49,14 +49,20 @@ public:
 			void				set_reference_count(int _count) noexcept { m_counter = _count;}
 
 	//! @brief increase reference count 1 @return 변공된 참조계수 값
-			int					add_ref() noexcept { DEBUG_ON_ADD_REFERENCECOUNT(1); return ++m_counter;}
-			int					add_ref(int _count) noexcept { DEBUG_ON_ADD_REFERENCECOUNT(_count); CGASSERT_ERROR(_count>=0); return m_counter += _count;}
+	//   - relaxed : 참조를 이미 가진 쪽만 add_ref한다. (순서는 release(acq_rel)가 맞춘다. 표준적인 참조계수 방식)
+	//     x86은 같은 명령(lock xadd), arm64는 barrier가 없다. 반환값으로 다른 data를 판단하지 않는다.
+			int					add_ref() noexcept { DEBUG_ON_ADD_REFERENCECOUNT(1); return m_counter.fetch_add(1, std::memory_order_relaxed) + 1;}
+			int					add_ref(int _count) noexcept { DEBUG_ON_ADD_REFERENCECOUNT(_count); CGASSERT_ERROR(_count>=0); return m_counter.fetch_add(_count, std::memory_order_relaxed) + _count;}
+
+	//! @brief 참조가 남아 있을 때만 참조계수를 1 올린다. @return 0이면(해제 중이거나 pool에 돌아간 객체) 올리지 않고 false
+	//   - 다른 곳이 참조를 갖지 않은 채 raw pointer로 들고 있는 객체(예 : socket sustain 목록)를 잠시 붙잡을 때 쓴다.
+	[[nodiscard]] bool		add_ref_if_alive() noexcept { int count = m_counter.load(std::memory_order_relaxed); while (count > 0) { if (m_counter.compare_exchange_weak(count, count + 1, std::memory_order_relaxed)) { DEBUG_ON_ADD_REFERENCECOUNT(1); return true; } } return false; }
 
 	//! @brief decrease reference and call count on_final_release/process_dispose on reference count being zero.
 			int					release() noexcept;
 			int					release(int _count) noexcept;
 
-	[[nodiscard]] int			reference_count() const noexcept { return m_counter;}
+	[[nodiscard]] int			reference_count() const noexcept { return m_counter.load(std::memory_order_acquire);}
 
 			Ireferenceable&		operator ++ () noexcept { add_ref(); return *this;}
 			Ireferenceable&		operator -- () noexcept { release(); return *this;}
@@ -66,7 +72,7 @@ public:
 			Ireferenceable&		operator = (Ireferenceable&&) noexcept { return *this; }
 
 			// statistics)
-			void				statistics_on_extra() noexcept;
+			void				statistics_on_execute_elapsed_time(chrono::tick::duration _elapsed_time) noexcept;
 	[[nodiscard]] Ifactory*		get_factory() const noexcept  { return m_pfactory;}
 
 // framework) 
@@ -89,54 +95,8 @@ private:
 
 private:
 			Ifactory*			m_pfactory {nullptr};
-			template<class> friend class factory::object_pool;
 			template<class> friend class factory::object_pool_tls;
 			template<class> friend class Nreferenceable;
 			friend class Ischedulable;
 };
 
-
-inline int CGDK::Ireferenceable::release() noexcept
-{
-	// check) 
-	DEBUG_ON_RELEASE_REFERENCECOUNT;
-
-	// 1) decrement counter
-	const int result = --m_counter;
-
-	// check)
-	CGASSERT_ERROR(result >= 0);
-
-	if (result == 0)
-		_process_on_final_release();
-
-	// return) 
-	return result;
-}
-
-inline int CGDK::Ireferenceable::release(int _count) noexcept
-{
-	// check) 
-	CGASSERT_ERROR(_count >= 0);
-
-	// 1) substract count
-	const int result = m_counter.fetch_sub(_count) - _count;
-
-	// check)
-	CGASSERT_ERROR(result >= 0);
-
-	if (result == 0)
-		_process_on_final_release();
-
-	// return) 
-	return result;
-}
-
-inline void CGDK::Ireferenceable::_process_on_final_release() noexcept
-{
-	on_final_release();
-
-	CGNEW_DEBUG_INFO_RESET(this);
-
-	process_dispose();
-}

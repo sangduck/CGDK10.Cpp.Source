@@ -39,17 +39,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)lockable.h">
       <Filter>lock</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)lockfree_self_stack.h">
-      <Filter>locked container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)lockfree_self_stack_64.h">
-      <Filter>locked container</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)scoped_lock.h">
       <Filter>lock</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)locked_identity.h">
-      <Filter>locked container</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)locked_self_stack.h">
       <Filter>locked container</Filter>

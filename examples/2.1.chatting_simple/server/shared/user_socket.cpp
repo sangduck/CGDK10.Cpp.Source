@@ -3,12 +3,12 @@
 
 void user::socket::on_connect()
 {
-	// 1) 접속시 초기화한다.
+	// 1) 접속 시 초기화한다.
 	m_aid.reset();
 	m_nickname.clear();
 
 	// 2) 일단 접속되면 Immigration Group에 Enter를 합니다.
-	g_pservice->m_pgroup_user_immigration->enter(this);
+	g_pservice->pgroup_user_immigration->enter(this);
 }
 
 void user::socket::on_disconnect(uint64_t /*_disconnect_reason*/)

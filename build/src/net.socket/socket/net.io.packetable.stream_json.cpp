@@ -6,7 +6,14 @@ using namespace CGDK;
 std::size_t net::io::packetable::Nstream_json::process_packet( shared_buffer& _buffer, const net::sockaddr& _address)
 {
 	// check) _buffer.data_가 0이어서는 안된다.
-	THROW_IF(_buffer.data() == nullptr, throwable::failure(eRESULT::INVALID_MESSAGE_BUFFER_IS_NULL), LOG_DEBUG << "(err ) CGDK.net.io: _buffer.data_ is nullptr. _buffer.size_: "sv << _buffer.size() << " " __CGFUNCTION__ ""sv)
+	if (_buffer.data() == nullptr)
+	{
+		// log) 
+		LOG_DEBUG << "(err ) CGDK.net.io: _buffer.data_ is nullptr. _buffer.size_: "sv << _buffer.size() << " " __CGFUNCTION__ ""sv;
+
+		// throw)
+		throw throwable::failure(eRESULT::INVALID_MESSAGE_BUFFER_IS_NULL);
+	}
 
 	// check) _buffer->size_가 0이어서는 안된다.
 	CGASSERT_ERROR(_buffer.size()!= 0)
@@ -45,7 +52,7 @@ std::size_t net::io::packetable::Nstream_json::process_packet( shared_buffer& _b
 			// 7) History에 Queueing한다.
 			this->push_message_to_history(_buffer);
 
-			// 8) 처리후 shared_buffer 포인터를 이동시킨다.
+			// 8) 처리 후 shared_buffer 포인터를 이동시킨다.
 			_buffer += offset(temp_size);
 
 			// statistics) receive message수를 세린다.
@@ -53,6 +60,6 @@ std::size_t net::io::packetable::Nstream_json::process_packet( shared_buffer& _b
 		}
 	}
 
-	// return) 처리중인 message의 크기를 return한다.
+	// return) 처리 중인 message의 크기를 return한다.
 	return static_cast<std::size_t>(8192);
 }

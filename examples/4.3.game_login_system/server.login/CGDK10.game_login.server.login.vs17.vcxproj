@@ -57,7 +57,8 @@
     <IntDir>..\Output\$(ProjectName)\$(Configuration)_$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
-    <VcpkgEnableManifest>true</VcpkgEnableManifest>
+    <VcpkgEnableManifest>false</VcpkgEnableManifest>
+    <VcpkgEnabled>false</VcpkgEnabled>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -102,6 +103,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>..\..\CGDK8(for C++)\Include;..\..\CGDK8(for C++)\CGDbuffer\C++;..\..\CGDK8(for C++)\CGDContainers</AdditionalIncludeDirectories>
       <AdditionalOptions>-Zm256 %(AdditionalOptions)</AdditionalOptions>
+      <ExceptionHandling>Async</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -128,49 +130,48 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
+    <Text Include="read_me.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Definitions.h" />
-    <ClInclude Include="LoginServer.h" />
-    <ClInclude Include="LoginServerDefinition.h" />
-    <ClInclude Include="LoginServerDlg.h" />
+    <ClInclude Include="CGDK1.game_login.server.lobby.h" />
+    <ClInclude Include="CGDK1.game_login.server.lobby.definition.h" />
+    <ClInclude Include="CGDK1.game_login.server.lobby.dlg.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="ServerLobbyGroupImmigrationSocket.h" />
-    <ClInclude Include="ServerLobbyGroupSocket.h" />
-    <ClInclude Include="ServerLobbySocket.h" />
+    <ClInclude Include="server_lobby_group_immigration_socket.h" />
+    <ClInclude Include="server_lobby_group_socket.h" />
+    <ClInclude Include="server_lobby_socket.h" />
     <ClInclude Include="Service.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="UserAccountManager.h" />
-    <ClInclude Include="UserGroupImmigrationSocket.h" />
-    <ClInclude Include="UserSocket.h" />
+    <ClInclude Include="user_account_manager.h" />
+    <ClInclude Include="user_group_immigration_socket.h" />
+    <ClInclude Include="user_socket.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LoginServer.cpp" />
-    <ClCompile Include="LoginServerDlg.cpp" />
-    <ClCompile Include="ServerLobbyGroupImmigrationSocket.cpp" />
-    <ClCompile Include="ServerLobbyGroupSocket.cpp" />
-    <ClCompile Include="ServerLobbySocket.cpp" />
+    <ClCompile Include="CGDK1.game_login.server.lobby.cpp" />
+    <ClCompile Include="CGDK1.game_login.server.lobby.dlg.cpp" />
+    <ClCompile Include="server_lobby_group_immigration_socket.cpp" />
+    <ClCompile Include="server_lobby_group_socket.cpp" />
+    <ClCompile Include="server_lobby_socket.cpp" />
     <ClCompile Include="Service.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="UserAccountManager.cpp" />
-    <ClCompile Include="UserGroupImmigrationSocket.cpp" />
-    <ClCompile Include="UserSocket.cpp" />
+    <ClCompile Include="user_account_manager.cpp" />
+    <ClCompile Include="user_group_immigration_socket.cpp" />
+    <ClCompile Include="user_socket.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\ServerStateMngServer.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="LoginServer.rc" />
+    <ResourceCompile Include="CGDK1.game_login.server.lobby.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="LoginServer_Setting.json" />
-    <None Include="res\LoginServer.ico" />
-    <None Include="res\LoginServer.rc2" />
+    <None Include="CGDK1.game_login.server.lobby.setting.json" />
+    <None Include="res\CGDK1.game_login.server.lobby.ico" />
+    <None Include="res\CGDK1.game_login.server.lobby.rc2" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

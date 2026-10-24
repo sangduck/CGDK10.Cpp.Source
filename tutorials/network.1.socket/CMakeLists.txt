@@ -19,19 +19,19 @@
 #-----------------------------------------------------------------------------
 # setting
 #-----------------------------------------------------------------------------
-# 1) project name
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY( VERSION 3.20 )
+
+# 2) project name
 PROJECT ( "CGDK10.tutorial.socket" )
 
-# 2) project version
+# 3) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 SET ( DEFAULT_BUILD_TYPE Debug )
-
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
 
 
 #-----------------------------------------------------------------------------
@@ -75,3 +75,31 @@ ADD_SUBDIRECTORY (socket.ex07.tcp_connector)
 
 # ex8) socket logger
 ADD_SUBDIRECTORY (socket.ex08.socket_logger)
+
+# ex9)lambda socket
+ADD_SUBDIRECTORY (socket.ex09.lambda_socket)
+
+# ex10) crypted socket
+ADD_SUBDIRECTORY (socket.ex10.crypted_send_receive)
+
+# ex11) ssl socket
+ADD_SUBDIRECTORY (socket.ex11.ssl_send_receive)
+
+# ex12) kafka (librdkafka : vcpkg on windows, 'librdkafka-dev' or -DCMAKE_PREFIX_PATH on linux)
+FIND_PATH ( CGDK_RDKAFKA_INCLUDE_DIR librdkafka/rdkafkacpp.h )
+IF (WIN32 OR CGDK_RDKAFKA_INCLUDE_DIR)
+	ADD_SUBDIRECTORY (socket.ex12.kafka)
+ELSE ()
+	MESSAGE ( STATUS "librdkafka not found: socket.ex12.kafka is skipped" )
+ENDIF ()
+
+# ex13) mail (SMTP)
+ADD_SUBDIRECTORY (socket.ex13.mail)
+
+# ex14) UDS (same host)
+ADD_SUBDIRECTORY (socket.ex14.uds)
+
+# ex15) tcp socket option (TCP_NODELAY, TCP_QUICKACK, SO_BUSY_POLL, TCP_NOTSENT_LOWAT, TCP Fast Open)
+ADD_SUBDIRECTORY (socket.ex15.socket_option)
+# ex16) emergency acceptor and the signals (shutdown / emergency / terminate)
+ADD_SUBDIRECTORY (socket.ex16.emergency_acceptor)

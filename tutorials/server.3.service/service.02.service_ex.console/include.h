@@ -1,4 +1,4 @@
-﻿#include "cgdk/sdk10/server.log.h"
+#include "cgdk/sdk10/server.log.h"
 #include "cgdk/sdk10/server.service.h"
 #include "cgdk/sdk10/net.socket.h"
 

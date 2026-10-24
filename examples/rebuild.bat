@@ -1,2 +1,2 @@
 @ECHO OFF
-call rebuild.windows.vs17.bat
+call rebuild.vs18.bat

@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.http.h"
+#include "cgdk/sdk10/net.socket.http.h"
 #include "../../define_message.h"
 
 #include <iostream>
@@ -9,42 +9,42 @@
 using namespace CGDK;
 
 // 
-// ì„¤ëª…) SSLì„ ì‚¬ìš©í•˜ì§€ ì•ŠëŠ” 'http://'ë‚˜ 'ws://'ëŠ” 80ë²ˆ portê°€ ê¸°ë³¸í¬íŠ¸ì´ë©°
-//      SSLì„ ì‚¬ìš©í•˜ëŠ” 'https://'ë‚˜ 'wss://'ëŠ” 443ë²ˆ portê°€ ê¸°ë³¸ í¬íŠ¸ì´ë‹¤.
-//      httpì™€ websocketìš© acceptorëŠ” êµ¬ë¶„í•˜ì§€ ì•Šê³  í•œë²ˆì— ì‚¬ìš©í•œë‹¤.
-//      í´ë¼ì´ì–¸íŠ¸ê°€ websocketì„ ì‚¬ìš©í•  ê²½ìš° websocket ë©”ì‹œì§€ê°€ ì „ë‹¬ë˜ë©°
-//      ê·¸ë ‡ì§€ ì•Šì„ ê²½ìš° ì¼ë°˜ httpë¡œ ë™ì‘í•œë‹¤.
+// ¼³¸í) SSLÀ» »ç¿ëÇÏÁö ¾Ê´Â 'http://'³ª 'ws://'´Â 80¹ø port°¡ ±âº»Æ÷Æ®ÀÌ¸ç
+//      SSLÀ» »ç¿ëÇÏ´Â 'https://'³ª 'wss://'´Â 443¹ø port°¡ ±âº» Æ÷Æ®ÀÌ´Ù.
+//      http¿Í websocket¿ë acceptor´Â ±¸ºĞÇÏÁö ¾Ê°í ÇÑ¹ø¿¡ »ç¿ëÇÑ´Ù.
+//      Å¬¶óÀÌ¾ğÆ®°¡ websocketÀ» »ç¿ëÇÒ °æ¿ì websocket ¸Ş½ÃÁö°¡ Àü´ŞµÇ¸ç
+//      ±×·¸Áö ¾ÊÀ» °æ¿ì ÀÏ¹İ http·Î µ¿ÀÛÇÑ´Ù.
 //
-//  2. HTTPì™€ Websocket êµ¬ë¶„í•˜ê¸°
-//     on_messageì— sMESSAGE_HTTP_REQUESTì— ì „ë‹¬ë˜ëŠ” ê°’ìœ¼ë¡œ í™•ì¸ê°€ëŠ¥í•˜ë‹¤.
+//  2. HTTP¿Í Websocket ±¸ºĞÇÏ±â
+//     on_message¿¡ sMESSAGE_HTTP_REQUEST¿¡ Àü´ŞµÇ´Â °ªÀ¸·Î È®ÀÎ°¡´ÉÇÏ´Ù.
 //      
-//       _msg.protocol.type == eHTTP_PROTOCOL::WEBSOCKET_  => ì›¹ì†Œì¼“
+//       _msg.protocol.type == eHTTP_PROTOCOL::WEBSOCKET_  => À¥¼ÒÄÏ
 //
 //       _msg.protocol.type == eHTTP_PROTOCOL::HTTP_  => HTTP
 //
 //
-//  3. Websocketë¡œ ì „ì†¡ë°›ì€ ë©”ì‹œì§€ ì½ê¸°
-//     ì „ì†¡ë°›ì€ ë©”ì‹œì§€ê°€ textí˜•ì‹ì¸ì§€ binary í˜•ì‹ì¸ì§€ëŠ” _msg.methodë¥¼ í™•ì¸í•  ìˆ˜ ìˆë‹¤.
+//  3. Websocket·Î Àü¼Û¹ŞÀº ¸Ş½ÃÁö ÀĞ±â
+//     Àü¼Û¹ŞÀº ¸Ş½ÃÁö°¡ textÇü½ÄÀÎÁö binary Çü½ÄÀÎÁö´Â _msg.method¸¦ È®ÀÎÇÒ ¼ö ÀÖ´Ù.
 //
-//      _msg.method == eHTTP_METHOD::TEXT_  => text í˜•ì‹
+//      _msg.method == eHTTP_METHOD::TEXT_  => text Çü½Ä
 //
-//      _msg.method == eHTTP_METHOD::BINARY_  => binary í˜•ì‹
+//      _msg.method == eHTTP_METHOD::BINARY_  => binary Çü½Ä
 //
-//     ì „ì†¡ë˜ì–´ì˜¨ ë©”ì‹œì§€ëŠ” sMESSAGE_HTTP_REQUEST êµ¬ì¡°ì²´ì˜ buf_messageì— ìˆë‹¤.
+//     Àü¼ÛµÇ¾î¿Â ¸Ş½ÃÁö´Â sMESSAGE_HTTP_REQUEST ±¸Á¶Ã¼ÀÇ buf_message¿¡ ÀÖ´Ù.
 //
 //
-//  4. Websocket ë©”ì‹œì§€ ì „ì†¡í•˜ê¸°
-//     ì „ë‹¬í•˜ê³ ì í•˜ëŠ” ë©”ì‹œì§€ë¥¼ sWEBSOCKET_MESSAGE êµ¬ì¡°ì²´ë¥¼  ì‚¬ìš©í•´ ì „ë‹¬í•˜ë©´ ëœë‹¤ã…£
+//  4. Websocket ¸Ş½ÃÁö Àü¼ÛÇÏ±â
+//     Àü´ŞÇÏ°íÀÚ ÇÏ´Â ¸Ş½ÃÁö¸¦ sWEBSOCKET_MESSAGE ±¸Á¶Ã¼¸¦  »ç¿ëÇØ Àü´ŞÇÏ¸é µÈ´Ù¤Ó
 //
-//       send(make_shared_buffer(sWEBSOCKET_MESSAGE(std::string_view("test message")))); -> text ì „ì†¡
+//       send(make_shared_buffer(sWEBSOCKET_MESSAGE(std::string_view("test message")))); -> text Àü¼Û
 //
-//       send(make_shared_buffer(sWEBSOCKET_MESSAGE(temp_buffer)); -> binary ì „ì†¡
+//       send(make_shared_buffer(sWEBSOCKET_MESSAGE(temp_buffer)); -> binary Àü¼Û
 // 
-//       send(make_shared_buffer(sWEBSOCKET_MESSAGE(temp_buffer, eHTTP_METHOD::TEXT_)); -> bufferì˜ ë‚´ìš©ì„ textë¡œ ì¸ì‹í•´ ì „ì†¡
+//       send(make_shared_buffer(sWEBSOCKET_MESSAGE(temp_buffer, eHTTP_METHOD::TEXT_)); -> bufferÀÇ ³»¿ëÀ» text·Î ÀÎ½ÄÇØ Àü¼Û
 //
 //
 
-// 1) socket_web í´ë˜ìŠ¤ë¥¼ ì •ì˜í•œë‹¤.
+// 1) socket_web Å¬·¡½º¸¦ Á¤ÀÇÇÑ´Ù.
 class socket_web : public net::socket::http_server
 {
 	virtual void		on_connect() override;
@@ -58,35 +58,35 @@ int main()
 	// trace) 
 	std::cout << "start server [tut.socket.06.websocket.server]..."sv << '\n';
 
-	// 1) 'socket_web'ì„ ì‚¬ìš©í•˜ëŠ” "ws://"ë¥¼ ë°›ëŠ” acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) 'socket_web'À» »ç¿ëÇÏ´Â "ws://"¸¦ ¹Ş´Â acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto pacceptor_ws = make_own<net::acceptor<socket_web>>();
 
-	// 2) acceptë¥¼ ì‹œì‘í•œë‹¤.
-	//    (ws://ì˜ ê¸°ë³¸ í¬íŠ¸ëŠ” 80ë²ˆ)
+	// 2) accept¸¦ ½ÃÀÛÇÑ´Ù.
+	//    (ws://ÀÇ ±âº» Æ÷Æ®´Â 80¹ø)
 	pacceptor_ws->start();
 
 
-	// 3) ssl contextë¥¼ ìƒì„±í•œë‹¤.
-	//    - sslì„ ì‚¬ìš©í•˜ê³ ì í•  ê²½ìš° ì•„ë˜ì™€ ê°™ì´ ssl_conentë¥¼ ìƒì„± í›„ ì„¤ì •í•´ì„œ ì‚¬ìš©í•´ì•¼ í•œë‹¤.
-	//    - ì¸ì¦ì„œê°€ ì—†ê±°ë‚˜ expireë˜ì—ˆì„ ê²½ìš° ì‹ ê·œ ë°œê¸‰ì„ ë°›ëŠ”ë‹¤.
-	//    !ì£¼ì˜) localhostì—ì„œ ë°œê¸‰í•œ ì¸ì¦ì„œë¡œëŠ” ëŒ€ë¶€ë¶„ì˜ ì›¹ë¸Œë¼ìš°ì €ì—ì„œ ë³´ì•ˆìƒ ì ‘ì†ì´ í—ˆìš©ë˜ì§€ ì•ŠëŠ”ë‹¤.
-	//           ë”°ë¼ì„œ internet explorerì™€ ê°™ì€ êµ¬í˜• ì›¹ë¸Œë¼ìš°ì €ë¥¼ ì‚¬ìš©í•˜ê±°ë‚˜ localhost ì¸ì¦ì„œë¥¼ í—ˆìš©í•˜ë„ë¡ ë¸Œë¼ìš°ì € ì˜µì…˜ì„ ë³€ê²½í•´ì¤˜ì•¼ í•œë‹¤.
+	// 3) ssl context¸¦ »ı¼ºÇÑ´Ù.
+	//    - sslÀ» »ç¿ëÇÏ°íÀÚ ÇÒ °æ¿ì ¾Æ·¡¿Í °°ÀÌ ssl_conent¸¦ »ı¼º ÈÄ ¼³Á¤ÇØ¼­ »ç¿ëÇØ¾ß ÇÑ´Ù.
+	//    - ÀÎÁõ¼­°¡ ¾ø°Å³ª expireµÇ¾úÀ» °æ¿ì ½Å±Ô ¹ß±ŞÀ» ¹Ş´Â´Ù.
+	//    !ÁÖÀÇ) localhost¿¡¼­ ¹ß±ŞÇÑ ÀÎÁõ¼­·Î´Â ´ëºÎºĞÀÇ À¥ºê¶ó¿ìÀú¿¡¼­ º¸¾È»ó Á¢¼ÓÀÌ Çã¿ëµÇÁö ¾Ê´Â´Ù.
+	//           µû¶ó¼­ internet explorer¿Í °°Àº ±¸Çü À¥ºê¶ó¿ìÀú¸¦ »ç¿ëÇÏ°Å³ª localhost ÀÎÁõ¼­¸¦ Çã¿ëÇÏµµ·Ï ºê¶ó¿ìÀú ¿É¼ÇÀ» º¯°æÇØÁà¾ß ÇÑ´Ù.
 	auto pssl_context = make_object<crypt::ssl_context>("tutorial_server.crt"sv, "tutorial_server.key"sv);
 
-	// 4) 'socket_web'ì„ ì‚¬ìš©í•˜ëŠ” "wss://"ë¥¼ ë°›ëŠ” acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 4) 'socket_web'À» »ç¿ëÇÏ´Â "wss://"¸¦ ¹Ş´Â acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto pacceptor_wss = make_own<net::acceptor<socket_web>>();
 
-	// 5) acceptë¥¼ ì‹œì‘í•œë‹¤.
-	//    ("wss://"ì˜ ê¸°ë³¸ í¬íŠ¸ëŠ” 443ì´ë‹¤.)
+	// 5) accept¸¦ ½ÃÀÛÇÑ´Ù.
+	//    ("wss://"ÀÇ ±âº» Æ÷Æ®´Â 443ÀÌ´Ù.)
 	pacceptor_wss->start({{}, pssl_context });
 
-	// 6) ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+	// 6) ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 	while(_getch() != 27);
 
 	// trace) 
 	std::cout << "stop server [tut.socket.06.websocket.server]..."sv << '\n';
 
-	// end) ì„œë²„ ì¢…ë£Œ
+	// end) ¼­¹ö Á¾·á
 	return 0;
 }
 
@@ -105,24 +105,24 @@ void socket_web::on_disconnect(uint64_t)
 
 result_code socket_web::on_message(sMESSAGE_HTTP_REQUEST& _msg)
 {
-	// ì„¤ëª…) ì¼ë°˜ì ì¸ HTTP/HTTPS í”„ë¡œí† ì½œì¼ ê²½ìš° ì—¬ê¸°ê°€ í˜¸ì¶œëœë‹¤.
+	// ¼³¸í) ÀÏ¹İÀûÀÎ HTTP/HTTPS ÇÁ·ÎÅäÄİÀÏ °æ¿ì ¿©±â°¡ È£ÃâµÈ´Ù.
 
-	// 1) ì „ì†¡ë˜ì–´ì–´ì˜¨ requestë¥¼ ì¶œë ¥í•œë‹¤.
-	std::cout << " - protocol: " << to_string<char>(_msg.protocol) << " version: "sv << _msg.version << '\n';
-	std::cout << " - method: " << to_string<char>(_msg.method) << '\n';
+	// 1) Àü¼ÛµÇ¾î¾î¿Â request¸¦ Ãâ·ÂÇÑ´Ù.
+	std::cout << " - protocol: " << to_string(_msg.protocol) << " version: "sv << _msg.version << '\n';
+	std::cout << " - method: " << to_string(_msg.method) << '\n';
 	std::cout << " - path: " << reinterpret_cast<const char*>(_msg.path.data()) << '\n';
 	for (auto& iter : _msg.parameters)
 	{
 		std::cout << ' ' << iter.key << ": "sv << iter.value << '\n';
 	}
 
-	// 2) responseë¥¼ ì‘ì„±í•œë‹¤.
+	// 2) response¸¦ ÀÛ¼ºÇÑ´Ù.
 	sMESSAGE_HTTP_RESPONSE msg_http_response;
 	msg_http_response.version = _msg.version;
 	msg_http_response.status_code = eHTTP_STATUS_CODE::OK_;
-	msg_http_response.status_message = to_string<char>(msg_http_response.status_code);
+	msg_http_response.status_message = to_string(msg_http_response.status_code);
 
-	// 3) response ì „ì†¡
+	// 3) response Àü¼Û
 	send(make_shared_buffer(msg_http_response));
 
 	// return) 
@@ -131,24 +131,24 @@ result_code socket_web::on_message(sMESSAGE_HTTP_REQUEST& _msg)
 
 result_code socket_web::on_message(sMESSAGE_HTTP_WEBSOCKET& _msg)
 {
-	// ì„¤ëª…) websocketì¼ ê²½ìš° ì—¬ê¸°ê°€ í˜¸ì¶œëœë‹¤.
+	// ¼³¸í) websocketÀÏ °æ¿ì ¿©±â°¡ È£ÃâµÈ´Ù.
 
-	// check) TEXTì¼ ê²½ìš°ë§Œ ì§„í–‰...
+	// check) TEXTÀÏ °æ¿ì¸¸ ÁøÇà...
 	RETURN_IF(_msg.method != eHTTP_METHOD::TEXT_, eRESULT::BYPASS);
 
-	// 1) ì „ì†¡ë˜ì–´ì˜¨ messageë¥¼ ì–»ëŠ”ë‹¤.
+	// 1) Àü¼ÛµÇ¾î¿Â message¸¦ ¾ò´Â´Ù.
 	std::u8string_view str_message = _msg.buf_message;
 
 	// trace)
 	std::cout << ' ' << encode_string<char>(str_message) << '\n';
 
-	// 2)  ë¬¸ìì—´ì„ ì „ì†¡í•œë‹¤.
-	//     ì£¼ì˜!) Web ë¬¸ìì—´ì€ UTF-8ë¡œ ë³€í™˜ë˜ì–´ì„œ ì „ë‹¬ë˜ë¯€ë¡œ ê·¸ì— ë”°ë¥¸ ë³€í™˜ì´ í•„ìš”ë¡œ í•œë‹¤.
-	//     ë§Œì•½ UTF-8ë¡œ ë³€í™˜í•˜ì§€ ì•Šê³  ì „ì†¡í•˜ê³  ì‹¶ì„ ë•Œì—ëŠ” ê·¸ëƒ¥ shared_bufferë¡œ ì „ì†¡í•˜ë©´ ëœë‹¤.
-	send(make_shared_buffer(sWEBSOCKET_MESSAGE("í…ŒìŠ¤íŠ¸ ë©”ì‹œì§€ ì „ì†¡"sv)));
+	// 2)  ¹®ÀÚ¿­À» Àü¼ÛÇÑ´Ù.
+	//     ÁÖÀÇ!) Web ¹®ÀÚ¿­Àº UTF-8·Î º¯È¯µÇ¾î¼­ Àü´ŞµÇ¹Ç·Î ±×¿¡ µû¸¥ º¯È¯ÀÌ ÇÊ¿ä·Î ÇÑ´Ù.
+	//     ¸¸¾à UTF-8·Î º¯È¯ÇÏÁö ¾Ê°í Àü¼ÛÇÏ°í ½ÍÀ» ¶§¿¡´Â ±×³É shared_buffer·Î Àü¼ÛÇÏ¸é µÈ´Ù.
+	send(make_shared_buffer(sWEBSOCKET_MESSAGE("\uD14C\uC2A4\uD2B8 \uBA54\uC2DC\uC9C0 \uC804\uC1A1"sv)));	// "Å×½ºÆ® ¸Ş½ÃÁö Àü¼Û"
 
-	// 3) ì¼ë°˜ ë°”ì´ë„ˆë¦¬ ë°ì´í„°ë¥¼ ì „ì†¡í•œë‹¤.
-	//    ì „ì†¡í•  ë°ì´í„°ë¥¼ shared_bufferì— ë„£ì–´ì„œ ì „ë‹¬í•œë‹¤.
+	// 3) ÀÏ¹İ ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ¸¦ Àü¼ÛÇÑ´Ù.
+	//    Àü¼ÛÇÒ µ¥ÀÌÅÍ¸¦ shared_buffer¿¡ ³Ö¾î¼­ Àü´ŞÇÑ´Ù.
 	auto buf_binary = alloc_shared_buffer(1000);
 	buf_binary.append<int>(100);
 	buf_binary.append<int>(200);

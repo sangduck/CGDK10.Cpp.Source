@@ -33,16 +33,16 @@ void ServerLogin::CSocket::OnConnect(CGNet::IO::IConnective* /*_pConnective*/)
 	CGLOG(g_pLog, eLOG_TYPE::INFO_, eLOG_LEVEL::HIGHER, _CGTEXT("> Login Server Connected [{}]"), CGNetAPI::AddressToString<_CHAR>(GetPeerAddress()).c_str());
 
 	// View)
-	g_pService->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_LOGINSERVER_CONNECT, (DWORD_PTR)this));
+	g_pservice->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_LOGINSERVER_CONNECT, (DWORD_PTR)this));
 
 	// 1) Certification을 요청하는 메시지를 전송한다.(성공한다면 ACCEPT_CERTIFICATION 메시지를 보내 올 것이다.)
-	Send(g_pService->Message_REQUEST_CERTIFICATION());
+	Send(g_pservice->Message_REQUEST_CERTIFICATION());
 }
 
 void ServerLogin::CSocket::OnDisconnect(uint32_t /*_Reason*/)
 {
 	// View)
-	g_pService->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_LOGINSERVER_DISCONNECT, (DWORD_PTR)this));
+	g_pservice->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_LOGINSERVER_DISCONNECT, (DWORD_PTR)this));
 
 	// Trace)
 	CGLOG(g_pLog, eLOG_TYPE::INFO_, eLOG_LEVEL::HIGHER, _CGTEXT("< Login Server Disconnected [{}]"), CGNetAPI::AddressToString<_CHAR>(GetPeerAddress()).c_str());
@@ -54,10 +54,10 @@ void ServerLogin::CSocket::OnDisconnect(uint32_t /*_Reason*/)
 void ServerLogin::CSocket::OnExecute()
 {
 	// 1) Player Count를 UPdate한다.
-	g_pService->UpdatePlayerCount();
+	g_pservice->update_player_count();
 
 	// 2) Send Message
-	Send(g_pService->Message_SEND_LOBBYSERVER_STATUS());
+	Send(g_pservice->Message_SEND_LOBBYSERVER_STATUS());
 }
 
 // Message Map)

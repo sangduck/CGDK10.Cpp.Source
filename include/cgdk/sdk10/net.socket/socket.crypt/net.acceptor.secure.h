@@ -1,0 +1,54 @@
+//*****************************************************************************
+//*                                                                           *
+//*                      Cho sanghyun's Game Classes II                       *
+//*                       Ver 10.0 / Release 2019.12.11                       *
+//*                                                                           *
+//*                          network socket classes                           *
+//*                                                                           *
+//*                                                                           *
+//*                                                                           *
+//*                                                                           *
+//*  This Program is programmed by Cho SangHyun. sangduck@cgcii.co.kr         *
+//*  Best for Game Developement and Optimized for Game Developement.          *
+//*                                                                           *
+//*                (c) 2003. Cho Sanghyun. All right reserved.                *
+//*                          http://www.CGCII.co.kr                           *
+//*                                                                           *
+//*****************************************************************************
+
+#pragma once
+
+namespace CGDK
+{
+//-----------------------------------------------------------------------------
+//
+// net::acceptor<TSOCKET> for secure socket
+//
+//-----------------------------------------------------------------------------
+template <class TSOCKET>
+class net::acceptor<TSOCKET, typename std::enable_if<!std::is_base_of<net::io::Nhttp_server, TSOCKET>::value && std::is_base_of<net::io::Nsocket_ssl, TSOCKET>::value>::type> :
+	public						net::io::connective::acceptor::Ntcp_ssl,
+	public						Nmessage_transmitter,
+	public						net::io::connectable_manager::list<TSOCKET>
+{
+public:
+			acceptor() 
+			{
+				// check) 
+				static_assert(std::is_base_of_v<Icryptable, TSOCKET>, "secured socket must have 'Icryptable' interface (derive 'net::io::connect_requestable::Ntcp_ssl' or 'net::io::Nsocket_ssl')");
+
+				std::string temp_name("acceptor.ssl<");
+				temp_name += typeid(TSOCKET).name();
+				temp_name += ">"sv;
+
+				this->name(temp_name);
+			}
+	virtual	~acceptor() noexcept {}
+
+protected:
+	virtual	object_ptr<net::io::Iconnectable> process_alloc_connectable() override { return alloc_object<TSOCKET>(); }
+	virtual bool				_process_destroy() noexcept override { auto result = net::io::connective::acceptor::Ntcp_ssl::_process_destroy(); reset_message_transmitter(); return result; }
+};
+
+
+}

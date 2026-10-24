@@ -1,10 +1,8 @@
-﻿#ifndef PCH_H
+#ifndef PCH_H
 #define PCH_H
 
 // 1) CGCII header files
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/buffer.hpp>
+#include <boost/asio.hpp>
 #include <set>
 #include <deque>
 #include <memory>

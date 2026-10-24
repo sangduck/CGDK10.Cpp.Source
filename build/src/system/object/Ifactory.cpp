@@ -4,6 +4,11 @@ namespace CGDK
 {
 
 
+void Ifactory::process_set_name(std::string_view _name)
+{
+    this->m_statistics.name = _name;
+}
+
 void Ifactory::process_register_factory()
 {
 	// declare) 
@@ -13,15 +18,19 @@ void Ifactory::process_register_factory()
 	CGASSERT_ERROR(pmanager.exist());
 
 	// check) pmanager가 nullptr이면 끝낸다.
-	RETURN_IF(pmanager.empty());
+	if(pmanager.empty())
+		return;
 
-	scoped_lock(this->m_pmanager)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_pmanager);
+
 		// 1) Factory Manager에 등록한다.
 		auto result = pmanager->process_register_factory(this);
 
 		// check) 
-		RETURN_IF(result == false);
+		if(result == false)
+			return;
 
 		// 2) Manager를 등록한다.
 		this->m_pmanager = pmanager;
@@ -33,10 +42,13 @@ void Ifactory::process_unregister_factory() noexcept
 	// declare) 
 	object_ptr<factory::manager> pmanager;
 
-	scoped_lock(this->m_pmanager)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_pmanager);
+
 		// check) 
-		RETURN_IF(this->m_pmanager.empty());
+		if(this->m_pmanager.empty())
+			return;
 
 		// 1) UnRegister한다.
 		this->m_pmanager->process_unregister_factory(this);
@@ -58,7 +70,7 @@ size_t Ifactory::_get_shrink_count(eFACTORY_GC_LEVEL _level) const noexcept
 
 	switch(_level)
 	{
-	// - 최대갯수를 초과하는 객체수의 1/16만을 모두 제거한다.
+	// - 최대개수를 초과하는 객체수의 1/16만을 모두 제거한다.
 	case	eFACTORY_GC_LEVEL::NORMAL:
 			if(this->m_statistics.now.existing > this->m_statistics.now.existing_limits)
 			{
@@ -66,7 +78,7 @@ size_t Ifactory::_get_shrink_count(eFACTORY_GC_LEVEL _level) const noexcept
 			}
 			break;
 
-	// - 최대갯수를 초과하는 객체수의 1/4만을 모두 제거한다.
+	// - 최대개수를 초과하는 객체수의 1/4만을 모두 제거한다.
 	case	eFACTORY_GC_LEVEL::HEAVY:
 			if(this->m_statistics.now.existing > this->m_statistics.now.existing_limits)
 			{
@@ -74,7 +86,7 @@ size_t Ifactory::_get_shrink_count(eFACTORY_GC_LEVEL _level) const noexcept
 			}
 			break;
 
-	// - 최대갯수를 초과하는 객체 갯수 모두 만큼을 제거한다.
+	// - 최대개수를 초과하는 객체 개수 모두 만큼을 제거한다.
 	case	eFACTORY_GC_LEVEL::EXCESS_ALL:
 			if(this->m_statistics.now.existing > this->m_statistics.now.existing_limits)
 			{

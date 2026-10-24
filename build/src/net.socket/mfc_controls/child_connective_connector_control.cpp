@@ -66,7 +66,7 @@ void CChild_connective_connector_control::OnEnable(BOOL _is_Enable)
 	object_ptr<net::io::connective::connector::Ntcp> pconnective_connector;
 
 	// 2) Acceptor를 얻어놓는다.
-	scoped_lock(m_pconnectiveConnector)
+	SCOPED_LOCK(m_lockable_pconnectiveConnector)
 	{
 		pconnective_connector = m_pconnectiveConnector;
 	}
@@ -79,13 +79,13 @@ void CChild_connective_connector_control::OnEnable(BOOL _is_Enable)
 	GetDlgItem(IDC_EDIT_ADDRESS)->EnableWindow(bEnableControl);
 	GetDlgItem(IDC_EDIT_PORT)->EnableWindow(bEnableControl);
 
-	GetDlgItem(IDC_STATIC_SEPERATOR_1)->EnableWindow(bEnableControl);
+	GetDlgItem(IDC_STATIC_SEPARATOR_1)->EnableWindow(bEnableControl);
 
 	GetDlgItem(IDC_BUTTON_CONNECT1)->EnableWindow(bEnableControl);
 	GetDlgItem(IDC_BUTTON_CONNECT10)->EnableWindow(bEnableControl);
 	GetDlgItem(IDC_BUTTON_CONNECT100)->EnableWindow(bEnableControl);
 
-	GetDlgItem(IDC_STATIC_SEPERATOR_2)->EnableWindow(bEnableControl);
+	GetDlgItem(IDC_STATIC_SEPARATOR_2)->EnableWindow(bEnableControl);
 	
 	GetDlgItem(IDC_EDIT_CONNECT_MASSIVE)->EnableWindow(bEnableControl);
 	GetDlgItem(IDC_BUTTON_CONNECT_MASSIVE)->EnableWindow(bEnableControl);
@@ -96,7 +96,7 @@ void CChild_connective_connector_control::OnEnable(BOOL _is_Enable)
 void CChild_connective_connector_control::OnDestroy()
 {
 	// 1) Acceptor를 Reset한다.
-	scoped_lock(m_pconnectiveConnector)
+	SCOPED_LOCK(m_lockable_pconnectiveConnector)
 	{
 		m_pconnectiveConnector.reset();
 	}
@@ -116,7 +116,7 @@ BOOL CChild_connective_connector_control::OnInitDialog()
 	// 2) Destination Port
 	SetDlgItemInt(IDC_EDIT_PORT, m_port);
 
-	// 3) Massive Connet 수 설정
+	// 3) Massive Connect 수 설정
 	SetDlgItemInt(IDC_EDIT_CONNECT_MASSIVE, 2000);
 
 	// return) 
@@ -126,7 +126,7 @@ BOOL CChild_connective_connector_control::OnInitDialog()
 
 void CChild_connective_connector_control::SetConnectiveConnector(net::io::connective::connector::Ntcp* _pconnective_connector)
 {
-	scoped_lock(m_pconnectiveConnector)
+	SCOPED_LOCK(m_lockable_pconnectiveConnector)
 	{
 		// check) 
 		RETURN_IF(m_pconnectiveConnector==_pconnective_connector);
@@ -229,7 +229,7 @@ void CChild_connective_connector_control::OnBnClickedButtonConnect100()
 
 void CChild_connective_connector_control::OnBnClickedButtonConnectMassive()
 {
-	// 1) Connect 갯수를 얻는다.
+	// 1) Connect 개수를 얻는다.
 	int	iCount	 = GetDlgItemInt(IDC_EDIT_CONNECT_MASSIVE);
 
 	// check) 최소 1개 최대5만개
@@ -255,7 +255,7 @@ void CChild_connective_connector_control::ConnectN(int p_n)
 	object_ptr<net::io::connective::connector::Ntcp>	pconnective_connector;
 
 	// 1) Acceptor를 얻어놓는다.
-	scoped_lock(m_pconnectiveConnector)
+	SCOPED_LOCK(m_lockable_pconnectiveConnector)
 	{
 		pconnective_connector = m_pconnectiveConnector;
 	}
@@ -287,15 +287,15 @@ void CChild_connective_connector_control::ConnectN(int p_n)
 	}
 }
 
-void CChild_connective_connector_control::disconnect(uint64_t _disconnect_reason) noexcept
+void CChild_connective_connector_control::disconnect(disconnect_reason_t _disconnect_reason) noexcept
 {
 	// declare) 
 	object_ptr<net::io::Iconnectable> pconnectable;
 
-	scoped_lock(m_pconnectiveConnector)
+	SCOPED_LOCK(this->m_lockable_pconnectiveConnector)
 	{
 		// 1) Connectable Manager를 얻는다.
-		auto pconnectablemanager = dynamic_pointer_cast<net::io::Iconnectable_manager>(m_pconnectiveConnector);
+		auto pconnectablemanager = dynamic_pointer_cast<net::io::Iconnectable_manager>(this->m_pconnectiveConnector);
 
 		// check) Connectable Manager가 없으면 끝낸다.
 		RETURN_IF(pconnectablemanager.empty());
@@ -303,7 +303,7 @@ void CChild_connective_connector_control::disconnect(uint64_t _disconnect_reason
 		// 2) Iterator를 얻는다.
 		auto iter = pconnectablemanager->alloc_iterator();
 
-		// 3) 첫번째 Connectable을 얻는다.
+		// 3) 첫 번째 Connectable을 얻는다.
 		pconnectable = iter->get_next();
 	}
 
@@ -320,7 +320,7 @@ void CChild_connective_connector_control::DisconnectAll()
 	object_ptr<net::io::connective::connector::Ntcp> pconnective_connector;
 
 	// 2) Acceptor를 얻어놓는다.
-	scoped_lock(m_pconnectiveConnector)
+	SCOPED_LOCK(m_lockable_pconnectiveConnector)
 	{
 		pconnective_connector = m_pconnectiveConnector;
 	}

@@ -30,19 +30,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\lockfree_self_stack.h">
       <Filter>lock</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\string_functions.windows.h">
-      <Filter>string</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\string_functions.android.h">
-      <Filter>string</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\string_functions.h">
-      <Filter>string</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\string_functions.ios.h">
-      <Filter>string</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\string_functions.linux.h">
       <Filter>string</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\scoped_lock.h">

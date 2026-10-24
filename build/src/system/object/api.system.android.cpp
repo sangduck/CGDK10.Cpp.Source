@@ -33,7 +33,7 @@ std::size_t	api::get_core_count()
 	auto res = fscanf(fp, "%d-%d", &i, &j);
 
 	// 3) fileÀ» ´Ý´Â´Ù.
-	fclose(fp);
+	std::fclose(fp);
 
 	std::size_t count_core = 0;
 

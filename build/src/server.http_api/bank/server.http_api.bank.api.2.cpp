@@ -1,24 +1,50 @@
-ï»¿#include "pch.h"
+#include "pch.h"
+
+// - CGDK: enable rapidjson SSE4.2 SIMD on x86-64 (skip whitespace/scan strings with _mm_cmpestri)
+#if (defined(_M_X64) || defined(__x86_64__)) && !defined(RAPIDJSON_SSE42) && !defined(RAPIDJSON_SSE2) && !defined(RAPIDJSON_NEON)
+	#if defined(_MSC_VER) || defined(__SSE4_2__)
+		#define RAPIDJSON_SSE42		// msvc compiles sse4.2 intrinsics without a flag; gcc needs -msse4.2 (__SSE4_2__)
+	#else
+		#define RAPIDJSON_SSE2		// sse2 is baseline on x86-64 (gcc enables it without a flag)
+	#endif
+#endif
+#include <charconv>
+
+#ifdef _MSC_VER
+	#pragma warning(disable:6102)
+	#pragma warning(disable:6313)
+	#pragma warning(disable:6385)
+	#pragma warning(disable:4996)
+	#pragma warning(disable:5054)
+	#pragma warning(disable:26495)
+	#pragma warning(disable:33010)
+#endif
 
 #if !defined(__linux__)
-	#pragma warning (disable:5054)
-	#pragma warning (disable:6340)
-	#pragma warning (disable:6313)
-	//#pragma diag_suppress 177 // supress #177-D function  was declared but never referenced
-	#include "../../common/rapidjson/document.h"
-	#include "../../common/rapidjson/writer.h"
-	#include "../../common/rapidjson/stringbuffer.h"
-	#include "../../common/rapidjson/filereadstream.h"
-	#include "../../common/rapidjson/filewritestream.h"
-	#pragma warning (default:6340)
-	#pragma warning (default:6313)
-	#pragma warning (default:5054)
+	#pragma warning(disable:5054)
+	//#pragma diag_suppress 177 // suppress #177-D function  was declared but never referenced
+	#include "rapidjson/document.h"
+	#include "rapidjson/writer.h"
+	#include "rapidjson/stringbuffer.h"
+	#include "rapidjson/filereadstream.h"
+	#include "rapidjson/filewritestream.h"
+	#pragma warning(default:5054)
 #else
 	#include "../../common/rapidjson/document.h"
 	#include "../../common/rapidjson/writer.h"
 	#include "../../common/rapidjson/stringbuffer.h"
 	#include "../../common/rapidjson/filereadstream.h"
 	#include "../../common/rapidjson/filewritestream.h"
+#endif
+
+#ifdef _MSC_VER
+	#pragma warning(default:6102)
+	#pragma warning(default:6313)
+	#pragma warning(default:6385)
+	#pragma warning(default:4996)
+	#pragma warning(default:5054)
+	#pragma warning(default:26495)
+	#pragma warning(default:33010)
 #endif
 
 namespace CGDK
@@ -30,26 +56,26 @@ chrono::date_time from_string_date_time(std::string_view _string);
 chrono::date_time from_string_date(std::string_view _string);
 chrono::date_time from_string_time(std::string_view _string);
 
-// 1) OAuth ì¸ì¦ ë° ê³„ì¢Œë“±ë¡
+// 1) OAuth ÀÎÁõ ¹× °èÁÂµî·Ï
 http_api::bank::RESPONSE_AUTHORIZE http_api::bank::request(const REQUEST_AUTHORIZE& _request)
 {
 	// ------------------------------------------------------------------
 	// 
-	// OAuth ì¸ì¦ - ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²° ìš”ì²­(3-legged): êµ¬ë²„ì „
+	// OAuth ÀÎÁõ - »ç¿ëÀÚ·Î±×ÀÎ¿¬°á ¿äÃ»(3-legged): ±¸¹öÀü
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		https://openapi.open.openform.or.kr/oauth/2.0/authorize
 	//	 3) HTTP Method		GET
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Parameters
-	//		- response_type			ê³ ì •ê°’: code			OAuth 2.0 ì¸ì • ìš”ì²­ì‹œ ë°˜í™˜ë˜ëŠ” í˜•íƒœ
-	//		- client_id				<client_id>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ í˜‘ì˜ Client ID
-	//		- redirect_uri			<callback_uri>			ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²°ì´ ì„±ê³µë˜ë©´ ì´ìš©ê¸°ê´€ìœ¼ë¡œ ì—°ê²°ë˜ëŠ” URL
-	//		- scope					ê³ ì •ê°’:login			Access Token ê¶Œí•œ ë²”ìœ„
+	//		- response_type			°íÁ¤°ª: code			OAuth 2.0 ÀÎÁ¤ ¿äÃ» ½Ã ¹İÈ¯µÇ´Â ÇüÅÂ
+	//		- client_id				<client_id>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ÇùÀÇ Client ID
+	//		- redirect_uri			<callback_uri>			»ç¿ëÀÚ·Î±×ÀÎ¿¬°áÀÌ ¼º°øÇÏ¸é ÀÌ¿ë±â°üÀ¸·Î ¿¬°áµÇ´Â URL
+	//		- scope					°íÁ¤°ª:login			Access Token ±ÇÇÑ ¹üÀ§
 	//								(login | inquiry | transfer)
-	//		- client_info			<client_info>			ì´ìš©ê¸°ê´€ì´ ì…‹íŒ…í•˜ëŠ” ì„ì˜ì˜ ì •ë³´
-	//								(Max: 256bytes)			Callback í˜¸ì¶œ ì‹œ ê·¸ëŒ€ë¡œ ì „ë‹¬ë¨
+	//		- client_info			<client_info>			ÀÌ¿ë±â°üÀÌ ¼¼ÆÃÇÏ´Â ÀÓÀÇÀÇ Á¤º¸
+	//								(Max: 256bytes)			Callback È£Ãâ ½Ã ±×´ë·Î Àü´ŞµÊ
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -61,19 +87,19 @@ http_api::bank::RESPONSE_AUTHORIZE http_api::bank::request(const REQUEST_AUTHORI
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto buf_object = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_object.data<char>(), SIZE_BUFFER, "/oauth/2.0/authorize?response_type=code&client_id=%s&redirect_uri=%s&scope=login&client_info=%s"sv, _request.client_id.c_str(), _request.redirect_uri.c_str(), _request.client_info.c_str());
+	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_object.data<char>(), SIZE_BUFFER, "/oauth/2.0/authorize?response_type=code&client_id=%s&redirect_uri=%s&scope=login&client_info=%s", _request.client_id.c_str(), _request.redirect_uri.c_str(), _request.client_info.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write<0, throwable::failure(eRESULT::FAIL));
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::GET_;
 
 	// 4) 
@@ -82,11 +108,11 @@ http_api::bank::RESPONSE_AUTHORIZE http_api::bank::request(const REQUEST_AUTHORI
 	// declare) 
 	shared_buffer buf_option;
 
-	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 	//std::vector<std::string_view> vector_accept{ "*/*"sv, "application/json"sv };
 
-	// 6) requestë¥¼ Setí•œë‹¤.
+	// 6) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -103,55 +129,52 @@ http_api::bank::RESPONSE_AUTHORIZE http_api::bank::request(const REQUEST_AUTHORI
 	// declare) 
 	http_api::bank::RESPONSE_AUTHORIZE	response;
 
-	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 7) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
@@ -160,7 +183,7 @@ http_api::bank::RESPONSE_AUTHORIZE http_api::bank::request(const REQUEST_AUTHORI
 		}
 	});
 
-	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -170,36 +193,36 @@ http_api::bank::RESPONSE_AUTHORIZE2_FIRST http_api::bank::request(const REQUEST_
 {
 	// ------------------------------------------------------------------
 	// 
-	// OAuth ì¸ì¦ - ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²° ìš”ì²­(3-legged): êµ¬ë²„ì „
+	// OAuth ÀÎÁõ - »ç¿ëÀÚ·Î±×ÀÎ¿¬°á ¿äÃ»(3-legged): ±¸¹öÀü
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/oauth/2.0/authorize2
 	//	 3) HTTP Method		GET
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Parameters
-	//		- response_type				ê³ ì •ê°’: code			OAuth 2.0 ì¸ì • ìš”ì²­ì‹œ ë°˜í™˜ë˜ëŠ” í˜•íƒœ
-	//		- client_id					<client_id>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ í˜‘ì˜ Client ID
-	//		- redirect_uri				<callback_uri>			ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²°ì´ ì„±ê³µë˜ë©´ ì´ìš©ê¸°ê´€ìœ¼ë¡œ ì—°ê²°ë˜ëŠ” URL
-	//		- scope						ê³ ì •ê°’:login			Access Token ê¶Œí•œ ë²”ìœ„
+	//		- response_type				°íÁ¤°ª: code			OAuth 2.0 ÀÎÁ¤ ¿äÃ» ½Ã ¹İÈ¯µÇ´Â ÇüÅÂ
+	//		- client_id					<client_id>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ÇùÀÇ Client ID
+	//		- redirect_uri				<callback_uri>			»ç¿ëÀÚ·Î±×ÀÎ¿¬°áÀÌ ¼º°øÇÏ¸é ÀÌ¿ë±â°üÀ¸·Î ¿¬°áµÇ´Â URL
+	//		- scope						°íÁ¤°ª:login			Access Token ±ÇÇÑ ¹üÀ§
 	//									(login | inquiry | transfer)
-	//		- client_info				<client_info>			ì´ìš©ê¸°ê´€ì´ ì…‹íŒ…í•˜ëŠ” ì„ì˜ì˜ ì •ë³´
-	//									(Max: 256bytes)			Callback í˜¸ì¶œ ì‹œ ê·¸ëŒ€ë¡œ ì „ë‹¬ë¨
-	//		- auth_type					"0"(ì„ íƒ)				ì‚¬ìš©ìì¸ì¦íƒ€ì…êµ¬ë¶„
-	//															(0:ìµœì´ˆì¸ì¦, 1:ì¬ì¸ì¦, 2:ì¸ì¦ìƒëµ)
-	//		- bg_color					#000000(ì„ íƒ)			Provider Page ë°°ê²½ìƒìƒ
-	//		- txt_color					#000000(ì„ íƒ)			Provider Page í…ìŠ¤íŠ¸ìƒìƒ
-	//		- btn1_color				#000000(ì„ íƒ)			Provider Page ë²„íŠ¼1 ìƒìƒ
-	//		- btn2_color				#000000(ì„ íƒ)			Provider Page ë²„íŠ¼2 ìƒìƒ
+	//		- client_info				<client_info>			ÀÌ¿ë±â°üÀÌ ¼¼ÆÃÇÏ´Â ÀÓÀÇÀÇ Á¤º¸
+	//									(Max: 256bytes)			Callback È£Ãâ ½Ã ±×´ë·Î Àü´ŞµÊ
+	//		- auth_type					"0"(¼±ÅÃ)				»ç¿ëÀÚÀÎÁõÅ¸ÀÔ±¸ºĞ
+	//															(0:ÃÖÃÊÀÎÁõ, 1:ÀçÀÎÁõ, 2:ÀÎÁõ»ı·«)
+	//		- bg_color					#000000(¼±ÅÃ)			Provider Page ¹è°æ»ı»ó
+	//		- txt_color					#000000(¼±ÅÃ)			Provider Page ÅØ½ºÆ®»ı»ó
+	//		- btn1_color				#000000(¼±ÅÃ)			Provider Page ¹öÆ°1 »ı»ó
+	//		- btn2_color				#000000(¼±ÅÃ)			Provider Page ¹öÆ°2 »ı»ó
 	//
-	//		- Kftc-Bfop-UserSeqNo		<user_seq_no>(ì„ íƒ)		ë‹¨ user_ciê°€ ìˆì„ ê²½ìš° í•„ìˆ˜ì…ë ¥
-	//		- Kftc-Bfop-UserCI			<user_ci>(ì„ íƒ)			CI(Connect Info)
-	//		- Kftc-Bfop-UserName		<user_name>(ì„ íƒ)
-	//		- Kftc-Bfop-UserInfo		<user_info>(ì„ íƒ)		ìƒë…„ì›”ì¼ 8ìë¦¬
-	//		- Kftc-Bfop-UserCellNo		<user_cell_no>(ì„ íƒ)
-	//		- Kftc-Bfop-UserUserEmail	<user_email>(ì„ íƒ)
-	//		- Kftc-Bfop-BankCodeStd		<user_bank_code_std>(ì„ íƒ) ê³ ì •ëœ ê³„ì¢Œë²ˆí˜¸ ë“±ë¡í•„ìš” ì‹œ ì…ë ¥
-	//		- Kftc-Bfop-AccountNum		<user_account_num>(ì„ íƒ)
+	//		- Kftc-Bfop-UserSeqNo		<user_seq_no>(¼±ÅÃ)		´Ü user_ci°¡ ÀÖÀ» °æ¿ì ÇÊ¼öÀÔ·Â
+	//		- Kftc-Bfop-UserCI			<user_ci>(¼±ÅÃ)			CI(Connect Info)
+	//		- Kftc-Bfop-UserName		<user_name>(¼±ÅÃ)
+	//		- Kftc-Bfop-UserInfo		<user_info>(¼±ÅÃ)		»ı³â¿ùÀÏ 8ÀÚ¸®
+	//		- Kftc-Bfop-UserCellNo		<user_cell_no>(¼±ÅÃ)
+	//		- Kftc-Bfop-UserUserEmail	<user_email>(¼±ÅÃ)
+	//		- Kftc-Bfop-BankCodeStd		<user_bank_code_std>(¼±ÅÃ) °íÁ¤µÈ °èÁÂ¹øÈ£ µî·ÏÇÊ¿ä ½Ã ÀÔ·Â
+	//		- Kftc-Bfop-AccountNum		<user_account_num>(¼±ÅÃ)
 	//
 	//
 	// ------------------------------------------------------------------
@@ -212,32 +235,32 @@ http_api::bank::RESPONSE_AUTHORIZE2_FIRST http_api::bank::request(const REQUEST_
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto buf_object = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_object.data<char>(), SIZE_BUFFER, "/oauth/2.0/authorize2?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&client_info=%s&auth_type=0&bg_color=#000000&txt_color=#000000&btn1_color=#000000&btn2_color=#000000"sv, _request.client_id.c_str(), _request.redirect_uri.c_str(), to_string<char>(_request.scope).data(), _request.client_info.c_str());
+	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_object.data<char>(), SIZE_BUFFER, "/oauth/2.0/authorize2?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&client_info=%s&auth_type=0&bg_color=#000000&txt_color=#000000&btn1_color=#000000&btn2_color=#000000", _request.client_id.c_str(), _request.redirect_uri.c_str(), to_string<char>(_request.scope).data(), _request.client_info.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write<0, throwable::failure(eRESULT::FAIL));
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::GET_;
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤. - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù. - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv };
 
 	// declare) 
 	shared_buffer buf_option;
 
-	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 	//std::vector<std::string_view> vector_accept{ "*/*"sv, "application/json"sv };
 
-	// 7) requestë¥¼ Setí•œë‹¤.
+	// 7) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -254,55 +277,52 @@ http_api::bank::RESPONSE_AUTHORIZE2_FIRST http_api::bank::request(const REQUEST_
 	// declare) 
 	http_api::bank::RESPONSE_AUTHORIZE2_FIRST	response;
 
-	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 7) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
@@ -311,7 +331,7 @@ http_api::bank::RESPONSE_AUTHORIZE2_FIRST http_api::bank::request(const REQUEST_
 		}
 	});
 
-	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -337,19 +357,19 @@ http_api::bank::RESPONSE_TOKEN http_api::bank::request(const REQUEST_TOKEN& _req
 {
 	// ------------------------------------------------------------------
 	// 
-	// OAuth ì¸ì¦ - ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²° ìš”ì²­(3-legged)
+	// OAuth ÀÎÁõ - »ç¿ëÀÚ·Î±×ÀÎ¿¬°á ¿äÃ»(3-legged)
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/oauth/2.0/token
 	//	 3) HTTP Method		POST
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Parameters
-	//		- code						<authorization_code>		ì‚¬ìš©ìì¸ì¦ ì„±ê³µ í›„ ì „ì†¡ë˜ëŠ” authorization_code
-	//		- client_id					<client_id>					ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ ì•±ì˜ Client ID
-	//		- client_secret				<client_secret>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ ì•±ì˜ Client Secret
-	//		- redirect_uri				<callback_uri>				Access Tokenì„ ì „ë‹¬ë°›ì„ callback_uri
-	//		- grant_type				ê³ ì •ê°’:authorization_code	Access Tokenì„ í—ˆìš©í•˜ê¸° ìœ„í•œ ê°’
+	//		- code						<authorization_code>		»ç¿ëÀÚÀÎÁõ ¼º°ø ÈÄ Àü¼ÛµÇ´Â authorization_code
+	//		- client_id					<client_id>					¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ¾ÛÀÇ Client ID
+	//		- client_secret				<client_secret>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ¾ÛÀÇ Client Secret
+	//		- redirect_uri				<callback_uri>				Access TokenÀ» Àü´Ş¹ŞÀ» callback_uri
+	//		- grant_type				°íÁ¤°ª:authorization_code	Access TokenÀ» Çã¿ëÇÏ±â À§ÇÑ °ª
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -361,32 +381,32 @@ http_api::bank::RESPONSE_TOKEN http_api::bank::request(const REQUEST_TOKEN& _req
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
+	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
 	auto str_object = "/oauth/2.0/token"sv;
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::POST_;
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤. - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù. - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	buf_option.append<TEXT_WEB>("code="sv);				buf_option.append<TEXT_WEB>(_request.code);
-	buf_option.append<TEXT_WEB>("&client_id="sv);		buf_option.append<TEXT_WEB>(_request.client_id);
-	buf_option.append<TEXT_WEB>("&client_secret="sv);	buf_option.append<TEXT_WEB>(_request.client_secret);
-	buf_option.append<TEXT_WEB>("&redirect_uri="sv);	buf_option.append<TEXT_WEB>(_request.redirect_uri);
-	buf_option.append<TEXT_WEB>("&grant_type=authorization_code"sv);
+	buf_option.append<text<char>>("code="sv);				buf_option.append<text<char>>(_request.code);
+	buf_option.append<text<char>>("&client_id="sv);		buf_option.append<text<char>>(_request.client_id);
+	buf_option.append<text<char>>("&client_secret="sv);	buf_option.append<text<char>>(_request.client_secret);
+	buf_option.append<text<char>>("&redirect_uri="sv);	buf_option.append<text<char>>(_request.redirect_uri);
+	buf_option.append<text<char>>("&grant_type=authorization_code"sv);
 	buf_option[buf_option.size()] = 0;
 
-	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view>	vector_accept{ "*/*"sv, "text/plain"sv };
 	//std::vector<std::string_view>	vector_accept{ "*/*"sv, "application/json"sv };
 
-	// 7) requestë¥¼ Setí•œë‹¤.
+	// 7) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -404,124 +424,121 @@ http_api::bank::RESPONSE_TOKEN http_api::bank::request(const REQUEST_TOKEN& _req
 	// declare) 
 	http_api::bank::RESPONSE_TOKEN	response;
 
-	// 8) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 8) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 9) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 9) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parseí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParseÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - "rsp_code"
-			if(__strcmp(str_name, "rsp_code"sv)==0)
+			if(std::string_view(str_name).compare("rsp_code"sv)==0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - "rsp_message"
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "access_token"
-			else if(__strcmp(str_name, "access_token"sv) == 0)
+			else if(std::string_view(str_name).compare("access_token"sv) == 0)
 			{
 				response.access_token = value.GetString();
 			}
 			// - "token_type"
-			else if (__strcmp(str_name, "token_type"sv) == 0)
+			else if (std::string_view(str_name).compare("token_type"sv) == 0)
 			{
 				response.token_type = get_enum_OAUTH_TOKEN_TYPE<char>(value.GetString());
 			}
 			// - "expires_in"
-			else if (__strcmp(str_name, "expires_in"sv) == 0)
+			else if (std::string_view(str_name).compare("expires_in"sv) == 0)
 			{
 				response.expires_in = value.GetInt64();
 			}
 			// - "refresh_token"
-			else if (__strcmp(str_name, "refresh_token"sv) == 0)
+			else if (std::string_view(str_name).compare("refresh_token"sv) == 0)
 			{
 				response.refresh_token = value.GetString();
 			}
 			// - "scope"
-			else if (__strcmp(str_name, "scope"sv) == 0)
+			else if (std::string_view(str_name).compare("scope"sv) == 0)
 			{
 				response.scope = get_enum_OAUTH_SCOPE<char>(value.GetString());
 			}
 			// - "user_seq_no"
-			else if (__strcmp(str_name, "user_seq_no"sv) == 0)
+			else if (std::string_view(str_name).compare("user_seq_no"sv) == 0)
 			{
 				response.user_seq_no = value.GetString();
 			}
 
 			// "user_ci"
-			else if (__strcmp(str_name, "user_ci"sv) == 0)
+			else if (std::string_view(str_name).compare("user_ci"sv) == 0)
 			{
 				response.user_ci = value.GetString();
 			}
 			// "user_name"
-			else if (__strcmp(str_name, "user_name"sv) == 0)
+			else if (std::string_view(str_name).compare("user_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.user_name, value.GetString());
 			}
 			// "user_info"
-			else if (__strcmp(str_name, "user_info"sv) == 0)
+			else if (std::string_view(str_name).compare("user_info"sv) == 0)
 			{
 				response.user_info = value.GetString();
 			}
 			// "user_gender"
-			else if (__strcmp(str_name, "user_gender"sv) == 0)
+			else if (std::string_view(str_name).compare("user_gender"sv) == 0)
 			{
 				response.user_gender = get_enum_OAUTH_GENDER<char>(value.GetString());
 			}
 			// "user_cell_no"
-			else if (__strcmp(str_name, "user_cell_no"sv) == 0)
+			else if (std::string_view(str_name).compare("user_cell_no"sv) == 0)
 			{
 				response.user_cell_no = value.GetString();
 			}
 			// "user_email"
-			else if (__strcmp(str_name, "user_email"sv) == 0)
+			else if (std::string_view(str_name).compare("user_email"sv) == 0)
 			{
 				response.user_email = value.GetString();
 			}
 		}
 	});
 
-	// 5) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 5) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -531,18 +548,18 @@ http_api::bank::RESPONSE_TOKEN2 http_api::bank::request(const REQUEST_TOKEN2& _r
 {
 	// ------------------------------------------------------------------
 	// 
-	// OAuth ì¸ì¦ - ì´ìš©ê¸°ê´€ Access Token ìš”ì²­ (2-legged)
+	// OAuth ÀÎÁõ - ÀÌ¿ë±â°ü Access Token ¿äÃ» (2-legged)
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/oauth/2.0/token
 	//	 3) HTTP Method		POST
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Parameters
-	//		- client_id					<client_id>					ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ ì•±ì˜ Client ID
-	//		- client_secret				<client_secret>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ ì•±ì˜ Client Secret
-	//		- grant_type				ê³ ì •ê°’:client_credentials	2-legged ì¸ì¦ì„ ìœ„í•œ ì¸ì¦ë°©ì‹ ì§€ì •
-	//		- scope						ê³ ì •ê°’:oob					Access Token ê¶Œí•œ ë²”ìœ„
+	//		- client_id					<client_id>					¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ¾ÛÀÇ Client ID
+	//		- client_secret				<client_secret>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ¾ÛÀÇ Client Secret
+	//		- grant_type				°íÁ¤°ª:client_credentials	2-legged ÀÎÁõÀ» À§ÇÑ ÀÎÁõ¹æ½Ä ÁöÁ¤
+	//		- scope						°íÁ¤°ª:oob					Access Token ±ÇÇÑ ¹üÀ§
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -554,31 +571,31 @@ http_api::bank::RESPONSE_TOKEN2 http_api::bank::request(const REQUEST_TOKEN2& _r
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
+	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
 	auto str_object = "/oauth/2.0/token"sv;
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::POST_;
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤. - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù. - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	buf_option.append<TEXT_WEB>("client_id=");		buf_option.append<TEXT_WEB>(_request.client_id);
-	buf_option.append<TEXT_WEB>("&client_secret=");	buf_option.append<TEXT_WEB>(_request.client_secret);
-	buf_option.append<TEXT_WEB>("&grant_type=client_credentials");
-	buf_option.append<TEXT_WEB>("&scope=oob");
+	buf_option.append<text<char>>("client_id=");		buf_option.append<text<char>>(_request.client_id);
+	buf_option.append<text<char>>("&client_secret=");	buf_option.append<text<char>>(_request.client_secret);
+	buf_option.append<text<char>>("&grant_type=client_credentials");
+	buf_option.append<text<char>>("&scope=oob");
 	buf_option.front<char>(buf_option.size()) = 0;
 
-	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 	//std::vector<std::string_view>	vector_accept{ "*/*"sv, "application/json"sv };
 
-	// 7) requestë¥¼ Setí•œë‹¤.
+	// 7) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -596,86 +613,83 @@ http_api::bank::RESPONSE_TOKEN2 http_api::bank::request(const REQUEST_TOKEN2& _r
 	// declare) 
 	http_api::bank::RESPONSE_TOKEN2 response;
 
-	// 8) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 8) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 9) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 9) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - shared_bufferë¥¼ clearí•œë‹¤.
+			// - shared_buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// 1) Parseí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// 1) ParseÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// 2) ê°’ì„ ì„¤ì •í•œë‹¤.
+		// 2) °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "access_token"
-			else if(__strcmp(str_name, "access_token"sv) == 0)
+			else if(std::string_view(str_name).compare("access_token"sv) == 0)
 			{
 				response.access_token = value.GetString();
 			}
 			// - "token_type"
-			else if (__strcmp(str_name, "token_type"sv) == 0)
+			else if (std::string_view(str_name).compare("token_type"sv) == 0)
 			{
 				response.token_type = get_enum_OAUTH_TOKEN_TYPE<char>(value.GetString());
 			}
 			// - "expires_in"
-			else if (__strcmp(str_name, "expires_in"sv) == 0)
+			else if (std::string_view(str_name).compare("expires_in"sv) == 0)
 			{
 				response.expires_in = value.GetInt64();
 			}
 			// - "scope"
-			else if (__strcmp(str_name, "scope"sv) == 0)
+			else if (std::string_view(str_name).compare("scope"sv) == 0)
 			{
 				response.scope = get_enum_OAUTH_SCOPE<char>(value.GetString());
 			}
 			// - "client_use_code"
-			else if (__strcmp(str_name, "client_use_code"sv) == 0)
+			else if (std::string_view(str_name).compare("client_use_code"sv) == 0)
 			{
 				response.client_use_code = value.GetString();
 			}
 		}
 	});
 
-	// 5) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 5) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -685,20 +699,20 @@ http_api::bank::RESPONSE_TOKEN_REFRESH http_api::bank::request(const REQUEST_TOK
 {
 	// ------------------------------------------------------------------
 	// 
-	// OAuth ì¸ì¦ - Login Access Token ê°±ì‹ (refresh_token ì‚¬ìš©)
+	// OAuth ÀÎÁõ - Login Access Token °»½Å(refresh_token »ç¿ë)
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/oauth/2.0/token
 	//	 3) HTTP Method		POST
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Parameters
-	//		- client_id					<client_id>					ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ ì•±ì˜ Client ID
-	//		- client_secret				<client_secret>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ ì•±ì˜ Client Secret
-	//		- refresh_token				<refresh_token>				login í† í° ë°œê¸‰ ì‹œ ë°›ì€ access_token ê°±ì‹ ìš© token
-	//		- scope						ê³ ì •ê°’						Access Token ê¶Œí•œ ë²”ìœ„
+	//		- client_id					<client_id>					¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ¾ÛÀÇ Client ID
+	//		- client_secret				<client_secret>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ¾ÛÀÇ Client Secret
+	//		- refresh_token				<refresh_token>				login ÅäÅ« ¹ß±Ş ½Ã ¹ŞÀº access_token °»½Å¿ë token
+	//		- scope						°íÁ¤°ª						Access Token ±ÇÇÑ ¹üÀ§
 	//									[login|inquiry|transfer]
-	//		- grant_type				ê³ ì •ê°’:refresh_token		Access Tokenì„ í—ˆìš©í•˜ê¸° ìœ„í•œ ê°’
+	//		- grant_type				°íÁ¤°ª:refresh_token		Access TokenÀ» Çã¿ëÇÏ±â À§ÇÑ °ª
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -710,32 +724,32 @@ http_api::bank::RESPONSE_TOKEN_REFRESH http_api::bank::request(const REQUEST_TOK
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
+	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
 	auto str_object = "/oauth/2.0/token"sv;
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::POST_;
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	buf_option.append<TEXT_WEB>("client_id="sv);		buf_option.append<TEXT_WEB>(_request.client_id);
-	buf_option.append<TEXT_WEB>("&client_secret="sv);	buf_option.append<TEXT_WEB>(_request.client_secret);
-	buf_option.append<TEXT_WEB>("&refresh_token="sv);	buf_option.append<TEXT_WEB>(_request.refresh_token);
-	buf_option.append<TEXT_WEB>("&scope="sv);			buf_option.append<TEXT_WEB>(to_string<char>(_request.scope));
-	buf_option.append<TEXT_WEB>("&grant_type=refresh_token"sv);
+	buf_option.append<text<char>>("client_id="sv);		buf_option.append<text<char>>(_request.client_id);
+	buf_option.append<text<char>>("&client_secret="sv);	buf_option.append<text<char>>(_request.client_secret);
+	buf_option.append<text<char>>("&refresh_token="sv);	buf_option.append<text<char>>(_request.refresh_token);
+	buf_option.append<text<char>>("&scope="sv);			buf_option.append<text<char>>(to_string<char>(_request.scope));
+	buf_option.append<text<char>>("&grant_type=refresh_token"sv);
 	buf_option.front<char>(buf_option.size()) = 0;
 
-	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 	//std::vector<std::string_view> vector_accept{ "*/*"sv, "application/json"sv };
 
-	// 7) requestë¥¼ Setí•œë‹¤.
+	// 7) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -753,86 +767,83 @@ http_api::bank::RESPONSE_TOKEN_REFRESH http_api::bank::request(const REQUEST_TOK
 	// declare) 
 	http_api::bank::RESPONSE_TOKEN_REFRESH	response;
 
-	// 8) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 8) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 9) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 9) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// 1) Parseí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// 1) ParseÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// 2) ê°’ì„ ì„¤ì •í•œë‹¤.
+		// 2) °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "access_token"
-			else if (__strcmp(str_name, "access_token"sv) == 0)
+			else if (std::string_view(str_name).compare("access_token"sv) == 0)
 			{
 				response.access_token = value.GetString();
 			}
 			// - "token_type"
-			else if (__strcmp(str_name, "token_type"sv) == 0)
+			else if (std::string_view(str_name).compare("token_type"sv) == 0)
 			{
 				response.token_type	= get_enum_OAUTH_TOKEN_TYPE<char>(value.GetString());
 			}
 			// - "expires_in"
-			else if (__strcmp(str_name, "expires_in"sv) == 0)
+			else if (std::string_view(str_name).compare("expires_in"sv) == 0)
 			{
 				response.expires_in = value.GetInt64();
 			}
 			// - "scope"
-			else if (__strcmp(str_name, "scope"sv) == 0)
+			else if (std::string_view(str_name).compare("scope"sv) == 0)
 			{
 				response.scope = get_enum_OAUTH_SCOPE<char>(value.GetString());
 			}
 			// - "user_seq_no"
-			else if (__strcmp(str_name, "user_seq_no"sv) == 0)
+			else if (std::string_view(str_name).compare("user_seq_no"sv) == 0)
 			{
 				response.user_seq_no = value.GetString();
 			}
 		}
 	});
 
-	// 5) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 5) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -844,18 +855,18 @@ http_api::bank::RESPONSE_USER_ME http_api::bank::request(const REQUEST_USER_ME& 
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/v1.0/user/me
 	//	 3) HTTP Method		GET
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Header
-	//		- Authorization			Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization			Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	//   6) Parameters
-	//		- user_seq_no			"U123456789"			AN(10) ì‚¬ìš©ìì¼ë ¨ë²ˆí˜¸
+	//		- user_seq_no			"U123456789"			AN(10) »ç¿ëÀÚÀÏ·Ã¹øÈ£
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -867,41 +878,41 @@ http_api::bank::RESPONSE_USER_ME http_api::bank::request(const REQUEST_USER_ME& 
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto buf_object = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_object.data<char>(), SIZE_BUFFER, "/v1.0/user/me?user_seq_no=%s"sv, _request.user_seq_no.c_str());
+	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_object.data<char>(), SIZE_BUFFER, "/v1.0/user/me?user_seq_no=%s", _request.user_seq_no.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write<0, throwable::failure(eRESULT::FAIL));
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::GET_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 5) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+	// 5) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 	std::vector<std::string_view> vector_header{ "Content-Type:application/x-www-form-urlencoded;charset=UTF-8"sv, buf_header.data<char>() };
 
 	// declare) 
 	shared_buffer buf_option;
 
-	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 	//std::vector<std::string_view> vector_accept{ "*/*"sv, "application/json"sv };
 
-	// 7) requestë¥¼ Setí•œë‹¤.
+	// 7) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -918,100 +929,97 @@ http_api::bank::RESPONSE_USER_ME http_api::bank::request(const REQUEST_USER_ME& 
 	// declare) 
 	http_api::bank::RESPONSE_USER_ME response;
 
-	// 8) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 8) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 9) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 9) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
 		// declare)
 		[[maybe_unused]] size_t	res_cnt	 = 0;
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
 
 			// - "user_seq_no"
-			else if (__strcmp(str_name, "user_seq_no"sv) == 0)
+			else if (std::string_view(str_name).compare("user_seq_no"sv) == 0)
 			{
 				response.user_seq_no = value.GetString();
 			}
 			// - "user_ci"
-			else if (__strcmp(str_name, "user_ci"sv) == 0)
+			else if (std::string_view(str_name).compare("user_ci"sv) == 0)
 			{
 				response.user_ci = value.GetString();
 			}
 			// - "user_name"
-			else if (__strcmp(str_name, "user_name"sv) == 0)
+			else if (std::string_view(str_name).compare("user_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.user_name, value.GetString());
 			}
 			// - "res_cnt"
-			else if (__strcmp(str_name, "res_cnt"sv) == 0)
+			else if (std::string_view(str_name).compare("res_cnt"sv) == 0)
 			{
-				res_cnt	 = __from_string<size_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), res_cnt);
 			}
 			// - "res_list"
-			else if (__strcmp(str_name, "res_list"sv) == 0)
+			else if (std::string_view(str_name).compare("res_list"sv) == 0)
 			{
 				for (auto iterRes = value.Begin(); iterRes != value.End(); ++iterRes)
 				{
 					// declare) 
-					http_api::bank::RESPONSE_USER_ME::ACCOUNT_INFO	AccouuntInfo;
+					http_api::bank::RESPONSE_USER_ME::ACCOUNT_INFO	AccountInfo;
 
 					for (auto iterNest = iterRes->MemberBegin(); iterNest != iterRes->MemberEnd(); ++iterNest)
 					{
@@ -1019,68 +1027,68 @@ http_api::bank::RESPONSE_USER_ME http_api::bank::request(const REQUEST_USER_ME& 
 						auto& value_Nested = iterNest->value;
 
 						// - "fintech_use_num"
-						if (__strcmp(strName_Nested, "fintech_use_num"sv) == 0)
+						if (std::string_view(strName_Nested).compare("fintech_use_num"sv) == 0)
 						{
-							AccouuntInfo.fintech_use_num = value_Nested.GetString();
+							AccountInfo.fintech_use_num = value_Nested.GetString();
 						}
 						// - "account_alias"
-						else if (__strcmp(strName_Nested, "account_alias"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("account_alias"sv) == 0)
 						{
-							convert_utf8_to_multibyte(AccouuntInfo.account_alias, value_Nested.GetString());
+							convert_utf8_to_multibyte(AccountInfo.account_alias, value_Nested.GetString());
 						}
 						// - "bank_code_std"
-						else if (__strcmp(strName_Nested, "bank_code_std"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("bank_code_std"sv) == 0)
 						{
-							AccouuntInfo.bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
+							AccountInfo.bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
 						}
 						// - "bank_code_sub"
-						else if (__strcmp(strName_Nested, "bank_code_sub"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("bank_code_sub"sv) == 0)
 						{
-							AccouuntInfo.bank_code_sub = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), AccountInfo.bank_code_sub);
 						}
 						// - "bank_name"
-						else if (__strcmp(strName_Nested, "bank_name"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("bank_name"sv) == 0)
 						{
-							convert_utf8_to_multibyte(AccouuntInfo.bank_name, value_Nested.GetString());
+							convert_utf8_to_multibyte(AccountInfo.bank_name, value_Nested.GetString());
 						}
 						// - "account_num_masked"
-						else if (__strcmp(strName_Nested, "account_num_masked"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("account_num_masked"sv) == 0)
 						{
-							AccouuntInfo.account_num_masked = value_Nested.GetString();
+							AccountInfo.account_num_masked = value_Nested.GetString();
 						}
 						// - "account_holder_name"
-						else if (__strcmp(strName_Nested, "account_holder_name"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("account_holder_name"sv) == 0)
 						{
-							convert_utf8_to_multibyte(AccouuntInfo.account_holder_name, value_Nested.GetString());
+							convert_utf8_to_multibyte(AccountInfo.account_holder_name, value_Nested.GetString());
 						}
 						// - "account_type"
-						else if (__strcmp(strName_Nested, "account_type"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("account_type"sv) == 0)
 						{
-							AccouuntInfo.account_type = value_Nested.GetString();
+							AccountInfo.account_type = value_Nested.GetString();
 						}
 						// - "inquiry_agree_yn"
-						else if (__strcmp(strName_Nested, "inquiry_agree_yn"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("inquiry_agree_yn"sv) == 0)
 						{
-							AccouuntInfo.inquiry_agree_yn = get_enum_OAUTH_YESNO<char>(value_Nested.GetString());
+							AccountInfo.inquiry_agree_yn = get_enum_OAUTH_YESNO<char>(value_Nested.GetString());
 						}
 						// - "inquiry_agree_dtime"
-						else if (__strcmp(strName_Nested, "inquiry_agree_dtime"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("inquiry_agree_dtime"sv) == 0)
 						{
-							AccouuntInfo.inquiry_agree_dtime = from_string_date_time(value_Nested.GetString());
+							AccountInfo.inquiry_agree_dtime = from_string_date_time(value_Nested.GetString());
 						}
 						// - "transfer_agree_yn"
-						else if (__strcmp(strName_Nested, "transfer_agree_yn"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("transfer_agree_yn"sv) == 0)
 						{
-							AccouuntInfo.transfer_agree_yn = get_enum_OAUTH_YESNO<char>(value_Nested.GetString());
+							AccountInfo.transfer_agree_yn = get_enum_OAUTH_YESNO<char>(value_Nested.GetString());
 						}
 						// - "transfer_agree_dtime"
-						else if (__strcmp(strName_Nested, "transfer_agree_dtime"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("transfer_agree_dtime"sv) == 0)
 						{
-							AccouuntInfo.transfer_agree_dtime = from_string_date_time(value_Nested.GetString());
+							AccountInfo.transfer_agree_dtime = from_string_date_time(value_Nested.GetString());
 						}
 					}
 
-					response.res_list.push_back(AccouuntInfo);
+					response.res_list.push_back(AccountInfo);
 				}
 
 				// check) 
@@ -1089,7 +1097,7 @@ http_api::bank::RESPONSE_USER_ME http_api::bank::request(const REQUEST_USER_ME& 
 		}
 	});
 
-	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -1099,19 +1107,19 @@ http_api::bank::RESPONSE_UNLINK http_api::bank::request(const REQUEST_UNLINK& _r
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		https://openapi.open.openform.or.kr/oauth/2.0/unlink
 	//	 3) HTTP Method		POST
 	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 	//   5) Header
-	//		- Authorization			Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization			Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	//   6) Parameters
-	//		- client_user_code		"F001234560"			AN(10) ì´ìš©ê¸°ê´€ì½”ë“œ
-	//		- user_seq_no			"U123456789"			AN(10) ì‚¬ìš©ìì¼ë ¨ë²ˆí˜¸
+	//		- client_user_code		"F001234560"			AN(10) ÀÌ¿ë±â°üÄÚµå
+	//		- user_seq_no			"U123456789"			AN(10) »ç¿ëÀÚÀÏ·Ã¹øÈ£
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -1123,39 +1131,39 @@ http_api::bank::RESPONSE_UNLINK http_api::bank::request(const REQUEST_UNLINK& _r
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto str_object = "/oauth/2.0/unlink"sv;
 
-	// 2) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::POST_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 3) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 3) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8", buf_header.data<char>() };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	buf_option.append<TEXT_WEB>("{client_use_code: "sv);	buf_option.append<TEXT_WEB>(_request.client_use_code);
-	buf_option.append<TEXT_WEB>(", user_seq_no: "sv);		buf_option.append<TEXT_WEB>(_request.user_seq_no);
-	buf_option.append<TEXT_WEB>("}");
+	buf_option.append<text<char>>("{client_use_code: "sv);	buf_option.append<text<char>>(_request.client_use_code);
+	buf_option.append<text<char>>(", user_seq_no: "sv);		buf_option.append<text<char>>(_request.user_seq_no);
+	buf_option.append<text<char>>("}");
 	buf_option[buf_option.size()] = 0;
 
-	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 	//std::vector<std::string_view>	vector_accept{ "*/*"sv, "application/json"sv };
 
-	// 7) requestë¥¼ Setí•œë‹¤.
+	// 7) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -1172,78 +1180,75 @@ http_api::bank::RESPONSE_UNLINK http_api::bank::request(const REQUEST_UNLINK& _r
 	// declare) 
 	http_api::bank::RESPONSE_UNLINK response;
 
-	// 8) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 8) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 9) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 9) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
 			// - "user_seq_no"
-			else if (__strcmp(str_name, "user_seq_no"sv) == 0)
+			else if (std::string_view(str_name).compare("user_seq_no"sv) == 0)
 			{
 				response.user_seq_no = value.GetString();
 			}
 		}
 	});
 
-	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -1253,21 +1258,21 @@ http_api::bank::RESPONSE_REGISTER_ACCOUNT http_api::bank::request(const REQUEST_
 {
 	// ------------------------------------------------------------------
 	// 
-	// OAuth ì¸ì¦ - ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²° ìš”ì²­(3-legged): êµ¬ë²„ì „
+	// OAuth ÀÎÁõ - »ç¿ëÀÚ·Î±×ÀÎ¿¬°á ¿äÃ»(3-legged): ±¸¹öÀü
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		https://openapi.open.openform.or.kr/oauth/2.0/authorize
 	//	 3) HTTP Method		GET
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Parameters
-	//		- response_type			ê³ ì •ê°’: code			OAuth 2.0 ì¸ì • ìš”ì²­ì‹œ ë°˜í™˜ë˜ëŠ” í˜•íƒœ
-	//		- client_id				<client_id>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ í˜‘ì˜ Client ID
-	//		- redirect_uri			<callback_uri>			ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²°ì´ ì„±ê³µë˜ë©´ ì´ìš©ê¸°ê´€ìœ¼ë¡œ ì—°ê²°ë˜ëŠ” URL
-	//		- scope					ê³ ì •ê°’:login			Access Token ê¶Œí•œ ë²”ìœ„
+	//		- response_type			°íÁ¤°ª: code			OAuth 2.0 ÀÎÁ¤ ¿äÃ» ½Ã ¹İÈ¯µÇ´Â ÇüÅÂ
+	//		- client_id				<client_id>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ÇùÀÇ Client ID
+	//		- redirect_uri			<callback_uri>			»ç¿ëÀÚ·Î±×ÀÎ¿¬°áÀÌ ¼º°øÇÏ¸é ÀÌ¿ë±â°üÀ¸·Î ¿¬°áµÇ´Â URL
+	//		- scope					°íÁ¤°ª:login			Access Token ±ÇÇÑ ¹üÀ§
 	//								(login | inquiry | transfer)
-	//		- client_info			<client_info>			ì´ìš©ê¸°ê´€ì´ ì…‹íŒ…í•˜ëŠ” ì„ì˜ì˜ ì •ë³´
-	//								(Max: 256bytes)			Callback í˜¸ì¶œ ì‹œ ê·¸ëŒ€ë¡œ ì „ë‹¬ë¨
+	//		- client_info			<client_info>			ÀÌ¿ë±â°üÀÌ ¼¼ÆÃÇÏ´Â ÀÓÀÇÀÇ Á¤º¸
+	//								(Max: 256bytes)			Callback È£Ãâ ½Ã ±×´ë·Î Àü´ŞµÊ
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -1279,32 +1284,32 @@ http_api::bank::RESPONSE_REGISTER_ACCOUNT http_api::bank::request(const REQUEST_
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto buf_object = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_object.data<char>(), SIZE_BUFFER, "/oauth/2.0/register_account?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&client_info=%s"sv, _request.client_id.c_str(), _request.redirect_uri.c_str(), to_string<char>(_request.scope).data(), _request.client_info.c_str());
+	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_object.data<char>(), SIZE_BUFFER, "/oauth/2.0/register_account?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&client_info=%s", _request.client_id.c_str(), _request.redirect_uri.c_str(), to_string<char>(_request.scope).data(), _request.client_info.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write<0, throwable::failure(eRESULT::FAIL));
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::GET_;
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv };
 
 	// declare) 
 	shared_buffer buf_option;
 
-	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 	//std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 
-	// 6) requestë¥¼ Setí•œë‹¤.
+	// 6) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -1321,55 +1326,52 @@ http_api::bank::RESPONSE_REGISTER_ACCOUNT http_api::bank::request(const REQUEST_
 	// declare) 
 	http_api::bank::RESPONSE_REGISTER_ACCOUNT response;
 
-	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 7) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
@@ -1378,7 +1380,7 @@ http_api::bank::RESPONSE_REGISTER_ACCOUNT http_api::bank::request(const REQUEST_
 		}
 	});
 
-	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -1388,20 +1390,20 @@ http_api::bank::RESPONSE_AUTHORIZE_ACCOUNT http_api::bank::request(const REQUEST
 {
 	// ------------------------------------------------------------------
 	// 
-	// OAuth ì¸ì¦ - ê³„ì¢Œë“±ë¡í™•ì¸ ìš”ì²­ (3-legged): êµ¬ë²„ì „
+	// OAuth ÀÎÁõ - °èÁÂµî·ÏÈ®ÀÎ ¿äÃ» (3-legged): ±¸¹öÀü
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		https://openapi.open.openform.or.kr/oauth/2.0/authorize_account
 	//	 3) HTTP Method		GET
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Parameters
-	//		- response_type			ê³ ì •ê°’: code			OAuth 2.0 ì¸ì • ìš”ì²­ì‹œ ë°˜í™˜ë˜ëŠ” í˜•íƒœ
-	//		- client_id				<client_id>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ í˜‘ì˜ Client ID
-	//		- redirect_uri			<callback_uri>			ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²°ì´ ì„±ê³µë˜ë©´ ì´ìš©ê¸°ê´€ìœ¼ë¡œ ì—°ê²°ë˜ëŠ” URL
-	//		- scope					[inquiry | transfer]	Access Token ê¶Œí•œ ë²”ìœ„
-	//		- client_info			<client_info>			ì´ìš©ê¸°ê´€ì´ ì…‹íŒ…í•˜ëŠ” ì„ì˜ì˜ ì •ë³´
-	//								(Max: 256bytes)			Callback í˜¸ì¶œ ì‹œ ê·¸ëŒ€ë¡œ ì „ë‹¬ë¨
+	//		- response_type			°íÁ¤°ª: code			OAuth 2.0 ÀÎÁ¤ ¿äÃ» ½Ã ¹İÈ¯µÇ´Â ÇüÅÂ
+	//		- client_id				<client_id>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ÇùÀÇ Client ID
+	//		- redirect_uri			<callback_uri>			»ç¿ëÀÚ·Î±×ÀÎ¿¬°áÀÌ ¼º°øÇÏ¸é ÀÌ¿ë±â°üÀ¸·Î ¿¬°áµÇ´Â URL
+	//		- scope					[inquiry | transfer]	Access Token ±ÇÇÑ ¹üÀ§
+	//		- client_info			<client_info>			ÀÌ¿ë±â°üÀÌ ¼¼ÆÃÇÏ´Â ÀÓÀÇÀÇ Á¤º¸
+	//								(Max: 256bytes)			Callback È£Ãâ ½Ã ±×´ë·Î Àü´ŞµÊ
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -1419,32 +1421,32 @@ http_api::bank::RESPONSE_AUTHORIZE_ACCOUNT http_api::bank::request(const REQUEST
 	// check)
 	THROW_IF(_request.scope != eOAUTH_SCOPE::INQUIRY_ && _request.scope != eOAUTH_SCOPE::TRANSFER_, throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto buf_object = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_object.data<char>(), SIZE_BUFFER, "/oauth/2.0/authorize_account?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&client_info=%s"sv, _request.client_id.c_str(), _request.redirect_uri.c_str(), to_string<char>(_request.scope).data(), _request.client_info.c_str());
+	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_object.data<char>(), SIZE_BUFFER, "/oauth/2.0/authorize_account?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&client_info=%s", _request.client_id.c_str(), _request.redirect_uri.c_str(), to_string<char>(_request.scope).data(), _request.client_info.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write<0, throwable::failure(eRESULT::FAIL));
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::GET_;
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv };
 
 	// declare) 
 	shared_buffer buf_option;
 
-	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 	//std::vector<std::string_view>	vector_accept{ "*/*"sv, "application/json"sv };
 
-	// 6) requestë¥¼ Setí•œë‹¤.
+	// 6) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -1461,55 +1463,52 @@ http_api::bank::RESPONSE_AUTHORIZE_ACCOUNT http_api::bank::request(const REQUEST
 	// declare) 
 	http_api::bank::RESPONSE_AUTHORIZE_ACCOUNT	response;
 
-	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 7) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv)==0)
+			if(std::string_view(str_name).compare("rsp_code"sv)==0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
@@ -1518,7 +1517,7 @@ http_api::bank::RESPONSE_AUTHORIZE_ACCOUNT http_api::bank::request(const REQUEST
 		}
 	});
 
-	// 9) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 9) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -1555,20 +1554,20 @@ http_api::bank::RESPONSE_ACCOUNT_LIST http_api::bank::request(const REQUEST_ACCO
 {
 	// ------------------------------------------------------------------
 	// 
-	// OAuth ì¸ì¦ - ê³„ì¢Œë“±ë¡í™•ì¸ ìš”ì²­ (3-legged): êµ¬ë²„ì „
+	// OAuth ÀÎÁõ - °èÁÂµî·ÏÈ®ÀÎ ¿äÃ» (3-legged): ±¸¹öÀü
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		https://openapi.open.openform.or.kr/v1.0/account/list
 	//	 3) HTTP Method		GET
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Parameters
-	//		- response_type			ê³ ì •ê°’: code			OAuth 2.0 ì¸ì • ìš”ì²­ì‹œ ë°˜í™˜ë˜ëŠ” í˜•íƒœ
-	//		- client_id				<client_id>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ í˜‘ì˜ Client ID
-	//		- redirect_uri			<callback_uri>			ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²°ì´ ì„±ê³µë˜ë©´ ì´ìš©ê¸°ê´€ìœ¼ë¡œ ì—°ê²°ë˜ëŠ” URL
-	//		- scope					[inquiry | transfer]	Access Token ê¶Œí•œ ë²”ìœ„
-	//		- client_info			<client_info>			ì´ìš©ê¸°ê´€ì´ ì…‹íŒ…í•˜ëŠ” ì„ì˜ì˜ ì •ë³´
-	//								(Max: 256bytes)			Callback í˜¸ì¶œ ì‹œ ê·¸ëŒ€ë¡œ ì „ë‹¬ë¨
+	//		- response_type			°íÁ¤°ª: code			OAuth 2.0 ÀÎÁ¤ ¿äÃ» ½Ã ¹İÈ¯µÇ´Â ÇüÅÂ
+	//		- client_id				<client_id>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ÇùÀÇ Client ID
+	//		- redirect_uri			<callback_uri>			»ç¿ëÀÚ·Î±×ÀÎ¿¬°áÀÌ ¼º°øÇÏ¸é ÀÌ¿ë±â°üÀ¸·Î ¿¬°áµÇ´Â URL
+	//		- scope					[inquiry | transfer]	Access Token ±ÇÇÑ ¹üÀ§
+	//		- client_info			<client_info>			ÀÌ¿ë±â°üÀÌ ¼¼ÆÃÇÏ´Â ÀÓÀÇÀÇ Á¤º¸
+	//								(Max: 256bytes)			Callback È£Ãâ ½Ã ±×´ë·Î Àü´ŞµÊ
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -1580,41 +1579,41 @@ http_api::bank::RESPONSE_ACCOUNT_LIST http_api::bank::request(const REQUEST_ACCO
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto buf_object = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_object.data<char>(), SIZE_BUFFER, "/v1.0/account/list?user_seq_no=%s&include_cancel_yn=%s&sort_order=%s"sv, _request.user_seq_no.c_str(), to_string<char>(_request.include_cancel_yn).data(), to_string<char>(_request.sort_order).data());
+	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_object.data<char>(), SIZE_BUFFER, "/v1.0/account/list?user_seq_no=%s&include_cancel_yn=%s&sort_order=%s", _request.user_seq_no.c_str(), to_string<char>(_request.include_cancel_yn).data(), to_string<char>(_request.sort_order).data());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write<0, throwable::failure(eRESULT::FAIL));
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::GET_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 5) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+	// 5) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv, buf_header.data<char>() };
 
 	// declare) 
 	shared_buffer buf_option;
 
-	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 	//std::vector<std::string_view>	vector_accept{ "*/*"sv, "application/json"sv };
 
-	// 7) requestë¥¼ Setí•œë‹¤.
+	// 7) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -1631,89 +1630,86 @@ http_api::bank::RESPONSE_ACCOUNT_LIST http_api::bank::request(const REQUEST_ACCO
 	// declare) 
 	http_api::bank::RESPONSE_ACCOUNT_LIST	response;
 
-	// 8) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 8) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 9) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 9) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
 		// declare)
 		[[maybe_unused]]std::size_t res_cnt = 0;
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
 			// - "user_name"
-			else if (__strcmp(str_name, "user_name"sv) == 0)
+			else if (std::string_view(str_name).compare("user_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.user_name, value.GetString());
 			}
 			// - "res_cnt"
-			else if (__strcmp(str_name, "res_cnt"sv) == 0)
+			else if (std::string_view(str_name).compare("res_cnt"sv) == 0)
 			{
-				res_cnt	 = __from_string<size_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), res_cnt);
 			}
 			// - "res_list"
-			else if (__strcmp(str_name, "res_list"sv) == 0)
+			else if (std::string_view(str_name).compare("res_list"sv) == 0)
 			{
 				for (auto iterRes = value.Begin(); iterRes != value.End(); ++iterRes)
 				{
 					// declare) 
-					http_api::bank::RESPONSE_ACCOUNT_LIST::ACCOUNT_INFO	AccouuntInfo;
+					http_api::bank::RESPONSE_ACCOUNT_LIST::ACCOUNT_INFO	AccountInfo;
 
 					for (auto iterNest = iterRes->MemberBegin(); iterNest != iterRes->MemberEnd(); ++iterNest)
 					{
@@ -1721,38 +1717,38 @@ http_api::bank::RESPONSE_ACCOUNT_LIST http_api::bank::request(const REQUEST_ACCO
 						auto& value_Nested = iterNest->value;
 
 						// - "fintech_use_num"
-						if (__strcmp(strName_Nested, "fintech_use_num"sv) == 0)
+						if (std::string_view(strName_Nested).compare("fintech_use_num"sv) == 0)
 						{
-							AccouuntInfo.fintech_use_num = value_Nested.GetString();
+							AccountInfo.fintech_use_num = value_Nested.GetString();
 						}
 						// - "account_alias"
-						else if (__strcmp(strName_Nested, "account_alias"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("account_alias"sv) == 0)
 						{
-							AccouuntInfo.account_alias = value_Nested.GetString();
+							AccountInfo.account_alias = value_Nested.GetString();
 						}
 						// - "bank_code_std"
-						else if (__strcmp(strName_Nested, "bank_code_std"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("bank_code_std"sv) == 0)
 						{
-							AccouuntInfo.bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
+							AccountInfo.bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
 						}
 						// - "bank_code_sub"
-						else if (__strcmp(strName_Nested, "bank_code_sub"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("bank_code_sub"sv) == 0)
 						{
-							AccouuntInfo.bank_code_sub = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), AccountInfo.bank_code_sub);
 						}
 						// - "bank_name"
-						else if (__strcmp(strName_Nested, "bank_name"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("bank_name"sv) == 0)
 						{
-							convert_utf8_to_multibyte(AccouuntInfo.bank_name, value_Nested.GetString());
+							convert_utf8_to_multibyte(AccountInfo.bank_name, value_Nested.GetString());
 						}
 						// - "account_num_masked"
-						else if (__strcmp(strName_Nested, "account_num_masked"sv) == 0)
+						else if (std::string_view(strName_Nested).compare("account_num_masked"sv) == 0)
 						{
-							AccouuntInfo.account_num_masked	 = value_Nested.GetString();
+							AccountInfo.account_num_masked	 = value_Nested.GetString();
 						}
 					}
 
-					response.res_list.push_back(AccouuntInfo);
+					response.res_list.push_back(AccountInfo);
 				}
 
 				// check) 
@@ -1761,7 +1757,7 @@ http_api::bank::RESPONSE_ACCOUNT_LIST http_api::bank::request(const REQUEST_ACCO
 		}
 	});
 
-	// 10) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 10) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -1771,19 +1767,19 @@ http_api::bank::RESPONSE_ACCOUNT_UPDATE_INFO http_api::bank::request(const REQUE
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/v1.0/account/update_info
 	//	 3) HTTP Method		POST
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Header
-	//		- Authorization			Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization			Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	//   6) Parameters
-	//		- fintech_use_num		<fintech_use_num>		AN(24) í•€í…Œí¬ì´ìš©ë²ˆí˜¸
-	//		- account_alias			"ë³´í—˜ë£Œë‚©ë¶€ê³„ì¢Œ"		AN(50) ë³€ê²½ì½”ìí•˜ëŠ” ê³„ì¢Œë³„ëª…
+	//		- fintech_use_num		<fintech_use_num>		AN(24) ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
+	//		- account_alias			"º¸Çè·á³³ºÎ°èÁÂ"		AN(50) º¯°æÄÚÀÚÇÏ´Â °èÁÂº°¸í
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -1795,35 +1791,35 @@ http_api::bank::RESPONSE_ACCOUNT_UPDATE_INFO http_api::bank::request(const REQUE
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto str_object = "/v1.0/account/update_info"sv;
 
-	// 2) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::POST_;
 
-	// 3) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+	// 3) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv, "Authorization: Bearer %s"sv }; _request.authorization.c_str();
 
 	// declare)
 	char str_account_alias[256]{ 0 };
 
-	// 4) ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+	// 4) ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 	convert_multibyte_to_utf8(str_account_alias, _request.account_alias.c_str());
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 	auto buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	buf_option.append<TEXT_WEB>("fintech_use_num="sv); buf_option.append<TEXT_WEB>(_request.fintech_use_num);
-	buf_option.append<TEXT_WEB>("&account_alias="sv); buf_option.append<TEXT_WEB>(str_account_alias);
+	buf_option.append<text<char>>("fintech_use_num="sv); buf_option.append<text<char>>(_request.fintech_use_num);
+	buf_option.append<text<char>>("&account_alias="sv); buf_option.append<text<char>>(str_account_alias);
 	buf_option.front<char>(buf_option.size()) = 0;
 
-	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 	//vector<std::string_view>	vector_accept{ "*/*"sv, "application/json"sv };
 
-	// 7) requestë¥¼ Setí•œë‹¤.
+	// 7) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -1840,83 +1836,80 @@ http_api::bank::RESPONSE_ACCOUNT_UPDATE_INFO http_api::bank::request(const REQUE
 	// declare) 
 	http_api::bank::RESPONSE_ACCOUNT_UPDATE_INFO response;
 
-	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 7) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv)==0)
+			if(std::string_view(str_name).compare("rsp_code"sv)==0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
 			// - "fintech_use_num"
-			else if (__strcmp(str_name, "fintech_use_num"sv) == 0)
+			else if (std::string_view(str_name).compare("fintech_use_num"sv) == 0)
 			{
 				response.fintech_use_num = value.GetString();
 			}
 			// - "account_alias"
-			else if (__strcmp(str_name, "account_alias"sv) == 0)
+			else if (std::string_view(str_name).compare("account_alias"sv) == 0)
 			{
 				response.account_alias = value.GetString();
 			}
 		}
 	});
 
-	// 9) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 9) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -1926,19 +1919,19 @@ http_api::bank::RESPONSE_ACCOUNT_CANCEL http_api::bank::request(const REQUEST_AC
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/v1.0/account/cancel
 	//	 3) HTTP Method		POST
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Header
-	//		- Authorization			Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization			Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	//   6) Parameters
-	//		- scope					[inquire | transfer]	inquire:ì¡°íšŒì„œë¹„ìŠ¤, transfer:ì¶œê¸ˆì„œë¹„ìŠ¤
-	//		- fintech_use_num		"12345678901234567890"	AN(24) í•€í…Œí¬ì´ìš©ë²ˆí˜¸
+	//		- scope					[inquire | transfer]	inquire:Á¶È¸¼­ºñ½º, transfer:Ãâ±İ¼­ºñ½º
+	//		- fintech_use_num		"12345678901234567890"	AN(24) ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -1956,38 +1949,38 @@ http_api::bank::RESPONSE_ACCOUNT_CANCEL http_api::bank::request(const REQUEST_AC
 	// check)
 	THROW_IF(_request.scope!=eOAUTH_SCOPE::INQUIRY_ && _request.scope != eOAUTH_SCOPE::TRANSFER_, throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto str_object = "/v1.0/account/update_info"sv;
 
-	// 2) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::POST_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 3) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 3) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv, buf_header.data<char>() };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	buf_option.append<TEXT_WEB>("scope="sv);			buf_option.append<TEXT_WEB>(to_string<char>(_request.scope));
-	buf_option.append<TEXT_WEB>("&fintech_use_num="sv);	buf_option.append<TEXT_WEB>(_request.fintech_use_num);
+	buf_option.append<text<char>>("scope="sv);			buf_option.append<text<char>>(to_string<char>(_request.scope));
+	buf_option.append<text<char>>("&fintech_use_num="sv);	buf_option.append<text<char>>(_request.fintech_use_num);
 	buf_option[buf_option.size()] = 0;
 
-	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 	//std::vector<std::string_view>	vector_accept{ "*/*"sv), "application/json"sv };
 
-	// 6) requestë¥¼ Setí•œë‹¤.
+	// 6) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -2004,98 +1997,95 @@ http_api::bank::RESPONSE_ACCOUNT_CANCEL http_api::bank::request(const REQUEST_AC
 	// declare) 
 	http_api::bank::RESPONSE_ACCOUNT_CANCEL response;
 
-	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 7) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv)==0)
+			if(std::string_view(str_name).compare("rsp_code"sv)==0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
 			// - "bank_tran_id"
-			else if (__strcmp(str_name, "bank_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_tran_id"sv) == 0)
 			{
 				response.bank_tran_id = value.GetString();
 			}
 			// - "bank_tran_date"
-			else if (__strcmp(str_name, "bank_tran_date"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_tran_date"sv) == 0)
 			{
 				response.bank_tran_date = from_string_date(value.GetString());
 			}
 			// - "bank_code_tran"
-			else if (__strcmp(str_name, "bank_code_tran"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_code_tran"sv) == 0)
 			{
 				response.bank_code_tran = value.GetString();
 			}
 			// - "bank_rsp_code"
-			else if (__strcmp(str_name, "bank_rsp_code"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_rsp_code"sv) == 0)
 			{
 				response.bank_rsp_code = get_enum_OAUTH_BANK_CODE<char>(value.GetString());
 			}
 			// - "bank_rsp_message"
-			else if (__strcmp(str_name, "bank_rsp_message"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_rsp_message"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.bank_rsp_message, value.GetString());
 			}
 		}
 	});
 
-	// 9) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 9) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -2105,19 +2095,19 @@ http_api::bank::RESPONSE_ACCOUNT_BALANCE http_api::bank::request(const REQUEST_A
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/v1.0/account/balance
 	//	 3) HTTP Method		GET
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Header
-	//		- Authorization			Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization			Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	//   6) Parameters
-	//		- fintech_use_num		"12345678901234567890"	AN(24) í•€í…Œí¬ì´ìš©ë²ˆí˜¸
-	//		- tran_dtime			"20160310101921"		N(14) ìš”ì²­ì¼ì‹œ
+	//		- fintech_use_num		"12345678901234567890"	AN(24) ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
+	//		- tran_dtime			"20160310101921"		N(14) ¿äÃ»ÀÏ½Ã
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -2129,48 +2119,41 @@ http_api::bank::RESPONSE_ACCOUNT_BALANCE http_api::bank::request(const REQUEST_A
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto buf_object = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_object.data<char>(), SIZE_BUFFER, "/v1.0/account/balance?fintech_use_num=%s&tran_dtime=%04u%02u%02u%02u%02u%02u"sv,
-		_request.fintech_use_num.c_str(),
-		static_cast<uint32_t>(_request.tran_dtime.t_year),
-		static_cast<uint32_t>(_request.tran_dtime.t_month),
-		static_cast<uint32_t>(_request.tran_dtime.t_day),
-		static_cast<uint32_t>(_request.tran_dtime.t_hour),
-		static_cast<uint32_t>(_request.tran_dtime.t_minute),
-		static_cast<uint32_t>(_request.tran_dtime.t_second));
+	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_object.data<char>(), SIZE_BUFFER, "/v1.0/account/balance?fintech_use_num=%s&tran_dtime=%04u%02u%02u%02u%02u%02u", _request.fintech_use_num.c_str(), static_cast<uint32_t>(_request.tran_dtime.t_year), static_cast<uint32_t>(_request.tran_dtime.t_month), static_cast<uint32_t>(_request.tran_dtime.t_day), static_cast<uint32_t>(_request.tran_dtime.t_hour), static_cast<uint32_t>(_request.tran_dtime.t_minute), static_cast<uint32_t>(_request.tran_dtime.t_second));
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write<0, throwable::failure(eRESULT::FAIL));
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::GET_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 5) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+	// 5) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv, buf_header.data<char>() };
 
 	// declare) 
 	shared_buffer buf_option;
 
-	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
 	//std::vector<std::string_view> vector_accept{ "*/*"sv, "application/json"sv };
 
-	// 7) requestë¥¼ Setí•œë‹¤.
+	// 7) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -2187,123 +2170,120 @@ http_api::bank::RESPONSE_ACCOUNT_BALANCE http_api::bank::request(const REQUEST_A
 	// declare) 
 	http_api::bank::RESPONSE_ACCOUNT_BALANCE response;
 
-	// 8) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 8) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 9) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 9) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 			
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
 			// - "bank_tran_id"
-			else if (__strcmp(str_name, "bank_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_tran_id"sv) == 0)
 			{
 				response.bank_tran_id = value.GetString();
 			}
 			// - "bank_tran_date"
-			else if (__strcmp(str_name, "bank_tran_date"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_tran_date"sv) == 0)
 			{
 				response.bank_tran_date = from_string_date(value.GetString());
 			}
 			// - "bank_code_tran"
-			else if (__strcmp(str_name, "bank_code_tran"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_code_tran"sv) == 0)
 			{
 				response.bank_code_tran = value.GetString();
 			}
 			// - "bank_rsp_code"
-			else if (__strcmp(str_name, "bank_rsp_code"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_rsp_code"sv) == 0)
 			{
 				response.bank_rsp_code = get_enum_OAUTH_BANK_CODE<char>(value.GetString());
 			}
 			// - "bank_rsp_message"
-			else if (__strcmp(str_name, "bank_rsp_message"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_rsp_message"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.bank_rsp_message, value.GetString());
 			}
 			// - "fintech_use_num"
-			else if (__strcmp(str_name, "fintech_use_num"sv) == 0)
+			else if (std::string_view(str_name).compare("fintech_use_num"sv) == 0)
 			{
 				response.fintech_use_num = value.GetString();
 			}
 			// - "balance_amt"
-			else if (__strcmp(str_name, "balance_amt"sv) == 0)
+			else if (std::string_view(str_name).compare("balance_amt"sv) == 0)
 			{
-				response.balance_amt = __from_string<int64_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), response.balance_amt);
 			}
 			// - "available_amt"
-			else if (__strcmp(str_name, "available_amt"sv) == 0)
+			else if (std::string_view(str_name).compare("available_amt"sv) == 0)
 			{
-				response.available_amt = __from_string<int64_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), response.available_amt);
 			}
 			// - "account_type"
-			else if (__strcmp(str_name, "account_type"sv) == 0)
+			else if (std::string_view(str_name).compare("account_type"sv) == 0)
 			{
 				response.account_type = get_enum_OAUTH_ACCOUNT_TYPE<char>(value.GetString());
 			}
 			// - "product_name"
-			else if (__strcmp(str_name, "product_name"sv) == 0)
+			else if (std::string_view(str_name).compare("product_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.product_name, value.GetString());
 			}
 		}
 	});
 
-	// 10) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 10) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 

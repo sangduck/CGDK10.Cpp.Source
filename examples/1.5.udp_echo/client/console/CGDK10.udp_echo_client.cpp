@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "echo_udp.h"
 
 extern own_ptr<test_udp_echo_client> g_ptest_udp_echo_client;
@@ -178,30 +178,30 @@ int main()
 
 			case	'U':
 			case	'u':
-					g_ptest_udp_echo_client->request_send_immidiately(1);
+					g_ptest_udp_echo_client->request_send_immediately(1);
 					break;
 
 			case	'I':
 			case	'i':
-					g_ptest_udp_echo_client->request_send_immidiately(10);
+					g_ptest_udp_echo_client->request_send_immediately(10);
 					break;
 
 			case	'O':
 			case	'o':
-					g_ptest_udp_echo_client->request_send_immidiately(100);
+					g_ptest_udp_echo_client->request_send_immediately(100);
 					break;
 
 			case	'P':
 			case	'p':
-					g_ptest_udp_echo_client->request_send_immidiately(1000);
+					g_ptest_udp_echo_client->request_send_immediately(1000);
 					break;
 
 			case	'[':
-					g_ptest_udp_echo_client->request_send_immidiately(100000);
+					g_ptest_udp_echo_client->request_send_immediately(100000);
 					break;
 
 			case	']':
-					g_ptest_udp_echo_client->request_send_immidiately(1000000);
+					g_ptest_udp_echo_client->request_send_immediately(1000000);
 					break;
 
 			case	'/':
@@ -309,16 +309,16 @@ void _print_setting_info(shared_buffer& _buffer_output, test_udp_echo_client* _p
 	_buffer_output.append_text("\x1b[5B");
 
 	// definitions)
-	static const char* str_index_to_string[] = { "8 byte", "64 byte", "256 byte", "1K byte", "4K byte", "16K byte", "64K byte", "512K byte", "4M byte", "32M byte", "256M byte" };
+	static const std::string_view str_index_to_string[] = { "8 byte"sv, "64 byte"sv, "256 byte"sv, "1K byte"sv, "4K byte"sv, "16K byte"sv, "64K byte"sv, "512K byte"sv, "4M byte"sv, "32M byte"sv, "256M byte"sv };
 
 	// 2) ...
 	_buffer_output.append_text("\x1b[37m [echo test]  \x1b[0m");
-	_buffer_output.append_text<char>((_ptest_udp_echo_client->m_enable_traffic_test) ? "\x1b[47m\x1b[30m on \x1b[0m " : "\x1b[90m off\x1b[0m ");
+	_buffer_output.append_text<char>((_ptest_udp_echo_client->m_enable_traffic_test) ? "\x1b[47m\x1b[30m on \x1b[0m "sv : "\x1b[90m off\x1b[0m "sv);
 	_buffer_output.append_text("\x1b[90mmessage size \x1b[0m"); _buffer_output.append_text<char>(str_index_to_string[_ptest_udp_echo_client->m_traffic_test_selected]); _buffer_output.append_text(",  ");
 	_buffer_output.append_text("\x1b[90mtimes \x1b[0m"); _buffer_output.append_text(_ptest_udp_echo_client->m_traffic_test_count_per_single); _buffer_output.append_text("\x1b[K\n");
 
 	_buffer_output.append_text("\x1b[37m [relay echo] \x1b[0m");
-	_buffer_output.append_text<char>((_ptest_udp_echo_client->m_enable_relay_echo_test) ? "\x1b[47m\x1b[30m on \x1b[0m " : "\x1b[90m off\x1b[0m "); _buffer_output.append_text("\x1b[K");
+	_buffer_output.append_text<char>((_ptest_udp_echo_client->m_enable_relay_echo_test) ? "\x1b[47m\x1b[30m on \x1b[0m "sv : "\x1b[90m off\x1b[0m "sv); _buffer_output.append_text("\x1b[K");
 	_buffer_output.append_text("              \x1b[37m [dis on res] \x1b[0m");
 	//_buffer_output.append_text<char>((_ptest_udp_echo_client->m_enable_disconnect_on_response) ? "\x1b[47m\x1b[30m on \x1b[0m " : "\x1b[90m off\x1b[0m "); _buffer_output.append_text("\x1b[K\n");
 
@@ -371,7 +371,7 @@ void print_setting_info(test_udp_echo_client* _ptest_udp_echo_client)
 	fflush(stdout);
 }
 
-void print_endpoint(test_udp_echo_client* _ptest_udp_echo_client)
+void print_endpoint(test_udp_echo_client* /*_ptest_udp_echo_client*/)
 {
 	//const auto& end_point = _ptest_udp_echo_client->get_endpoint();
 
@@ -382,17 +382,17 @@ void print_endpoint(test_udp_echo_client* _ptest_udp_echo_client)
 
 void print_statistics_info(test_udp_echo_client* _ptest_udp_echo_client, bool _update_now)
 {
-	// 1) í˜„ì¬ Tickê³¼ Tick Gapì„ êµ¬í•œë‹¤.
+	// 1) ÇöÀç Tick°ú Tick GapÀ» ±¸ÇÑ´Ù.
 	static auto tick_last = chrono::tick::time_point(chrono::tick::duration::zero());
 	auto tick_now = chrono::tick::now();
 
 	// 2) get tick differ
 	auto tick_differ = std::chrono::duration_cast<chrono::tick::milliseconds>(tick_now - tick_last);
 
-	// check) tickdifferê°€ 1sì´í•˜ë©´ ê·¸ëƒ¥ ëë‚¸ë‹¤.
+	// check) tickdiffer°¡ 1sÀÌÇÏ¸é ±×³É ³¡³½´Ù.
 	RETURN_IF(_update_now == false && tick_differ < 1s);
 
-	// 3) ìµœì¢… ì‹œê°„ì„ Updateí•œë‹¤.
+	// 3) ÃÖÁ¾ ½Ã°£À» UpdateÇÑ´Ù.
 	tick_last = tick_now;
 
 	// 4) alloc buffer
@@ -404,27 +404,27 @@ void print_statistics_info(test_udp_echo_client* _ptest_udp_echo_client, bool _u
 		const auto& statistics = net::io::statistics::Nsocket::statistics_get_traffic_info_total();
 
 		// declare) 
-		static uint64_t	last_count_sended = 0;
+		static uint64_t	last_count_sent = 0;
 		static uint64_t	last_count_received = 0;
-		static uint64_t	last_count_sendedByte = 0;
+		static uint64_t	last_count_sentByte = 0;
 		static uint64_t	last_count_received_byte = 0;
 
-		// - ì´ì „ê³¼ í˜„ì¬ì˜ ì°¨ì´ë¥¼ êµ¬í•œë‹¤. (Overflowê°€ ë‚¬ì„ ê²½ìš°ë¥¼ ëŒ€ë¹„í•˜ì—¬ ê³„ì‚°í•´ì•¼ í•œë‹¤.)
-		auto now_count_sended = statistics.count_sended_message.load();
-		auto now_count_sendedByte = statistics.count_sended_bytes.load();
+		// - ÀÌÀü°ú ÇöÀçÀÇ Â÷ÀÌ¸¦ ±¸ÇÑ´Ù. (Overflow°¡ ³µÀ» °æ¿ì¸¦ ´ëºñÇÏ¿© °è»êÇØ¾ß ÇÑ´Ù.)
+		auto now_count_sent = statistics.count_sent_message.load();
+		auto now_count_sentByte = statistics.count_sent_bytes.load();
 		auto now_count_send_failed = statistics.count_error_on_send.load();
 		auto now_count_received = statistics.count_received_message.load();
 		auto now_count_received_byte = statistics.count_received_bytes.load();
 
-		// - ì´ˆë‹¹ ì „ì†¡ë¥ ì„ êµ¬í•œë‹¤.
-		auto total_sended_message_per_sec = ((float)(now_count_sended - last_count_sended)) * 1000.0f / tick_differ.count();
-		auto total_sended_byte_per_sec = ((float)(now_count_sendedByte - last_count_sendedByte)) * 1000.0f / tick_differ.count();
+		// - ÃÊ´ç Àü¼Û·üÀ» ±¸ÇÑ´Ù.
+		auto total_sent_message_per_sec = ((float)(now_count_sent - last_count_sent)) * 1000.0f / tick_differ.count();
+		auto total_sent_byte_per_sec = ((float)(now_count_sentByte - last_count_sentByte)) * 1000.0f / tick_differ.count();
 		auto total_receive_message_per_sec = ((float)(now_count_received - last_count_received)) * 1000.0f / tick_differ.count();
 		auto total_receive_byte_per_sec = ((float)(now_count_received_byte - last_count_received_byte)) * 1000.0f / tick_differ.count();
 
-		// - ì´ì „ ê°’ì„ í˜„ì¬ ê°’ìœ¼ë¡œ Updateí•œë‹¤.(ë‹¤ìŒ Frameì—ì„œì˜ ê³„ì‚°ì„ ìœ„í•´)
-		last_count_sended = now_count_sended;
-		last_count_sendedByte = now_count_sendedByte;
+		// - ÀÌÀü °ªÀ» ÇöÀç °ªÀ¸·Î UpdateÇÑ´Ù.(´ÙÀ½ Frame¿¡¼­ÀÇ °è»êÀ» À§ÇØ)
+		last_count_sent = now_count_sent;
+		last_count_sentByte = now_count_sentByte;
 		last_count_received = now_count_received;
 		last_count_received_byte = now_count_received_byte;
 
@@ -433,18 +433,18 @@ void print_statistics_info(test_udp_echo_client* _ptest_udp_echo_client, bool _u
 
 		// - sended
 		buf_output.append_text(" [send]    ");
-		buf_output.append_text("\x1b[90m   messages \x1b[0m"); buf_output.append_text("{:12d}", now_count_sended);
-		__sprintf(temp_string, "%.2f", total_sended_message_per_sec);
+		buf_output.append_text("\x1b[90m   messages \x1b[0m"); buf_output.append_text(std::format("{:12d}", now_count_sent));
+		std::snprintf(temp_string, sizeof(temp_string), "%.2f", total_sent_message_per_sec);
 		buf_output.append_text("\x1b[90m   messages/s \x1b[0m"); buf_output.append_text(temp_string);
-		buf_output.append_text("\x1b[90m   bytes/s \x1b[0m"); buf_output.append_text(to_string_scaled_byte(temp_string, 256, total_sended_byte_per_sec));
+		buf_output.append_text("\x1b[90m   bytes/s \x1b[0m"); buf_output.append_text(to_string_scaled_byte(total_sent_byte_per_sec));
 		buf_output.append_text("\x1b[90m   failed \x1b[0m"); buf_output.append_text<char>(now_count_send_failed); buf_output.append_text("\x1b[K\n");
 
 		// - received
 		buf_output.append_text(" [receive] ");
-		buf_output.append_text("\x1b[90m   messages \x1b[0m"); buf_output.append_text("{:12d}", now_count_received);
-		__sprintf(temp_string, "%.2f", total_receive_message_per_sec);
+		buf_output.append_text("\x1b[90m   messages \x1b[0m"); buf_output.append_text(std::format("{:12d}", now_count_received));
+		std::snprintf(temp_string, sizeof(temp_string), "%.2f", total_receive_message_per_sec);
 		buf_output.append_text("\x1b[90m   messages/s \x1b[0m"); buf_output.append_text(temp_string);
-		buf_output.append_text("\x1b[90m   bytes/s \x1b[0m"); buf_output.append_text(to_string_scaled_byte(temp_string, 256, total_receive_byte_per_sec)); buf_output.append_text("\x1b[K\n");
+		buf_output.append_text("\x1b[90m   bytes/s \x1b[0m"); buf_output.append_text(to_string_scaled_byte(total_receive_byte_per_sec)); buf_output.append_text("\x1b[K\n");
 		buf_output.append_text("\n");
 	}
 

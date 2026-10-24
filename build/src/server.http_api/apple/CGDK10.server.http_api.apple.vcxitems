@@ -20,6 +20,7 @@
     <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.http_api\apple\read_me.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\server.http_api.apple.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.http_api\apple\server.http_api.apple.api.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.http_api\apple\server.http_api.apple.definitions.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.http_api\apple\server.http_api.apple.definitions.struct.h" />

@@ -1,0 +1,15 @@
+﻿<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Debug.NDI" />
+    <BuildType Name="Release" />
+    <BuildType Name="Release.NDI" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="web\CGDK10.server.web.vcxitems" Id="61d0bde3-cb02-4dd5-93a6-8bd3d01b7dc8" />
+  <Project Path="..\common\common.shared.vcxitems" Id="cb1ac3a7-19d0-4c1b-80a8-825abc3bdeb0" />
+  <Folder Name="/windows/" Id="bf72f4ed-07c3-45df-a598-89edbe45c265">
+    <Project Path="web\CGDK10.server.web.vs18.vcxproj" Id="e9ade5f7-6e56-448d-987b-943341835f0f" />
+  </Folder>
+  <Project Path="..\common\cgdk_info.shared.vcxitems" Id="f2b5df8c-26a7-4f26-bd80-933bb4870b0a" />
+</Solution>

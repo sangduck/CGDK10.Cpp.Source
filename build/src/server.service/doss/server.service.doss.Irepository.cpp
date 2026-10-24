@@ -4,7 +4,7 @@ namespace CGDK
 {
 
 bool doss::Irepository::wait()
-{ 
+{
 	// 1) wait
 	auto pthread_now = api::get_current_thread();
 
@@ -14,13 +14,13 @@ bool doss::Irepository::wait()
 	// 3) wait
 	try
 	{
-		scoped_lock_named(m_lockable_wait, cs)
+		SCOPED_LOCK_NAMED(m_lockable_wait, cs)
 		{
 			// check)
 			RETURN_IF(get_object_state() == eOBJECT_STATE::ESTABLISHED, true);
 
 			// - wait util complete
-			m_cv_complete.wait(cs); 
+			m_cv_complete.wait(cs);
 		}
 	}
 	catch (...)
@@ -35,114 +35,69 @@ bool doss::Irepository::wait()
 	// 6) notify unblocked
 	pthread_now->notify_unblocked();
 
-	// return) 
+	// return)
 	return true;
 }
 
-result_code doss::Irepository::process_request_transaction(Itransactable* _ptransactable)
-{
-	// 1) post execute
-	auto is_success = system_executor::post(_ptransactable);
-
-	// return)
-	return (is_success) ? eRESULT::PENDED : eRESULT::FAIL;
-}
-
-result_code doss::Irepository::process_transaction(Itransactable* _ptransactable)
+coroutine::task<result_code> doss::Irepository::co_request_transaction(object_ptr<Itransactable> _ptransactable)
 {
 	// declare)
 	result_code	result = eRESULT::NOT_READY;
 
-	// check) 
-	RETURN_IF(get_object_state() < eOBJECT_STATE::STOP_PENDING, result);
+	// check)
+	if (get_object_state() < eOBJECT_STATE::STOP_PENDING)
+		co_return result;
 
-	// 1) 상태를 eRESULT::REQUEST로 변경한다.
+	// 1) set the state to eRESULT::REQUEST
 	_ptransactable->m_result = eRESULT::REQUEST;
 
-	// 2) call process_entity_transaction_complete of session object
+	// 2) call process_entity_transaction_request of the session object (noexcept)
 	if (_ptransactable->m_psession.exist())
 	{
-		_ptransactable->m_psession->process_entity_transaction_request(_ptransactable); // noexcept
-	}
-
-	// 3) call m_f_request fuction if m_f_request is not nullptr
-	if (_ptransactable->m_f_request != nullptr)
-	{
-		// m_f_request를 호출한다. (여기서 실패시 바로 실패)
-		result = _ptransactable->m_f_request(_ptransactable);
-
-		// check) 여기서 Pending이어서는 안됀다.
-		CGASSERT_ERROR(result != eRESULT::PENDED);
-
-		// check) SUCCESS가 아닐 경우는 리턴한다.(여기서는 PENDING도 해서는 안됀다.
-		RETURN_IF(result != eRESULT::SUCCESS, eRESULT::INVALID_STATE);
+		_ptransactable->m_psession->process_entity_transaction_request(_ptransactable.get());
 	}
 
 	try
 	{
-		// check) 
+		// check)
 		THROW_IF(get_object_state() != eOBJECT_STATE::ESTABLISHED, throwable::failure(eRESULT::NOT_READY));
 
 		switch (_ptransactable->m_type)
 		{
-		// process_request_transaction_checkin
+		// co_request_transaction_checkin
 		case	eTRANSACTION_TYPE::CHECKIN:
-				{
-					// statistics) 
-					++Irepository::m_statistics.m_statistics_checkin_request;
-
-					result = process_request_transaction_checkin(_ptransactable);
-				}
+				doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_checkin_request);
+				result = co_await co_request_transaction_checkin(_ptransactable);
 				break;
 
-		// process_request_transaction_command
+		// co_request_transaction_command
 		case	eTRANSACTION_TYPE::COMMAND:
-				{
-					// statistics)
-					++Irepository::m_statistics.m_statistics_command_request;
-
-					result = process_request_transaction_command(_ptransactable);
-				}
+				doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_command_request);
+				result = co_await co_request_transaction_command(_ptransactable);
 				break;
 
-		// process_request_transaction_update
+		// co_request_transaction_update
 		case	eTRANSACTION_TYPE::UPDATE:
-				{
-					// statistics)
-					++Irepository::m_statistics.m_statistics_update_request;
-
-					result = process_request_transaction_update(_ptransactable);
-				}
+				doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_update_request);
+				result = co_await co_request_transaction_update(_ptransactable);
 				break;
 
-		// process_request_transaction_checkout
+		// co_request_transaction_checkout
 		case	eTRANSACTION_TYPE::CHECKOUT:
-				{
-					// statistics)
-					++Irepository::m_statistics.m_statistics_checkout_request;
-
-					result = process_request_transaction_checkout(_ptransactable);
-				}
+				doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_checkout_request);
+				result = co_await co_request_transaction_checkout(_ptransactable);
 				break;
 
-		// process_request_transaction_create
+		// co_request_transaction_create
 		case	eTRANSACTION_TYPE::CREATE:
-				{
-					// statistics)
-					++Irepository::m_statistics.m_statistics_create_request;
-
-					result = process_request_transaction_create(_ptransactable);
-				}
+				doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_create_request);
+				result = co_await co_request_transaction_create(_ptransactable);
 				break;
 
-		// process_request_transaction_remove
+		// co_request_transaction_remove
 		case	eTRANSACTION_TYPE::REMOVE:
-				{
-					// statistics)
-					++Irepository::m_statistics.m_statistics_remove_request;
-
-					result = process_request_transaction_remove(_ptransactable);
-				}
+				doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_remove_request);
+				result = co_await co_request_transaction_remove(_ptransactable);
 				break;
 
 		default:
@@ -153,24 +108,18 @@ result_code doss::Irepository::process_transaction(Itransactable* _ptransactable
 	{
 		// - set result
 		result = _e.reason();
-
-		// - set result
-		_ptransactable->set_result(result);
 	}
 	catch (...)
 	{
 		// - set result
 		result = eRESULT::EXCEPTION;
-
-		// - set result
-		_ptransactable->set_result(result);
 	}
 
-	// check)
-	CGASSERT_ERROR(result != eRESULT::NOT_DEFINED);
+	// - the result code of the transaction is stored on the transactable (the entity completes it)
+	_ptransactable->_set_result_if_not_set(result);
 
 	// return)
-	return	result;
+	co_return result;
 }
 
 bool doss::Irepository::process_complete_transaction(Itransactable* _ptransactable) noexcept
@@ -206,29 +155,16 @@ bool doss::Irepository::process_complete_transaction(Itransactable* _ptransactab
 			result = process_complete_transaction_create(_ptransactable);
 			break;
 
+	// process_complete_transaction_remove
+	case	eTRANSACTION_TYPE::REMOVE:
+			result = process_complete_transaction_remove(_ptransactable);
+			break;
+
 	default:
 			CGASSERT_ERROR(false);
 	}
 
-	// 2) _fCompletion함수를 호출한다.
-	if (_ptransactable->m_f_completion != nullptr)
-	{
-		try
-		{
-			_ptransactable->m_f_completion(_ptransactable);
-		}
-		catch (...)
-		{
-		}
-	}
-
-	// 3) call process_entity_transaction_complete of session object
-	if (_ptransactable->m_psession.exist())
-	{
-		_ptransactable->m_psession->process_entity_transaction_complete(_ptransactable); // noexcept
-	}
-
-	// return) 
+	// return)
 	return	result;
 }
 
@@ -242,11 +178,8 @@ void doss::Irepository::process_cancel_checkin(Ientity* _pentity, sCHECKIN_ID _c
 }
 
 
-result_code doss::Irepository::process_request_transaction_checkin(Itransactable* _ptransactable)
+coroutine::task<result_code> doss::Irepository::co_request_transaction_checkin(object_ptr<Itransactable> _ptransactable)
 {
-	// check) '_ptransactable' must not be nullptr
-	CGASSERT_ERROR(_ptransactable != nullptr);
-
 	// check) '_ptransactable->m_pentity' must exist
 	CGASSERT_ERROR(_ptransactable->m_pentity.exist());
 
@@ -255,96 +188,81 @@ result_code doss::Irepository::process_request_transaction_checkin(Itransactable
 
 	if (_ptransactable->m_cid.id_entity.exist())
 	{
-		// check) 
+		// check)
 		CGASSERT_ERROR(_ptransactable->m_cid.id_entity == _ptransactable->m_pentity->m_eid);
 
 		// 1) generate new cid
 		_ptransactable->m_cid = process_generate_new_cid(_ptransactable->m_cid);
 
 		// 2) call 'on_request_checkin'
-		result = on_request_checkin(_ptransactable);
+		result = co_await on_request_checkin(_ptransactable);
 	}
 	else
 	{
-		// 설명) 이미 동일한 cid로 checkin이 이미 되어 있다면 이것은 취소
-		//       만약 cid가 동일하다면 m_psession->process_entity_transaction_request에서 cid가 empty가 되어 온다.
-		_ptransactable->set_result(eRESULT::ALEADY_DONE);
+		// - the same cid is checked in already : a cancel (m_psession->process_entity_transaction_request made the cid empty)
+		_ptransactable->set_result(eRESULT::ALREADY_DONE);
 
 		// - set result
-		result = eRESULT::ALEADY_DONE;;
+		result = eRESULT::ALREADY_DONE;
 	}
 
 	// return)
-	return result;
+	co_return result;
 }
 
 bool doss::Irepository::process_complete_transaction_checkin(Itransactable* _ptransactable) noexcept
 {
-	// check) 
+	// check)
 	CGASSERT_ERROR(_ptransactable->m_result != eRESULT::NOT_DEFINED);
-	 
-	// check) 
+
+	// check)
 	CGASSERT_ERROR(_ptransactable->m_result != eRESULT::PENDED);
 
-	// declare) 
-	auto pentity = _ptransactable->m_pentity;
-
 	// declare)
-	object_ptr<Isession> psession_old;
+	auto pentity = _ptransactable->m_pentity;
 
 	if(_ptransactable->m_result == eRESULT::SUCCESS)
 	{
 		// 1) generate new cid
 		sCHECKIN_ID	cid_new = _ptransactable->m_cid;
 
-		// check) CID가 제대로 되었는 지 확인한다.
+		// check) the cid must be valid
 		CGASSERT_ERROR(cid_new.valid() == true);
 
-		// check) 이런 일은 있을 수 없다.
+		// check) this must not happen
 		RETURN_IF(cid_new.empty(), false);
 
-		scoped_lock(m_lockable_map_entity)
+		SCOPED_LOCK(m_lockable_map_entity)
 		{
 			try
 			{
-				// 2) get login option
-				//auto option_login = eTRANSACTION_OPTION::REJECT_IF_ALEADY_EXIST;
-				//auto option_login = eTRANSACTION_OPTION::TRANSFER_CHECKIN;
+				// 2) the login option
 				auto option_login = eTRANSACTION_OPTION::EXCLUSIVE_CHECKIN;
 
- 				// 3) process by login option
+ 				// 3) process by the login option
 				switch (option_login)
 				{
-				// case A) 배타적 checkin
-				//         - 하다의 eid에 하나의 checkin만을 허락한다.
-				//         - 따라서 eid에 checkin한 다른 모든 session은 강제 checkout처리가 ㄷ ㅚㄴ다.
+				// case A) exclusive checkin : one checkin per eid (every other session is force-checked-out)
 				case	eTRANSACTION_OPTION::EXCLUSIVE_CHECKIN:
 						pentity->process_insert_cid_and_remove_existing_cid(_ptransactable);
 						break;
 
-				// case B) 신규 checkin 금지
-				//       - entity에 기존의 checkin이 존재하면 checkin이 금지된다.
-				case	eTRANSACTION_OPTION::REJECT_IF_ALEADY_EXIST:
+				// case B) reject a new checkin if one exists already
+				case	eTRANSACTION_OPTION::REJECT_IF_ALREADY_EXIST:
 						pentity->process_insert_cid_posterior(_ptransactable);
 						break;
 
-				// case C) 증벅 checkin 허용
-				//         - 하나의 eid에 여러개의 checkin을 허용한다.
-				//         - 따라서 eid에 checkin한 것 중에 동일한 cid가 있을 경우 기존 cid는 제거한다.
+				// case C) allow duplicated checkin : the existing same cid is removed
 				case	eTRANSACTION_OPTION::ALLOW_DUPLICATED_CHECKIN:
 						pentity->process_insert_cid_duplicate(_ptransactable);
 						break;
 
-				// case D) checkin 이전 
-				//         - 기존 checkin을 대채한다. - 기존 접속을 checkout시킨다.
-				//         - 반드시 해당 cid와 동일한 cid가 존재햐야지만 진행된다.
-				//         - 해당 cid가 존재하지 않으면 eRESULT::NOT_EXIST 결과를 낸다.
-				//         - 기존 cid에 해당하는 psession을 리턴해 주며 새로운 psession으로 대체된다.
+				// case D) transfer checkin : replaces the existing checkin (the cid must exist : NOT_EXIST otherwise)
 				case	eTRANSACTION_OPTION::TRANSFER_CHECKIN:
 						pentity->process_transfer_cid_to_other_session(_ptransactable);
 						break;
 
-				// default) 정의되지 않은 처리다. 이런 처리는 있을 수 없다.
+				// default) undefined
 				default:
 						throw throwable::failure(eRESULT::EXCEPTION);
 						break;
@@ -355,7 +273,7 @@ bool doss::Irepository::process_complete_transaction_checkin(Itransactable* _ptr
 				// - set result
 				_ptransactable->m_result = _e.reason();
 
-				// - rollbakc command
+				// - rollback command
 				process_fail_transaction(_ptransactable);
 			}
 			catch (...)
@@ -363,7 +281,7 @@ bool doss::Irepository::process_complete_transaction_checkin(Itransactable* _ptr
 				// - set result
 				_ptransactable->m_result = eRESULT::EXCEPTION;
 
-				// - rollbakc command
+				// - rollback command
 				process_fail_transaction(_ptransactable);
 			}
 		}
@@ -372,104 +290,105 @@ bool doss::Irepository::process_complete_transaction_checkin(Itransactable* _ptr
 	// 7) ...
 	if (_ptransactable->m_result == eRESULT::SUCCESS)
 	{
-		// statistics) 
-		++Irepository::m_statistics.m_statistics_checkin_success;
+		// statistics)
+		doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_checkin_success);
 
-		// !주의) success일 경우 lock_count를 줄이지 않는다.
+		// !note) do not decrease the lock count on success
 	}
 	else
 	{
-		// statistics) 
-		++Irepository::m_statistics.m_statistics_checkin_fail;
+		// statistics)
+		doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_checkin_fail);
 	}
 
-	// return) 
+	// return)
 	return true;
 }
 
-result_code doss::Irepository::process_request_transaction_command(Itransactable* _ptransactable)
+coroutine::task<result_code> doss::Irepository::co_request_transaction_command(object_ptr<Itransactable> _ptransactable)
 {
-	// 1) cid가 empty일 경우 진행하지 않는다.
+	// 1) do not proceed if the cid is empty
 	if (_ptransactable->m_cid.empty())
 	{
 		_ptransactable->set_result(eRESULT::NOT_READY);
 
 		// return)
-		return eRESULT::NOT_READY;
+		co_return eRESULT::NOT_READY;
 	}
 
 	// 2) call 'on_request_command' and return
-	return on_request_command(_ptransactable);
+	co_return co_await on_request_command(_ptransactable);
 }
 
 bool doss::Irepository::process_complete_transaction_command(Itransactable* _ptransactable) noexcept
 {
 	// check)
-	CGASSERT_ERROR(_ptransactable != nullptr);
+	CGASSERT_FATAL(_ptransactable != nullptr);
 
-	// statistics) 
+	// statistics)
 	if (_ptransactable->m_result == eRESULT::SUCCESS)
 	{
-		++Irepository::m_statistics.m_statistics_command_success;
+		doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_command_success);
 	}
 	else
 	{
-		++Irepository::m_statistics.m_statistics_command_fail;
+		doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_command_fail);
 	}
 
 	// return)
 	return true;
 }
 
-result_code doss::Irepository::process_request_transaction_update(Itransactable* _ptransactable)
+coroutine::task<result_code> doss::Irepository::co_request_transaction_update(object_ptr<Itransactable> _ptransactable)
 {
-	return on_request_update(_ptransactable);
+	co_return co_await on_request_update(_ptransactable);
 }
 
 bool doss::Irepository::process_complete_transaction_update(Itransactable* _ptransactable) noexcept
 {
 	// check)
-	CGASSERT_ERROR(_ptransactable != nullptr);
+	CGASSERT_FATAL(_ptransactable != nullptr);
 
-	// statistics) 
+	// statistics) (update result : counted in command statistics before)
 	if(_ptransactable->m_result == eRESULT::SUCCESS)
 	{
-		++Irepository::m_statistics.m_statistics_command_success;
+		doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_update_success);
 	}
 	else
 	{
-		++Irepository::m_statistics.m_statistics_command_fail;
+		doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_update_fail);
 	}
 
 	// return)
 	return true;
 }
 
-result_code doss::Irepository::process_request_transaction_checkout(Itransactable* _ptransactable)
+coroutine::task<result_code> doss::Irepository::co_request_transaction_checkout(object_ptr<Itransactable> _ptransactable)
 {
-	// check) 
+	// check)
 	THROW_IF(_ptransactable->m_cid.empty(), throwable::failure(eRESULT::NOT_READY));
 
 	// 1) copy pentity value temporary
 	auto* pentity = _ptransactable->m_pentity.get();
 
-	// check) 
+	// check)
 	CGASSERT_ERROR(pentity != nullptr);
 
 	// check) return if pentity is nullptr
-	RETURN_IF(pentity == nullptr, false);
+	if (pentity == nullptr)
+		co_return eRESULT::NOT_EXIST;
 
-	scoped_lock(m_lockable_map_entity)
+	SCOPED_LOCK(m_lockable_map_entity)
 	{
-		// 2) remove cid 
-		auto is_success = pentity->process_remove_cid(_ptransactable->m_psession);
+		// 2) remove cid
+		auto is_success = pentity->process_remove_cid(_ptransactable->m_psession.get());
 
-		// check) 
+		// check)
 		THROW_IF(is_success == false, throwable::failure(eRESULT::NOT_EXIST));
 	}
 
-	// return) 
-	return on_request_checkout(_ptransactable);
+	// return)
+	co_return co_await on_request_checkout(_ptransactable);
 }
 
 bool doss::Irepository::process_complete_transaction_checkout(Itransactable* _ptransactable) noexcept
@@ -480,43 +399,79 @@ bool doss::Irepository::process_complete_transaction_checkout(Itransactable* _pt
 	// check) return if _ptransactable is nullptr
 	RETURN_IF(_ptransactable == nullptr, false);
 
-	// statistics) 
+	// statistics)
 	if (_ptransactable->m_result == eRESULT::SUCCESS)
-		++Irepository::m_statistics.m_statistics_checkout_success;
+		doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_checkout_success);
 	else
-		++Irepository::m_statistics.m_statistics_checkout_fail;
+		doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_checkout_fail);
 
-	// return) 
+	// return)
 	return true;
 }
 
-result_code doss::Irepository::process_request_transaction_create(Itransactable* _ptransactable)
+coroutine::task<result_code> doss::Irepository::co_request_transaction_create(object_ptr<Itransactable> _ptransactable)
 {
-	// 1) set result - must 
+	// 1) set result - must
 	_ptransactable->set_result(eRESULT::SUCCESS);
 
 	// return)
-	return eRESULT::SUCCESS;
+	co_return eRESULT::SUCCESS;
 }
 
-bool doss::Irepository::process_complete_transaction_create(Itransactable* /*_ptransactable*/) noexcept
+bool doss::Irepository::process_complete_transaction_create(Itransactable* _ptransactable) noexcept
 {
-	// return) 
+	// check)
+	RETURN_IF(_ptransactable == nullptr, false);
+
+	// statistics)
+	if (_ptransactable->m_result == eRESULT::SUCCESS)
+		doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_create_success);
+	else
+		doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_create_fail);
+
+	// return)
 	return true;
 }
 
-result_code doss::Irepository::process_request_transaction_remove(Itransactable* _ptransactable)
+coroutine::task<result_code> doss::Irepository::co_request_transaction_remove(object_ptr<Itransactable> _ptransactable)
 {
-	// 1) set result - must 
+	// check)
+	auto* pentity = _ptransactable->m_pentity.get();
+	THROW_IF(pentity == nullptr, throwable::failure(eRESULT::NOT_EXIST));
+
+	// check) checked in (used by sessions) : check out first
+	THROW_IF(pentity->get_checkin_count() != 0, throwable::failure(eRESULT::INVALID_STATE));
+
+	// 1) set result - must (removed from this repository on completion)
 	_ptransactable->set_result(eRESULT::SUCCESS);
 
 	// return)
-	return eRESULT::SUCCESS;
+	co_return eRESULT::SUCCESS;
 }
 
-bool doss::Irepository::process_complete_transaction_remove(Itransactable* /*_ptransactable*/) noexcept
+bool doss::Irepository::process_complete_transaction_remove(Itransactable* _ptransactable) noexcept
 {
-	// return) 
+	// check)
+	RETURN_IF(_ptransactable == nullptr, false);
+
+	// check) failed
+	RETURN_IF(_ptransactable->m_result != eRESULT::SUCCESS, true);
+
+	// 1) get entity
+	auto* pentity = _ptransactable->m_pentity.get();
+
+	// check)
+	RETURN_IF(pentity == nullptr, false);
+
+	// check) not removable now : checked in again or other transactions are queued after this one
+	//  (they would be processed on an entity which is no more in this repository)
+	RETURN_IF(pentity->get_checkin_count() != 0 || pentity->get_queued_transaction_count() > 1, false);
+
+	// 2) remove from this repository
+	if (this->process_entity_remove(pentity))
+		doss::statistics::repository::increase(Irepository::m_statistics.m_statistics_remove_complete);
+
+	// return)
 	return true;
 }
 
@@ -531,17 +486,16 @@ sCHECKIN_ID doss::Irepository::process_generate_new_cid(sCHECKIN_ID& _cid_reques
 	// 1) set...
 	cid.id_entity	 = sENTITY_ID{ get_repository_id(), _cid_request.entity_id().object_id() };
 	cid.id_session	 = _cid_request.id_session;
-	cid.id_object	 = ++static_id_checkin_generate; if(cid.id_object.empty()) { cid.id_object = ++static_id_checkin_generate; }
+	cid.id_object	 = (static_id_checkin_generate.fetch_add(1, std::memory_order_relaxed) + 1); if(cid.id_object.empty()) { cid.id_object = (static_id_checkin_generate.fetch_add(1, std::memory_order_relaxed) + 1); }
 	cid.key_certify	 = (static_cast<uint64_t>(rand()) << 32) | rand();
 
 	if (cid.id_object.empty())
 	{
-		cid.id_object = ++static_id_checkin_generate;
+		cid.id_object = (static_id_checkin_generate.fetch_add(1, std::memory_order_relaxed) + 1);
 	}
 
-	// return) 
+	// return)
 	return cid;
 }
-
 
 }

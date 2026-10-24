@@ -122,7 +122,7 @@ namespace CODE_TYPE
 	constexpr static message_t		UPDATE		 = (HEAD_0 | SUB_6);
 	constexpr static message_t		UI			 = (HEAD_0 | SUB_7);
 	constexpr static message_t		INIT		 = (HEAD_0 | SUB_8);
-	constexpr static message_t		INPUT		 = (HEAD_0 | SUB_9);   // Input용 메세지   [11/10/2016 BSH]
+	constexpr static message_t		INPUT		 = (HEAD_0 | SUB_9);   // Input용 메시지   [11/10/2016 BSH]
 	constexpr static message_t		USER		 = (HEAD_1 | SUB_A);
 }
 

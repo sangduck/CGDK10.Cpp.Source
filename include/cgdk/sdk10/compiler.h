@@ -33,7 +33,7 @@
 #include "CGCompilerClasses/CGDefinitionsCompilerProtocol.h"
 #include "CGCompilerClasses/CGDefinitionsCompiler.h"
 
-// 3) Souce
+// 3) Source
 #include "CGCompilerClasses/CGCompilerSource.h"
 #include "CGCompilerClasses/CGCompilerSourceFile.h"
 
@@ -119,7 +119,7 @@
 
 
 	//----------------------------------------------------------------------------
-	// * vs16 Lib 
+	// * vs17 Lib 
 	//----------------------------------------------------------------------------
 	#elif _MSC_PLATFORM_TOOLSET>=142
 

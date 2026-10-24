@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 
 
 CGDK::update::md5_caching::md5_caching()
@@ -28,8 +28,8 @@ CGDK::result_code CGDK::update::md5_caching::start(std::string_view _filename, i
 	// declare)
 	context _context;
 
-	// 1) set valus
-	scoped_lock(this->m_cs_map_prepare_info)
+	// 1) set values
+	SCOPED_LOCK(this->m_lockable_map_prepare_info)
 	{
 		this->m_file_confirm_level = _file_confirm_level;
 		this->m_filename = _filename;
@@ -45,10 +45,10 @@ CGDK::sUPDATABLE_PREPARE_INFO CGDK::update::md5_caching::get_prepare_info(const 
 	// declare) 
 	CGDK::sUPDATABLE_PREPARE_INFO updatable_prepare_info;
 
-	scoped_lock(this->m_cs_map_prepare_info)
+	SCOPED_LOCK(this->m_lockable_map_prepare_info)
 	{
 		// 1) find cached PREPARE_INFO
-		auto iter_find = m_map_prepare_info.find(std::string(_full_file_path));
+		auto iter_find = m_map_prepare_info.find(_full_file_path);
 
 		// check)
 		RETURN_IF(iter_find == m_map_prepare_info.end(), CGDK::sUPDATABLE_PREPARE_INFO());
@@ -72,7 +72,7 @@ void CGDK::update::md5_caching::put_prepare_info (const std::string& _full_file_
 	// check)
 	RETURN_IF(ec);
 
-	scoped_lock(this->m_cs_map_prepare_info)
+	SCOPED_LOCK(this->m_lockable_map_prepare_info)
 	{
 		// 2) find cached PREPARE_INFO
 		auto iter_find = m_map_prepare_info.find(_full_file_path);
@@ -94,7 +94,7 @@ void CGDK::update::md5_caching::put_prepare_info (const std::string& _full_file_
 
 void CGDK::update::md5_caching::pop_prepare_info(const std::string& _full_file_path) noexcept
 {
-	scoped_lock(this->m_cs_map_prepare_info)
+	SCOPED_LOCK(this->m_lockable_map_prepare_info)
 	{
 		// 1) find cached PREPARE_INFO
 		auto iter_find = m_map_prepare_info.find(_full_file_path);
@@ -148,7 +148,7 @@ std::filesystem::path CGDK::update::md5_caching::get_filename() const noexcept
 
 CGDK::result_code CGDK::update::md5_caching::_process_starting(context& _context)
 {
-	// 1) on_starting í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œë‹¤.
+	// 1) on_starting ÇÔ¼ö¸¦ È£ÃâÇÑ´Ù.
 	this->on_starting(_context);
 
 	// trace)
@@ -158,12 +158,12 @@ CGDK::result_code CGDK::update::md5_caching::_process_starting(context& _context
 	std::string filename;
 
 	// 2) get filename
-	scoped_lock(this->m_cs_map_prepare_info)
+	SCOPED_LOCK(this->m_lockable_map_prepare_info)
 	{
 		filename = this->m_filename;
 	}
 
-	// 3) loead file
+	// 3) load file
 	if(filename.empty() == false)
 	{
 		try
@@ -187,7 +187,7 @@ CGDK::result_code CGDK::update::md5_caching::_process_stopping() noexcept
 
 	try
 	{
-		// 1) on_stopping í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œë‹¤.
+		// 1) on_stopping ÇÔ¼ö¸¦ È£ÃâÇÑ´Ù.
 		this->on_stopping();
 
 		// 2) auto save
@@ -234,7 +234,7 @@ void CGDK::update::md5_caching::process_save_caching_file(std::string_view _file
 		size_t size_write = 0;
 		size_t file_info_count = 0;
 
-		scoped_lock(this->m_cs_map_prepare_info)
+		SCOPED_LOCK(this->m_lockable_map_prepare_info)
 		{
 			// 2) get size of data
 			size_write = get_size_of(this->m_map_prepare_info);
@@ -261,13 +261,13 @@ void CGDK::update::md5_caching::process_save_caching_file(std::string_view _file
 		// 6) close file
 		CGDK::api::file::close(file_handle);
 
-		scoped_lock(this->m_cs_map_prepare_info)
+		SCOPED_LOCK(this->m_lockable_map_prepare_info)
 		{
 			this->m_is_changed = false;
 		}
 
 		// log)
-		LOG_INFO << "  - md5 caching data saved:"sv << NFMT::format("{} file infos.", file_info_count);
+		LOG_INFO << "  - md5 caching data saved:"sv << CGDK::stream_string(file_info_count, " file infos.");
 
 		// 7)...
 		this->on_caching_file_saved();
@@ -323,9 +323,9 @@ void CGDK::update::md5_caching::process_load_caching_file(std::string_view _file
 		auto map_prepare_info = buf_read.extract<std::map<std::string, sPREPARE_INFO>>();
 
 		// log)
-		LOG_INFO << "  - md5 caching data loaded:"sv << NFMT::format("{} file infos.", map_prepare_info.size());
+		LOG_INFO << "  - md5 caching data loaded:"sv << CGDK::stream_string(map_prepare_info.size(), " file infos.");
 
-		// 6) confirm filse
+		// 6) confirm files
 		bool is_changed = false;
 		
 		if (this->m_file_confirm_level >= 1)
@@ -338,7 +338,7 @@ void CGDK::update::md5_caching::process_load_caching_file(std::string_view _file
 		}
 
 		// 7) set!
-		scoped_lock(this->m_cs_map_prepare_info)
+		SCOPED_LOCK(this->m_lockable_map_prepare_info)
 		{
 			this->m_map_prepare_info = std::move(map_prepare_info);
 			this->m_is_changed = is_changed;
@@ -364,15 +364,15 @@ void CGDK::update::md5_caching::process_load_caching_file(std::string_view _file
 bool CGDK::update::md5_caching::_process_confirm_files(std::map<std::string, sPREPARE_INFO>& _map_cached_file)
 {
 	// ------------------------------------------
-	// ì„¤ëª…) confirm files
-	//       - cachedëœ file infoë“¤ì´ ì‹¤ì œ íŒŒì¼ê³¼ ì¼ì¹˜í•˜ëŠ”ì§€ë¥¼ í™•ì¸í•œë‹¤.
-	//       - ë§Œì•½ cacheëœ ìµœì¢… ì €ìž¥ ì‹œê°„(last write_tiem)ì´ ì‹¤ì œ íŒŒì¼ê³¼ ë‹¤ë¥¼ ê²½ìš° eRESULT::EXPIREDë¥¼ ì„¤ì •í•œë‹¤.
-	//         cacheëœ file ì •ë³´ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŒì„ ë§í•œë‹¤. fileì´ ì¶”í›„ ë³€ê²½ë˜ê±°ë‚˜ ë‹¤ë¥¸ íŒŒì¼ë¡œ êµì²´ë˜ì—ˆì„ ê°€ëŠ¥ì„±ì´ ë†’ë‹¤.
-	//         -> ì´ê²ƒì€ check codeê°€ ì¼ì¹˜í•˜ê±´ ë§ê±´ updateë¡œ ì„¤ì •ëœë‹¤.
-	//       - ë§Œì•½ fileì˜ í¬ê¸°ê°€ ë³€ê²½ë˜ì—ˆë‹¤ë©´ ì—­ì‹œ eRESULT::EXPIREDë¥¼ ì„¤ì •í•œë‹¤.
-	//         fileì´ ì¶”í›„ ë³€ê²½ë˜ê±°ë‚˜ ë‹¤ë¥¸ íŒŒì¼ë¡œ êµì²´ë˜ì—ˆì„ ê°€ëŠ¥ì„±ì´ ë†’ë‹¤.
-	//         -> ì´ê²ƒì€ check codeê°€ ì¼ì¹˜í•˜ê±´ ë§ê±´ updateë¡œ ì„¤ì •ëœë‹¤.
-	//       - ëª¨ë‘ ì„±ê³µí•œ ê²½ìš° eRESULT::DONEìœ¼ë£¨ ì„¤ì •í•œë‹¤.
+	// ¼³¸í) confirm files
+	//       - cachedµÈ file infoµéÀÌ ½ÇÁ¦ ÆÄÀÏ°ú ÀÏÄ¡ÇÏ´ÂÁö¸¦ È®ÀÎÇÑ´Ù.
+	//       - ¸¸¾à cacheµÈ ÃÖÁ¾ ÀúÀå ½Ã°£(last write_tiem)ÀÌ ½ÇÁ¦ ÆÄÀÏ°ú ´Ù¸¦ °æ¿ì eRESULT::EXPIRED¸¦ ¼³Á¤ÇÑ´Ù.
+	//         cacheµÈ file Á¤º¸°¡ À¯È¿ÇÏÁö ¾ÊÀ½À» ¸»ÇÑ´Ù. fileÀÌ ÃßÈÄ º¯°æµÇ°Å³ª ´Ù¸¥ ÆÄÀÏ·Î ±³Ã¼µÇ¾úÀ» °¡´É¼ºÀÌ ³ô´Ù.
+	//         -> ÀÌ°ÍÀº check code°¡ ÀÏÄ¡ÇÏ°Ç ¸»°Ç update·Î ¼³Á¤µÈ´Ù.
+	//       - ¸¸¾à fileÀÇ Å©±â°¡ º¯°æµÇ¾ú´Ù¸é ¿ª½Ã eRESULT::EXPIRED¸¦ ¼³Á¤ÇÑ´Ù.
+	//         fileÀÌ ÃßÈÄ º¯°æµÇ°Å³ª ´Ù¸¥ ÆÄÀÏ·Î ±³Ã¼µÇ¾úÀ» °¡´É¼ºÀÌ ³ô´Ù.
+	//         -> ÀÌ°ÍÀº check code°¡ ÀÏÄ¡ÇÏ°Ç ¸»°Ç update·Î ¼³Á¤µÈ´Ù.
+	//       - ¸ðµÎ ¼º°øÇÑ °æ¿ì eRESULT::DONEÀ¸·ç ¼³Á¤ÇÑ´Ù.
 	// ------------------------------------------
 	// log)
 	LOG_INFO << "  - confirm files(L1: check file write time and file length)"sv;
@@ -452,10 +452,10 @@ bool CGDK::update::md5_caching::_process_confirm_files(std::map<std::string, sPR
 	// log)
 	if (deleted_files != 0)
 	{
-		LOG_INFO << NFMT::format("    {} file infos removed.", deleted_files);
-		LOG_INFO << NFMT::format("    {} file infos is invalid.", invalid_files);
+		LOG_INFO << CGDK::stream_string("    ", deleted_files, " file infos removed.");
+		LOG_INFO << CGDK::stream_string("    ", invalid_files, " file infos is invalid.");
 	}
 
 	//return)
-	return deleted_files == 0;
+	return deleted_files != 0;
 }

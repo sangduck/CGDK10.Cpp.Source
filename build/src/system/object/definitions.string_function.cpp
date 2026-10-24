@@ -1,7 +1,107 @@
-﻿#include "pch.h"
+#include "pch.h"
+#include <algorithm>
+#include <cctype>
+#include <charconv>
+#include <cstring>
+#include <cstdlib>
+#if !defined(_MSC_VER)
+#include <strings.h>
+#endif
+#include "cgdk/sdk10/system/object/util.cpu_feature.h"
 
+namespace CGDK
+{
 
-template<> std::string_view to_string<char>(eCHARACTER_SET _character_set) noexcept
+#if defined(CGDK_SIMD_AVX2)
+//-----------------------------------------------------------------------------
+// ASCII fast-path (AVX2)
+//
+//  - most logs / names / json are ASCII. convert the leading ASCII run with
+//    AVX2 and let the scalar loop handle the rest (from the first non-ASCII byte).
+//  - works for both a 16-bit wchar_t (windows) and a 32-bit wchar_t (linux).
+//-----------------------------------------------------------------------------
+// - UTF-8 -> wchar : zero-extend the leading ASCII bytes. returns the count converted.
+CGDK_TARGET_AVX2 static std::size_t _widen_ascii_avx2(const char8_t* _src, wchar_t* _dst, std::size_t _count) noexcept
+{
+	std::size_t i = 0;
+	for (; i + 32 <= _count; i += 32)
+	{
+		const __m256i v = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(_src + i));
+
+		// - any byte >= 0x80 : stop (let the scalar loop decode the multibyte sequence)
+		if (_mm256_movemask_epi8(v) != 0)
+			break;
+
+		const __m128i lo = _mm256_castsi256_si128(v);
+		const __m128i hi = _mm256_extracti128_si256(v, 1);
+
+		if constexpr (sizeof(wchar_t) == 2)
+		{
+			_mm256_storeu_si256(reinterpret_cast<__m256i*>(_dst + i),      _mm256_cvtepu8_epi16(lo));
+			_mm256_storeu_si256(reinterpret_cast<__m256i*>(_dst + i + 16), _mm256_cvtepu8_epi16(hi));
+		}
+		else
+		{
+			_mm256_storeu_si256(reinterpret_cast<__m256i*>(_dst + i),      _mm256_cvtepu8_epi32(lo));
+			_mm256_storeu_si256(reinterpret_cast<__m256i*>(_dst + i + 8),  _mm256_cvtepu8_epi32(_mm_srli_si128(lo, 8)));
+			_mm256_storeu_si256(reinterpret_cast<__m256i*>(_dst + i + 16), _mm256_cvtepu8_epi32(hi));
+			_mm256_storeu_si256(reinterpret_cast<__m256i*>(_dst + i + 24), _mm256_cvtepu8_epi32(_mm_srli_si128(hi, 8)));
+		}
+	}
+
+	// - avoid the AVX-SSE transition penalty
+	_mm256_zeroupper();
+
+	return i;
+}
+
+// - wchar -> UTF-8 : narrow the leading ASCII units. returns the count converted.
+CGDK_TARGET_AVX2 static std::size_t _narrow_ascii_avx2(const wchar_t* _src, char8_t* _dst, std::size_t _count) noexcept
+{
+	std::size_t i = 0;
+
+	if constexpr (sizeof(wchar_t) == 2)
+	{
+		const __m256i mask = _mm256_set1_epi16(static_cast<short>(0xFF80));
+		for (; i + 16 <= _count; i += 16)
+		{
+			const __m256i v = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(_src + i));	// 16 x u16
+
+			// - any unit >= 0x80 : stop
+			if (_mm256_testz_si256(v, mask) == 0)
+				break;
+
+			const __m128i lo = _mm256_castsi256_si128(v);
+			const __m128i hi = _mm256_extracti128_si256(v, 1);
+			_mm_storeu_si128(reinterpret_cast<__m128i*>(_dst + i), _mm_packus_epi16(lo, hi));	// src[0..15]
+		}
+	}
+	else
+	{
+		const __m256i mask = _mm256_set1_epi32(static_cast<int>(0xFFFFFF80));
+		for (; i + 8 <= _count; i += 8)
+		{
+			const __m256i v = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(_src + i));	// 8 x u32
+
+			// - any unit >= 0x80 : stop
+			if (_mm256_testz_si256(v, mask) == 0)
+				break;
+
+			const __m128i lo = _mm256_castsi256_si128(v);
+			const __m128i hi = _mm256_extracti128_si256(v, 1);
+			const __m128i p16 = _mm_packus_epi32(lo, hi);				// 8 x u16
+			_mm_storel_epi64(reinterpret_cast<__m128i*>(_dst + i), _mm_packus_epi16(p16, p16));	// 8 x u8
+		}
+	}
+
+	// - avoid the AVX-SSE transition penalty
+	_mm256_zeroupper();
+
+	return i;
+}
+#endif
+
+std::string_view to_string(eCHARACTER_SET _character_set) noexcept
 {
 	std::string_view result;
 
@@ -17,24 +117,8 @@ template<> std::string_view to_string<char>(eCHARACTER_SET _character_set) noexc
 
 	return result;
 }
-template<> std::wstring_view to_string<wchar_t>(eCHARACTER_SET _character_set) noexcept
-{
-	std::wstring_view result;
 
-	switch (_character_set)
-	{
-	case	eCHARACTER_SET::NONE:	result = L"none"sv; break;
-	case	eCHARACTER_SET::MBCS:	result = L"mbcs"sv; break;
-	case	eCHARACTER_SET::UTF8:	result = L"utf8"sv; break;
-	case	eCHARACTER_SET::UCS2:	result = L"ucs2"sv; break;
-	case	eCHARACTER_SET::UCS4:	result = L"ucs32"sv; break;
-	default:						result = L""sv; break;
-	}
-
-	return result;
-}
-
-template<> std::string_view to_string<char>(eEOL_TYPE _eol_code) noexcept
+std::string_view to_string(eEOL_TYPE _eol_code) noexcept
 {
 	std::string_view result;
 
@@ -51,30 +135,8 @@ template<> std::string_view to_string<char>(eEOL_TYPE _eol_code) noexcept
 
 	return	result;
 }
-template<> std::wstring_view to_string<wchar_t>(eEOL_TYPE _eol_code) noexcept
-{
-	std::wstring_view result;
 
-	switch (_eol_code)
-	{
-	case	eEOL_TYPE::NONE:	result = L"none"sv; break;
-	case	eEOL_TYPE::CRLF:	result = L"crlf"sv; break;
-	case	eEOL_TYPE::LF:		result = L"lf"sv; break;
-	case	eEOL_TYPE::CR:		result = L"cr"sv; break;
-	case	eEOL_TYPE::NULL_:	result = L"null"sv; break;
-	case	eEOL_TYPE::CR_NULL:	result = L"cr_null"sv; break;
-	default:					result = L""sv; break;
-	}
-
-	return	result;
-}
-
-
-namespace CGDK
-{
-
-template <>
-std::string_view to_string<char>(eOS_TYPE _os_type) noexcept
+std::string_view to_string(eOS_TYPE _os_type) noexcept
 {
 	// declare) 
 	std::string_view	str;
@@ -84,7 +146,7 @@ std::string_view to_string<char>(eOS_TYPE _os_type) noexcept
 	case	eOS_TYPE::NOT_DEFINED:			str = "NOT_DEFINED"; break;
 	case	eOS_TYPE::IOS:					str = "IOS"; break;
 	case	eOS_TYPE::ANDROID:				str = "ANDROID"; break;
-	case	eOS_TYPE::WINDOWS_NAVTIVE:		str = "WINDOWS_NAVTIVE"; break;
+	case	eOS_TYPE::WINDOWS_NATIVE:		str = "WINDOWS_NATIVE"; break;
 	case	eOS_TYPE::WINDOWS_UNIVERSAL:	str = "WINDOWS_UNIVERSAL"; break;
 	case	eOS_TYPE::LINUX:				str = "LINUX"; break;
 	case	eOS_TYPE::MACOS:				str = "MACOS"; break;
@@ -94,30 +156,8 @@ std::string_view to_string<char>(eOS_TYPE _os_type) noexcept
 	// return)
 	return	str;
 };
-template <>
-std::wstring_view to_string<wchar_t>(eOS_TYPE _os_type) noexcept
-{
-	// declare) 
-	std::wstring_view	str;
 
-	switch (_os_type)
-	{
-	case	eOS_TYPE::NOT_DEFINED:			str = L"NOT_DEFINED"; break;
-	case	eOS_TYPE::IOS:					str = L"IOS"; break;
-	case	eOS_TYPE::ANDROID:				str = L"ANDROID"; break;
-	case	eOS_TYPE::WINDOWS_NAVTIVE:		str = L"WINDOWS_NAVTIVE"; break;
-	case	eOS_TYPE::WINDOWS_UNIVERSAL:	str = L"WINDOWS_UNIVERSAL"; break;
-	case	eOS_TYPE::LINUX:				str = L"LINUX"; break;
-	case	eOS_TYPE::MACOS:				str = L"MACOS"; break;
-	default:								str = L" - "; break;
-	}
-
-	// return)
-	return	str;
-};
-
-template<>
-std::string_view to_string<char>(eLANGUAGE _language) noexcept
+std::string_view to_string(eLANGUAGE _language) noexcept
 {
 	// declare) 
 	std::string_view	str;
@@ -128,7 +168,7 @@ std::string_view to_string<char>(eLANGUAGE _language) noexcept
 	case	eLANGUAGE::KOREAN:				str = "KOREAN"; break;
 	case	eLANGUAGE::MANDARIN:			str = "MANDARIN"; break;
 	case	eLANGUAGE::CANTONESE:			str = "CANTONESE"; break;
-	case	eLANGUAGE::JANANESE:			str = "JANANESE"; break;
+	case	eLANGUAGE::JAPANESE:			str = "JAPANESE"; break;
 	case	eLANGUAGE::TAI:					str = "TAI"; break;
 	case	eLANGUAGE::ENGLISH:				str = "ENGLISH"; break;
 	case	eLANGUAGE::SPAINESE:			str = "SPAINESE"; break;
@@ -142,56 +182,176 @@ std::string_view to_string<char>(eLANGUAGE _language) noexcept
 	// return)
 	return	str;
 };
-template<>
-std::wstring_view to_string<wchar_t>(eLANGUAGE _language) noexcept
-{
-	// declare) 
-	std::wstring_view	str;
 
-	switch (_language)
+namespace
+{
+	// - true if all chars are ASCII (16 bytes per iteration)
+	[[nodiscard]] inline bool _is_ascii(const char* _p, size_t _size) noexcept
 	{
-	case	eLANGUAGE::NOT_DEFINED:			str = L"NOT_DEFINED"; break;
-	case	eLANGUAGE::KOREAN:				str = L"KOREAN"; break;
-	case	eLANGUAGE::MANDARIN:			str = L"MANDARIN"; break;
-	case	eLANGUAGE::CANTONESE:			str = L"CANTONESE"; break;
-	case	eLANGUAGE::JANANESE:			str = L"JANANESE"; break;
-	case	eLANGUAGE::TAI:					str = L"TAI"; break;
-	case	eLANGUAGE::ENGLISH:				str = L"ENGLISH"; break;
-	case	eLANGUAGE::SPAINESE:			str = L"SPAINESE"; break;
-	case	eLANGUAGE::PORTUGUESE:			str = L"PORTUGUESE"; break;
-	case	eLANGUAGE::DEUTSCHESE:			str = L"DEUTSCHESE"; break;
-	case	eLANGUAGE::DUTCH:				str = L"DUTCH"; break;
-	case	eLANGUAGE::RUSSIAN:				str = L"RUSSIAN"; break;
-	default:								str = L" - "; break;
+		size_t i = 0;
+		for (; i + 16 <= _size; i += 16)
+		{
+			uint64_t a, b;
+			memcpy(&a, _p + i, sizeof(a));
+			memcpy(&b, _p + i + 8, sizeof(b));
+			if (((a | b) & 0x8080808080808080ull) != 0)
+				return false;
+		}
+		for (; i < _size; ++i)
+		{
+			if (static_cast<unsigned char>(_p[i]) >= 0x80)
+				return false;
+		}
+		return true;
 	}
 
-	// return)
-	return	str;
-};
+	[[nodiscard]] inline bool _is_ascii(const wchar_t* _p, size_t _size) noexcept
+	{
+		uint32_t bits = 0;
+		for (size_t i = 0; i < _size; ++i)
+			bits |= static_cast<uint32_t>(_p[i]);
+		return bits < 0x80;
+	}
 
+	// - temporary wchar_t buffer (stack for small strings)
+	class _temp_wchar_buffer
+	{
+	public:
+		explicit _temp_wchar_buffer(size_t _count)
+		{
+			if (_count > std::size(m_stack))
+			{
+				m_heap = alloc_shared_buffer(_count * sizeof(wchar_t));
+				m_ptr = m_heap.data<wchar_t>();
+			}
+		}
+		[[nodiscard]] wchar_t* data() noexcept { return this->m_ptr; }
+
+	private:
+		wchar_t			m_stack[512]{};
+		shared_buffer	m_heap;
+		wchar_t*		m_ptr = m_stack;
+	};
+}
+
+std::wstring_view encode_string(wchar_t* _dest, std::string_view _source, size_t _size)
+{
+	// check)
+	RETURN_IF(_dest == nullptr || _size == 0, std::wstring_view());
+
+	// 1) ASCII : same in every MBCS code page -> just widen
+	if (_source.size() < _size && _is_ascii(_source.data(), _source.size()))
+	{
+		size_t i = 0;
+	#if defined(CGDK_SIMD_AVX2)
+		if (cpu::is_avx2_supported())
+			i = _widen_ascii_avx2(reinterpret_cast<const char8_t*>(_source.data()), _dest, _source.size());
+	#endif
+		for (; i < _source.size(); ++i)
+			_dest[i] = static_cast<wchar_t>(static_cast<unsigned char>(_source[i]));
+		_dest[_source.size()] = 0;
+		return std::wstring_view(_dest, _source.size());
+	}
+
+#if defined(_WIN32)
+	// 2) MultiByteToWideChar (_size - 1 : room for the terminator, returns 0 on failure)
+	const auto result_length = MultiByteToWideChar(CP_ACP, 0, _source.data(), static_cast<int>(_source.size()), _dest, static_cast<int>(_size - 1));
+	if (result_length <= 0)
+	{
+		_dest[0] = 0;
+		return std::wstring_view();
+	}
+
+	_dest[result_length] = 0;
+	return std::wstring_view(_dest, static_cast<size_t>(result_length));
+#else
+	// 2) mbstowcs (_source(string_view) may not be null-terminated, so convert a copy)
+	std::string temp_source(_source);
+	auto result_length = mbstowcs(_dest, temp_source.c_str(), _size - 1);
+	RETURN_IF(result_length == static_cast<size_t>(-1), (_dest[0] = 0, std::wstring_view()));
+	_dest[result_length] = 0;
+	return std::wstring_view(_dest, result_length);
+#endif
+}
+
+std::string_view encode_string(char* _dest, std::wstring_view _source, size_t _size)
+{
+	// check)
+	RETURN_IF(_dest == nullptr || _size == 0, std::string_view());
+
+	// 1) ASCII : same in every MBCS code page -> just narrow
+	if (_source.size() < _size && _is_ascii(_source.data(), _source.size()))
+	{
+		size_t i = 0;
+	#if defined(CGDK_SIMD_AVX2)
+		if (cpu::is_avx2_supported())
+			i = _narrow_ascii_avx2(_source.data(), reinterpret_cast<char8_t*>(_dest), _source.size());
+	#endif
+		for (; i < _source.size(); ++i)
+			_dest[i] = static_cast<char>(_source[i]);
+		_dest[_source.size()] = 0;
+		return std::string_view(_dest, _source.size());
+	}
+
+#if defined(_WIN32)
+	// 2) WideCharToMultiByte (_size - 1 : room for the terminator, returns 0 on failure)
+	const auto result_length = WideCharToMultiByte(CP_ACP, 0, _source.data(), static_cast<int>(_source.size()), _dest, static_cast<int>(_size - 1), nullptr, nullptr);
+	if (result_length <= 0)
+	{
+		_dest[0] = 0;
+		return std::string_view();
+	}
+
+	_dest[result_length] = 0;
+	return std::string_view(_dest, static_cast<size_t>(result_length));
+#else
+	// 2) wcstombs (_source(wstring_view) may not be null-terminated, so convert a copy)
+	std::wstring temp_source(_source);
+	auto result_length = wcstombs(_dest, temp_source.c_str(), _size - 1);
+	RETURN_IF(result_length == static_cast<size_t>(-1), (_dest[0] = 0, std::string_view()));
+	_dest[result_length] = 0;
+	return std::string_view(_dest, result_length);
+#endif
+}
 std::u8string_view encode_string(char8_t* _dest, std::string_view _source, size_t _size)
 {
-	//// wide to UTF-8
-	//std::wstring_convert<std::codecvt_utf8<wchar_t>>	convert;
-	//return	convert.to_bytes(_source);
+	// check)
+	RETURN_IF(_dest == nullptr || _size == 0, std::u8string_view());
 
-	auto size = _source.size() * sizeof(wchar_t);
+#if defined(_WIN32)
+	// 1) not ASCII : MBCS -> UCS2 -> UTF-8 (UCS2 count <= MBCS bytes)
+	if (!_is_ascii(_source.data(), _source.size()))
+	{
+		const size_t count = _source.size() + 1;
+		_temp_wchar_buffer temp(count);
+		const auto wide = encode_string(temp.data(), _source, count);
+		return encode_string(_dest, wide, _size);
+	}
+#endif
 
-	// 1) ucs2로 변환하기 위한 버퍼를 할당한다.
-	auto temp_buf = alloc_shared_buffer(size);
-
-	// 2) ucs2로 변환을 먼저한다.
-	auto result = encode_string(temp_buf.data<wchar_t>(), _source, size);
-
-	// 3) utf-8보 변환한다.
-	return encode_string(_dest, result, _size);
+	// 2) ASCII, or linux (std::string is UTF-8 already) : copy
+	const auto copy_length = (_source.size() < _size) ? _source.size() : (_size - 1);
+	memcpy(_dest, _source.data(), copy_length);
+	_dest[copy_length] = 0;
+	return std::u8string_view(_dest, copy_length);
 }
-std::u8string_view encode_string(char8_t* _dest, std::wstring_view _source, size_t /*_size*/)
+std::u8string_view encode_string(char8_t* _dest, std::wstring_view _source, size_t _size)
 {
-	// 1) 값을 복사한다.
+	// 1) ���� �����Ѵ�.
 	const wchar_t* pch_read_now = _source.data();
 	const wchar_t* pch_read_end = pch_read_now + _source.size();
 	char8_t* pch_write_now = _dest;
+	[[maybe_unused]] char8_t* pch_write_end = _dest + _size;
+
+	// - ASCII fast-path (AVX2) : an ASCII unit becomes 1 byte, so the destination always has room
+#if defined(CGDK_SIMD_AVX2)
+	if (cpu::is_avx2_supported())
+	{
+		const auto done = _narrow_ascii_avx2(pch_read_now, pch_write_now, static_cast<std::size_t>(pch_read_end - pch_read_now));
+		pch_read_now += done;
+		pch_write_now += done;
+	}
+#endif
 
 	for (; pch_read_now != pch_read_end; )
 	{
@@ -200,25 +360,58 @@ std::u8string_view encode_string(char8_t* _dest, std::wstring_view _source, size
 		// Case-1) 
 		if (ch_read_now < 0x80)
 		{
+			CGASSERT_ERROR(pch_write_now < pch_write_end);
 			*pch_write_now++ = (char)ch_read_now;
 		}
 		// Case-2) 110xxxxx 10xxxxxx
 		else if (ch_read_now < 0x800)
 		{
-			*pch_write_now++ = (((ch_read_now << 2) & 0xcf00) | 0xc000) >> 8;
-			*pch_write_now++ = ((ch_read_now & 0x3f) & 0x80);
+			CGASSERT_ERROR(pch_write_now < pch_write_end);
+			*pch_write_now++ = (((ch_read_now << 2) & 0x1f00) | 0xc000) >> 8;
+			CGASSERT_ERROR(pch_write_now < pch_write_end);
+			*pch_write_now++ = ((ch_read_now & 0x3f) | 0x80);
 		}
 		// Case-3) 1110xxxx 10xxxxxx 10xxxxxx
+		// Case-4) 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx (U+10000 ~ U+10FFFF)
 		else
 		{
-			*pch_write_now++ = (char8_t)((((ch_read_now << 4) & 0x3f0000) | 0xe00000) >> 16);
-			*pch_write_now++ = (char8_t)((((ch_read_now << 2) & 0x3f00) | 0x8000) >> 8);
-			*pch_write_now++ = (char8_t)(((ch_read_now & 0x3f) | 0x80));
+			auto code = static_cast<uint32_t>(ch_read_now);
+
+			// - UTF-16 surrogate pair (wchar_t is 16 bits on Windows)
+			if (code >= 0xd800 && code <= 0xdbff && pch_read_now != pch_read_end
+			 && static_cast<uint32_t>(*pch_read_now) >= 0xdc00 && static_cast<uint32_t>(*pch_read_now) <= 0xdfff)
+			{
+				code = 0x10000 + ((code - 0xd800) << 10) + (static_cast<uint32_t>(*pch_read_now++) - 0xdc00);
+			}
+			// - lone surrogate or out of range -> U+FFFD (replacement character)
+			else if ((code >= 0xd800 && code <= 0xdfff) || code > 0x10ffff)
+			{
+				code = 0xfffd;
+			}
+
+			if (code < 0x10000)
+			{
+				CGASSERT_ERROR(pch_write_now + 3 <= pch_write_end);
+				*pch_write_now++ = (char8_t)(0xe0 | (code >> 12));
+				*pch_write_now++ = (char8_t)(0x80 | ((code >> 6) & 0x3f));
+				*pch_write_now++ = (char8_t)(0x80 | (code & 0x3f));
+			}
+			else
+			{
+				CGASSERT_ERROR(pch_write_now + 4 <= pch_write_end);
+				*pch_write_now++ = (char8_t)(0xf0 | (code >> 18));
+				*pch_write_now++ = (char8_t)(0x80 | ((code >> 12) & 0x3f));
+				*pch_write_now++ = (char8_t)(0x80 | ((code >> 6) & 0x3f));
+				*pch_write_now++ = (char8_t)(0x80 | (code & 0x3f));
+			}
 		}
 	}
-	*pch_write_now = 0;
 
-	// 3) 길이를 리턴한다
+	// - terminate (callers allocate 4 bytes per char, so 4-byte sequences can fill it up)
+	if (pch_write_now < pch_write_end)
+		*pch_write_now = 0;
+
+	// 3) ���̸� �����Ѵ�
 	return std::u8string_view{ _dest, size_t(pch_write_now - _dest) };
 }
 std::string_view encode_string_to_utf8(char* _dest, std::wstring_view _source, size_t _size)
@@ -228,120 +421,144 @@ std::string_view encode_string_to_utf8(char* _dest, std::wstring_view _source, s
 	return std::string_view(reinterpret_cast<const char*>(result.data()), result.size());
 }
 
-std::u8string_view encode_string(char8_t* /*_dest*/, std::u16string_view /*_source*/, size_t /*_size*/)
-{
-	return std::u8string_view();
-}
-std::u8string_view encode_string(char8_t* /*_dest*/, std::u32string_view /*_source*/, size_t /*_size*/)
-{
-	return std::u8string_view();
-}
-
-std::u16string_view encode_string(char16_t* /*_dest*/, std::u8string_view /*_source*/, size_t /*_size*/)
-{
-	return std::u16string_view();
-}
-std::u32string_view encode_string(char32_t* /*_dest*/, std::u8string_view /*_source*/, size_t /*_size*/)
-{
-	return std::u32string_view();
-}
 std::string_view encode_string(char* _dest, std::u8string_view _source, size_t _size)
 {
-	// 1) alloc shared buffer
-	auto buf_temp = alloc_shared_buffer(_source.size() * sizeof(wchar_t));
+	// check)
+	RETURN_IF(_dest == nullptr || _size == 0, std::string_view());
 
-	// 2) ...
-	auto result = encode_string(buf_temp.data<wchar_t>(), _source, buf_temp.size());
+	const auto source = reinterpret_cast<const char*>(_source.data());
 
-	// 3) convert to unicode
-	return encode_string(_dest, result, _size);
-}
-std::wstring_view encode_string(wchar_t* _dest, std::u8string_view _source, size_t /*_size*/)
+#if defined(_WIN32)
+	// 1) not ASCII : UTF-8 -> UCS2 -> MBCS (UCS2 count <= UTF-8 bytes)
+	if (!_is_ascii(source, _source.size()))
+	{
+		const size_t count = _source.size() + 1;
+		_temp_wchar_buffer temp(count);
+		const auto wide = encode_string(temp.data(), _source, count);
+		return encode_string(_dest, wide, _size);
+	}
+#endif
+
+	// 2) ASCII, or linux (std::string is UTF-8 already) : copy
+	const auto copy_length = (_source.size() < _size) ? _source.size() : (_size - 1);
+	memcpy(_dest, source, copy_length);
+	_dest[copy_length] = 0;
+	return std::string_view(_dest, copy_length);
+}std::wstring_view encode_string(wchar_t* _dest, std::u8string_view _source, size_t _size)
 {
 	// declare) 
 	std::wstring_view result;
 
-	// 1) 값을 복사한다.
+	// 1) ���� �����Ѵ�.
 	const char8_t* pch_read_now	 = _source.data();
 	const char8_t* pch_read_end	 = pch_read_now + _source.size();
-	wchar_t*	   pch_write_now = _dest;
+	wchar_t* pch_write_now = _dest;
+	[[maybe_unused]] wchar_t* pch_write_end = _dest + _size;
+
+	// - ASCII fast-path (AVX2) : an ASCII byte becomes 1 wchar, so the destination always has room
+#if defined(CGDK_SIMD_AVX2)
+	if (cpu::is_avx2_supported())
+	{
+		const auto done = _widen_ascii_avx2(pch_read_now, pch_write_now, static_cast<std::size_t>(pch_read_end - pch_read_now));
+		pch_read_now += done;
+		pch_write_now += done;
+	}
+#endif
 
 	for (; pch_read_now != pch_read_end; )
 	{
-		// - 첫번째 문자를 읽는다.
-		wchar_t	ch_read_1 = *pch_read_now++;
+		// - ù ��° ���ڸ� �д´�.
+		const uint32_t ch_read_1 = *pch_read_now++;
 
-		// Case-1) 0x80보다 작으면 그냥 일반 코드
-		if ((ch_read_1 & 0x80) == 0)
+		// Case-1) 0x80���� ������ �׳� �Ϲ� �ڵ�
+		if (ch_read_1 < 0x80)
 		{
-			*pch_write_now++ = ch_read_1;
+			CGASSERT_ERROR(pch_write_now < pch_write_end);
+			*pch_write_now++ = static_cast<wchar_t>(ch_read_1);
+			continue;
 		}
-		// Case-2) 110xxxxx 10xxxxxx
-		else if ((ch_read_1 & 0xe0) == 0xc0)
+
+		// Case-2) 110xxxxx 10xxxxxx                   (U+0080 ~ U+07FF)
+		// Case-3) 1110xxxx 10xxxxxx 10xxxxxx          (U+0800 ~ U+FFFF)
+		// Case-4) 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx (U+10000 ~ U+10FFFF)
+		//  - the 2nd byte range excludes overlong, surrogate and > U+10FFFF (Unicode Table 3-7)
+		//  - invalid lead byte, invalid continuation byte or truncated input
+		//    -> U+FFFD for the maximal subpart, then continue from the failed byte
+		size_t		count = 0;
+		uint32_t	code = 0;
+		uint8_t		lower = 0x80;
+		uint8_t		upper = 0xbf;
+
+		if (ch_read_1 >= 0xc2 && ch_read_1 <= 0xdf)
 		{
-			// - 두번째 문자 읽기
-			wchar_t	ch_read_2 = (wchar_t)*pch_read_now++;
-
-			// check) NULL이 돌아오면 Exception을 던진다.
-			if(ch_read_2 == 0)
-				return	result;
-
-			// - 문자를 작성한다.
-			*pch_write_now++ = ((ch_read_1 & 0x1f) << 6) | (ch_read_2 & 0x3f);
+			count = 1;
+			code = ch_read_1 & 0x1f;
 		}
-		// Case-3) 1110xxxx 10xxxxxx 10xxxxxx
-		else if ((ch_read_1 & 0xf0) == 0xe0)
+		else if (ch_read_1 >= 0xe0 && ch_read_1 <= 0xef)
 		{
-			// - 두번째 문자 읽기
-			wchar_t	ch_read_2 = (wchar_t)*pch_read_now++;
-
-			// check) NULL이 돌아오면 Exception을 던진다.
-			if (ch_read_2 == 0)
-				return result;
-
-			// - 세번째 문자 읽기
-			wchar_t	ch_read_3 = (wchar_t)*pch_read_now++;
-
-			// check) ch_read_3이 0이면 여기서 끝낸다.
-			if (ch_read_3 == 0)
-				return	result;
-
-			// - 문자를 작성한다.
-			*pch_write_now++ = ((ch_read_1 & 0x0f) << 12) | ((ch_read_2 & 0x3f) << 6) | (ch_read_3 & 0x3f);
+			count = 2;
+			code = ch_read_1 & 0x0f;
+			if (ch_read_1 == 0xe0) lower = 0xa0;		// overlong
+			else if (ch_read_1 == 0xed) upper = 0x9f;	// surrogate
 		}
-		// Case-4) 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-		else if ((ch_read_1 & 0xf8) == 0xf0)
+		else if (ch_read_1 >= 0xf0 && ch_read_1 <= 0xf4)
 		{
-			// - 두번째 문자 읽기
-			wchar_t	ch_read_2 = (wchar_t)*pch_read_now++;
+			count = 3;
+			code = ch_read_1 & 0x07;
+			if (ch_read_1 == 0xf0) lower = 0x90;		// overlong
+			else if (ch_read_1 == 0xf4) upper = 0x8f;	// > U+10FFFF
+		}
 
-			// check) NULL이 돌아오면 Exception을 던진다.
-			if (ch_read_2 == 0)
-				return result;
+		// - continuation bytes (never reads past pch_read_end)
+		size_t read = 0;
+		for (; read < count && pch_read_now != pch_read_end; ++read)
+		{
+			const uint8_t ch = *pch_read_now;
+			if (ch < lower || ch > upper)
+				break;
 
-			// - 세번째 문자 읽기
-			wchar_t	ch_read_3 = (wchar_t)*pch_read_now++;
+			code = (code << 6) | (ch & 0x3f);
+			lower = 0x80;
+			upper = 0xbf;
+			++pch_read_now;
+		}
 
-			// check) ch_read_3이 0이면 여기서 끝낸다.
-			if (ch_read_3 == 0)
-				return result;
-
-			// - 네번째 문자 읽기
-			wchar_t	ch_read_4 = (wchar_t)*pch_read_now++;
-
-			// check) ch_read_4이 0이면 여기서 끝낸다.
-			if (ch_read_4 == 0)
-				return result;
-
-			// - 문자를 작성한다.
-			*pch_write_now++ = ((ch_read_1 & 0x07) << 18) | ((ch_read_2 & 0x3f) << 12) | ((ch_read_3 & 0x3f) << 6) | (ch_read_4 & 0x3f);
+		// - invalid -> U+FFFD (replacement character)
+		if (count == 0 || read != count)
+		{
+			CGASSERT_ERROR(pch_write_now < pch_write_end);
+			*pch_write_now++ = static_cast<wchar_t>(0xfffd);
+		}
+		else if (code >= 0x10000)
+		{
+			// - UTF-16 surrogate pair (wchar_t is 16 bits on Windows)
+			if constexpr (sizeof(wchar_t) == 2)
+			{
+				CGASSERT_ERROR(pch_write_now + 2 <= pch_write_end);
+				*pch_write_now++ = static_cast<wchar_t>(0xd800 + ((code - 0x10000) >> 10));
+				*pch_write_now++ = static_cast<wchar_t>(0xdc00 + ((code - 0x10000) & 0x3ff));
+			}
+			// - UTF-32 (wchar_t is 32 bits on Linux)
+			else
+			{
+				CGASSERT_ERROR(pch_write_now < pch_write_end);
+				*pch_write_now++ = static_cast<wchar_t>(code);
+			}
+		}
+		else
+		{
+			CGASSERT_ERROR(pch_write_now < pch_write_end);
+			*pch_write_now++ = static_cast<wchar_t>(code);
 		}
 	}
-	*pch_write_now = 0;
+
+	// - terminate
+	if (pch_write_now < pch_write_end)
+		*pch_write_now = 0;
 
 	result = std::wstring_view{ _dest, static_cast<size_t>(pch_write_now - _dest) };
 
-	// 3) 길이를 리턴한다
+	// 3) ���̸� �����Ѵ�
 	return result;
 }
 
@@ -350,185 +567,167 @@ std::wstring_view encode_string_from_utf8(wchar_t* _dest, std::string_view _sour
 	return encode_string(_dest, std::u8string_view(reinterpret_cast<const char8_t*>(_source.data()), _source.size()), _size);
 }
 
-void __convert_unicode_to_utf8(shared_buffer& _buf_dst, const_buffer_view _buf_src)
+std::size_t __convert_text(void* _dst, std::size_t _dst_count, eCHARACTER_SET _dst_character_set, const void* _src, std::size_t _src_count, eCHARACTER_SET _src_character_set)
 {
-	// 2) line수를 얻는다.
-	auto count_line = _buf_src.extract<COUNT_T>();
+	// check)
+	if (_dst == nullptr || _dst_count == 0)
+		return 0;
 
-	// 3) line수를 써넣는다.
-	_buf_dst.append<COUNT_T>(count_line);
-
-	// 4) 모두 convert해서 추가한다.
-	for (auto i = 0; i < count_line; ++i)
+	// 1) same character set : copy (cut to fit, _dst_count - 1 : room for the terminator)
+	if (_dst_character_set == _src_character_set)
 	{
-		// - extract source string
-		auto str_src = _buf_src.extract<std::wstring_view>();
+		if (_src_count > _dst_count - 1)
+			_src_count = _dst_count - 1;
 
-		// - make room for writing string_length
-		auto& str_len = _buf_dst.append<COUNT_T>(0);
-
-		// - convert string
-		auto size_added = encode_string(_buf_dst.data<char8_t>() + _buf_dst.size(), str_src).size();
-
-		// - write length
-		str_len = static_cast<COUNT_T>(size_added + 1);
-		_buf_dst.add_size(size_added * sizeof(char8_t));
-		_buf_dst.append<char8_t>(0);
+		if (_dst_character_set == eCHARACTER_SET::UCS2)
+		{
+			memcpy(_dst, _src, _src_count * sizeof(wchar_t));
+			static_cast<wchar_t*>(_dst)[_src_count] = 0;
+		}
+		else
+		{
+			memcpy(_dst, _src, _src_count);
+			static_cast<char*>(_dst)[_src_count] = 0;
+		}
+		return _src_count;
 	}
-}
-void __convert_unicode_to_mbcs(shared_buffer& _buf_dst, const_buffer_view _buf_src)
-{
-	// 1) line수를 얻는다.
-	auto count_line = _buf_src.extract<COUNT_T>();
 
-	// 2) line수를 써넣는다.
-	_buf_dst.append<COUNT_T>(count_line);
-
-	// 3) 모두 convert해서 추가한다.
-	for (auto i = 0; i < count_line; ++i)
+	// 2) _dst may be too small for the worst case : convert into a temporary buffer and copy what fits
+	const auto ratio = __get_convert_ratio(_dst_character_set, _src_character_set);
+	if (_src_count > (_dst_count - 1) / ratio)
 	{
-		// - extract한다.
-		auto str_src = _buf_src.extract<std::wstring_view>();
+		const auto unit = __get_unit_size(_dst_character_set);
+		const auto temp_count = _src_count * ratio + 1;
+		std::vector<char> temp(temp_count * unit);
+		const auto converted = __convert_text(temp.data(), temp_count, _dst_character_set, _src, _src_count, _src_character_set);
 
-		// - make room for writing string_length
-		auto& str_len = _buf_dst.append<COUNT_T>();
+		auto count = (converted < _dst_count - 1) ? converted : _dst_count - 1;
 
-		// - convert string
-		auto size_added = encode_string(_buf_dst.data<char>() + _buf_dst.size(), str_src).size();
+		// - UTF8 : don't cut a character
+		if (_dst_character_set == eCHARACTER_SET::UTF8 && count < converted)
+		{
+			while (count > 0 && (static_cast<unsigned char>(temp[count]) & 0xc0) == 0x80)
+				--count;
+		}
 
-		// - write length
-		str_len = static_cast<COUNT_T>(size_added + 1);
-		_buf_dst.add_size(size_added * sizeof(char));
-		_buf_dst.append<char>(0);
+		memcpy(_dst, temp.data(), count * unit);
+		if (unit == sizeof(wchar_t))
+			static_cast<wchar_t*>(_dst)[count] = 0;
+		else
+			static_cast<char*>(_dst)[count] = 0;
+
+		return count;
 	}
-}
-void __convert_mbcs_to_unicode(shared_buffer& _buf_dst, const_buffer_view _buf_src)
-{
-	// 1) line수를 얻는다.
-	auto count_line = _buf_src.extract<COUNT_T>();
 
-	// 2) line수를 써넣는다.
-	_buf_dst.append<COUNT_T>(count_line);
+	// 3) convert
+	const auto src_mbcs = std::string_view(static_cast<const char*>(_src), _src_count);
+	const auto src_ucs2 = std::wstring_view(static_cast<const wchar_t*>(_src), _src_count);
+	const auto src_utf8 = std::u8string_view(static_cast<const char8_t*>(_src), _src_count);
 
-	// 3) 모두 convert해서 추가한다.
-	for (auto i = 0; i < count_line; ++i)
+	switch (_dst_character_set)
 	{
-		// - extract source string
-		auto str_src = _buf_src.extract<std::string_view>();
+	case	eCHARACTER_SET::MBCS:
+			if (_src_character_set == eCHARACTER_SET::UCS2)	return encode_string(static_cast<char*>(_dst), src_ucs2, _dst_count).size();
+			if (_src_character_set == eCHARACTER_SET::UTF8)	return encode_string(static_cast<char*>(_dst), src_utf8, _dst_count).size();
+			break;
 
-		// - make room for writing string_length
-		auto& str_len = _buf_dst.append<COUNT_T>(0);
+	case	eCHARACTER_SET::UCS2:
+			if (_src_character_set == eCHARACTER_SET::MBCS)	return encode_string(static_cast<wchar_t*>(_dst), src_mbcs, _dst_count).size();
+			if (_src_character_set == eCHARACTER_SET::UTF8)	return encode_string(static_cast<wchar_t*>(_dst), src_utf8, _dst_count).size();
+			break;
 
-		// - convert string
-		auto size_added = encode_string(_buf_dst.data<wchar_t>(_buf_dst.size()), str_src, MAX_TRACE_STRING_LENGTH).size();
+	case	eCHARACTER_SET::UTF8:
+			if (_src_character_set == eCHARACTER_SET::MBCS)	return encode_string(static_cast<char8_t*>(_dst), src_mbcs, _dst_count).size();
+			if (_src_character_set == eCHARACTER_SET::UCS2)	return encode_string(static_cast<char8_t*>(_dst), src_ucs2, _dst_count).size();
+			break;
 
-		// - write length
-		str_len = static_cast<uint32_t>(size_added + 1);
-		_buf_dst.add_size(size_added * sizeof(wchar_t));
-		_buf_dst.append<wchar_t>(0);
+	default:
+			break;
 	}
+
+	// error)
+	CGASSERT_ERROR(false);
+
+	// return)
+	return 0;
 }
-void __convert_utf8_to_unicode(shared_buffer& _buf_dst, const_buffer_view _buf_src)
+
+void __append_line(shared_buffer& _dst, eCHARACTER_SET _dst_character_set, const void* _src, std::size_t _src_count, eCHARACTER_SET _src_character_set)
 {
-	// 1) line수를 얻는다.
-	auto count_line = _buf_src.extract<COUNT_T>();
-
-	// 2) line수를 써넣는다.
-	_buf_dst.append<COUNT_T>(count_line);
-
-	// 3) 모두 convert해서 추가한다.
-	for (auto i = 0; i < count_line; ++i)
-	{
-		// - extract source string
-		auto str_src = _buf_src.extract<std::u8string_view>();
-
-		// - make room for writing string_length
-		auto& str_len = _buf_dst.append<COUNT_T>(0);
-
-		// - 변환한다.
-		auto size_added = encode_string(_buf_dst.data<wchar_t>(_buf_dst.size()), str_src).size();
-
-		// - write length
-		str_len = static_cast<uint32_t>(size_added + 1);
-		_buf_dst.add_size(size_added * sizeof(wchar_t));
-		_buf_dst.append<wchar_t>(0);
-	}
-}
-void __convert_mbcs_to_utf8(shared_buffer& _buf_dst, const_buffer_view _buf_src)
-{
-	// 1) line수를 얻는다.
-	auto count_line = _buf_src.extract<COUNT_T>();
-
-	// 2) line수를 써넣는다.
-	_buf_dst.append<COUNT_T>(count_line);
-
 	// declare)
-	auto source_length = _buf_src.size() + 1;
+	const auto unit = __get_unit_size(_dst_character_set);
 
-	// declare) temporary shared_buffer
-	auto temp_buffer = alloc_shared_buffer(source_length * sizeof(wchar_t) + 64);
+	// 1) length (set after converting)
+	auto& length = _dst.append<COUNT_T>(0);
 
-	// 3) 모두 convert해서 추가한다.
-	for (auto i = 0; i < count_line; ++i)
+	// 2) text + terminator
+	const auto written = __convert_text(_dst.data() + _dst.size(), _dst.get_remained_size() / unit, _dst_character_set, _src, _src_count, _src_character_set);
+	_dst.add_size((written + 1) * unit);
+
+	// 3) length (terminator included)
+	length = static_cast<COUNT_T>(written + 1);
+}
+
+void __convert_lines(shared_buffer& _dst, eCHARACTER_SET _dst_character_set, const_buffer_view _src, eCHARACTER_SET _src_character_set)
+{
+	// 1) line count
+	const auto count_line = _src.extract<COUNT_T>();
+	_dst.append<COUNT_T>(count_line);
+
+	// 2) lines
+	for (COUNT_T i = 0; i < count_line; ++i)
 	{
-		// - extract source string
-		auto str_src = _buf_src.extract<std::string_view>();
-
-		// - make room for writing string_length
-		auto& str_len = _buf_dst.append<COUNT_T&>();
-
-		// declare) temporary shared_buffer for converting
-		auto* temp_dst = temp_buffer.data<wchar_t>();
-
-		// - convert mbcs string to unicode
-		auto str_temp = encode_string(temp_dst, str_src, source_length);
-
-		// - convert unicode string to utf8
-		auto size_added = encode_string(_buf_dst.data<char8_t>() + _buf_dst.size(), str_temp).size();
-
-		// - write length
-		str_len = static_cast<COUNT_T>(size_added + 1);
-		_buf_dst.add_size(size_added + sizeof(char8_t));
-		_buf_dst.append<char8_t>(0);
+		if (_src_character_set == eCHARACTER_SET::UCS2)
+		{
+			const auto line = _src.extract<std::wstring_view>();
+			__append_line(_dst, _dst_character_set, line.data(), line.size(), _src_character_set);
+		}
+		else
+		{
+			const auto line = _src.extract<std::string_view>();
+			__append_line(_dst, _dst_character_set, line.data(), line.size(), _src_character_set);
+		}
 	}
 }
-void __convert_utf8_to_mbcs(shared_buffer& _buf_dst, const_buffer_view _buf_src)
+namespace detail
 {
-	// 1) line수를 얻는다.
-	auto count_line = _buf_src.extract<COUNT_T>();
-
-	// 2) line수를 써넣는다.
-	_buf_dst.append<COUNT_T>(count_line);
-
-	// declare)
-	auto source_length = _buf_src.size();
-
-	// declare) temporary shared_buffer
-	auto temp_buffer = alloc_shared_buffer(source_length * sizeof(wchar_t) + 64);
-
-	// 3) 모두 convert해서 추가한다.
-	for (auto i = 0; i < count_line; ++i)
+	// - ASCII only (same as the "C" locale, no locale call)
+	[[nodiscard]] constexpr unsigned char ascii_lower(unsigned char _ch) noexcept
 	{
-		// - extract source string
-		auto str_src = _buf_src.extract<std::u8string_view>();
-
-		// - 문자열 길이를 써넣는다.
-		auto& str_len = _buf_dst.append<COUNT_T&>();
-
-		// - target
-		auto* temp_dst = temp_buffer.data<wchar_t>();
-
-		// declare) temporary shared_buffer for converting
-		auto str_temp = encode_string(temp_dst, str_src, source_length);
-
-		// - unicode를 mbcs로 변환한다.
-		auto size_added = encode_string(_buf_dst.data<char>() + _buf_dst.size(), str_temp).size();
-
-		// - write length
-		str_len = static_cast<COUNT_T>(size_added + 1);
-		_buf_dst.add_size(size_added * sizeof(char));
-		_buf_dst.append<char>(0);
+		return (static_cast<unsigned>(_ch - 'A') < 26u) ? static_cast<unsigned char>(_ch | 0x20) : _ch;
 	}
+}
+
+int __stricmp(const char* _lhs, const char* _rhs) noexcept
+{
+	for (;; ++_lhs, ++_rhs)
+	{
+		const int lhs = detail::ascii_lower(static_cast<unsigned char>(*_lhs));
+		const int rhs = detail::ascii_lower(static_cast<unsigned char>(*_rhs));
+		if (lhs != rhs || lhs == 0)
+			return lhs - rhs;
+	}
+}
+int __stricmp(std::string_view _lhs, std::string_view _rhs)
+{
+	// - no allocation (compares the whole views, embedded '\0' included)
+	const size_t count = (_lhs.size() < _rhs.size()) ? _lhs.size() : _rhs.size();
+	for (size_t i = 0; i < count; ++i)
+	{
+		const int lhs = detail::ascii_lower(static_cast<unsigned char>(_lhs[i]));
+		const int rhs = detail::ascii_lower(static_cast<unsigned char>(_rhs[i]));
+		if (lhs != rhs)
+			return lhs - rhs;
+	}
+
+	return (_lhs.size() < _rhs.size()) ? -1 : (_lhs.size() > _rhs.size()) ? 1 : 0;
+}
+std::string __to_lower(std::string_view _source)
+{
+	std::string value(_source.size(), '\0');
+	for (size_t i = 0; i < _source.size(); ++i)
+		value[i] = static_cast<char>(detail::ascii_lower(static_cast<unsigned char>(_source[i])));
+	return value;
 }
 
 

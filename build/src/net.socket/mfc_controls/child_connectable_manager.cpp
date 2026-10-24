@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <charconv>
 
 
 namespace CGDK
@@ -205,7 +206,7 @@ void CChild_connectable_manager::OnBnClickedButtonDisconnectAll()
 	// declare) 
 	object_ptr<net::io::Iconnectable_manager> pconnectable_manager;
 
-	scoped_lock(m_lockable_connectable_manager)
+	SCOPED_LOCK(m_lockable_connectable_manager)
 	{
 		pconnectable_manager = m_pConnectableManager;
 	}
@@ -232,7 +233,7 @@ void CChild_connectable_manager::OnBnClickedButtonClearGhost()
 	// declare) 
 	object_ptr<net::io::Iconnectable_manager>	pconnectable_manager;
 
-	scoped_lock(m_lockable_connectable_manager)
+	SCOPED_LOCK(m_lockable_connectable_manager)
 	{
 		pconnectable_manager	 = m_pConnectableManager;
 	}
@@ -267,7 +268,7 @@ void CChild_connectable_manager::clear_connectable_list()
 	m_list_connectable.DeleteAllItems();
 
 	// 3) Acceptor를 Reset한다.
-	scoped_lock(m_lockable_connectable_manager)
+	SCOPED_LOCK(m_lockable_connectable_manager)
 	{
 		m_pConnectableManager.reset();
 	}
@@ -279,7 +280,7 @@ object_ptr<net::io::Iconnectable> CChild_connectable_manager::VarifyConnectable(
 	object_ptr<net::io::Iconnectable_manager>	pmanager;
 
 	// 1) Connective Manager를 설정한다.
-	scoped_lock(m_lockable_connectable_manager)
+	SCOPED_LOCK(m_lockable_connectable_manager)
 	{
 		pmanager	 = m_pConnectableManager;
 	}
@@ -331,7 +332,7 @@ void CChild_connectable_manager::EnableControls(bool p_bStatus)
 void CChild_connectable_manager::set_connectable_manager(net::io::Iconnectable_manager* _pconnectable_manager)
 {
 	// 1) Connectable Manager를 설정한다.
-	scoped_lock(m_lockable_connectable_manager)
+	SCOPED_LOCK(m_lockable_connectable_manager)
 	{
 		m_pConnectableManager = _pconnectable_manager;
 	}
@@ -349,7 +350,7 @@ void CChild_connectable_manager::UpdateConnectableList()
 	// check) 윈도우가 생성되어 있지 않으면 끝낸다.
 	RETURN_IF(m_hWnd == nullptr)
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 
@@ -359,7 +360,7 @@ void CChild_connectable_manager::UpdateConnectableList()
 	// declare) 
 	object_ptr<net::io::Iconnectable_manager>	pconnectable_manager;
 
-	scoped_lock(m_lockable_connectable_manager)
+	SCOPED_LOCK(m_lockable_connectable_manager)
 	{
 		pconnectable_manager	 = m_pConnectableManager;
 	}
@@ -402,7 +403,7 @@ void CChild_connectable_manager::UpdateConnectableList()
 
 	auto tick_now = chrono::tick::now();
 
-	// Chekck)
+	// Check)
 	net::io::Iconnectable* pconnectable;
 
 	// 2) Iterator를 얻는다.(이건 다 쓰고 반드시 지워줘야 한다.)
@@ -436,7 +437,7 @@ void CChild_connectable_manager::UpdateConnectableList()
 			addr_socket				 = pconnectable->local_endpoint();
 			if(addr_socket.is_loopback()==false)
 			{
-				to_string<TCHAR>(text, MAX_STRING_LENGTH, addr_socket);
+				wsprintf(text, TEXT("%hs"), to_string(addr_socket).c_str());
 				list_item.pszText	 = text;
 			}
 			else
@@ -452,7 +453,7 @@ void CChild_connectable_manager::UpdateConnectableList()
 			
 			if(addr_socket.is_loopback()==false)
 			{
-				to_string<TCHAR>(text, MAX_STRING_LENGTH, addr_socket);
+				wsprintf(text, TEXT("%hs"), to_string(addr_socket).c_str());
 				list_item.pszText		 = text;
 			}
 			else
@@ -463,7 +464,7 @@ void CChild_connectable_manager::UpdateConnectableList()
 			m_list_connectable.SetItem(&list_item);
 
 			list_item.iSubItem = 3;
-			wsprintf(text, TEXT("%s"), to_string<TCHAR>(chrono::time::local::time_point(pconnectable->statistics_get_connect_time())).c_str());
+			wsprintf(text, TEXT("%hs"), to_string(chrono::time::local::time_point(pconnectable->statistics_get_connect_time())).c_str());
 			list_item.pszText = text;
 			m_list_connectable.SetItem(&list_item);
 
@@ -475,6 +476,17 @@ void CChild_connectable_manager::UpdateConnectableList()
 		//-----------------------------------------------------------------
 		// declare) 
 		TCHAR text[MAX_STRING_LENGTH]={};
+		char text_mb[MAX_STRING_LENGTH]={};
+		auto set_number_text = [&](auto _value)
+		{
+			if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(_value)>> && std::is_unsigned_v<std::remove_cvref_t<decltype(_value)>>)
+		*std::to_chars(text_mb, text_mb + (std::size(text_mb)) - 1, static_cast<uint64_t>(_value)).ptr = 0;
+	else if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(_value)>>)
+		*std::to_chars(text_mb, text_mb + (std::size(text_mb)) - 1, static_cast<int64_t>(_value)).ptr = 0;
+	else
+		*std::to_chars(text_mb, text_mb + (std::size(text_mb)) - 1, _value).ptr = 0;
+			list_item.pszText = const_cast<TCHAR*>(encode_string(text, std::string_view(text_mb), MAX_STRING_LENGTH).data());
+		};
 
 		// 2. "State"
 		list_item.iSubItem		 = 2;
@@ -536,48 +548,68 @@ void CChild_connectable_manager::UpdateConnectableList()
 
 		// 4. "Snd Msg"
 		list_item.iSubItem		 = 4;
-		__to_string(text, pconnectable->statistics_get_sended_message());
-		list_item.pszText		 = text;
+		set_number_text(pconnectable->statistics_get_sent_message());
+		if(list_item.pszText == nullptr)
+		{
+			list_item.pszText = text;
+		}
 		m_list_connectable.SetItem(&list_item);
 
 		// 5. "Snd Byte"
 		list_item.iSubItem		 = 5;
-		list_item.pszText		 = (TCHAR*)to_string_scaled_byte(text, 1024, pconnectable->statistics_get_sended_bytes()).data();
+		CString str_sent_bytes(to_string_scaled_byte(static_cast<uint64_t>(pconnectable->statistics_get_sent_bytes())).c_str());
+		list_item.pszText		 = const_cast<LPTSTR>(static_cast<LPCTSTR>(str_sent_bytes));
 		m_list_connectable.SetItem(&list_item);
 
 		// 6. "Snd I/O"
 		list_item.iSubItem		 = 6;
-		__to_string(text, pconnectable->statistics_get_async_send());
-		list_item.pszText		 = text;
+		set_number_text(pconnectable->statistics_get_async_send());
+		if(list_item.pszText == nullptr)
+		{
+			list_item.pszText = text;
+		}
 		m_list_connectable.SetItem(&list_item);
 
 		// 7. "Snd Time"
 		list_item.iSubItem		 = 7;
-		__to_string(text, (uint32_t)(tick_now>=pconnectable->statistics_get_tick_last_send() ? (tick_now-pconnectable->statistics_get_tick_last_send()).count() : 0));
-		list_item.pszText		 = text;
+		set_number_text((uint32_t)(tick_now>=pconnectable->statistics_get_tick_last_send() ? (tick_now-pconnectable->statistics_get_tick_last_send()).count() : 0));
+		if(list_item.pszText == nullptr)
+		{
+			list_item.pszText = text;
+		}
 		m_list_connectable.SetItem(&list_item);
 
 		// 8. "Rcv Msg"
 		list_item.iSubItem		 = 8;
-		__to_string(text, pconnectable->statistics_get_received_message());
-		list_item.pszText		 = text;
+		set_number_text(pconnectable->statistics_get_received_message());
+		if(list_item.pszText == nullptr)
+		{
+			list_item.pszText = text;
+		}
 		m_list_connectable.SetItem(&list_item);
 
 		// 9. "Rcv Byte"
 		list_item.iSubItem		 = 9;
-		list_item.pszText		 = (TCHAR*)to_string_scaled_byte(text, 1024, pconnectable->statistics_get_received_bytes()).data();
+		CString str_received_bytes(to_string_scaled_byte(static_cast<uint64_t>(pconnectable->statistics_get_received_bytes())).c_str());
+		list_item.pszText		 = const_cast<LPTSTR>(static_cast<LPCTSTR>(str_received_bytes));
 		m_list_connectable.SetItem(&list_item);
 
 		// 10. "Rcv I/O"
 		list_item.iSubItem		 = 10;
-		__to_string(text, pconnectable->statistics_get_async_receive());
-		list_item.pszText		 = text;
+		set_number_text(pconnectable->statistics_get_async_receive());
+		if(list_item.pszText == nullptr)
+		{
+			list_item.pszText = text;
+		}
 		m_list_connectable.SetItem(&list_item);
 
 		// 11. "Rcv Time"
 		list_item.iSubItem		 = 11;
-		__to_string(text, static_cast<uint32_t>(tick_now>=pconnectable->statistics_get_tick_last_receive() ? (tick_now-pconnectable->statistics_get_tick_last_receive()).count() : 0));
-		list_item.pszText		 = text;
+		set_number_text(static_cast<uint32_t>(tick_now>=pconnectable->statistics_get_tick_last_receive() ? (tick_now-pconnectable->statistics_get_tick_last_receive()).count() : 0));
+		if(list_item.pszText == nullptr)
+		{
+			list_item.pszText = text;
+		}
 		m_list_connectable.SetItem(&list_item);
 
 
@@ -585,8 +617,8 @@ void CChild_connectable_manager::UpdateConnectableList()
 		// 5) 통계자료를 계산한다.
 		//-----------------------------------------------------------------
 		qwSend_IO			+= pconnectable->statistics_get_async_send();
-		qwSend_Bytes		+= pconnectable->statistics_get_sended_bytes();
-		qwSend_Message		+= pconnectable->statistics_get_sended_message();
+		qwSend_Bytes		+= pconnectable->statistics_get_sent_bytes();
+		qwSend_Message		+= pconnectable->statistics_get_sent_message();
 
 		qwReceive_IO		+= pconnectable->statistics_get_async_receive();
 		qwReceive_Bytes		+= pconnectable->statistics_get_received_bytes();
@@ -606,17 +638,14 @@ void CChild_connectable_manager::UpdateConnectableList()
 	//-----------------------------------------------------------------+
 	// 4. Static 값들을 Update한다.
 	//-----------------------------------------------------------------
-	// declare) 
-	TCHAR string[256] = { NULL, };
-
 	// 1) 통계값을 표시한다.
 	SetDlgItemInt(IDC_STATIC_TOTAL_SOCKET,		static_cast<uint32_t>(pconnectable_manager->count()));
-	SetDlgItemText(IDC_STATIC_SEND_IO,			to_string_scaled_byte(string, 256, qwSend_IO).data());
-	SetDlgItemText(IDC_STATIC_SEND_BYTES,		to_string_scaled_byte(string, 256, qwSend_Bytes).data());
-	SetDlgItemText(IDC_STATIC_SEND_MESSAGE,		to_string_scaled_byte(string, 256, qwSend_Message).data());
-	SetDlgItemText(IDC_STATIC_RECEIVE_IO,		to_string_scaled_byte(string, 256, qwReceive_IO).data());
-	SetDlgItemText(IDC_STATIC_RECEIVE_BYTES,	to_string_scaled_byte(string, 256, qwReceive_Bytes).data());
-	SetDlgItemText(IDC_STATIC_RECEIVE_MESSAGE,	to_string_scaled_byte(string, 256, qwReceive_Message).data());
+	SetDlgItemText(IDC_STATIC_SEND_IO,			CString(to_string_scaled_byte(static_cast<uint64_t>(qwSend_IO)).c_str()));
+	SetDlgItemText(IDC_STATIC_SEND_BYTES,		CString(to_string_scaled_byte(static_cast<uint64_t>(qwSend_Bytes)).c_str()));
+	SetDlgItemText(IDC_STATIC_SEND_MESSAGE,		CString(to_string_scaled_byte(static_cast<uint64_t>(qwSend_Message)).c_str()));
+	SetDlgItemText(IDC_STATIC_RECEIVE_IO,		CString(to_string_scaled_byte(static_cast<uint64_t>(qwReceive_IO)).c_str()));
+	SetDlgItemText(IDC_STATIC_RECEIVE_BYTES,	CString(to_string_scaled_byte(static_cast<uint64_t>(qwReceive_Bytes)).c_str()));
+	SetDlgItemText(IDC_STATIC_RECEIVE_MESSAGE,	CString(to_string_scaled_byte(static_cast<uint64_t>(qwReceive_Message)).c_str()));
 
 	// 2) Redraw On
 	m_list_connectable.SetRedraw(TRUE);
@@ -662,7 +691,7 @@ void CChild_connectable_manager::OnActivate(UINT nState, CWnd* pWndOther, BOOL b
 	// 1) 
 	CChildDialog::OnActivate(nState, pWndOther, bMinimized);
 	
-	// 2) List를 Updae한다.
+	// 2) List를 Update한다.
 	PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);
 }
 
@@ -670,10 +699,10 @@ void CChild_connectable_manager::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// 1) Update한다.
@@ -712,7 +741,7 @@ LRESULT CChild_connectable_manager::OnCGMessageNotify(WPARAM _wparam, LPARAM _lp
 				bool bIsSame = false;
 
 				// 3) ConnectableManager를 설정한다.
-				scoped_lock(m_lockable_connectable_manager)
+				SCOPED_LOCK(m_lockable_connectable_manager)
 				{
 					bIsSame = _pconnectable_manager==m_pConnectableManager;
 				}
@@ -737,7 +766,7 @@ LRESULT CChild_connectable_manager::OnCGMessageNotify(WPARAM _wparam, LPARAM _lp
 				bool bIsSame = false;
 
 				// 3) ConnectableManager를 설정한다.
-				scoped_lock(m_lockable_connectable_manager)
+				SCOPED_LOCK(m_lockable_connectable_manager)
 				{
 					bIsSame	 = _pconnectable_manager==m_pConnectableManager;
 				}

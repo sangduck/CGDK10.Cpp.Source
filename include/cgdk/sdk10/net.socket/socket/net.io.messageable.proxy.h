@@ -27,23 +27,18 @@ namespace CGDK
 //-----------------------------------------------------------------------------
 template <class TPROXY>
 class net::io::messageable::Nproxy : 
-// inherited classes)
-	virtual public				Imessageable
+	virtual public				CGDK::Imessageable
 {
-// constructor/destructor)
 protected:
 			Nproxy() {}
 	virtual	~Nproxy() noexcept {}
 
-// public)
 public:
-			void				set_proxy( TPROXY* _pProxy) noexcept{ std::lock_guard<lockable<>> cs(this->m_pproxy); this->m_pproxy=_pProxy; }
-			[[nodiscard]] object_ptr<TPROXY> get_proxy() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<object_ptr<TPROXY>>&>(this->m_pproxy)); return this->m_pproxy; }
+			void				set_proxy( TPROXY* _pProxy) noexcept{ std::lock_guard cs(this->m_pproxy); this->m_pproxy=_pProxy; }
+			[[nodiscard]] object_ptr<TPROXY> get_proxy() const noexcept { std::lock_guard cs(const_cast<lockable<object_ptr<TPROXY>>&>(this->m_pproxy)); return this->m_pproxy; }
 	[[nodiscard]] auto&			get_lockable() noexcept { return this->m_pproxy;}
 	[[nodiscard]] const auto&	get_lockable() const noexcept { return this->m_pproxy;}
 
-// implementation)
-public:
 	virtual	result_code			process_message(sMESSAGE& _msg) override;
 
 private:

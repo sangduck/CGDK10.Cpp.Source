@@ -21,23 +21,7 @@ bool address_v6::is_v4_compatible() const noexcept
       && ((sin6_addr.s6_addr[15] == 0) || (sin6_addr.s6_addr[15] == 1))));
 }
 
-constexpr address_v4 address_v6::get_v4_mapped() const noexcept
-{
-	address_v4 temp;
-
-	if (is_v4_mapped())
-	{
-		auto temp_addr_v4 = *(uint32_t*)& sin6_addr.s6_addr[12];
-		temp = address_v4(temp_addr_v4);
-	}
-	else
-	{
-
-	}
-
-	// return)
-	return temp;
-}
+// - get_v4_mapped() is defined in the header (constexpr)
 
 address_v6 make_address_v6(const std::string_view _str, std::error_code& _error_code) noexcept
 {

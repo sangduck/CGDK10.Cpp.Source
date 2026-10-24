@@ -1,26 +1,27 @@
 #include "pch.h"
+#include <charconv>
 
 void _append_key_value(shared_buffer& _buf_target, std::string_view _str_key, std::string_view _str_value);
 void _append_key_value(shared_buffer& _buf_target, std::string_view _str_key, std::size_t _value);
 
-void _append_server_info_service_instance(buffer& _buf_dest, server_admin::instance_Iservice* _pinstance_service)
+void _append_server_info_service_instance(buffer& _buf_dest, server_system::instance_service* _pinstance_service)
 {
 	// check)
-	CGASSERT_ERROR(_pinstance_service != nullptr);
+	CGASSERT_FATAL(_pinstance_service != nullptr);
 
 	// check)
 	THROW_IF(_pinstance_service == nullptr, throwable::failure(eRESULT::EXCEPTION));
 
 	// 1) get info
-	const auto& setting = _pinstance_service->m_instance.setting;
-	const auto& status = _pinstance_service->m_instance.status;
+	const auto& setting = _pinstance_service->m_instance.info.setting;
+	const auto& status = _pinstance_service->m_instance.info.status;
 
 	// 2) 
 	_buf_dest.append_text<char>("<td>");
 
 	// 3) "name"
 	_buf_dest.append_text<char>("<span style='font-size:15px;font-weight:bold'><i class='fa fa-server'></i> ");
-	_buf_dest.append_text<char>(setting.nickname);
+	_buf_dest.append_text<char>(setting.name);
 	_buf_dest.append_text<char>("</span><br>");
 
 	// 4) TYPE/UIDs
@@ -33,17 +34,17 @@ void _append_server_info_service_instance(buffer& _buf_dest, server_admin::insta
 	//     <td>START</td>
 	if (status.state != eOBJECT_STATE::NONE)
 	{
-		_buf_dest.append_text<char>(to_string<char>(status.state));
+		_buf_dest.append_text<char>(to_string(status.state));
 	}
 	_buf_dest.append_text<char>("<br>");
 
 	// 6) 
-	_buf_dest.append_text<char>("<canvas class='table_server_list_canvas' Id='si_cv1{}'>", reinterpret_cast<uint64_t>(static_cast<server_admin::Iinstance*>(_pinstance_service)));
+	_buf_dest.append_text<char>(CGDK::stream_string("<canvas class='table_server_list_canvas' Id='si_cv1", reinterpret_cast<uint64_t>(static_cast<server_system::Iinstance*>(_pinstance_service)), "'>"));
 
 
 	_buf_dest.append_text<char>("</canvas>");
-	if(status.vector_process_status.empty() == false)
-		_buf_dest.append_text<char>(to_string_scaled_byte<char>(status.vector_process_status.back().bytes_memory_usage));
+	if(_pinstance_service->m_vector_process_status.empty() == false)
+		_buf_dest.append_text<char>(to_string_scaled_byte(_pinstance_service->m_vector_process_status.back().bytes_memory_usage));
 	else
 		_buf_dest.append_text<char>("0"sv);
 
@@ -59,11 +60,11 @@ void _append_server_info_service_instance(buffer& _buf_dest, server_admin::insta
 //    'SELI' + 'A' + [id] + '\n' + [ctx_length] + [ctx] + '\n' => Append 
 // 
 //-----------------------------------------------------------------
-shared_buffer _make_webmessage_server_info_service_instance_add(server_admin::Iinstance* _pinstance)
+shared_buffer _make_webmessage_server_info_service_instance_add(server_system::Iinstance* _pinstance)
 {
 
 	// 1) get instance 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -78,13 +79,13 @@ shared_buffer _make_webmessage_server_info_service_instance_add(server_admin::Ii
 		buffer buf_text = buf_temp;
 
 		// - append tr data
-		_append_server_info_service_instance(buf_text, dynamic_cast<server_admin::instance_Iservice*>(_pinstance));
+		_append_server_info_service_instance(buf_text, dynamic_cast<server_system::instance_service*>(_pinstance));
 
 		// - append command (A:Add, D:delete, U:update)
 		buf_result.append<char>('A');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("tr{}", reinterpret_cast<uint64_t>(_pinstance));
+		auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(_pinstance));
 
 		// - append element_id
 		buf_result.append_text<char>(tr_element_id);
@@ -110,10 +111,10 @@ shared_buffer _make_webmessage_server_info_service_instance_add(server_admin::Ii
 //    'SELI' + 'U' + [id] + '\n' + [ctx_length] + [ctx] + '\n' => Update
 // 
 //-----------------------------------------------------------------
-shared_buffer _make_webmessage_server_info_service_instance_update(server_admin::Iinstance* _pinstance, uint64_t /*_flag*/)
+shared_buffer _make_webmessage_server_info_service_instance_update(server_system::Iinstance* _pinstance, uint64_t /*_flag*/)
 {
 	// 1) get instance 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -128,13 +129,13 @@ shared_buffer _make_webmessage_server_info_service_instance_update(server_admin:
 		buffer buf_text = buf_temp;
 
 		// - append tr data
-		_append_server_info_service_instance(buf_text, dynamic_cast<server_admin::instance_Iservice*>(_pinstance));
+		_append_server_info_service_instance(buf_text, dynamic_cast<server_system::instance_service*>(_pinstance));
 
 		// - append command (A:Add, D:delete, U:update)
 		buf_result.append<char>('U');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("tr{}", reinterpret_cast<uint64_t>(_pinstance));
+		auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(_pinstance));
 
 		// - append element_id
 		buf_result.append_text<char>(tr_element_id);
@@ -160,10 +161,10 @@ shared_buffer _make_webmessage_server_info_service_instance_update(server_admin:
 //    'SELI' + 'D' + [id] + '\n' => Delete
 // 
 //-----------------------------------------------------------------
-shared_buffer _make_webmessage_server_info_service_instance_remove(server_admin::Iinstance* _pinstance)
+shared_buffer _make_webmessage_server_info_service_instance_remove(server_system::Iinstance* _pinstance)
 {
 	// 1) get instance 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -178,7 +179,7 @@ shared_buffer _make_webmessage_server_info_service_instance_remove(server_admin:
 		buf_result.append<char>('D');
 
 		// - tr node name
-		auto tr_element_id = NFMT::format("tr{}", reinterpret_cast<uint64_t>(_pinstance));
+		auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(_pinstance));
 
 		// - append tr_element_id
 		buf_result.append_text<char>(tr_element_id);
@@ -192,7 +193,7 @@ shared_buffer _make_webmessage_server_info_service_instance_remove(server_admin:
 shared_buffer make_webmessage_server_info_server_list()
 {
 	// 1) get instance 
-	auto pmanager_instance = service::pmanager_instance.get_object_ptr();
+	auto pmanager_instance = ::service::pmanager_instance.get_object_ptr();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -202,7 +203,7 @@ shared_buffer make_webmessage_server_info_server_list()
 	buf_result.append_text<char>(MESSAGE_WEB_SERVER_INFO_SERVER_LIST); // "SELI"
 
 	// 4) append message 
-	scoped_lock(pmanager_instance->m_cs_instance)
+	SCOPED_LOCK(pmanager_instance->m_lockable_instance)
 	{
 		for (const auto& iter : pmanager_instance->m_map_instance)
 		{
@@ -210,16 +211,16 @@ shared_buffer make_webmessage_server_info_server_list()
 			buffer buf_text = buf_temp;
 
 			// check)
-			CONTINUE_IF(iter.second->get_instance_type() != server_admin::eINSTANCE_TYPE::SERVICE);
+			CONTINUE_IF(iter.second->get_instance_type() != ::eINSTANCE_TYPE::SERVICE);
 
 			// - append tr data
-			_append_server_info_service_instance(buf_text, dynamic_pointer_cast<server_admin::instance_Iservice>(iter.second));
+			_append_server_info_service_instance(buf_text, dynamic_pointer_cast<server_system::instance_service>(iter.second));
 
 			// - append command
 			buf_result.append<char>('A');
 
 			// - tr node name
-			auto tr_element_id = NFMT::format("tr{}", reinterpret_cast<uint64_t>(iter.second.get()));
+			auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(iter.second.get()));
 
 			// - append element id
 			buf_result.append_text<char>(tr_element_id);
@@ -270,11 +271,8 @@ shared_buffer _make_web_message_log(const std::vector<object_ptr<LOG_RECORD>>& _
 
 
 
-observable_websocket_peer_info::observable_websocket_peer_info(const std::string_view _name)
+observable_websocket_peer_info::observable_websocket_peer_info()
 {
-	// 1) set name
-	this->set_name(_name);
-
 	this->m_webpage_str_target = "webpage_server_info.htm";
 }
 
@@ -297,7 +295,7 @@ uintptr_t observable_websocket_peer_info::on_observer_unregistering(socket_webso
 	_pobserver->unsubscribe(OCID_FRAME3);
 	_pobserver->unsubscribe(OCID_FRAME2);
 
-	// 2) uregister _pmenber
+	// 2) unregister _pmenber
 	_pobserver->unregister_messageable(this);
 
 	// return) 
@@ -323,10 +321,13 @@ result_code observable_websocket_peer_info::on_message(sMESSAGE_NETWORK& _msg)
 			buf_temp.extract(size(2));
 
 			// - get id
-			void* pobject = reinterpret_cast<void*>(__from_string<uint64_t>(buf_temp.to_string<char>()));
+			const auto str_object = buf_temp.to_string<char>();
+			uint64_t value_object = 0;
+			std::from_chars(str_object.data(), str_object.data() + str_object.size(), value_object);
+			void* pobject = reinterpret_cast<void*>(value_object);
 
 			// - find service_entity
-			auto pservice_entity = service::pmanager_instance->find_instance_by_pvoid(pobject);
+			auto pservice_entity = ::service::pmanager_instance->find_instance_by_pvoid(pobject);
 
 			// check)
 			RETURN_IF(pservice_entity.empty(), eRESULT::DONE);
@@ -340,13 +341,13 @@ result_code observable_websocket_peer_info::on_message(sMESSAGE_NETWORK& _msg)
 	return eRESULT::BYPASS;
 }
 
-void observable_websocket_peer_info::notify_to_web_controls_INSTANCE_ENTER(server_admin::Iinstance* _pinstance)
+void observable_websocket_peer_info::notify_to_web_controls_INSTANCE_ENTER(server_system::Iinstance* _pinstance)
 {
 	// declare) 
 	shared_buffer buf_send;
 
 	// 1) make buffer
-	scoped_lock(_pinstance->m_cs_instance)
+	SCOPED_LOCK(_pinstance->m_lockable_instance)
 	{
 		buf_send = _make_webmessage_server_info_service_instance_add(_pinstance);
 	}
@@ -354,13 +355,13 @@ void observable_websocket_peer_info::notify_to_web_controls_INSTANCE_ENTER(serve
 	// 2) send
 	this->send(buf_send);
 }
-void observable_websocket_peer_info::notify_to_web_controls_INSTANCE_LEAVE(server_admin::Iinstance* _pinstance)
+void observable_websocket_peer_info::notify_to_web_controls_INSTANCE_LEAVE(server_system::Iinstance* _pinstance)
 {
 	// declare) 
 	shared_buffer buf_send;
 
 	// 1) make buffer
-	scoped_lock(_pinstance->m_cs_instance)
+	SCOPED_LOCK(_pinstance->m_lockable_instance)
 	{
 		buf_send = _make_webmessage_server_info_service_instance_remove(_pinstance);
 	}
@@ -369,13 +370,13 @@ void observable_websocket_peer_info::notify_to_web_controls_INSTANCE_LEAVE(serve
 	this->send(buf_send);
 }
 
-void observable_websocket_peer_info::notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_admin::Iinstance* _pinstance)
+void observable_websocket_peer_info::notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_system::Iinstance* _pinstance)
 {
 	// declare) 
 	shared_buffer buf_send;
 
 	// 1) make buffer
-	scoped_lock(_pinstance->m_cs_instance)
+	SCOPED_LOCK(_pinstance->m_lockable_instance)
 	{
 		buf_send = _make_webmessage_server_info_service_instance_update(_pinstance, 0xffffffff);
 	}

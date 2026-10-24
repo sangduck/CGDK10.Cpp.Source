@@ -1,14 +1,14 @@
-ï»¿//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ì—ì„œ ìƒì„±í•œ í¬í•¨ íŒŒì¼ìž…ë‹ˆë‹¤.
-// tutorial.group.chatting.server.mfc.rcì—ì„œ ì‚¬ìš©
+//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++¿¡¼­ »ý¼ºÇÑ Æ÷ÇÔ ÆÄÀÏÀÔ´Ï´Ù.
+// tutorial.group.chatting.server.mfc.rc¿¡¼­ »ç¿ë
 //
 #define IDR_MAINFRAME					128
 #define IDM_ABOUTBOX					0x0010
 #define IDD_ABOUTBOX					100
 #define IDS_ABOUTBOX					101
-#define IDD_TUTORIALGROUPCHATTINGSERVERMFCWINDOWSVS16_DIALOG				102
+#define IDD_TUTORIALGROUPCHATTINGSERVERMFCWINDOWS_DIALOG				102
 
-// ë‹¤ìŒì€ ìƒˆ ê°œì²´ì— ì‚¬ìš©í•  ê¸°ë³¸ê°’ìž…ë‹ˆë‹¤.
+// ´ÙÀ½Àº »õ °³Ã¼¿¡ »ç¿ëÇÒ ±âº»°ªÀÔ´Ï´Ù.
 //
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS

@@ -1,13 +1,14 @@
 #include "pch.h"
+#include <charconv>
 
 
 object_ptr<time_event::Ientity> find_time_event_entity(uint64_t _id);
-void _append_event_object(buffer& _buf_dest, const server_admin::time_event_snap& _pentity);
+void _append_event_object(buffer& _buf_dest, const server_system::time_event_snap& _pentity);
 void _append_key_value(shared_buffer& _buf_target, std::string_view _str_key, std::string_view _str_value);
 void _append_key_value(shared_buffer& _buf_target, std::string_view _str_key, std::size_t _value);
 void _append_log_info(shared_buffer& _buf_out, const LOG_RECORD* _plog_record);
 
-shared_buffer _make_webmessage_event_list(const std::vector<server_admin::time_event_snap>& _vector_time_event)
+shared_buffer _make_webmessage_event_list(const std::vector<server_system::time_event_snap>& _vector_time_event)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -24,7 +25,7 @@ shared_buffer _make_webmessage_event_list(const std::vector<server_admin::time_e
 			buffer buf_text = buf_temp;
 
 			// - tr element id
-			auto tr_element_id = NFMT::format("tr{}", iter.updatable.id);
+			auto tr_element_id = CGDK::stream_string("tr", iter.updatable.id);
 
 			// - append tr data
 			_append_event_object(buf_text, iter);
@@ -59,7 +60,7 @@ shared_buffer _make_webmessage_log_count(std::array<size_t, MAX_LOG_TYPE>& _arra
 	auto plogger = service::get_logger();
 
 	// 2) get loc count
-	scoped_lock(plogger->get_count_lock())
+	SCOPED_LOCK(plogger->get_count_lock())
 	{
 		log_count_total = plogger->get_log_count();
 		array_log_count = plogger->_log_count();
@@ -91,11 +92,11 @@ template<class TITER>
 shared_buffer _make_webmessage_log(std::string_view _command, TITER _begin, TITER _end)
 {
 	// 1) calculate memory size
-	size_t size_buffer = 4;
+	size_t size_buffer = 1024;
 	for (auto iter = _begin; iter != _end; ++iter)
 	{
 		size_buffer += (*iter)->buf_message.size() * 4 + 256;
-		size_buffer += (*iter)->get_line_count() * 256;
+		size_buffer += (*iter)->line_count() * 256;
 		size_buffer += 1024;
 	}
 
@@ -129,14 +130,12 @@ shared_buffer _make_web_message_log(std::string_view _command, circular_list<obj
 	return _make_webmessage_log(_command, _list_plog_record.begin(), _list_plog_record.end());
 }
 
-observable_websocket_peer_overview_info::observable_websocket_peer_overview_info(const std::string_view _name) :
+observable_websocket_peer_overview_info::observable_websocket_peer_overview_info() :
 	m_is_count_log_count_updating(false),
 	m_array_log_count_last{ 0,0,0,0,0,0,0,0 }
 {
-	set_name(_name);
-
-	m_webpage_str_target = "webpage_server_overview_info.htm";
-	m_webpage_index = 'A';
+	this->m_webpage_str_target = "webpage_server_overview_info.htm";
+	this->m_webpage_index = 'A';
 }
 
 observable_websocket_peer_overview_info::~observable_websocket_peer_overview_info()
@@ -146,19 +145,19 @@ observable_websocket_peer_overview_info::~observable_websocket_peer_overview_inf
 void observable_websocket_peer_overview_info::request_update_webpage_time_event()
 {
 	// check)
-	CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+	CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 	// declare) 
 	shared_buffer buf_send;
 
 	// 1) make message
-	scoped_lock(this->m_pservice_entity->m_cs_instance)
+	SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 	{
-		buf_send = _make_webmessage_event_list(this->m_pservice_entity->m_instance.status.vector_time_event);
+		buf_send = _make_webmessage_event_list(this->m_pservice_entity->m_instance.info.status.vector_time_event);
 	}
 
 	// 2) 모두에게 전송한다.
-	scoped_lock(this->m_lockable_observable)
+	SCOPED_LOCK(this->m_lockable_observable)
 	{
 		for (auto& iter : this->m_container_observer)
 		{
@@ -173,7 +172,7 @@ void observable_websocket_peer_overview_info::add_log_records(const circular_lis
 	this->send(_make_webmessage_log(MESSAGE_WEB_LOG_OBJECT_INFO, _list_log_record.begin(), _list_log_record.end()));
 
 	//// 2) send updating log count message
-	//scoped_lock(service::get_logger()->get_count_lock())
+	//SCOPED_LOCK(service::get_logger()->get_count_lock())
 	//{
 	//	// check)
 	//	RETURN_IF(this->m_is_count_log_count_updating == true);
@@ -192,19 +191,19 @@ void observable_websocket_peer_overview_info::on_observer_registered(socket_webs
 	_pobserver->register_messageable(this);
 
 	// check)
-	CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+	CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 	// declare) 
 	std::array<shared_buffer, 3> array_buffer;
 
-	scoped_lock(this->m_pservice_entity->m_cs_instance)
+	SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 	{
 		// 2) make server list/event list
-		array_buffer[0]  = _make_webmessage_event_list(this->m_pservice_entity->m_instance.status.vector_time_event);
+		array_buffer[0]  = _make_webmessage_event_list(this->m_pservice_entity->m_instance.info.status.vector_time_event);
 
 		// 3) make stored log
 		array_buffer[1] = _make_webmessage_log_count(this->m_array_log_count_last);
-		array_buffer[2] = _make_web_message_log(MESSAGE_WEB_LOG_OBJECT_INFO, this->m_pservice_entity->m_instance.status.vector_log_record);
+		array_buffer[2] = _make_web_message_log(MESSAGE_WEB_LOG_OBJECT_INFO, this->m_pservice_entity->m_instance.info.status.vector_log_record);
 	}
 
 	// 4) send all
@@ -217,7 +216,7 @@ uintptr_t observable_websocket_peer_overview_info::on_observer_unregistering(soc
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);
 
-	// 2) uregister _pmenber
+	// 2) unregister _pmenber
 	_pobserver->unregister_messageable(this);
 
 	// return) 
@@ -293,7 +292,9 @@ result_code observable_websocket_peer_overview_info::on_message_time_event(sMESS
 	auto message_type = _msg.buf_message.extract_text<char>(size(4));
 
 	// 2) get target id
-	auto element_id = __from_string<uint64_t>((_msg.buf_message + offset(2)).to_string<char>());
+	const auto str_element_id = (_msg.buf_message + offset(2)).to_string<char>();
+	uint64_t element_id = 0;
+	std::from_chars(str_element_id.data(), str_element_id.data() + str_element_id.size(), element_id);
 
 	// 3) find time event object
 	object_ptr<time_event::Ientity> ptime_event_entity = find_time_event_entity(element_id);
@@ -369,7 +370,7 @@ void observable_websocket_peer_overview_info::process_send_webmessage_log_count_
 	auto plogger = service::get_logger();
 
 	// 2) get loc count
-	scoped_lock(plogger->get_count_lock())
+	SCOPED_LOCK(plogger->get_count_lock())
 	{
 		// check)
 		CGASSERT_ERROR(m_is_count_log_count_updating == true);
@@ -417,7 +418,7 @@ void observable_websocket_peer_overview_info::process_send_webmessage_log_count_
 	this->send(make_shared_buffer(sWEBSOCKET_MESSAGE(buf_text.to_string<char>())));
 
 	// 8) re-request or stop
-	scoped_lock(plogger->get_count_lock())
+	SCOPED_LOCK(plogger->get_count_lock())
 	{
 		// - store last log count
 		this->m_array_log_count_last = array_log_count;

@@ -1,9 +1,9 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                                util.crypt                                 *
+//*                          Utinity.Crypto Classes                           *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -83,32 +83,8 @@
 #define		CGDK_COMPONENT_NAME			"CGDK10.system.util.crypt"
 
 // 2) svn version
-#if defined(_MSC_VER)
-	#include "svn_version.h"
-#else
-	#ifndef _SVN_VERSION_H_
-	#define _SVN_VERSION_H_
+#include "svn_version.h"
 
-	#define SVN_LOCAL_MODIFICATIONS       0						// 1 if there are modifications to the local working copy, 0 otherwise
-	#define SVN_COMMIT_REVISION           2310					// Highest committed revision number in the working copy
-	#define SVN_COMMIT_REVISION_STRING    "2310"				// Highest committed revision number in the working copy
-	#define SVN_UPDATE_REVISION_STRING    "2310"				// Highest committed revision number in the working copy
-	#define SVN_TIME_NOW_STRING           "2018/07/13 08:54:17"	// Current system date &amp; time
-
-	#endif
-#endif
-
-// 3) SSL
-#include <openssl/rsa.h>
-#include <openssl/aes.h>
-#include <openssl/crypto.h> 
-#include <openssl/x509.h> 
-#include <openssl/pem.h> 
-#include <openssl/ssl.h>
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <openssl/hmac.h>
-
-// 4) license files
+// 3) license files
 #include "../../common/version.h"
 #include "../../common/cgdk_info.h"

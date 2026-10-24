@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <charconv>
 
 // SSL Include files
 #include <openssl/rsa.h>
@@ -10,20 +11,20 @@
 
 using namespace CGDK;
 
+void apply_websocket_mask(char* _data, std::size_t _size, const uint8_t* _mask) noexcept;
+
 void net::io::Nhttp_server::process_on_connect()
 {
 }
 
 void net::io::Nhttp_server::process_on_fail_connect(uint64_t _disconnect_reason)
 {
-	on_fail_connect(_disconnect_reason);
+	this->on_fail_connect(_disconnect_reason);
 }
 void net::io::Nhttp_server::process_on_disconnect(uint64_t _disconnect_reason, eSOCKET_STATE _socket_state)
 {
 	if (_socket_state == eSOCKET_STATE::CERTIFIED)
-	{
-		on_disconnect(_disconnect_reason);
-	}
+		this->on_disconnect(_disconnect_reason);
 }
 
 shared_buffer message_web_error(uint32_t _error_code, const std::string_view _error_message)
@@ -32,8 +33,8 @@ shared_buffer message_web_error(uint32_t _error_code, const std::string_view _er
 	auto temp_buffer = alloc_shared_buffer(4096);
 
 	// 2) Response head를 작성한다.
-	temp_buffer.append_text("HTTP/1.1 {} {}\r\n"sv, _error_message, _error_code);	// Protocol 버전 및 응답코드
-	temp_buffer.append_text("Server: CGCII/10.0.0\r\n"sv);		// Web Server Bannder 정보
+	temp_buffer.append_text(CGDK::stream_string("HTTP/1.1 ", _error_message, " ", _error_code, "\r\n"));	// Protocol 버전 및 응답코드
+	temp_buffer.append_text("Server: CGCII/10.0.0\r\n"sv);		// Web Server Banner 정보
 	temp_buffer.append_text("Content-type:text/html\r\n"sv);	// MIME 타입
 	temp_buffer.append_text("Content-length:107\r\n"sv);		// HTTP Body 크기
 
@@ -58,12 +59,12 @@ shared_buffer message_web_socket_handshake(const std::string_view _websocket_pro
 	temp_buffer.append_text("HTTP/1.1 101 Switching Protocols\r\n"sv);
 	temp_buffer.append_text("Upgrade: websocket\r\n"sv);
 	temp_buffer.append_text("Connection: Upgrade\r\n"sv);
-	temp_buffer.append_text("Sec-WebSocket-Location: {}\r\n"sv, _websocket_location);
+	temp_buffer.append_text(CGDK::stream_string("Sec-WebSocket-Location: ", _websocket_location, "\r\n"));
 	if (_websocket_protocol.empty() == false)
 	{
-		temp_buffer.append_text("Sec-WebSocket-Protocol: {}\r\n"sv, _websocket_protocol);
+		temp_buffer.append_text(CGDK::stream_string("Sec-WebSocket-Protocol: ", _websocket_protocol, "\r\n"));
 	}
-	temp_buffer.append_text("Sec-WebSocket-Accept: {}\r\n"sv, _websocket_accept);
+	temp_buffer.append_text(CGDK::stream_string("Sec-WebSocket-Accept: ", _websocket_accept, "\r\n"));
 	temp_buffer.append_text("Server: CGCII/10.0.0\r\n"sv);
 	temp_buffer.append_text("\r\n"sv);
 
@@ -74,12 +75,14 @@ shared_buffer message_web_socket_handshake(const std::string_view _websocket_pro
 char get_next_char(char*& _pnow, const char* _pend)
 {
 	// check) End면 끝낸다.
-	RETURN_IF(_pnow == _pend, 0);
+	if(_pnow == _pend)
+		return 0;
 
 	if (*_pnow == '%')
 	{
 		// check) 길이가 2Byte 이하면 Exception을 던진다.
-		THROW_IF((_pend-_pnow) < 3, throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv));
+		if((_pend-_pnow) < 3)
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv);
 
 		char* pNow = _pnow+1;
 
@@ -104,10 +107,11 @@ char get_next_char(char*& _pnow, const char* _pend)
 char get_next_code_utf8(char*& _pnow, const char* _pend)
 {
 	// 1) Character 값을 읽어온다.
-	char ch_read = (char)get_next_char(_pnow, _pend);
+	char ch_read = get_next_char(_pnow, _pend);
 
 	// check)
-	 RETURN_IF(ch_read == 0, 0);
+	if(ch_read == 0)
+		return 0;
 
 	// Case-1) 0x80보다 작으면 그냥 그 값을 Return한다.(일반적인 값임)
 	if ((ch_read & 0x80) == 0)
@@ -118,10 +122,11 @@ char get_next_code_utf8(char*& _pnow, const char* _pend)
 	else if ((ch_read & 0xe0) == 0xc0)
 	{
 		// - Character 읽기
-		char wch_next = (char)get_next_char(_pnow, _pend);
+		char wch_next = get_next_char(_pnow, _pend);
 
 		// check) NULL이 돌아오면 Exception을 던진다.
-		THROW_IF(wch_next == 0, throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv));
+		if(wch_next == 0)
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv);
 
 		return	((ch_read & 0x1f) << 6) | (wch_next & 0x3f);
 	}
@@ -129,16 +134,18 @@ char get_next_code_utf8(char*& _pnow, const char* _pend)
 	else if ((ch_read & 0xf0) == 0xe0)
 	{
 		// - 1번째 Character
-		char wch_next1 = (char)get_next_char(_pnow, _pend);
+		char wch_next1 = get_next_char(_pnow, _pend);
 
 		// check) NULL이 돌아오면 Exception을 던진다.
-		THROW_IF(wch_next1 == 0, throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv));
+		if(wch_next1 == 0)
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv);
 
 		// - 2번째 Character
-		char wch_next2 = (char)get_next_char(_pnow, _pend);
+		char wch_next2 = get_next_char(_pnow, _pend);
 
 		// check) NULL이 돌아오면 Exception을 던진다.
-		THROW_IF(wch_next2 == 0, throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv));
+		if(wch_next2 == 0)
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv);
 
 		return ((ch_read & 0x0f)<<12) | ((wch_next1 & 0x3f)<<6) | (wch_next2 & 0x3f);
 	}
@@ -151,28 +158,98 @@ char get_next_code_utf8(char*& _pnow, const char* _pend)
 		//throw	throwable::failure(400, "Invalid Request"sv);
 
 		// - 1번째 Character
-		char wch_next1 = (char)get_next_char(_pnow, _pend);
+		char wch_next1 = get_next_char(_pnow, _pend);
 
 		// check) NULL이 돌아오면 Exception을 던진다.
-		THROW_IF(wch_next1 == 0, throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv));
+		if(wch_next1 == 0)
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv);
 
 		// - 2번째 Character
-		char wch_next2 = (char)get_next_char(_pnow, _pend);
+		char wch_next2 = get_next_char(_pnow, _pend);
 
 		// check) NULL이 돌아오면 Exception을 던진다.
-		THROW_IF(wch_next2 == 0, throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv));
+		if(wch_next2 == 0)
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv);
 
 		// - 3번째 Character
-		char wch_next3 = (char)get_next_char(_pnow, _pend);
+		char wch_next3 = get_next_char(_pnow, _pend);
 
 		// check) NULL이 돌아오면 Exception을 던진다.
-		THROW_IF(wch_next3 == 0, throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv));
+		if(wch_next3 == 0)
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid request"sv);
 
-		return ((ch_read & 0x07) << 18) | ((ch_read & 0x3f) << 12) | ((wch_next1 & 0x3f) << 6) | (wch_next2 & 0x3f);
+		return ((ch_read & 0x07) << 18) | ((wch_next1 & 0x3f) << 12) | ((wch_next2 & 0x3f) << 6) | (wch_next3 & 0x3f);
 	}
 
 	// return) Error...
 	return	0;
+}
+
+void net::io::Nhttp_server::_throw_too_large(std::string_view _what, std::size_t _size, std::size_t _max) const
+{
+	// log)
+	LOG_WARNING << "(warn) CGDK.net.socket.http: "sv << _what << " is too large ("sv << _size << " > "sv << _max << " bytes). disconnect"sv;
+
+	// - 접속을 끊는다. (receivable에서 exception을 받으면 socket을 닫는다.)
+	throw throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH);
+}
+
+void net::io::Nhttp_server::_process_websocket_data(uint16_t _opcode, bool _is_fin, const shared_buffer& _buffer, const buffer_view& _payload)
+{
+	// declare)
+	auto f_dispatch = [this](uint16_t _opcode_message, shared_buffer&& _buf_message)
+	{
+		sMESSAGE_HTTP_WEBSOCKET msg;
+		msg.method = (_opcode_message == 1) ? eHTTP_METHOD::TEXT_ : eHTTP_METHOD::BINARY_;
+		msg.buf_message = std::move(_buf_message);
+
+		// - message를 Imessageable로 전달하여 처리한다.
+		this->process_message(msg);
+
+		// statistics)
+		this->statistics_on_receive_message();
+	};
+	auto f_append = [this](const buffer_view& _data)
+	{
+		if (this->m_max_body_size != 0 && this->m_ws_fragments.size() + _data.size() > this->m_max_body_size)
+			this->_throw_too_large("websocket fragmented message"sv, this->m_ws_fragments.size() + _data.size(), this->m_max_body_size);
+		this->m_ws_fragments.append(reinterpret_cast<const char*>(_data.data()), _data.size());
+	};
+
+	// 1) continuation (시작 frame 없이 온 것은 버린다.)
+	if (_opcode == 0)
+	{
+		RETURN_IF(this->m_ws_fragment_opcode == 0);
+
+		f_append(_payload);
+		RETURN_IF(_is_fin == false);
+
+		auto buf_message = alloc_shared_buffer(this->m_ws_fragments.size() + 1);
+		if (this->m_ws_fragments.empty() == false)
+			buf_message.append(this->m_ws_fragments.size(), this->m_ws_fragments.data());
+
+		auto opcode_message = this->m_ws_fragment_opcode;
+		this->m_ws_fragments.clear();
+		this->m_ws_fragment_opcode = 0;
+
+		f_dispatch(opcode_message, std::move(buf_message));
+		return;
+	}
+
+	// 2) 새 text/binary frame (끝나지 않은 조각이 있으면 버린다.)
+	this->m_ws_fragments.clear();
+	this->m_ws_fragment_opcode = 0;
+
+	// - 조각의 시작
+	if (_is_fin == false)
+	{
+		this->m_ws_fragment_opcode = _opcode;
+		f_append(_payload);
+		return;
+	}
+
+	// - 한 frame
+	f_dispatch(_opcode, _buffer ^ _payload);
 }
 
 size_t net::io::Nhttp_server::process_packet_websocket( shared_buffer& _buffer, const net::sockaddr& /*_address*/)
@@ -193,13 +270,16 @@ size_t net::io::Nhttp_server::process_packet_websocket( shared_buffer& _buffer, 
 			// 2) Head를 얻는다.
 			uint16_t header = buf_apply.extract<uint16_t>();
 
-			// 3) 첫번째 메시지인가 아닌가.
+			// 3) 첫 번째 메시지인가 아닌가.
 			bool  is_fin = (header & 0x0080)!=0;
 			uint16_t Opcode = (header & 0x000f); // opcode 0:continue, 1:text, 2:binary 8:close
 
-			// 4) message length
+			// 4) message length (126: 2 byte 길이, 127: 8 byte 길이. 길이 byte가 아직 다 오지 않았으면 기다린다.)
 			bool bMasked = (header & 0x8000) != 0;
-			uint16_t length = (header & 0x7f00)>>8;
+			uint64_t length = (header & 0x7f00)>>8;
+
+			BREAK_IF(length == 126 && buf_apply.size() < 2);
+			BREAK_IF(length == 127 && buf_apply.size() < 8);
 
 			// 5) length가 126일 경우 길이용 바이트로 2Byte 추가.
 			if (length == 126)
@@ -210,7 +290,7 @@ size_t net::io::Nhttp_server::process_packet_websocket( shared_buffer& _buffer, 
 				// - 2Byte 읽어 뒤집어 사용한다.
 				for(int i=0;i<2; ++i)
 				{
-					length += static_cast<size_t>(buf_apply.extract<uint8_t>()) << (8 * (2 - 1 - i));
+					length += static_cast<uint64_t>(buf_apply.extract<uint8_t>()) << (8 * (2 - 1 - i));
 				}
 			}
 			// 6) length가 127일 경우 길이용 바이트로 8Byte 추가.
@@ -222,16 +302,21 @@ size_t net::io::Nhttp_server::process_packet_websocket( shared_buffer& _buffer, 
 				// - 8Byte 추가
 				for (int i = 0; i<8; ++i)
 				{
-					length += static_cast<size_t>(buf_apply.extract<uint8_t>()) << (8 * (8 - 1 - i));
+					length += static_cast<uint64_t>(buf_apply.extract<uint8_t>()) << (8 * (8 - 1 - i));
 				}
 			}
+
+			// check) frame 크기 제한
+			if (this->m_max_body_size != 0 && length > this->m_max_body_size)
+				this->_throw_too_large("websocket frame"sv, static_cast<std::size_t>(length), this->m_max_body_size);
 
 			// 7) Masked일 경우 Masked 처리를 한다.
 			if(bMasked)
 			{
 				// check) length보다 길이가 작으면 여기서 끝낸다.
 				//        주의!!) 이 BREAK문은 반드시 여기서 BREAK를 해야한다. 이유는 중복 Masking 처리를 방지하기 위해서이다.
-				BREAK_IF(buf_apply.size() - sizeof(uint32_t) < length);
+				//        (size가 mask(4 byte)보다 작을 수 있으므로 빼지 않고 더해서 비교한다.)
+				BREAK_IF(buf_apply.size() < sizeof(uint32_t) + length);
 
 				// declare) 
 				uint8_t	mask[4];
@@ -239,15 +324,9 @@ size_t net::io::Nhttp_server::process_packet_websocket( shared_buffer& _buffer, 
 				// - Mask를 읽어낸다
 				*(uint32_t*)mask = buf_apply.extract<uint32_t>();
 
-				// - Read/ReadEnd...
-				auto read_pos_now = buf_apply.data<char>();
-				auto read_pos_end = buf_apply.data<char>() + length;
 
 				// - Mask값을 XOR처리한다.
-				for (int c = 0; read_pos_now != read_pos_end; ++read_pos_now, ++c)
-				{
-					*read_pos_now = *read_pos_now ^ mask[c % 4];
-				}
+				apply_websocket_mask(buf_apply.data<char>(), static_cast<std::size_t>(length), mask);
 			}
 			else
 			{
@@ -273,64 +352,49 @@ size_t net::io::Nhttp_server::process_packet_websocket( shared_buffer& _buffer, 
 			//	*  0xB ~ 0xF	Reserved for further control frames
 			switch(Opcode)
 			{
-			// CASE) continue
+			// CASE) continue / Text / Binary (조각은 모아서 하나로 전달한다.)
 			case	0:
-					{
-
-					}
-					break;
-
-			// CASE) Text
 			case	1:
-					{
-						// - 전달용 message를 설정한다.
-						sMESSAGE_HTTP_WEBSOCKET msg;
-
-						msg.method = eHTTP_METHOD::TEXT_;
-						msg.buf_message = _buffer ^ buf_payload_data;
-
-						// - message를 Imessageable로 전달하여 처리한다.
-						process_message(msg);
-
-						// - Paket수를 증가시킨다.
-						statistics_on_receive_message();
-					}
-					break;
-
-			// CASE) Binary
 			case	2:
-					{
-						// declare) 
-						sMESSAGE_HTTP_WEBSOCKET msg;
-
-						// - 전달용 message를 설정한다.
-						msg.method = eHTTP_METHOD::BINARY_;
-						msg.buf_message = _buffer ^ buf_payload_data;
-
-						// - message를 Imessageable로 전달하여 처리한다.
-						process_message(msg);
-
-						// - Paket수를 증가시킨다.
-						statistics_on_receive_message();
-					}
+					this->_process_websocket_data(Opcode, is_fin, _buffer, buf_payload_data);
 					break;
 
 			// CASE) close
 			case	8:
 					{
+						// - close frame을 돌려주고 끊는다. (RFC 6455 5.5.1 : status code(2 byte)만 돌려준다.)
+						auto buf_close = alloc_shared_buffer(4);
+						buf_close.append<uint8_t>(0x88);
+						if (length >= 2)
+						{
+							buf_close.append<uint8_t>(2);
+							buf_close.append(2, buf_payload_data.data());
+						}
+						else
+						{
+							buf_close.append<uint8_t>(0);
+						}
+						process_send(std::move(buf_close), 1, 0);
+
 						disconnect();
 					}
 					break;
 
-			// CASE) PING 요청시
+			// CASE) PING 요청 시
 			case	9:
 					{
-						// - Pong을 전송한다.
-						//   Pong은 Opcode가 0x0a로 변경해서 전달받은 Ping과 완전히 동일한 데이터를 Echo 전송한다.
-						_buffer.front<uint8_t>() = (_buffer.front<uint8_t>() & 0xf0) | 0x0a;
+						// - Pong을 전송한다. (opcode 0x0a, Ping과 같은 payload. 서버는 mask하지 않는다.)
+						//   (이 frame의 payload만 보낸다. control frame의 payload는 125 byte 이하다.)
+						if (length <= 125)
+						{
+							auto buf_pong = alloc_shared_buffer(2 + static_cast<std::size_t>(length));
+							buf_pong.append<uint8_t>(0x8a);
+							buf_pong.append<uint8_t>(static_cast<uint8_t>(length));
+							if (length != 0)
+								buf_pong.append(static_cast<std::size_t>(length), buf_payload_data.data());
 
-						// - 전송한다.
-						process_send(shared_buffer(_buffer), 1, 0);
+							process_send(std::move(buf_pong), 1, 0);
+						}
 					}
 					break;
 
@@ -352,7 +416,7 @@ size_t net::io::Nhttp_server::process_packet_websocket( shared_buffer& _buffer, 
 			// 11) 메시지 끝일 경우...
 			if (is_fin == true)
 			{
-				// - 접속 종료시
+				// - 접속 종료 시
 				//int status = 0;
 				//if(length >= 2)
 				//{
@@ -384,6 +448,20 @@ size_t net::io::Nhttp_server::process_packet_websocket( shared_buffer& _buffer, 
 	return 0;
 }
 
+bool net::io::Nhttp_server::send_websocket_ping()
+{
+	// check)
+	if (this->is_websocket() == false)
+		return false;
+
+	// - PING (opcode 0x9, payload 없음. 서버는 mask하지 않는다.)
+	auto buf_ping = alloc_shared_buffer(2);
+	buf_ping.append<uint8_t>(0x89);
+	buf_ping.append<uint8_t>(0x00);
+
+	return this->process_send(std::move(buf_ping), 1, 0);
+}
+
 std::string sha1(const std::string_view _input, size_t iterations = 1) noexcept
 {
 	std::string hash;
@@ -399,80 +477,39 @@ std::string sha1(const std::string_view _input, size_t iterations = 1) noexcept
 
 std::string base64_encode(const std::string_view _ascii) noexcept
 {
-	std::string base64;
+	// - EVP_EncodeBlock : no new line, '\0' terminated (4 * ceil(n / 3) + 1 bytes)
+	std::string base64(4 * ((_ascii.size() + 2) / 3) + 1, '\0');
 
-	BUF_MEM*	bptr = BUF_MEM_new();
-	BIO*		b64 = BIO_new(BIO_f_base64());
-	BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-	BIO*		bio = BIO_new(BIO_s_mem());
-	BIO_push(b64, bio);
-	BIO_set_mem_buf(b64, bptr, BIO_CLOSE);
+	const auto length = EVP_EncodeBlock(reinterpret_cast<unsigned char*>(base64.data()), reinterpret_cast<const unsigned char*>(_ascii.data()), static_cast<int>(_ascii.size()));
+	if (length < 0)
+		return std::string();
 
-	// write directly to base64-shared_buffer to avoid copy
-	auto base64_length = static_cast<size_t>(round(4 * ceil(static_cast<double>(_ascii.size()) / 3.0)));
-	base64.resize(base64_length);
-	bptr->length = 0;
-	bptr->max = base64_length + 1;
-	bptr->data = &base64[0];
+	base64.resize(static_cast<size_t>(length));
 
-	if (BIO_write(b64, &_ascii[0], static_cast<int>(_ascii.size())) <= 0 || BIO_flush(b64) <= 0)
-	{
-		base64.clear();
-	}
-
-	// To keep &base64[0] through BIO_free_all(b64)
-	bptr->length = 0;
-	bptr->max = 0;
-	bptr->data = nullptr;
-
-	BIO_free_all(b64);
-
-	// return) 
+	// return)
 	return base64;
 }
 
 bool base64_encode(char* _dest, size_t _dest_size, const std::string_view _source) noexcept
 {
-	BUF_MEM*	bptr = BUF_MEM_new();
-	BIO*		b64 = BIO_new(BIO_f_base64());
-	BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-	BIO*		bio = BIO_new(BIO_s_mem());
-	BIO_push(b64, bio);
-	BIO_set_mem_buf(b64, bptr, BIO_CLOSE);
+	// check) the size of the result + '\0'
+	const size_t base64_length = 4 * ((_source.size() + 2) / 3);
+	if (_dest == nullptr || base64_length >= _dest_size)
+		return false;
 
-	// write directly to base64-shared_buffer to avoid copy
-	auto base64_length = static_cast<size_t>(round(4 * ceil(static_cast<double>(_source.size()) / 3.0)));
+	// - EVP_EncodeBlock : no new line, '\0' terminated
+	const auto length = EVP_EncodeBlock(reinterpret_cast<unsigned char*>(_dest), reinterpret_cast<const unsigned char*>(_source.data()), static_cast<int>(_source.size()));
 
-	// check)
-	RETURN_IF(base64_length >= _dest_size, false);
-
-	bptr->length = 0;
-	bptr->max = base64_length + 1;
-	bptr->data = _dest;
-
-	if (BIO_write(b64, _source.data(), static_cast<int>(_source.size())) <= 0 || BIO_flush(b64) <= 0)
-	{
-		return	false;
-	}
-
-	// - NULL을 추가한다.
-	_dest[base64_length] = 0;
-
-	// To keep &base64[0] through BIO_free_all(b64)
-	bptr->length = 0;
-	bptr->max = 0;
-	bptr->data = nullptr;
-
-	BIO_free_all(b64);
-
-	// return) 
-	return true;
+	// return)
+	return length >= 0 && static_cast<size_t>(length) == base64_length;
 }
 
 void encode_web_socket_key(char* _dest, const std::string_view _key)
 {
 	// check)
 	CGASSERT_ERROR(_key.size() == 24);
+	if(_key.size() != 24)
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
 	// declare) 
 	char str_source[256];
@@ -491,16 +528,21 @@ void encode_web_socket_key(char* _dest, const std::string_view _key)
 	auto result = base64_encode(_dest, 256, std::string_view(str_sha1, 20));
 
 	// check) ...
-	THROW_IF(result == false, throwable::failure(eRESULT::FAIL));
+	if(result == false)
+		throw throwable::failure(eRESULT::FAIL);
 }
 
 bool check_web_socket_key(const std::string_view _compare, const std::string_view _source) noexcept
 {
 	// check)
 	CGASSERT_ERROR(_source.size() == 24);
+	if(_source.size() != 24)
+		return false;
 
 	// check)
 	CGASSERT_ERROR(_compare.size() == 28);
+	if(_compare.size() != 28)
+		return false;
 
 	// declare) 
 	char str_source[256];
@@ -515,16 +557,17 @@ bool check_web_socket_key(const std::string_view _compare, const std::string_vie
 	char str_sha1[256];
 	SHA1(reinterpret_cast<const unsigned char*>(str_source), 60, reinterpret_cast<unsigned char*>(str_sha1));
 
-	// decalre) 
+	// declare) 
 	char str_result[256];
 
 	// 4) Base64로 다시 Encoding
 	auto result = base64_encode(str_result, 256, std::string_view(str_sha1, 20));
 
 	// check) ...
-	RETURN_IF(result == false, false);
+	if(result == false)
+		return false;
 
-	// 5) compare keyward
+	// 5) compare keyword
 	return _compare == std::string_view(str_result, 28);
 }
 
@@ -544,6 +587,16 @@ size_t net::io::Nhttp_server::process_packet_http( shared_buffer& _buffer, const
 		{
 			if (m_msg_http_request.get_header("Upgrade"sv) == "websocket"sv)
 			{
+				// check) upgrade (ex. Origin) : '403 Forbidden' and disconnect
+				if (this->on_websocket_upgrade(m_msg_http_request) == false)
+				{
+					auto buf_forbidden = alloc_shared_buffer(128);
+					buf_forbidden.append_text("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"sv);
+					process_send(std::move(buf_forbidden), 1, 0);
+					this->disconnect();
+					return 0;
+				}
+
 				// - WebSocket-Key를 얻는다.
 				auto str_web_socket_key = m_msg_http_request.get_header("Sec-WebSocket-Key"sv);
 
@@ -551,7 +604,8 @@ size_t net::io::Nhttp_server::process_packet_http( shared_buffer& _buffer, const
 				CGASSERT_ERROR(str_web_socket_key.size() == 24);
 
 				// check) WebSocketKey가 없으면 Exception을 던진다.
-				THROW_IF(str_web_socket_key.size() != 24, throwable::failure(eRESULT::FAIL_NO_WEBSOCKET_KEY))
+				if(str_web_socket_key.size() != 24)
+					throw throwable::failure(eRESULT::FAIL_NO_WEBSOCKET_KEY);
 
 				// declare)
 				uint32_t version = HTTP_VERSION(1,1);
@@ -562,7 +616,8 @@ size_t net::io::Nhttp_server::process_packet_http( shared_buffer& _buffer, const
 				// check) Version 정보를 얻느다.
 				if (str_web_socket_version.empty() == false)
 				{
-					version = __from_string<int>(str_web_socket_version);
+					version = 0;
+					std::from_chars(str_web_socket_version.data(), str_web_socket_version.data() + str_web_socket_version.size(), version);
 				}
 
 
@@ -587,17 +642,18 @@ size_t net::io::Nhttp_server::process_packet_http( shared_buffer& _buffer, const
 				auto pacceptor = dynamic_cast<net::io::connective::acceptor::Ntcp*>(this->m_pconnectable_notify);
 
 				// check)
-				CGASSERT_ERROR(pacceptor != nullptr);
+				CGASSERT_FATAL(pacceptor != nullptr);
 
 				{
 					// declare)
 					std::string_view str_address;
-					char temp_string[256]{ 0 };
+					std::string temp_string;
 
 					// - accept address를 얻는다.
 					if (pacceptor != nullptr)
 					{
-						str_address = CGDK::to_string(temp_string, 256, pacceptor->get_accept_endpoint().address());
+						temp_string = pacceptor->get_accept_endpoint().address().to_string();
+						str_address = temp_string;
 					}
 					else
 					{
@@ -616,16 +672,15 @@ size_t net::io::Nhttp_server::process_packet_http( shared_buffer& _buffer, const
 							   
 				try
 				{
-					// - set object_state
-					socket_state(eSOCKET_STATE::CERTIFIED);
-
-					// - call 'on_connect'
-					on_connect();
+					// - set object_state (CAS : ESTABLISHED일 때만 CERTIFIED로 바꾸고 on_connect를 호출한다.
+					//   그 사이 닫히는 중이면(오류 응답 후 disconnect 등) 상태를 덮어쓰지 않고 on_connect 없이 메시지만 전달한다)
+					if (this->set_socket_state_if(eSOCKET_STATE::ESTABLISHED, eSOCKET_STATE::CERTIFIED))
+						on_connect();
 				}
 				catch (...)
 				{
-					// - restore socket status
-					socket_state(eSOCKET_STATE::ESTABLISHED);
+					// - restore socket status (CAS : CERTIFIED일 때만)
+					this->set_socket_state_if(eSOCKET_STATE::CERTIFIED, eSOCKET_STATE::ESTABLISHED);
 
 					// reraise)
 					throw;
@@ -638,16 +693,15 @@ size_t net::io::Nhttp_server::process_packet_http( shared_buffer& _buffer, const
 			{
 				try
 				{
-					// - set object_state
-					socket_state(eSOCKET_STATE::CERTIFIED);
-
-					// - call 'on_connect'
-					on_connect();
+					// - set object_state (CAS : ESTABLISHED일 때만 CERTIFIED로 바꾸고 on_connect를 호출한다.
+					//   그 사이 닫히는 중이면(오류 응답 후 disconnect 등) 상태를 덮어쓰지 않고 on_connect 없이 메시지만 전달한다)
+					if (this->set_socket_state_if(eSOCKET_STATE::ESTABLISHED, eSOCKET_STATE::CERTIFIED))
+						on_connect();
 				}
 				catch (...)
 				{
-					// - restore socket status
-					socket_state(eSOCKET_STATE::ESTABLISHED);
+					// - restore socket status (CAS : CERTIFIED일 때만)
+					this->set_socket_state_if(eSOCKET_STATE::CERTIFIED, eSOCKET_STATE::ESTABLISHED);
 
 					// reraise)
 					throw;
@@ -661,76 +715,51 @@ size_t net::io::Nhttp_server::process_packet_http( shared_buffer& _buffer, const
 		// - message을 Imessageable로 전달하여 처리한다.
 		process_message(m_msg_http_request);
 
-		// statistics) Paket수를 증가시킨다.
+		// statistics) Packet수를 증가시킨다.
 		statistics_on_receive_message();
 
 		// - reset message
 		m_msg_http_request.reset();
+		this->_reset_chunk();
 
 		// return)
 		return 0;
 	}
 
-	// 3) chunked면 추가 처리해 준다.
-	if (m_msg_http_request.is_chunked)
-	{
-		while (m_msg_http_request.content_completed)
-		{
-			// - 훅함수 process_pre_message()를 호출한다.
-			process_pre_message(m_msg_http_request);
-
-			// - message를 Imessageable로 전달하여 처리한다.
-			process_message(m_msg_http_request);
-
-			// - m_msg_http_request를 reset
-			m_msg_http_request.content_completed = false;
-
-			// - 다시 parsing 처리 함.
-			auto size_process_nested = process_parsing_http(_buffer);
-
-			// - 처리된 만큼 뺀다.
-			_buffer += offset(size_process_nested);
-		}
-
-		// - complete면...
-		if (m_msg_http_request.is_completed)
-		{
-			// - 훅함수 process_pre_message()를 호출한다.
-			process_pre_message(m_msg_http_request);
-
-			// - message를 Imessageable로 전달하여 처리한다.
-			process_message(m_msg_http_request);
-
-			// statistics) 
-			statistics_on_receive_message();
-
-			// - reset message
-			m_msg_http_request.reset();
-		}
-	}
-
-	// return)
+	// return) (chunked body도 process_parsing_http에서 다 모은 후 한 번에 전달한다.)
 	return m_msg_http_request.buf_message.size();
 }
 
 std::size_t net::io::Nhttp_server::process_packet( shared_buffer& _buffer, const net::sockaddr& _socket_address)
 {
 	// check) _buffer.data_가 0이어서는 안된다.
-	THROW_IF(_buffer.data() == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT), LOG_DEBUG << "(err ) _buffer.data_ is nullptr. _buffer.size_: "sv << _buffer.size() << " " __CGFUNCTION__ ""sv)
+	if (_buffer.data() == nullptr)
+	{
+		LOG_DEBUG << "(err ) _buffer.data_ is nullptr. _buffer.size_: "sv << _buffer.size() << " " __CGFUNCTION__ ""sv;
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
+	}
 
 	// check) 최하 4Byte보다 작을 경우 그냥 끝낸다.
-	RETURN_IF(_buffer.size() < 4, 0);
+	if(_buffer.size() == 0)
+		return 0;
 
-	// 1) message 처리
-	switch (m_msg_http_request.protocol)
+	// 1) message 처리 (한 번 받은 데이터에 message가 여럿 있으면(pipelining) 모두 처리한다.)
+	for (;;)
 	{
-	case	eHTTP_PROTOCOL::WEBSOCKET_:
-			process_packet_websocket(_buffer, _socket_address);
-			break;
+		auto size_before = _buffer.size();
+		auto protocol_before = m_msg_http_request.protocol;
 
-	default:
+		if (protocol_before == eHTTP_PROTOCOL::WEBSOCKET_)
+			process_packet_websocket(_buffer, _socket_address);
+		else
 			process_packet_http(_buffer, _socket_address);
-			break;
+
+		// check) 더 처리한 것이 없다. (message가 아직 다 오지 않았다.)
+		BREAK_IF(_buffer.size() == 0 || (_buffer.size() == size_before && m_msg_http_request.protocol == protocol_before));
+
+		// check) 접속을 끊는 중이다.
+		auto state = this->socket_state();
+		BREAK_IF(state >= eSOCKET_STATE::SEND_DISCONNECTED && state <= eSOCKET_STATE::LAST_ACK);
 	}
 
 	// return) 
@@ -739,7 +768,6 @@ std::size_t net::io::Nhttp_server::process_packet( shared_buffer& _buffer, const
 
 std::string_view	find_paragraph(std::string_view& _string);
 std::string_view	find_tok(std::string_view& _string, char _tok);
-uint32_t			string_to_uint_hex(const std::string_view _string);
 char*				str_find_terminal(char* _str_begin, char* _str_end) noexcept;
 
 size_t net::io::Nhttp_server::process_parsing_http(shared_buffer _buffer)
@@ -748,7 +776,8 @@ size_t net::io::Nhttp_server::process_parsing_http(shared_buffer _buffer)
 	size_t processed = 0;
 
 	// check) 
-	RETURN_IF(_buffer.size() <= 4, processed);
+	if(_buffer.size() == 0)
+		return processed;
 
 	// declare) 
 	char* pos_now = _buffer.data();
@@ -761,16 +790,24 @@ size_t net::io::Nhttp_server::process_parsing_http(shared_buffer _buffer)
 		if(m_msg_http_request.content_length_now == 0)
 		{
 			// - 처리된 만큼을 건너띈다.
-			pos_now += m_msg_http_request.buf_head.size();
+			//   (head가 아직 다 오지 않았을 때 찾아본 위치. buf_head는 비어 있으므로 크기를 바꾸지 않는다.)
+			pos_now += this->m_size_head_scanned;
+
+			// check) head 끝(CRLF CRLF)을 찾을 수 있을 만큼 오지 않았다. (4 byte)
+			if (pos_end - pos_now < 4)
+				return processed;
 
 			// - TERINAL_STRING(\n\r\n\r)을 찾는다.
 			pos_now = str_find_terminal(pos_now, (pos_end - 3));
 
-			// check) 해당 문자열을 찾지 못했으므로 끝낸다.
+			// check) 해당 문자열을 찾지 못했으므로 끝낸다. (header가 너무 길면 끊는다.)
 			if (pos_now == (pos_end - 3))
 			{
+				if (this->m_max_header_size != 0 && static_cast<std::size_t>(pos_end - _buffer.data()) > this->m_max_header_size)
+					this->_throw_too_large("http header"sv, static_cast<std::size_t>(pos_end - _buffer.data()), this->m_max_header_size);
+
 				// - process를 저장한다.
-				m_msg_http_request.buf_head.set_size( pos_now - _buffer.data() );
+				this->m_size_head_scanned = static_cast<std::size_t>(pos_now - _buffer.data());
 
 				// return) 0
 				return	processed;
@@ -778,6 +815,11 @@ size_t net::io::Nhttp_server::process_parsing_http(shared_buffer _buffer)
 
 			// - TERMINAML_STRING만큼을 이동...
 			pos_now += 4;
+			this->m_size_head_scanned = 0;
+
+			// check) header 크기 제한 (한 번에 다 받은 경우)
+			if (this->m_max_header_size != 0 && static_cast<std::size_t>(pos_now - _buffer.data()) > this->m_max_header_size)
+				this->_throw_too_large("http header"sv, static_cast<std::size_t>(pos_now - _buffer.data()), this->m_max_header_size);
 
 			// - process를 저장한다.
 			processed = pos_now - _buffer.data();
@@ -825,64 +867,93 @@ size_t net::io::Nhttp_server::process_parsing_http(shared_buffer _buffer)
 		}
 	}
 
-	// 2) chunk
-	if(m_msg_http_request.is_chunked == true)
+	// 2) chunked body
+	//    - size line(hex[;ext]) -> data + CRLF -> ... -> '0' -> trailer header들 -> 빈 줄
+	//    - 다 모은 후 한 번에 전달한다. (받은 만큼 처리하고 상태(m_chunk_state)를 기억한다.)
+	if (m_msg_http_request.is_chunked == true && m_msg_http_request.is_completed == false)
 	{
-		// - 얻기...
-		std::string_view temp_str_pos = std::string_view(pos_now, static_cast<uint32_t>(pos_end - pos_now));
-
-		// - 첫줄을 읽는다.
-		if (m_msg_http_request.content_length_now == 0)
+		for (;;)
 		{
-			// - 첫번째 줄을 얻는다.
-			auto temp_str_first = find_paragraph(temp_str_pos);
+			std::string_view rest(pos_now, static_cast<std::size_t>(pos_end - pos_now));
 
-			// - 첫줄을 읽어들였으면 진행
-			if (temp_str_first.empty() == false)
+			// - size line
+			if (this->m_chunk_state == 0)
 			{
-				// - chunk length
-				auto chunk_length = string_to_uint_hex(temp_str_first);
-
-				// - 첫줄이 '0'이 아니면 => chunk 진행
-				if (chunk_length != 0)
+				auto pos_line = rest.find("\r\n"sv);
+				if (pos_line == std::string_view::npos)
 				{
-					// - context 길이를 써넣는다.
-					m_msg_http_request.content_length_now = chunk_length;
-
-					// - 진행 처리...
-					processed += (temp_str_pos.data() - temp_str_first.data());
+					if (rest.size() > 1024)
+						this->_throw_too_large("http chunk size line"sv, rest.size(), 1024);
+					break;
 				}
-				// - 첫줄이 '0'이면 => 종료.
-				else
+
+				auto line = rest.substr(0, pos_line);
+				if (auto pos_ext = line.find(';'); pos_ext != std::string_view::npos)
+					line = line.substr(0, pos_ext);
+				while (line.empty() == false && (line.back() == ' ' || line.back() == '\t'))
+					line.remove_suffix(1);
+
+				std::size_t chunk_size = 0;
+				auto [ptr, ec] = std::from_chars(line.data(), line.data() + line.size(), chunk_size, 16);
+				if (line.empty() || ec != std::errc() || ptr != line.data() + line.size())
+					throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid chunk size"sv);
+
+				pos_now += pos_line + 2;
+				processed = static_cast<size_t>(pos_now - _buffer.data());
+
+				if (chunk_size == 0)
 				{
-					// - clear
-					m_msg_http_request.content_length_now = 0;
-
-					// - complete~
-					m_msg_http_request.is_completed = true;
+					this->m_chunk_state = 2;
+					continue;
 				}
+
+				if (this->m_max_body_size != 0 && this->m_chunked_body.size() + chunk_size > this->m_max_body_size)
+					this->_throw_too_large("http chunked body"sv, this->m_chunked_body.size() + chunk_size, this->m_max_body_size);
+
+				this->m_chunk_size = chunk_size;
+				this->m_chunk_state = 1;
 			}
-		}
-
-		// - chunk를 읽는다.
-		if(m_msg_http_request.content_length_now != 0)
-		{
-			// - shared_buffer를 설정한다.
-			if((m_msg_http_request.content_length_now) <= temp_str_pos.size())
+			// - data + CRLF
+			else if (this->m_chunk_state == 1)
 			{
-				// - append exist data
-				m_msg_http_request.contents[0].reserve(m_msg_http_request.contents[0].size() + m_msg_http_request.content_length_now);
+				BREAK_IF(rest.size() < this->m_chunk_size + 2);
 
-				// - ...
-				auto ptr_old = m_msg_http_request.contents[0].get_back_ptr();
+				this->m_chunked_body.append(rest.substr(0, this->m_chunk_size));
+				pos_now += this->m_chunk_size + 2;
+				processed = static_cast<size_t>(pos_now - _buffer.data());
+				this->m_chunk_state = 0;
+			}
+			// - trailer (빈 줄이 나올 때까지. trailer header는 쓰지 않는다.)
+			else
+			{
+				auto pos_line = rest.find("\r\n"sv);
+				if (pos_line == std::string_view::npos)
+				{
+					if (this->m_max_header_size != 0 && rest.size() > this->m_max_header_size)
+						this->_throw_too_large("http chunk trailer"sv, rest.size(), this->m_max_header_size);
+					break;
+				}
 
-				// - 설정한다.
-				m_msg_http_request.contents[0] += buffer_view { const_cast<char*>(temp_str_pos.data()), m_msg_http_request.content_length_now };
-				m_msg_http_request.buf_message  = m_msg_http_request.contents[0] ^ buffer_view{ ptr_old, m_msg_http_request.content_length_now };
+				pos_now += pos_line + 2;
+				processed = static_cast<size_t>(pos_now - _buffer.data());
+
+				// - trailer header
+				if (pos_line != 0)
+					continue;
+
+				// - complete
+				auto buf_body = alloc_shared_buffer(this->m_chunked_body.size() + 1);
+				if (this->m_chunked_body.empty() == false)
+					buf_body.append(this->m_chunked_body.size(), this->m_chunked_body.data());
+
+				m_msg_http_request.contents.clear();
+				m_msg_http_request.contents.emplace_back(std::move(buf_body));
+				m_msg_http_request.buf_message = m_msg_http_request.contents[0];
 				m_msg_http_request.content_completed = true;
+				m_msg_http_request.is_completed = true;
 
-				// - 진행 처리...
-				processed += m_msg_http_request.content_length_now;
+				this->_reset_chunk();
+				break;
 			}
 		}
 	}
@@ -921,7 +992,8 @@ sHTTP_PATH_ITEM splite_option(std::u8string_view& _string)
 	sHTTP_PATH_ITEM	temp_path_item;
 
 	// check) 한자도 없으면 끝낸다.
-	RETURN_IF(_string.empty(), temp_path_item);
+	if(_string.empty())
+		return temp_path_item;
 
 	auto pos_begin = _string.data();
 	auto pos_end = pos_begin + _string.size();
@@ -1003,7 +1075,7 @@ std::u8string url_encoding(std::u8string_view _url)
 		else
 		{
 			char temp[8]{0};
-			__sprintf(temp, "%02x"sv, ch);
+			std::snprintf(temp, std::size(temp), "%02x", ch);
 			output_string.push_back('%');
 			output_string.push_back(temp[0]);
 			output_string.push_back(temp[1]);
@@ -1017,7 +1089,8 @@ std::u8string url_encoding(std::u8string_view _url)
 void url_decoding(std::u8string_view& _url)
 {
 	// check) 
-	RETURN_IF(_url.empty());
+	if(_url.empty())
+		return;
 
 	std::string_view std_temp (reinterpret_cast<const char*>(_url.data()), _url.size());
 
@@ -1036,7 +1109,8 @@ void url_decoding(std::u8string_view& _url)
 		else
 		{
 			// check) 길이가 2Byte 이하면 Exception을 던진다.
-			THROW_IF(remained < 3, throwable::failure(eRESULT::LENGTH_ERROR));
+			if (remained < 3)
+				throw throwable::failure(eRESULT::LENGTH_ERROR);
 
 			// - remove '%'
 			++iter_src;
@@ -1075,225 +1149,56 @@ void net::io::Nhttp_server::process_parsing_http_head(shared_buffer _buffer)
 	// 2) parsing string
 	std::string_view temp_str_pos = _buffer;
 	
-	// 3) request line (첫번째줄)
+	// 3) request line (첫 번째 줄)
 	{
-		// - 첫번째 줄을 얻는다.
+		// - 첫 번째 줄을 얻는다.
 		auto temp_str_first = find_paragraph(temp_str_pos);
 
 		// check) 없으면 exception을 던진다.
-		THROW_IF(temp_str_first.empty(), throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv))
+		if (temp_str_first.empty())
+			throw throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv);
 
-		// - methoid를 확인한다.
-		switch (temp_str_first[0])
+		// - method를 확인한다. (첫 공백까지를 표와 비교한다. 짧은 요청줄도 범위를 넘어 읽지 않는다.)
 		{
-		// "GET"
-		case	'G':
-				{
-					THROW_IF(temp_str_first[1] != 'E' || temp_str_first[2] != 'T' || temp_str_first[3] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-					temp_str_first.remove_prefix(4);
+			struct sMETHOD
+			{
+				std::string_view	name;
+				eHTTP_METHOD		method;
+			};
+			static constexpr sMETHOD METHODS[] =
+			{
+				{ "GET"sv,		eHTTP_METHOD::GET_ },
+				{ "POST"sv,		eHTTP_METHOD::POST_ },
+				{ "PUT"sv,		eHTTP_METHOD::PUT_ },
+				{ "PURGE"sv,	eHTTP_METHOD::PURGE_ },
+				{ "PATCH"sv,	eHTTP_METHOD::PATCH_ },
+				{ "PROPFIND"sv,	eHTTP_METHOD::PROPFIND_ },
+				{ "COPY"sv,		eHTTP_METHOD::COPY_ },
+				{ "DELETE"sv,	eHTTP_METHOD::DELETE_ },
+				{ "HEAD"sv,		eHTTP_METHOD::HEAD_ },
+				{ "OPTIONS"sv,	eHTTP_METHOD::OPTIONS_ },
+				{ "LINK"sv,		eHTTP_METHOD::LINK_ },
+				{ "LOCK"sv,		eHTTP_METHOD::LOCK_ },
+				{ "UNLINK"sv,	eHTTP_METHOD::UNLINK_ },
+				{ "UNLOCK"sv,	eHTTP_METHOD::UNLOCK_ },
+				{ "VIEW"sv,		eHTTP_METHOD::VIEW_ },
+				{ "TRACE"sv,	eHTTP_METHOD::TRACE_ },
+			};
 
-					m_msg_http_request.method = eHTTP_METHOD::GET_;
-				}
-				break;
+			// check) method 다음에 공백이 있어야 한다.
+			const auto pos_space = temp_str_first.find(' ');
+			if (pos_space == std::string_view::npos)
+				throw throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv);
 
-		// "POST" or "PUT" or "PATCH" or "PURGE" or "PROPFIND"
-		case	'P':
-				{
-					switch(temp_str_first[1])
-					{
-					// "POST"
-					case	'O':
-							{
-								THROW_IF(temp_str_first[2] != 'S' || temp_str_first[3] != 'T' || temp_str_first[4] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-								temp_str_first.remove_prefix(5);
+			const auto str_method = temp_str_first.substr(0, pos_space);
+			const auto iter_find = std::find_if(std::begin(METHODS), std::end(METHODS), [&](const sMETHOD& _item) { return _item.name == str_method; });
 
-								m_msg_http_request.method = eHTTP_METHOD::POST_;
-							}
-							break;
+			// check)
+			if (iter_find == std::end(METHODS))
+				throw throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv);
 
-					// "PUT" or "PURGE"
-					case	'U':
-							{
-								switch(temp_str_first[2])
-								{
-								// "PUT"
-								case	'T':
-										{
-											THROW_IF(temp_str_first[3] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-											temp_str_first.remove_prefix(4);
-
-											m_msg_http_request.method = eHTTP_METHOD::PUT_;
-										}
-										break;
-
-								// "PURGE"
-								case	'U':
-										{
-											THROW_IF(temp_str_first[3] != 'R' || temp_str_first[4] != 'G' || temp_str_first[5] != 'E' || temp_str_first[6] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-											temp_str_first.remove_prefix(6);
-
-											m_msg_http_request.method = eHTTP_METHOD::PURGE_;
-										}
-										break;
-
-								default:
-										throw throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv);
-								}
-							}
-							break;
-
-					// "PATCH"
-					case	'A':
-							{
-								THROW_IF(temp_str_first[2] != 'T' || temp_str_first[3] != 'C' || temp_str_first[4] != 'H' || temp_str_first[5] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-								temp_str_first.remove_prefix(6);
-
-								m_msg_http_request.method = eHTTP_METHOD::PATCH_;
-							}
-							break;
-
-					// "PROPFIND"
-					case	'R':
-							{
-								THROW_IF(temp_str_first[2] != 'O' || temp_str_first[3] != 'P' || temp_str_first[4] != 'F' || temp_str_first[5] != 'I' || temp_str_first[6] != 'N' || temp_str_first[7] != 'D' || temp_str_first[8] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-								temp_str_first.remove_prefix(9);
-
-								m_msg_http_request.method = eHTTP_METHOD::PROPFIND_;
-							}
-							break;
-
-					default:
-							throw throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv);
-					}
-				}
-				break;
-
-		// COPY
-		case	'C':
-				{
-					THROW_IF(temp_str_first[1] != 'O' || temp_str_first[2] != 'P' || temp_str_first[3] != 'Y' || temp_str_first[6] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-					temp_str_first.remove_prefix(5);
-
-					m_msg_http_request.method = eHTTP_METHOD::COPY_;
-				}
-				break;
-
-		// DELETE
-		case	'D':
-				{
-					THROW_IF(temp_str_first[1] != 'E' || temp_str_first[2] != 'L' || temp_str_first[3] != 'E' || temp_str_first[4] != 'T' || temp_str_first[5] != 'E' || temp_str_first[6] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-					temp_str_first.remove_prefix(7);
-
-					m_msg_http_request.method = eHTTP_METHOD::DELETE_;
-				}
-				break;
-
-		// HEAD
-		case	'H':
-				{
-					THROW_IF(temp_str_first[1] != 'E' || temp_str_first[2] != 'A' || temp_str_first[3] != 'D' || temp_str_first[4] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-					temp_str_first.remove_prefix(5);
-
-					m_msg_http_request.method = eHTTP_METHOD::HEAD_;
-				}
-				break;
-
-		// OPTIONS
-		case	'O':
-				{
-					THROW_IF(temp_str_first[1] != 'P' || temp_str_first[2] != 'T' || temp_str_first[3] != 'I' || temp_str_first[4] != 'O' || temp_str_first[5] != 'N' || temp_str_first[6] != 'S' || temp_str_first[7] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-					temp_str_first.remove_prefix(8);
-
-					m_msg_http_request.method = eHTTP_METHOD::OPTIONS_;
-				}
-				break;
-
-		// LINK or LOCK
-		case	'L':
-				{
-					switch(temp_str_first[1])
-					{
-					// "LINK"
-					case	'I':
-							{
-								THROW_IF(temp_str_first[2] != 'N' || temp_str_first[3] != 'K' || temp_str_first[4] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-								temp_str_first.remove_prefix(5);
-
-								m_msg_http_request.method = eHTTP_METHOD::LINK_;
-							}
-							break;
-
-					// "LOCK"
-					case	'O':
-							{
-								THROW_IF(temp_str_first[2] != 'C' || temp_str_first[3] != 'K' || temp_str_first[4] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-								temp_str_first.remove_prefix(5);
-
-								m_msg_http_request.method = eHTTP_METHOD::LOCK_;
-							}
-							break;
-
-					default:
-							throw throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv);
-					}
-				}
-				break;
-
-		// UNLINK or UNLOCK
-		case	'U':
-				{
-					THROW_IF(temp_str_first[1] != 'N' || temp_str_first[2] != 'L', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-
-					switch (temp_str_first[3])
-					{
-					// "UNLINK"
-					case	'I':
-							{
-								THROW_IF(temp_str_first[4] != 'N' || temp_str_first[5] != 'K' || temp_str_first[6] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-								temp_str_first.remove_prefix(7);
-
-								m_msg_http_request.method = eHTTP_METHOD::UNLINK_;
-							}
-							break;
-
-					// "UNLOCK"
-					case	'O':
-							{
-								THROW_IF(temp_str_first[4] != 'C' || temp_str_first[5] != 'K' || temp_str_first[6] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-								temp_str_first.remove_prefix(7);
-
-								m_msg_http_request.method = eHTTP_METHOD::UNLOCK_;
-							}
-							break;
-
-					default:
-							throw throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv);
-					}
-				}
-				break;
-
-		// VIEW
-		case	'V':
-				{
-					THROW_IF(temp_str_first[1] != 'I' || temp_str_first[2] != 'E' || temp_str_first[3] != 'W' || temp_str_first[4] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-					temp_str_first.remove_prefix(5);
-
-					m_msg_http_request.method = eHTTP_METHOD::VIEW_;
-				}
-				break;
-
-		// TRACE
-		case	'T':
-				{
-					THROW_IF(temp_str_first[1] != 'R' || temp_str_first[2] != 'A' || temp_str_first[3] != 'C' || temp_str_first[4] != 'E' || temp_str_first[5] != ' ', throwable::failure(eRESULT::FAIL, 400, "unknowned method"sv));
-					temp_str_first.remove_prefix(6);
-
-					m_msg_http_request.method = eHTTP_METHOD::TRACE_;
-				}
-				break;
-
-		default:
-				throw throwable::failure(eRESULT::FAIL);
+			m_msg_http_request.method = iter_find->method;
+			temp_str_first.remove_prefix(pos_space + 1);
 		}
 
 		// - trim (remove blank)
@@ -1304,10 +1209,12 @@ void net::io::Nhttp_server::process_parsing_http_head(shared_buffer _buffer)
 		m_msg_http_request.path = std::u8string_view(reinterpret_cast<const char8_t*>(result_path.data()), result_path.size());
 
 		// check) Path가 없으면 exception을 던진다.
-		THROW_IF(m_msg_http_request.path.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid path"sv));
+		if (m_msg_http_request.path.empty())
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid path"sv);
 
 		// check) Path가아 니면 Exception을 던진다.(path는 무조건 '/'나 '*'로 시작한다.)
-		THROW_IF(m_msg_http_request.path[0] != '/' && m_msg_http_request.path[0] != '*', throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "Invalid path"sv));
+		if (m_msg_http_request.path[0] != '/' && m_msg_http_request.path[0] != '*')
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "Invalid path"sv);
 
 		if(m_msg_http_request.method == eHTTP_METHOD::GET_ && m_msg_http_request.path[0] != '*')
 		{
@@ -1370,10 +1277,15 @@ void net::io::Nhttp_server::process_parsing_http_head(shared_buffer _buffer)
 			temp_param.key = find_tok(temp_str_now, ':');
 			temp_param.value = temp_str_now;
 
-			// - "Content-Length"인지 확인한다.
-			if (temp_param.key == "Content-Length")
+			// - "Content-Length"인지 확인한다. (header 이름은 대소문자를 구분하지 않는다. 크기 제한)
+			if (__icompare(temp_param.key, "Content-Length"sv))
 			{
-				m_msg_http_request.content_length_now = __from_string<uint32_t>(temp_param.value);
+				uint64_t content_length = 0;
+				std::from_chars(temp_param.value.data(), temp_param.value.data() + temp_param.value.size(), content_length);
+				if (this->m_max_body_size != 0 && content_length > this->m_max_body_size)
+					this->_throw_too_large("http body"sv, static_cast<std::size_t>(content_length), this->m_max_body_size);
+
+				m_msg_http_request.content_length_now = static_cast<std::size_t>(content_length);
 			}
 			else if (temp_param.key == "Transfer-Encoding"sv)
 			{
@@ -1397,7 +1309,7 @@ result_code net::io::Nhttp_server::process_message(sMESSAGE& _msg)
 	// declare) 
 	result_code result = eRESULT::BYPASS;
 
-	// 1) message fuction
+	// 1) message function
 	if ((_msg.message & eMESSAGE::SYSTEM::NETWORK_MASK) == eMESSAGE::SYSTEM::NETWORK)
 	{
 		switch (_msg.message)
@@ -1423,3 +1335,5 @@ result_code net::io::Nhttp_server::process_message(sMESSAGE& _msg)
 	// return)
 	return result;
 }
+
+

@@ -1,4 +1,4 @@
-Ôªø#include "pch.h"
+#include "pch.h"
 #include "echo_client.h"
 
 extern own_ptr<test_tcp_echo_client> g_ptest_tcp_echo_client;
@@ -229,30 +229,30 @@ int main()
 
 			case	'U':
 			case	'u':
-					g_ptest_tcp_echo_client->request_send_immidiately(1);
+					g_ptest_tcp_echo_client->request_send_immediately(1);
 					break;
 
 			case	'I':
 			case	'i':
-					g_ptest_tcp_echo_client->request_send_immidiately(10);
+					g_ptest_tcp_echo_client->request_send_immediately(10);
 					break;
 
 			case	'O':
 			case	'o':
-					g_ptest_tcp_echo_client->request_send_immidiately(100);
+					g_ptest_tcp_echo_client->request_send_immediately(100);
 					break;
 
 			case	'P':
 			case	'p':
-					g_ptest_tcp_echo_client->request_send_immidiately(1000);
+					g_ptest_tcp_echo_client->request_send_immediately(1000);
 					break;
 
 			case	'[':
-					g_ptest_tcp_echo_client->request_send_immidiately(100000);
+					g_ptest_tcp_echo_client->request_send_immediately(100000);
 					break;
 
 			case	']':
-					g_ptest_tcp_echo_client->request_send_immidiately(1000000);
+					g_ptest_tcp_echo_client->request_send_immediately(1000000);
 					break;
 
 			case	'/':
@@ -364,24 +364,24 @@ void _print_setting_info(shared_buffer& _buffer_output, test_tcp_echo_client* _p
 	_buffer_output.append_text("\x1b[5B");
 
 	// definitions)
-	static const char* str_index_to_string[] = { "8 byte", "64 byte", "256 byte", "1K byte", "4K byte", "16K byte", "64K byte", "512K byte", "4M byte", "32M byte", "256M byte" };
+	static const std::string_view str_index_to_string[] = { "8 byte"sv, "64 byte"sv, "256 byte"sv, "1K byte"sv, "4K byte"sv, "16K byte"sv, "64K byte"sv, "512K byte"sv, "4M byte"sv, "32M byte"sv, "256M byte"sv };
 
 	// 2) ...
 	_buffer_output.append_text("\x1b[37m [con test]   \x1b[0m");
-	_buffer_output.append_text<char>((_ptest_tcp_echo_client->m_enable_connect_test) ? "\x1b[47m\x1b[30m on \x1b[0m " : "\x1b[90m off\x1b[0m ");
+	_buffer_output.append_text<char>((_ptest_tcp_echo_client->m_enable_connect_test) ? "\x1b[47m\x1b[30m on \x1b[0m "sv : "\x1b[90m off\x1b[0m "sv);
 	_buffer_output.append_text("\x1b[90mrange min \x1b[0m"); _buffer_output.append_text(_ptest_tcp_echo_client->m_connect_test_min);
 	_buffer_output.append_text("\x1b[90m ~ max \x1b[0m"); _buffer_output.append_text(_ptest_tcp_echo_client->m_connect_test_max); _buffer_output.append_text(", ");
 	_buffer_output.append_text("\x1b[90minterval \x1b[0m"); _buffer_output.append_text<char>("0"sv); _buffer_output.append_text("\x1b[K\n");
 
 	_buffer_output.append_text("\x1b[37m [echo test]  \x1b[0m");
-	_buffer_output.append_text<char>((_ptest_tcp_echo_client->m_enable_traffic_test) ? "\x1b[47m\x1b[30m on \x1b[0m " : "\x1b[90m off\x1b[0m ");
+	_buffer_output.append_text<char>((_ptest_tcp_echo_client->m_enable_traffic_test) ? "\x1b[47m\x1b[30m on \x1b[0m "sv : "\x1b[90m off\x1b[0m "sv);
 	_buffer_output.append_text("\x1b[90mmessage size \x1b[0m"); _buffer_output.append_text<char>(str_index_to_string[_ptest_tcp_echo_client->m_traffic_test_selected]); _buffer_output.append_text(",  ");
 	_buffer_output.append_text("\x1b[90mtimes \x1b[0m"); _buffer_output.append_text(_ptest_tcp_echo_client->m_traffic_test_messages_per_single); _buffer_output.append_text("\x1b[K\n");
 
 	_buffer_output.append_text("\x1b[37m [relay echo] \x1b[0m");
-	_buffer_output.append_text<char>((_ptest_tcp_echo_client->m_enable_relay_echo_test) ? "\x1b[47m\x1b[30m on \x1b[0m " : "\x1b[90m off\x1b[0m "); _buffer_output.append_text("\x1b[K");
+	_buffer_output.append_text<char>((_ptest_tcp_echo_client->m_enable_relay_echo_test) ? "\x1b[47m\x1b[30m on \x1b[0m "sv : "\x1b[90m off\x1b[0m "sv); _buffer_output.append_text("\x1b[K");
 	_buffer_output.append_text("              \x1b[37m [dis on res] \x1b[0m");
-	_buffer_output.append_text<char>((_ptest_tcp_echo_client->m_enable_disconnect_on_response) ? "\x1b[47m\x1b[30m on \x1b[0m " : "\x1b[90m off\x1b[0m "); _buffer_output.append_text("\x1b[K\n");
+	_buffer_output.append_text<char>((_ptest_tcp_echo_client->m_enable_disconnect_on_response) ? "\x1b[47m\x1b[30m on \x1b[0m "sv : "\x1b[90m off\x1b[0m "sv); _buffer_output.append_text("\x1b[K\n");
 
 	// 3) move cursor
 	_buffer_output.append_text("\x1b[8A");
@@ -444,23 +444,23 @@ void print_endpoint(test_tcp_echo_client* _ptest_tcp_echo_client)
 	const auto& end_point = _ptest_tcp_echo_client->get_endpoint();
 
 	std::cout << " [remote endpoint]\n";
-	std::cout << "\x1b[90m address : \x1b[0m" << to_string<char>(end_point.address()) << "\x1b[K\n";
+	std::cout << "\x1b[90m address : \x1b[0m" << to_string(end_point.address()) << "\x1b[K\n";
 	std::cout << "\x1b[90m port    : \x1b[0m" << end_point.port() << "\x1b[K\n\n";
 }
 
 void print_statistics_info(test_tcp_echo_client* _ptest_tcp_echo_client, bool _update_now)
 {
-	// 1) ÌòÑÏû¨ TickÍ≥º Tick GapÏùÑ Íµ¨ÌïúÎã§.
+	// 1) «ˆ¿Á Tick∞˙ Tick Gap¿ª ±∏«—¥Ÿ.
 	static auto tick_last = chrono::tick::time_point(chrono::tick::duration::zero());
 	auto tick_now = chrono::tick::now();
 
 	// 2) get tick differ
 	auto tick_differ = std::chrono::duration_cast<chrono::tick::milliseconds>(tick_now - tick_last);
 
-	// check) tickdifferÍ∞Ä 1sÏù¥ÌïòÎ©¥ Í∑∏ÎÉ• ÎÅùÎÇ∏Îã§.
+	// check) tickdiffer∞° 1s¿Ã«œ∏È ±◊≥… ≥°≥Ω¥Ÿ.
 	RETURN_IF(_update_now == false && tick_differ < 1s);
 
-	// 3) ÏµúÏ¢Ö ÏãúÍ∞ÑÏùÑ UpdateÌïúÎã§.
+	// 3) √÷¡æ Ω√∞£¿ª Update«—¥Ÿ.
 	tick_last = tick_now;
 
 	// 4) alloc buffer
@@ -476,19 +476,19 @@ void print_statistics_info(test_tcp_echo_client* _ptest_tcp_echo_client, bool _u
 		static uint64_t	last_count_success = 0;
 		static uint64_t	last_count_disconnected = 0;
 
-		// - Ïù¥Ï†ÑÍ≥º ÌòÑÏû¨Ïùò Ï∞®Ïù¥Î•º Íµ¨ÌïúÎã§. (OverflowÍ∞Ä ÎÇ¨ÏùÑ Í≤ΩÏö∞Î•º ÎåÄÎπÑÌïòÏó¨ Í≥ÑÏÇ∞Ìï¥Ïïº ÌïúÎã§.)
+		// - ¿Ã¿¸∞˙ «ˆ¿Á¿« ¬˜¿Ã∏¶ ±∏«—¥Ÿ. (Overflow∞° ≥µ¿ª ∞ÊøÏ∏¶ ¥Î∫Ò«œø© ∞ËªÍ«ÿæﬂ «—¥Ÿ.)
 		auto now_count_keep = statistics.count_keep.load();
 		auto now_count_try = statistics.count_try.load();
 		auto now_count_success = statistics.count_success_connect.load();
 		auto now_count_fail = statistics.count_fail_connect.load();
 		auto now_count_disconnected = statistics.count_disconnect.load();
 
-		// - Ï¥àÎãπ Ï†ÑÏÜ°Î•†ÏùÑ Íµ¨ÌïúÎã§.
+		// - √ ¥Á ¿¸º€∑¸¿ª ±∏«—¥Ÿ.
 		auto total_try_per_sec = ((float)(now_count_try - last_count_try)) * 1000.0f / tick_differ.count();
 		auto total_success_per_sec = ((float)(now_count_success - last_count_success)) * 1000.0f / tick_differ.count();
 		auto total_disconnected_per_sec = ((float)(now_count_disconnected - last_count_disconnected)) * 1000.0f / tick_differ.count();
 
-		// - Ïù¥Ï†Ñ Í∞íÏùÑ ÌòÑÏû¨ Í∞íÏúºÎ°ú UpdateÌïúÎã§.(Îã§Ïùå FrameÏóêÏÑúÏùò Í≥ÑÏÇ∞ÏùÑ ÏúÑÌï¥)
+		// - ¿Ã¿¸ ∞™¿ª «ˆ¿Á ∞™¿∏∑Œ Update«—¥Ÿ.(¥Ÿ¿Ω Frameø°º≠¿« ∞ËªÍ¿ª ¿ß«ÿ)
 		last_count_try = now_count_try;
 		last_count_success = now_count_success;
 		last_count_disconnected = now_count_disconnected;
@@ -511,27 +511,27 @@ void print_statistics_info(test_tcp_echo_client* _ptest_tcp_echo_client, bool _u
 		const auto& statistics = net::io::statistics::Nsocket::statistics_get_traffic_info_total();
 
 		// declare) 
-		static uint64_t	last_count_sended = 0;
+		static uint64_t	last_count_sent = 0;
 		static uint64_t	last_count_received = 0;
-		static uint64_t	last_count_sendedByte = 0;
+		static uint64_t	last_count_sentByte = 0;
 		static uint64_t	last_count_received_byte = 0;
 
-		// - Ïù¥Ï†ÑÍ≥º ÌòÑÏû¨Ïùò Ï∞®Ïù¥Î•º Íµ¨ÌïúÎã§. (OverflowÍ∞Ä ÎÇ¨ÏùÑ Í≤ΩÏö∞Î•º ÎåÄÎπÑÌïòÏó¨ Í≥ÑÏÇ∞Ìï¥Ïïº ÌïúÎã§.)
-		auto now_count_sended = statistics.count_sended_message.load();
-		auto now_count_sendedByte = statistics.count_sended_bytes.load();
+		// - ¿Ã¿¸∞˙ «ˆ¿Á¿« ¬˜¿Ã∏¶ ±∏«—¥Ÿ. (Overflow∞° ≥µ¿ª ∞ÊøÏ∏¶ ¥Î∫Ò«œø© ∞ËªÍ«ÿæﬂ «—¥Ÿ.)
+		auto now_count_sent = statistics.count_sent_message.load();
+		auto now_count_sentByte = statistics.count_sent_bytes.load();
 		auto now_count_send_failed = statistics.count_error_on_send.load();
 		auto now_count_received = statistics.count_received_message.load();
 		auto now_count_received_byte = statistics.count_received_bytes.load();
 
-		// - Ï¥àÎãπ Ï†ÑÏÜ°Î•†ÏùÑ Íµ¨ÌïúÎã§.
-		auto total_sended_message_per_sec = ((float)(now_count_sended - last_count_sended)) * 1000.0f / tick_differ.count();
-		auto total_sended_byte_per_sec = ((float)(now_count_sendedByte - last_count_sendedByte)) * 1000.0f / tick_differ.count();
+		// - √ ¥Á ¿¸º€∑¸¿ª ±∏«—¥Ÿ.
+		auto total_sent_message_per_sec = ((float)(now_count_sent - last_count_sent)) * 1000.0f / tick_differ.count();
+		auto total_sent_byte_per_sec = ((float)(now_count_sentByte - last_count_sentByte)) * 1000.0f / tick_differ.count();
 		auto total_receive_message_per_sec = ((float)(now_count_received - last_count_received)) * 1000.0f / tick_differ.count();
 		auto total_receive_byte_per_sec = ((float)(now_count_received_byte - last_count_received_byte)) * 1000.0f / tick_differ.count();
 
-		// - Ïù¥Ï†Ñ Í∞íÏùÑ ÌòÑÏû¨ Í∞íÏúºÎ°ú UpdateÌïúÎã§.(Îã§Ïùå FrameÏóêÏÑúÏùò Í≥ÑÏÇ∞ÏùÑ ÏúÑÌï¥)
-		last_count_sended = now_count_sended;
-		last_count_sendedByte = now_count_sendedByte;
+		// - ¿Ã¿¸ ∞™¿ª «ˆ¿Á ∞™¿∏∑Œ Update«—¥Ÿ.(¥Ÿ¿Ω Frameø°º≠¿« ∞ËªÍ¿ª ¿ß«ÿ)
+		last_count_sent = now_count_sent;
+		last_count_sentByte = now_count_sentByte;
 		last_count_received = now_count_received;
 		last_count_received_byte = now_count_received_byte;
 
@@ -540,18 +540,18 @@ void print_statistics_info(test_tcp_echo_client* _ptest_tcp_echo_client, bool _u
 
 		// - sended
 		buf_output.append_text(" [send]    ");
-		buf_output.append_text("\x1b[90m   messages \x1b[0m"); buf_output.append_text("{:12d}", now_count_sended);
-		__sprintf(temp_string, "%.2f", total_sended_message_per_sec);
+		buf_output.append_text("\x1b[90m   messages \x1b[0m"); buf_output.append_text(std::format("{:12d}", now_count_sent));
+		std::snprintf(temp_string, sizeof(temp_string), "%.2f", total_sent_message_per_sec);
 		buf_output.append_text("\x1b[90m   messages/s \x1b[0m"); buf_output.append_text(temp_string);
-		buf_output.append_text("\x1b[90m   bytes/s \x1b[0m"); buf_output.append_text(to_string_scaled_byte(temp_string, 256, total_sended_byte_per_sec));
+		buf_output.append_text("\x1b[90m   bytes/s \x1b[0m"); buf_output.append_text(to_string_scaled_byte(total_sent_byte_per_sec));
 		buf_output.append_text("\x1b[90m   failed \x1b[0m"); buf_output.append_text<char>(now_count_send_failed); buf_output.append_text("\x1b[K\n");
 
 		// - received
 		buf_output.append_text(" [receive] ");
-		buf_output.append_text("\x1b[90m   messages \x1b[0m"); buf_output.append_text("{:12d}", now_count_received);
-		__sprintf(temp_string, "%.2f", total_receive_message_per_sec);
+		buf_output.append_text("\x1b[90m   messages \x1b[0m"); buf_output.append_text(std::format("{:12d}", now_count_received));
+		std::snprintf(temp_string, sizeof(temp_string), "%.2f", total_receive_message_per_sec);
 		buf_output.append_text("\x1b[90m   messages/s \x1b[0m"); buf_output.append_text(temp_string);
-		buf_output.append_text("\x1b[90m   bytes/s \x1b[0m"); buf_output.append_text(to_string_scaled_byte(temp_string, 256, total_receive_byte_per_sec)); buf_output.append_text("\x1b[K\n");
+		buf_output.append_text("\x1b[90m   bytes/s \x1b[0m"); buf_output.append_text(to_string_scaled_byte(total_receive_byte_per_sec)); buf_output.append_text("\x1b[K\n");
 		buf_output.append_text("\n");
 	}
 

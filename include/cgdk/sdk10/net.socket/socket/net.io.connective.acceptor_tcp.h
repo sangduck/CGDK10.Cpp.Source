@@ -24,7 +24,7 @@ namespace CGDK
 //
 // net::io::connective::acceptor::Ntcp
 //
-// 2. context paramters
+// 2. context parameters
 //
 //	  1) "local_endpoint" (필수)
 //		listen할 주소와 포트를 의미한다.
@@ -56,6 +56,21 @@ namespace CGDK
 // 	     값이 적으면 메모리 사용량은 줄일 수 있는 반면 그만큼 단위 시간당 최대 접속 처리 능력은 낮아질 수 있다.
 //		 값을 기본값(0)으로 설정할 경우 CPU의 코어 수에 비례해 자동적으로 설정된다.
 //
+//	  5) "tcp_fastopen" (optional) : TCP Fast Open (RFC 7413) of the listen socket. true/false/<queue length> (default false)
+//		 the data in the SYN of a client with a TFO cookie is accepted and given to the first recv : one RTT less for the first request.
+//		 linux   : the value is the max pending TFO connections (true : DEFAULT_TCP_FASTOPEN_QUEUE_LENGTH) and sysctl net.ipv4.tcp_fastopen needs bit 2 (ex. 3)
+//		 windows : enable (windows 10 1607 or later)
+//		 the first data of a TFO connection may be delivered twice (a retransmitted SYN) : the first request must be idempotent.
+//
+//	  6) "socket_option" (optional) : the tcp socket option of the accepted sockets (sSOCKET_OPTION_TCP. applied when the accept completes)
+//		 - "tcp_nodelay"			TCP_NODELAY (true/false, default true)
+//		 - "tcp_quickack"		delayed ACK off (true/false, default false. linux : TCP_QUICKACK after every recv, windows : SIO_TCP_SET_ACK_FREQUENCY = 1)
+//		 - "busy_poll"			SO_BUSY_POLL in microseconds (linux. 0/default : not set. CAP_NET_ADMIN to raise it. windows : ignored)
+//		 - "tcp_notsent_lowat"	TCP_NOTSENT_LOWAT in bytes ("64k", "1m" ok. linux. 0/default : not set. windows : ignored)
+//		 given : set to every accepted socket right before on_accept() (on_accept() may change it per socket).
+//		 not given : the accepted sockets keep their own socket_option() (the constructor of the socket class, on_request_accept()).
+//		 nothing but TCP_NODELAY is applied by default.
+//
 //    예) 사용예
 //
 //			auto pacceptor = make_own<net::acceptor<foo_socket>>("foo");
@@ -65,10 +80,12 @@ namespace CGDK
 //			param["foo"]["local_endpoint"]["port"]	   = 20000;
 //			param["foo"]["prepare_on_start"]		   = 256;
 //			param["foo"]["must_prepare"]			   = 32;
+//			param["foo"]["tcp_fastopen"]			   = true;
+//			param["foo"]["socket_option"]["tcp_quickack"] = true;
 //
 //			pacceptor->start(param);
 //
-// 3. struct paramters
+// 3. struct parameters
 // 	   context parameter와 동일한 인자들을 미리 정의된 START_PARAMETER 구조체를 사용해 설정할 수 있다.
 // 
 //		struct START_PARAMETER
@@ -78,6 +95,9 @@ namespace CGDK
 //			std::size_t			prepare_on_start = 0;
 //			std::size_t			must_prepare = 0;
 //			uint64_t			flag_option = 0;
+//			int					tcp_fastopen = 0;
+//			sSOCKET_OPTION_TCP	socket_option;
+//			int					flag_socket_option = 0;
 //		};
 //		
 // 	   값 멤버 변수는 context parameter의 동일한 key와 같은 parameter이다.
@@ -104,9 +124,8 @@ class net::io::connective::acceptor::Ntcp :
 {
 // constructor/destructor)
 public:
-			Ntcp() { register_connective(); }
-			Ntcp(std::string_view _name) : Nnameable(_name) { register_connective(); }
-	virtual	~Ntcp() { unregister_connective(); }
+			Ntcp() { this->register_connective(); }
+	virtual	~Ntcp() { this->unregister_connective(); }
 
 	// 1) start function
 			result_code			start() { return this->object::Nstartable::start();}
@@ -128,21 +147,27 @@ public:
 	virtual	void				set_accept_endpoint(const end_point_type& _accept_endpoint) noexcept override;
 	virtual	void				reset_accept_endpoint() noexcept override;
 
+	// 4) the tcp socket option of the accepted sockets (sSOCKET_OPTION_TCP. the context : "socket_option". applied to the sockets accepted after)
+	//    (set to every socket right before on_accept() : on_accept() may change it per socket. not set : the accepted sockets keep their own socket_option())
+			void				socket_option(const sSOCKET_OPTION_TCP& _option) noexcept { this->m_socket_option = _option; this->m_flag_socket_option = true; }
+	[[nodiscard]] const sSOCKET_OPTION_TCP& socket_option() const noexcept { return this->m_socket_option; }
+	[[nodiscard]] int			tcp_fastopen() const noexcept { return this->m_tcp_fastopen; }
+
 // frameworks)
 protected:
-	//! @brief 초기화되기 전 호출된다.(on_destroy()함수와 짝함수다.) @param _msg 초기화 할때 전달될 메시지
+	//! @brief 초기화되기 전 호출된다.(on_destroy()함수와 짝함수다.) @param _msg 초기화 할 때 전달될 메시지
 	virtual	void				on_initializing(context& /*_context*/) override {}
 	virtual	void				on_initialize(context& /*_context*/) override {}
 	virtual	void				on_destroying() override {}
 	virtual	void				on_destroy() override {}
 
-	//! @brief 초기화되기 전 호출된다.(on_destroy()함수와 짝함수다.) @param _msg 초기화 할때 전달될 메시지
+	//! @brief 초기화되기 전 호출된다.(on_destroy()함수와 짝함수다.) @param _msg 초기화 할 때 전달될 메시지
 	virtual	void				on_starting(context& /*_context*/) override {}
 	virtual	void				on_start(context& /*_context*/) override {}
 	virtual	void				on_stopping () override {}
 	virtual	void				on_stop() override {}
 
-	//! @brief Accept를 요청했을 때 호출된다. @param _pconnectable Aceept를 받을 객체
+	//! @brief Accept를 요청했을 때 호출된다. @param _pconnectable Accept를 받을 객체
 	virtual	void				on_request_accept(net::io::Iconnectable* /*_pconnectable*/) {}
 	virtual	void				on_accept(net::io::Iconnectable* /*_pconnectable*/) {}
 	virtual	void				on_fail_accept(net::io::Iconnectable* /*_pconnectable*/) {}
@@ -156,7 +181,20 @@ protected:
 	//! @brief Accept 받기 위해 필요한 Iconnectable 객체를 할당 받는 공장 메써드(Factory Method) @ return 할당된 Iconnectable 객체
 	[[nodiscard]] virtual object_ptr<Iconnectable> process_alloc_connectable () PURE;
 
+	//! @brief the io_context of the socket to accept. default : empty (the io_context of the acceptor is used).
+	//!        override it to give a socket its own io_context (ex. net::emergency::Nacceptor : an executor per socket)
+	//!        (START_PARAMETER::enable_cpu_affinity : the io_context pinned to the CPU that received the connection, SO_INCOMING_CPU. linux)
+	[[nodiscard]] virtual object_ptr<executor::Iio_context> process_get_connectable_io_context(Iconnectable* _pconnectable);
+
+public:
+	// - CPU affinity (START_PARAMETER::enable_cpu_affinity, linux) : an accepted socket runs on the io_context of the CPU that received its packets.
+	//   one io_context with one thread pinned to each CPU, shared by the acceptors, created on demand and stopped with the system_executor.
+	[[nodiscard]] static object_ptr<executor::Iio_context> cpu_affinity_io_context(int _cpu);
+	static	void				stop_cpu_affinity_io_contexts() noexcept;
+protected:
+
 	// 4) set parameters
+			void				process_get_acceptor_parameters(context& _context, START_PARAMETER& _parameter);
 	virtual void				process_set_parameters(context& _context);
 
 	// 5) set default port
@@ -171,7 +209,10 @@ protected:
 	virtual result_code			_process_stop () noexcept override;
 
 #if defined(_SYS_EPOLL_H)
-	object_ptr<socket::Ntcp>	_process_starting_uds(const START_PARAMETER& _parameter);
+	// - UDS (Unix domain socket, START_PARAMETER::enable_uds/uds_only) : accepts the same host connections through "\0cgdk.tcp.<port>" too (or only)
+			void				_process_starting_uds(const START_PARAMETER& _parameter);
+			void				_process_close_uds() noexcept;
+			void				_process_wait_accepting() noexcept;
 #endif
 	// 7) destroy
 	virtual result_code			_process_destroy () noexcept override;
@@ -200,11 +241,19 @@ protected:
 			void				process_retry_accept();
 			class executable_retry_request_accept;
 			bool				m_retry_accept_now = false;
-			lockable<>			m_lockable_retry_accept_now;
+	mutable	lock_object			m_lockable_retry_accept_now;
 	#elif defined(_SYS_EPOLL_H)
 			bool				request_accept(CGSOCKET _handle_socket, ADDRESS_FAMILY _address_family);
-			void				process_connective_accept(uintptr_t _result);
-	static	void				proceoss_closesocket_fail(net::io::Iconnectable* _pconnectable, uint64_t _disconnect_reason) noexcept;
+			void				process_connective_accept(uintptr_t _result, CGSOCKET _handle_listen, ADDRESS_FAMILY _address_family);
+			void				_process_accepted(CGSOCKET _handle_socket_new, ADDRESS_FAMILY _address_family) noexcept;
+	static	void				process_closesocket_fail(net::io::Iconnectable* _pconnectable, disconnect_reason_t _disconnect_reason) noexcept;
+		// - io_uring completion (net.io.connective.acceptor_tcp.uring.cpp) : a multishot ACCEPT op on the listen socket instead of the
+		//   EPOLLIN registration. every CQE (the accepted fd) goes through _process_accepted(). the op ends with -ECANCELED at stop
+		//   (process_close_socket : cancel_fd before the listen socket is closed) and is posted again on any other end while listening
+	[[nodiscard]] bool			_is_io_completion_accept() const noexcept;
+			bool				_process_start_accept_cq(CGSOCKET _handle_listen, ADDRESS_FAMILY _address_family);
+			void				process_connective_accept_cq(intptr_t _result, std::size_t _flags, CGSOCKET _handle_listen, ADDRESS_FAMILY _address_family);
+			class executable_accept_cq;
 	#endif
 
 	// 12) member variable
@@ -217,8 +266,21 @@ protected:
 			end_point_type		m_accept_endpoint;
 			bool				m_enable_progress_log = true;
 
+	// - accept한 socket에 적용할 cryption type ("cryption": { "enable": true } => PNCODE)
+	//   (socket이 Icryptable일 때만 적용된다.)
+			eCRYPTION_TYPE		m_cryption_type = eCRYPTION_TYPE::NONE;
+
+	// - the tcp socket option of the accepted sockets ("socket_option" / START_PARAMETER::socket_option. set to every accepted socket right before on_accept() when m_flag_socket_option)
+	//   and TCP Fast Open of the listen socket ("tcp_fastopen" / START_PARAMETER::tcp_fastopen. 0 : off)
+			sSOCKET_OPTION_TCP	m_socket_option;
+			bool				m_flag_socket_option = false;
+			int					m_tcp_fastopen = 0;
+
 	// 13) IP6 Option
 			int					m_is_ip6_only = 0;
+
+	// - cpu affinity (START_PARAMETER::enable_cpu_affinity)
+			bool				m_enable_cpu_affinity = false;
 
 	// 14) executable
 			class executable_connective;
@@ -227,9 +289,12 @@ protected:
 			class executable_accept;
 			object_ptr<Ireferenceable> m_pexecutable_accept;
 
-			bool				m_enable_uds = false;
+			// - UDS listen socket (INVALID_SOCKET : not listening on UDS)
+			std::atomic<CGSOCKET>	m_handle_uds_listen{ INVALID_SOCKET };
+			object_ptr<Ireferenceable> m_pexecutable_accept_uds;
 
-			object_ptr<socket::Ntcp> m_psocket_uds;
+			// - the accepts in process (process_connective_accept) : process_close_socket() waits for them before it closes the listen sockets
+			std::atomic<int>	m_count_accepting{ 0 };
 	#endif
 };
 

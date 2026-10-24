@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "echo_client.h"
 
 bool test_tcp_echo_client::m_enable_relay_echo_test = false;
@@ -179,10 +179,10 @@ void test_tcp_echo_client::request_closesocket(int64_t _count)
 		{
 			int64_t disconnected = 0;
 
-			scoped_lock(pthis->m_pconnector_socket->get_lockable())
+			SCOPED_LOCK(pthis->m_pconnector_socket->get_lockable())
 			{
-				// ì£¼ì˜) closesocketì„ í•  ê²½ìš° m_pconnectorì˜ connectable_listì—ì„œ ì œê±°ë ìˆ˜ ìˆì–´
-				//       iterator ë¬´íš¨í™” í˜„ìƒì´ ë°œìƒí•  ìˆ˜ ìˆìœ¼ë¯€ë¡œ ë°˜ë“œì‹œ iterator ë¬´íš¨í™”ì— ëŒ€ë¹„í•´ ì²˜ë¦¬í•´ì•¼ í•œë‹¤.
+				// ÁÖÀÇ) closesocketÀ» ÇÒ °æ¿ì m_pconnectorÀÇ connectable_list¿¡¼­ Á¦°ÅµÉ ¼ö ÀÖ¾î
+				//       iterator ¹«È¿È­ Çö»óÀÌ ¹ß»ıÇÒ ¼ö ÀÖÀ¸¹Ç·Î ¹İµå½Ã iterator ¹«È¿È­¿¡ ´ëºñÇØ Ã³¸®ÇØ¾ß ÇÑ´Ù.
 
 				auto iter = pthis->m_pconnector_socket->begin();
 				auto iter_end = pthis->m_pconnector_socket->end();
@@ -222,10 +222,10 @@ void test_tcp_echo_client::request_disconnect_socket(int64_t _count)
 		{
 			int64_t disconnected = 0;
 
-			scoped_lock(pthis->m_pconnector_socket->get_lockable())
+			SCOPED_LOCK(pthis->m_pconnector_socket->get_lockable())
 			{
-				// ì£¼ì˜) disconnectì„ í•  ê²½ìš° m_pconnectorì˜ connectable_listì—ì„œ ì œê±°ë ìˆ˜ ìˆì–´
-				//       iterator ë¬´íš¨í™” í˜„ìƒì´ ë°œìƒí•  ìˆ˜ ìˆìœ¼ë¯€ë¡œ ë°˜ë“œì‹œ iterator ë¬´íš¨í™”ì— ëŒ€ë¹„í•´ ì²˜ë¦¬í•´ì•¼ í•œë‹¤.
+				// ÁÖÀÇ) disconnectÀ» ÇÒ °æ¿ì m_pconnectorÀÇ connectable_list¿¡¼­ Á¦°ÅµÉ ¼ö ÀÖ¾î
+				//       iterator ¹«È¿È­ Çö»óÀÌ ¹ß»ıÇÒ ¼ö ÀÖÀ¸¹Ç·Î ¹İµå½Ã iterator ¹«È¿È­¿¡ ´ëºñÇØ Ã³¸®ÇØ¾ß ÇÑ´Ù.
 
 				auto iter = pthis->m_pconnector_socket->begin();
 				auto iter_end = pthis->m_pconnector_socket->end();
@@ -260,7 +260,7 @@ void test_tcp_echo_client::request_send()
 	// 1) ...
 	auto value = ++this->m_traffic_send_requested;
 
-	// check) iPreê°€ 1ì´ë©´ Interlockedê±¸ê¸°.
+	// check) iPre°¡ 1ÀÌ¸é Interlocked°É±â.
 	if (value == 1)
 	{
 		object_ptr<test_tcp_echo_client> self(this);
@@ -272,7 +272,7 @@ void test_tcp_echo_client::request_send()
 	}
 }
 
-void test_tcp_echo_client::request_send_immidiately(int64_t _count)
+void test_tcp_echo_client::request_send_immediately(int64_t _count)
 {
 	// 1) send
 	this->process_send_message(m_traffic_test_selected, _count);
@@ -409,7 +409,7 @@ void test_tcp_echo_client::process_execute_send()
 	// 2) ...
 	auto value = --this->m_traffic_send_requested;
 
-	// check) 0ì´ ì•„ë‹ ê²½ìš° ë˜ ê±¸ê¸°...
+	// check) 0ÀÌ ¾Æ´Ò °æ¿ì ¶Ç °É±â...
 	if (value != 0)
 	{
 		object_ptr<test_tcp_echo_client> pthis(this);
@@ -439,7 +439,7 @@ void test_tcp_echo_client::read_setting()
 	context context_config;
 
 	// 1) read json file
-	context_config.read_from_json_file("message_format.json"sv);
+	context_config.from_json(api::file::read_file("message_format.json"sv));
 
 	if (context_config.is_valid())
 	{
@@ -485,7 +485,7 @@ void test_tcp_echo_client::read_setting()
 	// 4) ready messges for send test
 	this->process_ready_send_test_message(this->m_traffic_test_selected);
 
-	// 5) Connectorë¥¼ ìƒì„±í•œë‹¤.
+	// 5) Connector¸¦ »ı¼ºÇÑ´Ù.
 	//this->m_endpoint_connect = net::ip::tcp::endpoint{ net::ip::tcp::resolver().resolve("localhost", "20000") };
 	//this->m_endpoint_connect = net::ip::tcp::endpoint{ net::ip::address_v6::loopback(), 20000 };
 
@@ -514,7 +514,7 @@ void test_tcp_echo_client::process_connect_test()
 	// 1) disconnect
 	int64_t disconnected = 0;
 
-	scoped_lock(this->m_pconnector_socket->get_lockable())
+	SCOPED_LOCK(this->m_pconnector_socket->get_lockable())
 	{
 		auto count_socket = static_cast<int64_t>(this->m_pconnector_socket->count());
 
@@ -523,8 +523,8 @@ void test_tcp_echo_client::process_connect_test()
 			int64_t range = count_socket - this->m_connect_test_min;
 			int64_t disconnect = (range) ? rand() % range : 0;
 
-			// ì£¼ì˜) closesocketì„ í•  ê²½ìš° m_pconnectorì˜ connectable_listì—ì„œ ì œê±°ë ìˆ˜ ìˆì–´
-			//       iterator ë¬´íš¨í™” í˜„ìƒì´ ë°œìƒí•  ìˆ˜ ìˆìœ¼ë¯€ë¡œ ë°˜ë“œì‹œ iterator ë¬´íš¨í™”ì— ëŒ€ë¹„í•´ ì²˜ë¦¬í•´ì•¼ í•œë‹¤.
+			// ÁÖÀÇ) closesocketÀ» ÇÒ °æ¿ì m_pconnectorÀÇ connectable_list¿¡¼­ Á¦°ÅµÉ ¼ö ÀÖ¾î
+			//       iterator ¹«È¿È­ Çö»óÀÌ ¹ß»ıÇÒ ¼ö ÀÖÀ¸¹Ç·Î ¹İµå½Ã iterator ¹«È¿È­¿¡ ´ëºñÇØ Ã³¸®ÇØ¾ß ÇÑ´Ù.
 
 			auto iter = this->m_pconnector_socket->begin();
 			auto iter_end = this->m_pconnector_socket->end();
@@ -548,14 +548,14 @@ void test_tcp_echo_client::process_connect_test()
 		int64_t nConnect;
 		if (count_socket < this->m_connect_test_min)
 		{
-			// - min connectë³´ë‹¤ ë‚®ì„ ì‹œ min connectë§Œí¼ í•œêº¼ë²ˆì— ì ‘ì†í•œë‹¤.
+			// - min connectº¸´Ù ³·À» ½Ã min connect¸¸Å­ ÇÑ²¨¹ø¿¡ Á¢¼ÓÇÑ´Ù.
 			nConnect = this->m_connect_test_min - count_socket;
 		}
 		else if (count_socket < this->m_connect_test_max)
 		{
 			auto range = this->m_connect_test_max - count_socket;
 
-			// - ìµœëŒ€ ì—¬ìœ  remained/8(12.5%)ì˜ ê°’ì„ ì‹ ê·œë¡œ ì ‘ì†ì‹œë„í•œë‹¤.
+			// - ÃÖ´ë ¿©À¯ remained/8(12.5%)ÀÇ °ªÀ» ½Å±Ô·Î Á¢¼Ó½ÃµµÇÑ´Ù.
 			nConnect = (range) ? rand() % range : 0;
 		}
 		else
@@ -612,7 +612,7 @@ void test_tcp_echo_client::process_send_message(std::size_t _index, int64_t _cou
 
 		std::vector<object_ptr< socket_tcp>> vector_socket;
 
-		scoped_lock(this->m_pconnector_socket->get_lockable())
+		SCOPED_LOCK(this->m_pconnector_socket->get_lockable())
 		{
 			vector_socket.reserve(this->m_pconnector_socket->count());
 
@@ -651,7 +651,7 @@ void test_tcp_echo_client::process_send_message(shared_buffer _buffer)
 {
 	try
 	{
-		scoped_lock(this->m_pconnector_socket->get_lockable())
+		SCOPED_LOCK(this->m_pconnector_socket->get_lockable())
 		{
 			for (auto& iter : *this->m_pconnector_socket)
 			{

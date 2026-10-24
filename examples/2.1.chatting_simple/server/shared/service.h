@@ -20,7 +20,7 @@
 // service
 //-----------------------------------------------------------------------------
 class service : 
-	public						server_system::service_ex
+	public						server_system::Xservice
 {
 public:
 			service();
@@ -29,6 +29,6 @@ public:
 public:
 			own_ptr<user::manager>				m_pmanager_user;
 			own_ptr<channel::manager>			m_pmanager_channel;
-			own_ptr<user::group_immigration>	m_pgroup_user_immigration;
-			own_ptr<net::acceptor<user::socket>> m_pacceptor_user;
+			own_ptr<user::group_immigration>	pgroup_user_immigration;
+			own_ptr<net::acceptor<user::socket>> pacceptor_user;
 };

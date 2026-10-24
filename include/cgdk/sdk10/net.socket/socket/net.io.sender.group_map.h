@@ -38,19 +38,19 @@ public:
 			void				leave(const TKEY& _key) noexcept;
 			void				leave_all() noexcept;
 			object_ptr<TSENDER>	find(const TKEY& _key) const noexcept;
-			lockable<>&			get_lockable() noexcept { return this->m_cs_map_sender ;}
+			lock_object&		get_lockable() noexcept { return this->m_lockable_map_sender;}
 protected:
-			lockable<>			m_cs_map_sender;
+	mutable	lock_object			m_lockable_map_sender;
 			std::map<TKEY, object_ptr<TSENDER>> m_map_sender;
 };
 
 template<class TKEY, class TSENDER>
 void net::io::sender::Igroup_map<TKEY, TSENDER>::join(const TKEY& _key, TSENDER* _psender)
 {
-	// check) _psender가 nullptr이면 안됀다.
+	// check) _psender가 nullptr이면 안 된다.
 	THROW_IF(_psender == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	scoped_lock(this->m_cs_map_sender)
+	SCOPED_LOCK(this->m_lockable_map_sender)
 	{
 		// 1) 먼저 찾는다
 		auto iter_find = this->m_map_sender.find(_key);
@@ -66,10 +66,10 @@ void net::io::sender::Igroup_map<TKEY, TSENDER>::join(const TKEY& _key, TSENDER*
 template<class TKEY, class TSENDER>
 void net::io::sender::Igroup_map<TKEY, TSENDER>::join(const TKEY& _key, object_ptr<TSENDER>&& _psender)
 {
-	// check) _psender가 nullptr이면 안됀다.
+	// check) _psender가 nullptr이면 안 된다.
 	THROW_IF(_psender == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	scoped_lock(this->m_cs_map_sender)
+	SCOPED_LOCK(this->m_lockable_map_sender)
 	{
 		// 1) 먼저 찾는다
 		auto iter_find = this->m_map_sender.find(_key);
@@ -85,7 +85,7 @@ void net::io::sender::Igroup_map<TKEY, TSENDER>::join(const TKEY& _key, object_p
 template<class TKEY, class TSENDER>
 void net::io::sender::Igroup_map<TKEY, TSENDER>::leave(const TKEY& _key) noexcept
 {
-	scoped_lock(this->m_cs_map_sender)
+	SCOPED_LOCK(this->m_lockable_map_sender)
 	{
 		// 1) 먼저 찾는다
 		auto iter_find = this->m_map_sender.find(_key);
@@ -101,7 +101,7 @@ void net::io::sender::Igroup_map<TKEY, TSENDER>::leave(const TKEY& _key) noexcep
 template<class TKEY, class TSENDER>
 void net::io::sender::Igroup_map<TKEY, TSENDER>::leave_all() noexcept
 {
-	scoped_lock(this->m_cs_map_sender)
+	SCOPED_LOCK(this->m_lockable_map_sender)
 	{
 		this->m_map_sender.clear();
 	}
@@ -113,7 +113,7 @@ object_ptr<TSENDER> net::io::sender::Igroup_map<TKEY, TSENDER>::find(const TKEY&
 	// declare)
 	object_ptr<TSENDER> temp;
 
-	scoped_lock(this->m_cs_map_sender)
+	SCOPED_LOCK(this->m_lockable_map_sender)
 	{
 		// 1) 먼저 찾는다
 		auto iter_find = this->m_map_sender.find(_key);
@@ -142,13 +142,25 @@ public:
 		// check) 버퍼가 Overflow되었는가?
 		CGASSERT_ERROR(_buffer._is_buffer_overflow() == false);
 
-		// 1) 전송한다.
-		scoped_lock(this->m_cs_map_sender)
+		// declare)
+		std::vector<object_ptr<TSENDER>> vector_send;
+
+		SCOPED_LOCK(this->m_lockable_map_sender)
 		{
-			for (auto iter = this->m_map_sender.begin(), iterEnd = this->m_map_sender.end(); iter != iterEnd; ++iter)
+			// - reserve
+			vector_send.reserve(this->m_map_sender.size());
+
+			// - copy sender
+			for (const auto& iter : this->m_map_sender)
 			{
-				iter->second->send({ shared_buffer(_buffer), _count_message }, _option);
+				vector_send.push_back(iter.second);
 			}
+		}
+
+		// 1) 전송한다.
+		for (auto& iter : vector_send)
+		{
+			iter->send({ shared_buffer(_buffer), _count_message }, _option);
 		}
 
 		// return)

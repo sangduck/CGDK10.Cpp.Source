@@ -36,7 +36,7 @@ class CGMFCCONTROL_EXT_CLASS CChild_reference_list : public CChildDialog
 
 // constructor/destructor)
 public:
-			CChild_reference_list(Ireferenceable* _prefernece=nullptr, CWnd* pnode_parent = nullptr);   // standard constructor
+			CChild_reference_list(Ireferenceable* _preference=nullptr, CWnd* pnode_parent = nullptr);   // standard constructor
 	virtual ~CChild_reference_list();
 
 // MFC) Virtual Functions
@@ -68,7 +68,7 @@ public:
 // implementation) 
 protected:
 			object_ptr<Ireferenceable> m_pobject;
-			lockable<>			m_lockable_object;
+			lock_object			m_lockable_object;
 			CListCtrl			m_listctrl_reference;
 			BOOL				m_is_enable_control;
 };

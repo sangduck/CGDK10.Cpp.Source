@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "cgdk/sdk10/net.socket.h"
 

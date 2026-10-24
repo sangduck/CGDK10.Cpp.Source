@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "TLOG_RECORD.h"
 #include <iostream>
 
@@ -80,11 +80,11 @@ namespace CGDK
 	// 10) this thread object
 	TLS	api::Nthread*				g_pthread_now = nullptr;
 
-	// 11) thread manager (Managerì˜ ì´ˆê¸°í™”ë¥¼ ê°€ì¥ ë¨¼ì € í•´ì•¼í•¨)
+	// 11) thread manager (ManagerÀÇ ÃÊ±âÈ­¸¦ °¡Àå ¸ÕÀú ÇØ¾ßÇÔ)
 	std::mutex						__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL1 + 21)	api::manager_thread::m_s_lockable_create;
 	own_ptr<api::manager_thread>	__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL1 + 22)	api::manager_thread::m_s_pinstance;
 
-	// 12) exception manager (Managerì˜ ì´ˆê¸°í™”ë¥¼ ê°€ì¥ ë¨¼ì € í•´ì•¼í•¨)
+	// 12) exception manager (ManagerÀÇ ÃÊ±âÈ­¸¦ °¡Àå ¸ÕÀú ÇØ¾ßÇÔ)
 	std::mutex						__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL1 + 23)	dump_manager::m_s_lockable_create;
 	own_ptr<dump_manager>			__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL1 + 24)	dump_manager::m_s_pinstance;
 

@@ -195,7 +195,7 @@ struct REQUEST_LINE_GROUP_MEMBER_IDS : public query::REQUEST
 public:
 	static_string<256>			access_token;
 	static_string<64>			groupId;			// Found in the source object of webhook event objects
-	static_string<64>			start;				// (Optinal) Value of the continuation token found in the next property of the JSON object returned in the response. Include this parameter to get the next array of user IDs for the members of the group.
+	static_string<64>			start;				// (Optional) Value of the continuation token found in the next property of the JSON object returned in the response. Include this parameter to get the next array of user IDs for the members of the group.
 
 public:
 	REQUEST_LINE_GROUP_MEMBER_IDS() noexcept : REQUEST{ "api.line.me" } {}
@@ -258,7 +258,7 @@ struct REQUEST_LINE_ROOM_MEMBER_IDS : public query::REQUEST
 public:
 	static_string<256>			access_token;
 	static_string<64>			roomId;				// Found in the source object of webhook event objects
-	static_string<64>			start;				// (Optinal) Value of the continuation token found in the next property of the JSON object returned in the response. Include this parameter to get the next array of user IDs for the members of the group.
+	static_string<64>			start;				// (Optional) Value of the continuation token found in the next property of the JSON object returned in the response. Include this parameter to get the next array of user IDs for the members of the group.
 
 public:
 	REQUEST_LINE_ROOM_MEMBER_IDS() noexcept : REQUEST{ "api.line.me" } {}
@@ -345,7 +345,7 @@ struct RESPONSE_LINE_RICHMENU_DELETE : public query::RESPONSE
 };
 
 
-// 4) Get rich numu ID of user
+// 4) Get rich menu ID of user
 struct REQUEST_LINE_RICHMENU_USER : public query::REQUEST
 {
 public:
@@ -362,7 +362,7 @@ struct RESPONSE_LINE_RICHMENU_USER : public query::RESPONSE
 };
 
 
-// 5) Link rich numu ID of user
+// 5) Link rich menu ID of user
 struct REQUEST_LINE_RICHMENU_USER_LINK : public query::REQUEST
 {
 public:
@@ -380,7 +380,7 @@ struct RESPONSE_LINE_RICHMENU_USER_LINK : public query::RESPONSE
 };
 
 
-// 6) Unlink rich numu ID of user
+// 6) Unlink rich menu ID of user
 struct REQUEST_LINE_RICHMENU_USER_UNLINK : public query::REQUEST
 {
 public:

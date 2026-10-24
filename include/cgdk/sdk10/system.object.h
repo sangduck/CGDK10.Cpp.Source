@@ -17,6 +17,8 @@
 //*****************************************************************************
 
 #pragma once
+
+#include "cgdk/sdk10/lib_path.h"
 //-----------------------------------------------------------------------------
 //
 // CGDK10.system.object
@@ -42,7 +44,7 @@
 	#endif
 #endif
 
-// 2) Factroies for All allocated objects by make_object<T> function
+// 2) Factories for All allocated objects by make_object<T> function
 #define	_USE_CREATE_FACTORY_FOR_ALL_OBJECT
 
 // 3) Disable Warning
@@ -64,14 +66,13 @@
 
 // 2) Exception
 #include <exception>
+#include <source_location>
+#include <compare>
 
-// 3) standard
-#include <filesystem>
-
-// 4) Debug Help (for WIN32)
+// 4) Windows exception types
 #if defined(_MSC_VER)
+	#include <windows.h>
 	#include <eh.h>
-	#include <Dbghelp.h>
 #endif
 
 #if defined(_MSC_VER)
@@ -83,38 +84,9 @@
 	#include <thread>
 #endif
 
-// 6) Thread (Linux or Mobile)
-#if defined(__ANDROID__)
-	#include <signal.h>
-	#include <poll.h>
-	#include <pthread.h>
-	#include <sched.h>
-	#include <unistd.h>
-
-	#include <linux/input.h>
-	#include <sys/epoll.h>
-
-#elif defined(__linux__)
-	#include <pthread.h>
-	#include <unistd.h>
-	//#include <linux/input.h>
-
-	// - epoll
-	#include <sys/epoll.h>
-
-	//// - aio
-	#include <signal.h>
-	#include <aio.h>
-	//#include <linux/aio_abi.h>
-
-#elif defined (__APPLE__)
-	#include <poll.h>
-	#include <pthread.h>
-	#include <sched.h>
-	#include <unistd.h>
-
-	#include <linux/input.h>
-#endif
+// 6) thread (api::Nthread runs on std::jthread)
+#include <thread>
+#include <stop_token>
 
 
 //----------------------------------------------------------------------------
@@ -139,9 +111,10 @@ namespace CGDK
 	class Iexecutor;
 	class Ischedulable;
 	class Imessageable;
-
 	template <class> class Ipoolable;
+	class non_copyable;
 
+	// 3) object
 	namespace object
 	{
 		class Inameable;
@@ -163,10 +136,13 @@ namespace CGDK
 		class Npausable;
 		class Ninitializable_startable;
 		class Nenable;
-		template <typename TTYPE, typename TCON = std::vector<object_ptr<TTYPE>>> class Nattachable;
+		template <typename TTYPE, typename TCON = circular_list<object_ptr<TTYPE>>> class Nattachable;
 	}
 
-	// 3) exception
+	// 4) class
+	class allocator_manager;
+
+	// 5) exception
 	class Ithrowable;
 
 	// 4) log
@@ -174,41 +150,42 @@ namespace CGDK
 	class Ilog_source;
 	class Ilog_filter;
 	class log_archive;
+	struct sMESSAGE_LOG;
+	class log_source;
 
-	// 5) ...
+	// 6) ...
 	namespace resource
 	{
 		class manager;
 	}
 
-	// 6) factory
+	// 7) factory
 	class Ifactory;
 	namespace factory
 	{
 		class manager;
 		template <class> class Iobject;
 		template <class> class object;
-		template <class>	class object_pool;
-		template <class>	class object_pool_tls;
+		template <class> class object_pool_tls;
 		class memory_block;
 	}
 	template <class> class Npoolable;
 
-	// 7) edc
+	// 8) edc
 	namespace edc
 	{
 		class crc;
 		extern crc default_crc;
 	}
 
-	// 8) archive
+	// 9) archive
 	namespace archive
 	{
 		class file;
 		class file_record;
 	}
 
-	// 9) api
+	// 10) api
 	namespace api
 	{
 		class queue_executable;
@@ -220,12 +197,14 @@ namespace CGDK
 		class manager_thread;
 	}
 
-	// 10) executor
+	// 11) executor
 	namespace executor
 	{
 		class Iqueue;
 		class Iio_context;
+		class Iio_context_threads;
 		class queue_list;
+		class queue_list_threads;
 		class io_context;
 		class io_context_threads;
 		template <class T = Iexecutor> class list;
@@ -237,11 +216,11 @@ namespace CGDK
 		class manager;
 	}
 	class system_executor;
+	class dump_manager;
 
-	// 11) executable
+	// 12) executable
 	namespace executable
 	{
-		template <class> class list;
 		template <class> class function;
 		class Nbatch;
 		template <class> class batch_function;
@@ -249,7 +228,7 @@ namespace CGDK
 		class batch_wait;
 	}
 
-	// 12) schedulable
+	// 13) schedulable
 	namespace schedulable
 	{
 		class manager;
@@ -269,21 +248,21 @@ namespace CGDK
 		}
 	}
 
-	// 13) updatable
+	// 14) updatable
 	namespace updatable
 	{
 		class executable_batch;
 	}
 
-	// 14) throwable
+	// 15) throwable
 	namespace throwable
 	{
 		class failure;
 		class critical;
-		class seh_exception;
+		class system_exception;
 	}
 
-	// 15) factory
+	// 16) factory
 	namespace factory
 	{
 		class _traits_has_pool {};
@@ -297,7 +276,7 @@ namespace CGDK
 
 	template <class> class POOLABLE;
 
-	// 16) messageable
+	// 17) messageable
 	class Imessageable;
 	class Nmessageable;
 	class Imessage_transmitter;
@@ -324,40 +303,15 @@ namespace CGDK
 	{
 
 #if defined(__ANDROID__) || defined(__linux__)
-		class io_context_epoll;
-		using io_context = io_context_epoll;
+		class io_context_Nepoll;
 #elif defined(_IO_APISET_H_)
 		class io_context_Niocp;
-		class io_context_iocp_queued;
-		class io_context_iocp_direct;
-		//using io_context = io_context_iocp_queued;
-		using io_context = io_context_iocp_direct;
 #else
-	#error "Unsuppored API"
+	#error "Unsupported API"
 #endif
 	}
 }
 
-
-//-----------------------------------------------------------------------------
-// External library
-//-----------------------------------------------------------------------------
-#if defined(__cpp_lib_format)
-	#include <format>
-	#define NFMT std
-#else
-	// 1) external libarary
-	#if defined(_MSC_VER)
-		#pragma warning(disable:26812)
-		#pragma warning(disable:26446)
-	#endif
-	#include "cgdk/sdk10/system/object/fmt/format.h"
-	#if defined(_MSC_VER)
-		#pragma warning(default:26812)
-		#pragma warning(default:26446)
-	#endif
-	#define NFMT fmt
-#endif
 
 //----------------------------------------------------------------------------
 //
@@ -374,6 +328,9 @@ namespace CGDK
 #include "cgdk/sdk10/system/object/definitions.result_code.h"
 #include "cgdk/sdk10/system/object/definitions.object.h"
 
+// 3) attributes
+#include "cgdk/sdk10/system/object/non_copyable.h"
+
 
 //----------------------------------------------------------------------------
 // creation & reference counting
@@ -386,6 +343,7 @@ namespace CGDK
 #include "cgdk/sdk10/system/object/Ireferenceable.h"
 #include "cgdk/sdk10/system/object/object_ptr.h"
 #include "cgdk/sdk10/system/object/any_ptr.h"
+#include "cgdk/sdk10/system/object/send_defer.h"
 
 
 //----------------------------------------------------------------------------
@@ -428,13 +386,12 @@ namespace CGDK
 
 // 2) attachable
 #include "cgdk/sdk10/system/object/object.Iattachable.h"
-#include "cgdk/sdk10/system/object/object.Nattachable.h"
 
 // 3) registerable
 #include "cgdk/sdk10/system/object/Iregisterable.h"
 #include "cgdk/sdk10/system/object/Nregisterable.h"
 
-// 4) registery
+// 4) registry
 #include "cgdk/sdk10/system/object/depository.h"
 
 
@@ -505,7 +462,7 @@ namespace CGDK
 //-----------------------------------------------------------------------------
 // objects 
 //-----------------------------------------------------------------------------
-// 1) Objeect 
+// 1) object 
 #include "cgdk/sdk10/system/object/object.Nstate.h"
 #include "cgdk/sdk10/system/object/object.Nstartable.h"
 #include "cgdk/sdk10/system/object/object.Npausable.h"
@@ -518,13 +475,32 @@ namespace CGDK
 #include "cgdk/sdk10/system/object/resource.manager.h"
 
 
+//----------------------------------------------------------------------------
+// class manager
+//----------------------------------------------------------------------------
+#include "cgdk/sdk10/system/object/allocator_manager.h"
+
+//----------------------------------------------------------------------------
+// util
+//----------------------------------------------------------------------------
+// 1) util interface
+#include "cgdk/sdk10/system/object/util.Icryptor.h"
+#include "cgdk/sdk10/system/object/util.Icryptable.h"
+#include "cgdk/sdk10/system/object/util.Ichecker.h"
+#include "cgdk/sdk10/system/object/util.Icompressor.h"
+
+// 2) util encoder/decoder
+#include "cgdk/sdk10/system/object/util.edc.check_sum.h"
+#include "cgdk/sdk10/system/object/util.edc.md5.h"
+#include "cgdk/sdk10/system/object/util.edc.crc.h"
+#include "cgdk/sdk10/system/object/util.compress.h"
+#include "cgdk/sdk10/system/object/util.base64.h"
+
+
 //-----------------------------------------------------------------------------
 // factory
 //-----------------------------------------------------------------------------
 // 1) utils
-#include "cgdk/sdk10/system/object/util.edc.crc.h"
-#include "cgdk/sdk10/system/object/util.compress.h"
-#include "cgdk/sdk10/system/object/util.crypt.base64.h"
 #include "cgdk/sdk10/system/object/util.query_performance.h"
 
 #if defined(_MSC_VER)
@@ -565,14 +541,16 @@ namespace CGDK
 
 #include "cgdk/sdk10/system/object/Ilog_filter.h"
 #include "cgdk/sdk10/system/object/Ilogger.h"
-#include "cgdk/sdk10/system/object/Ilog_source.h"
 
 #include "cgdk/sdk10/system/object/log.stream.h"
 #include "cgdk/sdk10/system/object/log.archive.h"
 
+#include "cgdk/sdk10/system/object/Ilog_source.h"
+#include "cgdk/sdk10/system/object/log_source.h"
+
 
 //-----------------------------------------------------------------------------
-// pool & factroy
+// pool & factory
 //-----------------------------------------------------------------------------
 // 1) Interfaces
 #include "cgdk/sdk10/system/object/Ipoolable.h"
@@ -580,7 +558,6 @@ namespace CGDK
 // 2) object pool
 #include "cgdk/sdk10/system/object/factory.Iobject.h"
 #include "cgdk/sdk10/system/object/factory.object.h"
-#include "cgdk/sdk10/system/object/factory.object.pool.h"
 #include "cgdk/sdk10/system/object/factory.object.pool_tls.h"
 
 // 3) Npoolable
@@ -613,10 +590,6 @@ namespace CGDK
 #include "cgdk/sdk10/system/object/api.manager_thread.h"
 #include "cgdk/sdk10/system/object/api.thread.h"
 #include "cgdk/sdk10/system/object/api.threads.h"
-#include "cgdk/sdk10/system/object/api.io_context.Niocp.h"
-#include "cgdk/sdk10/system/object/api.io_context.iocp_queued.h"
-#include "cgdk/sdk10/system/object/api.io_context.iocp_direct.h"
-#include "cgdk/sdk10/system/object/api.io_context.epoll.h"
 #include "cgdk/sdk10/system/object/api.queue_executable.h"
 
 // 5) executor/thread
@@ -625,8 +598,7 @@ namespace CGDK
 #include "cgdk/sdk10/system/object/executor.Iqueue.h"
 #include "cgdk/sdk10/system/object/executor.Iio_context.h"
 #include "cgdk/sdk10/system/object/executor.queue_list.h"
-#include "cgdk/sdk10/system/object/executor.io_context.h"
-#include "cgdk/sdk10/system/object/executor.io_context_threads.h"
+#include "cgdk/sdk10/system/object/executor.queue_list_threads.h"
 #include "cgdk/sdk10/system/object/executor.strand.h"
 #include "cgdk/sdk10/system/object/executor.scheduler.h"
 #include "cgdk/sdk10/system/object/executor.list_priority.h"
@@ -637,7 +609,6 @@ namespace CGDK
 #include "cgdk/sdk10/system/object/executable.batch.h"
 #include "cgdk/sdk10/system/object/executable.batch_wait.h"
 #include "cgdk/sdk10/system/object/executable.batch_function.h"
-#include "cgdk/sdk10/system/object/executable.list.h"
 #include "cgdk/sdk10/system/object/executable.make.h"
 
 
@@ -667,6 +638,30 @@ namespace CGDK
 
 
 //-----------------------------------------------------------------------------
+// coroutine (C++20 or later)
+//-----------------------------------------------------------------------------
+#if defined(__cpp_impl_coroutine)
+// 1) definitions
+#define	CGDK_SYSTEM_COROUTINE
+
+// 2) standard header files
+#include <coroutine>
+#include <exception>
+#include <optional>
+#include <future>
+#include <type_traits>
+
+// 3) coroutine
+#include "cgdk/sdk10/system/object/definitions.coroutine.h"
+#include "cgdk/sdk10/system/object/coroutine.task.h"
+#include "cgdk/sdk10/system/object/coroutine.post.h"
+#include "cgdk/sdk10/system/object/coroutine.function.h"
+#include "cgdk/sdk10/system/object/coroutine.sleep.h"
+#include "cgdk/sdk10/system/object/coroutine.async_result.h"
+#endif
+
+
+//-----------------------------------------------------------------------------
 // archive
 //-----------------------------------------------------------------------------
 // 1) 
@@ -677,15 +672,9 @@ namespace CGDK
 
 
 //----------------------------------------------------------------------------
-// util
+// admin
 //----------------------------------------------------------------------------
-// 1) edc
-#include "cgdk/sdk10/system/object/util.edc.check_sum.h"
-#include "cgdk/sdk10/system/object/util.edc.md5.h"
-
-// 3) crytor
-#include "cgdk/sdk10/system/object/util.Icrypt.h"
-#include "cgdk/sdk10/system/object/util.Icryptable.h"
+#include "cgdk/sdk10/system/object/definitions.admin.h"
 
 
 //----------------------------------------------------------------------------
@@ -750,15 +739,13 @@ namespace CGDK
 		// WinSDK 10
 		#if WDK_NTDDI_VERSION >= NTDDI_WIN10
 			#ifdef NDEBUG
-				#pragma message("[CGDK10] 'CGDK10.system.object_Windows10.0_x64_Release.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.system.object_Windows10.0_x64_Release.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.system.object_Windows10.0_x64_Release.lib")
 			#else
-				#pragma message("[CGDK10] 'CGDK10.system.object_Windows10.0_x64_Debug.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.system.object_Windows10.0_x64_Debug.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.system.object_Windows10.0_x64_Debug.lib")
 			#endif
 		// Error - No supported
 		#else
-			#error "[CGDK10] Not supported Windonws SDK version (Need Windows SDK 10.0 or higher)"
+			#error "[CGDK10] Not supported Windows SDK version (Need Windows SDK 10.0 or higher)"
 		#endif
 
 	#else

@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -23,16 +23,16 @@ void tutorial_step_ex1();
 
 int main()
 {
-	// step 1) CGDK::Ireferenceableì™€ CGDK::object_ptr<T>ì™€ CGDK::make_object<T>()
+	// step 1) CGDK::Ireferenceable¿Í CGDK::object_ptr<T>¿Í CGDK::make_object<T>()
 	tutorial_step_1();
 
-	// step 2) CGDK::object_ptr<T>ì˜ ì¸ì ì „ë‹¬ê³¼ ëŒ€ì…
+	// step 2) CGDK::object_ptr<T>ÀÇ ÀÎÀÚ Àü´Ş°ú ´ëÀÔ
 	tutorial_step_2();
 
-	// step 3) poolê³¼ CGDK::Npoolable<T>
+	// step 3) pool°ú CGDK::Npoolable<T>
 	tutorial_step_3();
 
-	// step 4) CGDK::own_ptr<T>ì™€ CGDK::make_own<T>()
+	// step 4) CGDK::own_ptr<T>¿Í CGDK::make_own<T>()
 	tutorial_step_4();
 
 	// step ex1) object pool

@@ -22,10 +22,9 @@
 // Ilog_source
 //
 //-----------------------------------------------------------------------------
-class CGDK::Ilog_source : virtual public Ireferenceable
+class CGDK::Ilog_source : virtual public log_archive
 {
 public:
 	virtual ~Ilog_source() noexcept {}
-	virtual object_ptr<LOG_RECORD>	process_store_log(log_type_t _log_type, log_level_t _log_level, eCHARACTER_SET _char_code, std::string_view _log_message) noexcept PURE;
-
+	virtual	void				store_log(std::vector<object_ptr<LOG_RECORD>>&& _vector_plog_record);
 };

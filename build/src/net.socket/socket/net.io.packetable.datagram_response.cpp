@@ -52,7 +52,7 @@ bool net::io::packetable::Ndatagram_response::send_ack( uint32_t _Serial, const 
 {
 	//-----------------------------------------------------------------
 	// 주의) ACK의 경우 뒤에서부터 읽는 tail message이라 따라서 message를
-	//       뒷쪽에다 붙히고 Serial을 그 이전에 붙이게 된다.
+	//       뒷쪽에다 붙이고 Serial을 그 이전에 붙이게 된다.
 	//-----------------------------------------------------------------
 	// 1) shared_buffer를 생성한다.
 	auto temp_buffer = alloc_shared_buffer(64);

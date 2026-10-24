@@ -62,7 +62,7 @@ void group::array_seat_sender_dispatchable<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TM
 	}
 	catch(...)
 	{
-		// - Unreigster 
+		// - Unregister 
 		_pmember->unregister_messageable(this);
 
 		// reraise) 

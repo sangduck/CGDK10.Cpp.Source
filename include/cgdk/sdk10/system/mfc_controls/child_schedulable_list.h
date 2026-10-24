@@ -70,7 +70,7 @@ public:
 protected:
 			CListCtrl			m_list_schedulable;
 			object_ptr<schedulable::manager> m_pexecutor_schedulable;
-			lockable<>			m_lockable_manager_thread;
+			lock_object			m_lockable_manager_thread;
 			BOOL				m_is_enable_control;
 };
 

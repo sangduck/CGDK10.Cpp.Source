@@ -1,7 +1,7 @@
 #include "pch.h"
 
 
-shared_buffer message_NETWORK_CERTIFY_RESPOSNE()
+shared_buffer message_NETWORK_CERTIFY_RESPONSE()
 {
 	// declare)
 	const auto MESSAGE_SIZE = 64;
@@ -110,7 +110,7 @@ result_code group_socket_immigration::on_message_NETWORK_CERTIFY_REQUEST(sMESSAG
 	//auto buf = _msg.buf_message + offset(8);
 
 	// 3) send response message
-	psocket->send(message_NETWORK_CERTIFY_RESPOSNE());
+	psocket->send(message_NETWORK_CERTIFY_RESPONSE());
 
 	// 4) enter to group
 	g_pservice->m_pgroup_socket->enter(psocket);

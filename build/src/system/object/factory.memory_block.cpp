@@ -5,6 +5,24 @@ namespace CGDK
 
 extern bool g_is_initialize;
 
+
+// definition) memory_block Object for memory_block factory
+class factory::memory_block::memory :
+	public Imemory,
+	public Ipoolable<memory_block::memory>,
+	public factory::_traits_has_pool
+{
+public:
+	memory(size_t _size);
+	memory() noexcept : Imemory(nullptr, 0) {}
+	virtual	~memory() noexcept;
+private:
+	virtual	void	process_dispose() noexcept override { this->m_ppool->dealloc(this); }
+
+public:
+	object_ptr<pool_t>	m_ppool;
+};
+
 factory::memory_block::memory::memory(size_t _size)
 {
 	// 1) 메모리를 생성합니다.(Aligned된 memory_block로 할당받는다.)
@@ -12,7 +30,7 @@ factory::memory_block::memory::memory(size_t _size)
 
 	// check) 할당에 실패했으면 던진다.
 	//THROW_IF(data_ == nullptr, throwable::failure(eRESULT::BAD_ALLOC));
-	if(data_ == nullptr)
+	if (data_ == nullptr)
 		throw throwable::failure(eRESULT::BAD_ALLOC);
 
 	// 2) Len을 설정한다.
@@ -21,47 +39,46 @@ factory::memory_block::memory::memory(size_t _size)
 
 factory::memory_block::memory::~memory() noexcept
 {
-	// 1) 할당해제한다.
 	::free(data_);
 }
 
 class factory::memory_block::memoryblock_pool : public factory::memory_block::pool_t
 {
 public:
-		#if defined(_USE_TLS_FACTORY_STATISTICS)
-			memoryblock_pool(int _index, size_t _block_size, const std::string_view _name) noexcept : factory::memory_block::pool_t(_name, eFACTORY_TYPE::POOL_MEMORYBLOCK), m_block_size(_block_size), m_attributes(0)
-			{
-				this->m_local_data_index = _index;
-			}
-		#else
-			memoryblock_pool(int, size_t _block_size, const std::string_view _name) noexcept : factory::memory_block::pool_t(_name, eFACTORY_TYPE::POOL_MEMORYBLOCK), m_block_size(_block_size), m_attributes(0)
-			{
-			}
-		#endif
+#if defined(_USE_TLS_FACTORY_STATISTICS)
+	memoryblock_pool(int _index, size_t _block_size, const std::string_view _name) noexcept : factory::memory_block::pool_t(_name, eFACTORY_TYPE::POOL_MEMORYBLOCK), m_block_size(_block_size), m_attributes(0)
+	{
+		this->m_local_data_index = _index;
+	}
+#else
+	memoryblock_pool(int, size_t _block_size, const std::string_view _name) noexcept : factory::memory_block::pool_t(_name, eFACTORY_TYPE::POOL_MEMORYBLOCK), m_block_size(_block_size), m_attributes(0)
+	{
+	}
+#endif
 
 	virtual	~memoryblock_pool() noexcept {}
 
 public:
-	virtual	size_t		object_size() const noexcept override { return this->m_block_size;}
+	virtual	size_t		object_size() const noexcept override { return this->m_block_size; }
 	virtual	factory::memory_block::memoryblock_t* create_object(CGNEW_DEBUG_INFO_PARAMETERS) override
-			{
-			#ifdef _ENABLE_DEBUG_NEW
-				#if defined(_WIN32)
-					return new(_NORMAL_BLOCK, CGNEW_DEBUG_INFO_PARAMETERS_PASSING) factory::memory_block::memoryblock_t(this->m_block_size);
-				#else
-					return new factory::memory_block::memoryblock_t(this->m_block_size);
-				#endif
-			#else
-				return new factory::memory_block::memoryblock_t(this->m_block_size);
-			#endif
-			}
+	{
+#ifdef _ENABLE_DEBUG_NEW
+#if defined(_WIN32)
+		return new(_NORMAL_BLOCK, CGNEW_DEBUG_INFO_PARAMETERS_PASSING) factory::memory_block::memoryblock_t(this->m_block_size);
+#else
+		return new factory::memory_block::memoryblock_t(this->m_block_size);
+#endif
+#else
+		return new factory::memory_block::memoryblock_t(this->m_block_size);
+#endif
+	}
 
-			uint32_t	get_attribute() const noexcept { return this->m_attributes;}
-			void		set_attribute(uint32_t _attribute) noexcept { this->m_attributes=_attribute; }
+	uint32_t	get_attribute() const noexcept { return this->m_attributes; }
+	void		set_attribute(uint32_t _attribute) noexcept { this->m_attributes = _attribute; }
 
 private:
-			size_t		m_block_size;
-			uint32_t	m_attributes;
+	size_t		m_block_size;
+	uint32_t	m_attributes;
 };
 
 factory::memory_block::memory_block()
@@ -76,13 +93,113 @@ factory::memory_block::~memory_block() noexcept
 	this->destroy();
 }
 
+factory::memory_block::memoryblock_t* factory::memory_block::alloc(int _index CGNEW_DEBUG_INFO_COMMA CGNEW_DEBUG_INFO_PARAMETERS)
+{
+	// check)
+	if(_index < 0 || _index >= static_cast<int>(this->m_vector_memory_block_pool.size()))
+		throw throwable::failure(eRESULT::RANGE_ERROR, 0, "out of memory_block factory's block index range"sv);
+
+	// check)
+	if(this->m_vector_memory_block_pool.at(_index).empty())
+		throw throwable::failure(eRESULT::NOT_READY, 0, "memory_block factory is not ready"sv);
+
+	// return)
+	return this->m_vector_memory_block_pool.at(_index)->alloc(CGNEW_DEBUG_INFO_PARAMETERS_PASSING);
+}
+
+class factory::memory_block::memory_general :
+	public Imemory,
+	public Ipoolable<memory_general>,
+	public factory::_traits_has_pool,
+	public factory::_traits_memory
+{
+public:
+	memory_general() noexcept {}
+	virtual	~memory_general() noexcept {}
+	void prepare(size_t _size)
+	{
+		// check)
+		CGASSERT_ERROR(data_ == nullptr);
+
+		// 1) alloc buffer
+		auto pmemory = ::malloc(_size);
+
+		// check)
+		THROW_IF(pmemory == nullptr, throwable::failure(eRESULT::BAD_ALLOC));
+
+		set_data(reinterpret_cast<char*>(pmemory));
+		set_size(_size);
+	}
+
+private:
+	virtual	void	process_dispose() noexcept override { SAFE_FREE(data_); this->m_ppool->dealloc(this); }
+
+public:
+	object_ptr<pool_extra_t>	m_ppool;
+};
+
+factory::memory_block::memory_general_t* factory::memory_block::alloc_general(size_t _size CGNEW_DEBUG_INFO_COMMA CGNEW_DEBUG_INFO_PARAMETERS)
+{
+	// 1) alloc memory object
+	auto pmemory = m_memory_block_extra_pool->alloc(CGNEW_DEBUG_INFO_PARAMETERS_PASSING);
+
+	// 2) create memory
+	pmemory->prepare(_size);
+
+	// return)
+	return pmemory;
+}
+
+void factory::memory_block::dealloc(int _index, memoryblock_t* _pblock) noexcept
+{
+	// check)
+	CGASSERT_ERROR(_index >= 0 && _index < static_cast<int>(m_vector_memory_block_pool.size()));
+
+	// check)
+	if(_index < 0 || _index >= static_cast<int>(m_vector_memory_block_pool.size()))
+		return;
+
+	// - get factory
+	own_ptr<pool_t>& pfactory = m_vector_memory_block_pool.at(_index);
+
+	// check)
+	CGASSERT_ERROR(pfactory.exist());
+
+	// check)
+	if(pfactory.empty())
+		return;
+
+	// return)
+	return pfactory->dealloc(_pblock);
+}
+
+factory::memory_block::memory* _mem_pool_alloc(size_t _size CGNEW_DEBUG_INFO_COMMA CGNEW_DEBUG_INFO_PARAMETERS)
+{
+	return factory::memory_block::instance().alloc(SELECT_BLOCK(_size) CGNEW_DEBUG_INFO_COMMA CGNEW_DEBUG_INFO_PARAMETERS_PASSING);
+}
+
+void _mem_pool_free(factory::memory_block::memory* _pmemeory) noexcept
+{
+	_pmemeory->m_ppool->dealloc(_pmemeory);
+}
+
+object_ptr<Imemory> _mem_alloc(size_t _size CGNEW_DEBUG_INFO_COMMA CGNEW_DEBUG_INFO_PARAMETERS)
+{
+	if (_size <= MEMORYPOOL_MAX_SIZE_OF_MEMORY_BLOCK)
+		return factory::memory_block::instance().alloc(SELECT_BLOCK(_size) CGNEW_DEBUG_INFO_COMMA CGNEW_DEBUG_INFO_PARAMETERS_PASSING);
+	else
+		return factory::memory_block::instance().alloc_general(_size CGNEW_DEBUG_INFO_COMMA CGNEW_DEBUG_INFO_PARAMETERS_PASSING);
+}
+
 result_code factory::memory_block::initialize(const INITIALIZE_PARAMETER& _parameter)
 {
 	// check)
-	RETURN_IF(g_is_initialize == false, eRESULT::ALEADY_EXIST);
+	if(g_is_initialize == false)
+		return result_code(eRESULT::ALREADY_EXIST);
 
 	// check)
-	RETURN_IF(m_s_instance_pool.m_vector_memory_block_pool.empty() == false, eRESULT::ALEADY_DONE);
+	if(m_s_instance_pool.m_vector_memory_block_pool.empty() == false)
+		return result_code(eRESULT::ALREADY_DONE);
 
 	// 1) create as type
 	switch(_parameter.type)
@@ -245,10 +362,12 @@ size_t factory::memory_block::prepare(int _index, size_t _amount)
 	CGASSERT_ERROR(_index >= 0 && _index < static_cast<int>(this->m_vector_memory_block_pool.size()));
 
 	// check)
-	RETURN_IF(_index < 0 || _index >= static_cast<int>(this->m_vector_memory_block_pool.size()), 0);
+	if(_index < 0 || _index >= static_cast<int>(this->m_vector_memory_block_pool.size()))
+		return 0;
 
 	// check)
-	RETURN_IF(_amount < 1, 0);
+	if(_amount < 1)
+		return 0;
 
 	// 1) prepare한다.
 	return this->m_vector_memory_block_pool.at(_index)->prepare(_amount);
@@ -260,10 +379,12 @@ size_t factory::memory_block::shrink(int _index, size_t _amount) noexcept
 	CGASSERT_ERROR(_index >= 0 && _index < static_cast<int>(this->m_vector_memory_block_pool.size()));
 
 	// check)
-	RETURN_IF(_index < 0 || _index >= static_cast<int>(this->m_vector_memory_block_pool.size()), 0);
+	if(_index < 0 || _index >= static_cast<int>(this->m_vector_memory_block_pool.size()))
+		return 0;
 
 	// check)
-	RETURN_IF(_amount < 1, 0);
+	if(_amount < 1)
+		return 0;
 
 	// 1) shrink한다.
 	return this->m_vector_memory_block_pool.at(_index)->shrink(_amount);

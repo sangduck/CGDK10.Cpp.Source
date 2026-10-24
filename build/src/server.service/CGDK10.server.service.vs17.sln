@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "windows", "windows", "{FCD63EDF-BCBF-4A85-80AC-72F561BE5ABA}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.service.doss", "doss\CGDK10.server.service.doss.vs17.vcxproj", "{19ADD403-9984-4BDF-B526-2D25F943A12C}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.server.service.doss", "doss\CGDK10.server.service.doss.vcxitems", "{44376A03-D13D-4FA2-BF33-AFDE63366174}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "cgdk_info.shared", "..\common\cgdk_info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Debug|x64.ActiveCfg = Debug|x64
+		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Debug|x64.Build.0 = Debug|x64
+		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Release|x64.ActiveCfg = Release|x64
+		{19ADD403-9984-4BDF-B526-2D25F943A12C}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{19ADD403-9984-4BDF-B526-2D25F943A12C} = {FCD63EDF-BCBF-4A85-80AC-72F561BE5ABA}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {677B3FA5-5A59-4EF4-9703-63ECC8FB16BF}
+	EndGlobalSection
+EndGlobal

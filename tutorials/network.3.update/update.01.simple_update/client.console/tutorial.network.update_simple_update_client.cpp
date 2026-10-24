@@ -1,6 +1,7 @@
-ï»¿#include "cgdk/sdk10/net.update.h"
+#include "cgdk/sdk10/net.update.h"
 #include "../define_message.h"
 #include <iostream>
+#include <iomanip>
 #if defined(_WIN32)
 	#include <conio.h>
 #endif
@@ -35,7 +36,7 @@ class socket_tcp_client :
 {
 	virtual void on_connect() override
 	{
-		std::cout << " @ connected"sv << '\n';
+		std::cout << " @ connected" << '\n';
 
 		// 1) make client info 
 		sREQUEST_UPDATE temp_update_request;
@@ -47,14 +48,14 @@ class socket_tcp_client :
 	}
 	virtual void on_fail_connect(uint64_t /*_disconnect_reason*/) override
 	{
-		std::cout << " @ fail to connecting"sv << '\n';
+		std::cout << " @ fail to connecting" << '\n';
 	}
 	virtual void on_disconnect(uint64_t) override
 	{
-		std::cout << " @ disconnected"sv << '\n';
+		std::cout << " @ disconnected" << '\n';
 	}
 
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜.
+	// (v) ¸Ş½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö.
 	virtual result_code on_message(sMESSAGE_NETWORK& _msg) override
 	{
 		// 1) transmit message
@@ -73,10 +74,10 @@ class socket_tcp_client :
 
 	result_code on_message_UPDATE_BEGIN_REQUEST(sMESSAGE_NETWORK& _msg)
 	{
-		// 1) receiverë¥¼ ìƒì„±í•œë‹¤.
+		// 1) receiver¸¦ »ı¼ºÇÑ´Ù.
 		auto preceiver = make_object<update::receiver_lambda>();
 
-		// 2) receiverë¥¼ ì´ˆê¸°í™” í•œë‹¤.
+		// 2) receiver¸¦ ÃÊ±âÈ­ ÇÑ´Ù.
 		{
 			// - set transmitter
 			preceiver->set_transmitter(this);
@@ -84,23 +85,23 @@ class socket_tcp_client :
 			// - set lambda functions
 			preceiver->set_function_update_begin([=](update::receiver_lambda* /*_preceiver*/, const update::sUPDATE_REQUEST_INFO& _update_request_info)
 				{
-					std::cout << " @ update begin  " << NFMT::format("{} files, {} bytes "sv, _update_request_info.total_count, _update_request_info.total_bytes) << std::endl;
+					std::cout << " @ update begin  " << _update_request_info.total_count << " files," << _update_request_info.total_bytes << " bytes " << std::endl;
 				});
 
 			preceiver->set_function_update_end([=](update::receiver_lambda* _preceiver, eRESULT /*_result*/)
 				{
-					std::cout << "   total \x1b[33m"sv << NFMT::format("{}"sv, _preceiver->get_total_transfered_files()) << "\x1b[0m files"sv << std::endl;
-					std::cout << "   total \x1b[33m"sv << NFMT::format("{}"sv, _preceiver->get_total_transfered_bytes()) << "\x1b[0m bytes"sv << std::endl;
-					std::cout << " @ update complete"sv << std::endl;
+					std::cout << "   total \x1b[33m" << _preceiver->get_total_transfered_files() << "\x1b[0m files" << std::endl;
+					std::cout << "   total \x1b[33m" << _preceiver->get_total_transfered_bytes() << "\x1b[0m bytes" << std::endl;
+					std::cout << " @ update complete" << std::endl;
 				});
 
 			preceiver->set_function_updatable_begin([=](update::receiver_lambda* /*_preceiver*/, update::Ireceivable* _preceivable, uint64_t /*_pos_begin*/)
 				{
 					const auto& updatable_file_info = _preceivable->m_meta_info;
 					if ((updatable_file_info.flag & CGDK::resource::eFILE_FLAG::RECREATE) != CGDK::resource::eFILE_FLAG::RECREATE)
-						std::cout << "   \x1b[92m[  0%]\x1b[0m "sv << updatable_file_info.path << "/"sv << updatable_file_info.filename;
+						std::cout << "   \x1b[92m[  0%]\x1b[0m " << updatable_file_info.path << "/" << updatable_file_info.filename;
 					else
-						std::cout << "\r   \x1b[92m[  0%]\x1b[0m "sv << updatable_file_info.path << "/"sv << updatable_file_info.filename;
+						std::cout << "\r   \x1b[92m[  0%]\x1b[0m " << updatable_file_info.path << "/" << updatable_file_info.filename;
 				});
 
 			preceiver->set_function_updatable_process([=](update::receiver_lambda* /*_preceiver*/, update::Ireceivable* _preceivable, const resource::sMETA_FILE_BLOCK& _block_info)
@@ -109,20 +110,20 @@ class socket_tcp_client :
 					auto bytes_now = _block_info.pos + _block_info.size;
 					auto bytes_end = updatable_file_info.size;
 					auto ratio = static_cast<int>(static_cast<float>(bytes_now) / static_cast<float>(bytes_end) * 100.0f);
-					std::cout << "\r   \x1b[92m["sv << NFMT::format("{:3}"sv, ratio) << "%]\x1b[0m "sv;
+					std::cout << "\r   \x1b[92m[" << std::setw(3) << ratio << "%]\x1b[0m ";
 				});
 
 			preceiver->set_function_updatable_end([=](update::receiver_lambda* /*_preceiver*/, update::Ireceivable* _preceivable, eRESULT /*_result*/)
 				{
 					const auto& updatable_file_info = _preceivable->m_meta_info;
-					std::cout << "\r   \x1b[92m[100%]\x1b[0m " << updatable_file_info.path << "/"sv << updatable_file_info.filename << std::endl;
+					std::cout << "\r   \x1b[92m[100%]\x1b[0m " << updatable_file_info.path << "/" << updatable_file_info.filename << std::endl;
 				});
 
-			// - md5 ìºì‹± íŒŒì¼ì„ ì„¤ì •í•´ ì¤€ë‹¤.
+			// - md5 Ä³½Ì ÆÄÀÏÀ» ¼³Á¤ÇØ ÁØ´Ù.
 			preceiver->set_md5_caching(g_pmd5_caching);
 
-			// - root í´ë”ë¥¼ ì„¤ì •í•´ ì¤€ë‹¤.(ì´ í´ë” ì´í•˜ì— ìƒì„±ë  ê²ƒì´ë‹¤.)
-			preceiver->set_root_path("destination"sv);
+			// - root Æú´õ¸¦ ¼³Á¤ÇØ ÁØ´Ù.(ÀÌ Æú´õ ÀÌÇÏ¿¡ »ı¼ºµÉ °ÍÀÌ´Ù.)
+			preceiver->set_root_path("destination");
 		}
 
 		// 3) start!
@@ -139,32 +140,32 @@ class socket_tcp_client :
 int main()
 {
 	// trace) hide cursor
-	std::cout << "\x1b[?25l"sv;
+	std::cout << "\x1b[?25l";
 
 	// trace) 
-	std::cout << "start client [tut.update.01.simple_update.client]..."sv << '\n';
+	std::cout << "start client [tut.update.01.simple_update.client]..." << '\n';
 
 	g_pmd5_caching = make_own<update::md5_caching>();
-	g_pmd5_caching->start("destination/update_caching.info"sv);
+	g_pmd5_caching->start("destination/update_caching.info");
 
-	// 1) ì ‘ì†ì„ ì‹œë„í•  'socket_tcp_client' ì†Œì¼“ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) Á¢¼ÓÀ» ½ÃµµÇÒ 'socket_tcp_client' ¼ÒÄÏ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto psocket = make_own<socket_tcp_client>();
 
-	// 2) ìµœëŒ€ ë©”ì‹œì§€ í¬ê¸°ë¥¼ ëŠ˜ë ¤ì¤€ë‹¤.
+	// 2) ÃÖ´ë ¸Ş½ÃÁö Å©±â¸¦ ´Ã·ÁÁØ´Ù.
 	psocket->maximum_message_buffer_size(16 * 1024 * 1024); // 16Mbyte
 
-	// 2) 20000ë²ˆ í¬íŠ¸ì—ì„œ ì ‘ì†ì„ ì‹œë„í•œë‹¤. (ip::addressë‚˜ resolverë¡œ ì„¤ì •ì´ ê°€ëŠ¥í•˜ë‹¤.)
+	// 2) 20000¹ø Æ÷Æ®¿¡¼­ Á¢¼ÓÀ» ½ÃµµÇÑ´Ù. (ip::address³ª resolver·Î ¼³Á¤ÀÌ °¡´ÉÇÏ´Ù.)
 	psocket->start({ { net::ip::address_v4::loopback(), 31000 } });
 
-	// 3) ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+	// 3) ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 	while (_getch() != 27);
 
 	// trace) 
-	std::cout << "stop client [tut.update.01.simple_update.client]..."sv << '\n';
+	std::cout << "stop client [tut.update.01.simple_update.client]..." << '\n';
 
 	// trace) show cursor
-	std::cout << "\x1b[?25h"sv;
+	std::cout << "\x1b[?25h";
 
-	// end) ì¢…ë£Œ
+	// end) Á¾·á
 	return 0;
 }

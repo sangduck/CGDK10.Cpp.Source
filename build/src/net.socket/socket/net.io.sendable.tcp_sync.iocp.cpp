@@ -13,31 +13,35 @@ bool net::io::sendable::Ntcp_sync::process_sendable(const buffer_view _buffer, o
 	// 
 	//    1) 일단 Overlapped I/O에 사용될 executable를 Pool에서 할당받는다.
 	//    2) 할당 받은 send executable에 sender와 Senderable 그리고 Original
-	//       값을 저장시켜놓는다.(나중에 완료시 사용을 위해)
+	//       값을 저장시켜놓는다.(나중에 완료 시 사용을 위해)
 	//    3) executable를 넣어 Overlapped로 WSASend()함수를 호출한다.
 	//    4) 만약 WSASend가  실패했을 경우 모두를 rollback시킨다.
 	//
 	//-----------------------------------------------------------------
 	// check) _buffer.size()이 0이 아닌가?
-	CGASSERT(_buffer.size() != 0, false);
+	CGASSERT_FATAL(_buffer.size() != 0);
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	RETURN_IF(_buffer.size() == 0, false);
+	if(_buffer.size() == 0)
+		return false;
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	CGASSERT(_buffer.data() != nullptr, false);
+	CGASSERT_ERROR(_buffer.data() != nullptr);
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	THROW_IF(_buffer.data() == nullptr, throwable::failure(eRESULT::INVALID_MESSAGE_BUFFER_IS_NULL, 0, "buffer.data is null ('net::io::sendable::Ntcp_sync::process_sendable')"sv));
-
+	if(_buffer.data() == nullptr)
+		return false;
+	
 	// check) if socket is not connected, return false
-	RETURN_IF(this->socket_state() < eSOCKET_STATE::ESTABLISHED, false);
+	if(this->socket_state() < eSOCKET_STATE::ESTABLISHED)
+		return false;
 
 	// 1) get socket native handle
 	CGSOCKET handle_socket = native_handle();
 
 	// check) 
-	RETURN_IF(handle_socket == INVALID_SOCKET, false);
+	if(handle_socket == INVALID_SOCKET)
+		return false;
 
 	// 2) async send and return result
 	return process_sendable_async(handle_socket, _buffer, std::move(_powner), _count_message);

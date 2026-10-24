@@ -1,17 +1,29 @@
-ï»¿// ì£¼ì˜) protobuf header íŒŒì¼ì€ ë°˜ã„·ë“œì‹œ CGDK10 í—¤ë”íŒŒì¼ë³´ë‹¤ ì•ì— ì™€ì•¼ í•œë‹¤.
+// ÁÖÀÇ) protobuf header ÆÄÀÏÀº ¹İµå½Ã CGDK10 Çì´õÆÄÀÏº¸´Ù ¾Õ¿¡ ¿Í¾ß ÇÑ´Ù.
 #if defined(_MSC_VER)
-	#pragma warning(disable:4251)
+	#pragma warning(disable:4018)
+	#pragma warning(disable:4100)
 	#pragma warning(disable:4127)
+	#pragma warning(disable:4244)
+	#pragma warning(disable:4251)
+	#pragma warning(disable:4267)
+	#pragma warning(disable:4458)
+	#pragma warning(disable:4819)
 	#pragma warning(disable:5054)
 #endif
 
 #include <iostream>
 #include "../common/messages.pb.h"
-#if defined(_MSC_VER)
-	#pragma warning(default:4251)
-	#pragma warning(default:4127)
-	#pragma warning(default:5054)
 
+#if defined(_MSC_VER)
+	#pragma warning(default:4018)
+	#pragma warning(default:4100)
+	#pragma warning(default:4127)
+	#pragma warning(default:4244)
+	#pragma warning(default:4251)
+	#pragma warning(default:4267)
+	#pragma warning(default:4458)
+	#pragma warning(default:4819)
+	#pragma warning(default:5054)
 	#include <conio.h>
 #endif
 
@@ -21,34 +33,34 @@
 
 using namespace CGDK;
 
-// 1) socket í´ë˜ìŠ¤ë¥¼ ì •ì˜í•œë‹¤.
+// 1) socket Å¬·¡½º¸¦ Á¤ÀÇÇÑ´Ù.
 class socket_tcp_client : public net::socket::tcp_client<>
 {
-	// (v) ì ‘ì† ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_connect() override
 	{
 		std::cout << " @ connected"sv << '\n';
 	}
 
-	// (v) ì ‘ì† ì‹¤íŒ¨ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½ÇÆĞ ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_fail_connect(uint64_t /*_disconnect_reason*/) override
 	{
 		std::cout << " @ fail to connecting"sv << '\n';
 	}
 
-	// (v) ì ‘ì† ì¢…ë£Œ ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó Á¾·á ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_disconnect(uint64_t) override
 	{
 		std::cout << " @ disconnected"sv << '\n';
 	}
 
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜.
+	// (v) ¸Ş½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö.
 	virtual result_code on_message(sMESSAGE_NETWORK& _msg) override
 	{
-		// 1) message headë¥¼ ì½ìŠµë‹ˆë‹¤.
+		// 1) message head¸¦ ÀĞ½À´Ï´Ù.
 		auto msg_header = _msg.buf_message.front<sMESSAGE_HEADER>();
 
-		// 2) message ì¢…ë¥˜ì— ë”°ë¥¸ ì²˜ë¦¬ë¥¼ í•œë‹¤.
+		// 2) message Á¾·ù¿¡ µû¸¥ Ã³¸®¸¦ ÇÑ´Ù.
 		switch (msg_header.type)
 		{
 		case	eMESSAGE_TYPE::SEND_A:
@@ -77,10 +89,10 @@ int main()
 	// trace) 
 	std::cout << "start client []..."sv << '\n';
 
-	// 2) ì ‘ì†ì„ ì‹œë„í•  'socket_tcp_client' ì†Œì¼“ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 2) Á¢¼ÓÀ» ½ÃµµÇÒ 'socket_tcp_client' ¼ÒÄÏ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto psocket = make_own<socket_tcp_client>();
 
-	// 3) 20000ë²ˆ í¬íŠ¸ì—ì„œ ì ‘ì†ì„ ì‹œë„í•œë‹¤.
+	// 3) 20000¹ø Æ÷Æ®¿¡¼­ Á¢¼ÓÀ» ½ÃµµÇÑ´Ù.
 	psocket->start({{ net::ip::address_v4::loopback(), 20000 }});
 
 	// comment)
@@ -89,22 +101,22 @@ int main()
 	std::cout << " 'C' key: send message 'eMESSAGE_TYPE::SEND_C'"sv << '\n';
 	std::cout << " ESC key: terminate"sv << '\n';
 
-	// 4) ë©”ì‹œì§€ ë¬´í•œ ë£¨í”„~
+	// 4) ¸Ş½ÃÁö ¹«ÇÑ ·çÇÁ~
 	for(;;)
 	{
-		// - key ëˆŒë €ë‚˜?
+		// - key ´­·¶³ª?
 		if(_kbhit())
 		{
-			// - Keyë¥¼ ì½ëŠ”ë‹¤.
+			// - Key¸¦ ÀĞ´Â´Ù.
 			int	ch = _getch();
 
-			// - ESCí‚¤ë¥¼ ëˆ„ë¥´ë©´ ì ‘ì†ì„ ì¢…ë£Œí•œë‹¤.
+			// - ESCÅ°¸¦ ´©¸£¸é Á¢¼ÓÀ» Á¾·áÇÑ´Ù.
 			if (ch == 27)
 			{
 				break;
 			}
 			// ----------------------------------------------
-			// - Aí‚¤ ëˆ„ë¥´ë©´ Message Bë¥¼ ì „ì†¡í•œë‹¤.
+			// - AÅ° ´©¸£¸é Message B¸¦ Àü¼ÛÇÑ´Ù.
 			// ----------------------------------------------
 			else if(ch=='a' || ch=='A')
 			{
@@ -123,7 +135,7 @@ int main()
 				psocket->send(buf_send);
 			}
 			// ----------------------------------------------
-			// - Bí‚¤ ëˆ„ë¥´ë©´ Message Bë¥¼ ì „ì†¡í•œë‹¤.
+			// - BÅ° ´©¸£¸é Message B¸¦ Àü¼ÛÇÑ´Ù.
 			// ----------------------------------------------
 			else if(ch=='b' || ch=='B')
 			{
@@ -144,7 +156,7 @@ int main()
 				psocket->send(buf_send);
 			}
 			// ----------------------------------------------
-			// - Cí‚¤ ëˆ„ë¥´ë©´ Message Bë¥¼ ì „ì†¡í•œë‹¤.
+			// - CÅ° ´©¸£¸é Message B¸¦ Àü¼ÛÇÑ´Ù.
 			// ----------------------------------------------
 			else if(ch=='c' || ch=='C')
 			{
@@ -170,13 +182,13 @@ int main()
 			}
 		}
 
-		// - 1ms ìŠ¬ë¦½í•œë‹¤. (CPUë¥¼ ë„ˆë¬´ ë§ì´ ë¨¹ìœ¼ë¯€ë¡œ...)
+		// - 1ms ½½¸³ÇÑ´Ù. (CPU¸¦ ³Ê¹« ¸¹ÀÌ ¸ÔÀ¸¹Ç·Î...)
 		std::this_thread::sleep_for(1ms);
 	}
 
 	// trace) 
 	std::cout << "stop server []..."sv << '\n';
 
-	// end) ì¢…ë£Œ
+	// end) Á¾·á
 	return 0;
 }

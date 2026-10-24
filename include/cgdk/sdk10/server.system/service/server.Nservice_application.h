@@ -27,11 +27,11 @@ namespace CGDK
 // 
 //-----------------------------------------------------------------------------
 class server_system::Nservice_application :
-	public						Nstatic_service_logger,
 	public						Iservice,
 	public						object::Nnameable,
 	public                      object::Ninitializable_startable,
 	public						object::Npausable,
+	public						Nstatic_service_logger,
 	virtual public				Imessageable,
 	virtual public				Nmessage_transmitter,
 	virtual public				Ilogger
@@ -47,12 +47,13 @@ public:
 	virtual	result_code			pause() override;
 	virtual	result_code			resume() override;
 
-	[[nodiscard]] virtual eOBJECT_STATE get_object_state() const noexcept override ;
+	[[nodiscard]] virtual auto	get_object_state() const noexcept -> eOBJECT_STATE override;
 	virtual	eOBJECT_STATE		set_object_state(eOBJECT_STATE _status) noexcept override;
 	virtual	bool				set_object_state_if(eOBJECT_STATE _status_compare, eOBJECT_STATE _status) noexcept  override;
 
 protected:
-	virtual	void				on_service_setting (context& /*_context*/) {}
+	virtual	void				on_initialize_setting(context& _context);
+	virtual	void				on_start_setting(context& _context);
 
 	virtual	void				on_initializing (context& /*_context*/) override {}
 	virtual	void				on_initialize (context& /*_context*/) override {}
@@ -87,6 +88,8 @@ protected:
 	virtual result_code			process_message (sMESSAGE& /*_msg*/) override { return 0;}
 
 	virtual	result_code			process_initialize (context& _context);
+			void				_process_initializing_loggers (context& _context);
+			void				_process_destroying_loggers () noexcept;
 	virtual	result_code			process_destroy () noexcept;
 	virtual	result_code			process_start (context& _context);
 	virtual	result_code			process_stop () noexcept;
@@ -117,18 +120,9 @@ protected:
 	virtual	void				process_service_continue (uint32_t _type, void* _pevent_data, void* _pcontext);
 	virtual	void				process_service_run ();
 
-#if defined(__linux__)
-	static	void				process_signal_stop(int _signal);
-	static  void				process_signal_pause(int _signal);
-	static	void				process_signal_continue(int _signal);
-	static	void				process_signal_hup(int _signal);
-	static	void				process_signal_interrupt(int _signal);
-	static	void				process_signal_quit(int _signal);
-	static	void				process_signal_segment_fault(int _signal);
-#endif
 	virtual	void				process_state_changed(eOBJECT_STATE _state_new, eOBJECT_STATE _state_old) override;
 
-	virtual	void				process_log(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record) override;
+	virtual	void				process_log(object_ptr<LOG_RECORD>&& _plog_record) override;
 
 			int					process_run(int _argc = 0, char** _pargv = nullptr);
 
@@ -146,8 +140,11 @@ protected:
 			std::mutex						m_lock_complete;
 			std::condition_variable			m_cv_complete;
 
+			// - loggers created by setting ("service"."logger" or "logger")
+			std::vector<own_ptr<Ilogger>>	m_vector_logger;
+
 	static	own_ptr<Nservice_application> m_pinstance;
-	static	lockable<>			m_lockable_create;
+	static	lock_object			m_lockable_create;
 };
 
 

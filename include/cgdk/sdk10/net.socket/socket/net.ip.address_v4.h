@@ -47,22 +47,20 @@ public:
 	[[nodiscard]] constexpr bool is_class_a() const noexcept { return (to_uint() & 0x80000000) == 0; }
 	[[nodiscard]] constexpr bool is_class_b() const noexcept { return (to_uint() & 0xc0000000) == 0x80000000; }
 	[[nodiscard]] constexpr bool is_class_c() const noexcept { return (to_uint() & 0xe0000000) == 0xc0000000; }
-	[[nodiscard]] constexpr bool is_private() const noexcept { return S_un_b.s_b1 == 10;}
+	[[nodiscard]] constexpr bool is_private() const noexcept { return (S_un_b.s_b1 == 10) || (S_un_b.s_b1 == 172 && S_un_b.s_b2 >= 16 && S_un_b.s_b2 <= 31) || (S_un_b.s_b1 == 192 && S_un_b.s_b2 == 168);}
 	[[nodiscard]] constexpr bool is_public() const noexcept { return !is_private();}
 	[[nodiscard]] constexpr bool is_unspecified() const noexcept { return to_uint() == 0;}
 	[[nodiscard]] constexpr bool is_loopback() const noexcept { return (to_uint() & 0xff000000) == 0x7f000000; }
 	[[nodiscard]] constexpr bool is_multicast() const noexcept { return (to_uint() & 0xf0000000) == 0xe0000000; }
 	[[nodiscard]] constexpr bytes_type to_bytes() const noexcept { return bytes;}
-	[[nodiscard]] constexpr uint_type to_uint() const noexcept { return constexpr_htonl(S_addr);}
-	template<class T = char, class Allocator = allocator<T>>
-	[[nodiscard]] std::basic_string<T, std::char_traits<T>, Allocator> 
-								to_string(const Allocator& _allocator = Allocator()) const;
+	[[nodiscard]] constexpr uint_type to_uint() const noexcept { return constexpr_htonl(this->S_addr);}
+	[[nodiscard]] std::string	to_string() const;
 
 	[[nodiscard]] static constexpr address_v4 any() noexcept { return address_v4();}
 	[[nodiscard]] static constexpr address_v4 loopback() noexcept { return address_v4(0x7f000001); }
 	[[nodiscard]] static constexpr address_v4 broadcast() noexcept { return address_v4(0xffffffff); }
 // assignment)
-	constexpr address_v4&		operator = (const address_v4& _rhs) noexcept{ S_addr = _rhs.S_addr; return *this; }
+	constexpr address_v4&		operator = (const address_v4& _rhs) noexcept{ this->S_addr = _rhs.S_addr; return *this; }
 
 public:
 	union
@@ -94,11 +92,9 @@ enum class v4_mapped_t { v4_mapped };
 template<class CharT, class Traits>
 std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& _output_stream, const address_v4& _address);
 
-template<class T, class Allocator>
-std::basic_string<T, std::char_traits<T>, Allocator> 
-address_v4::to_string(const Allocator& _allocator) const
+inline std::string address_v4::to_string() const
 {
-	return CGDK::to_string<T, Allocator>(*this, _allocator);
+	return CGDK::to_string(*this);
 }
 
 

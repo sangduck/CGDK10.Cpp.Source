@@ -62,11 +62,11 @@ public:
 protected:
 			chrono::tick::time_point m_tick_last;
 
-			LONGLONG			m_count_sended;
-			LONGLONG			m_count_sendedByte;
+			LONGLONG			m_count_sent;
+			LONGLONG			m_count_sentByte;
 
 			const statistics::unit_traffic* m_pstatistics;
-			lockable<>			m_lockable_statistics;
+	mutable	lock_object			m_lockable_statistics;
 };
 
 

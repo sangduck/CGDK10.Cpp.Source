@@ -76,6 +76,9 @@
     <Filter Include="net.io\sendable\async\raw">
       <UniqueIdentifier>{030883e1-c0d8-4785-85d5-81466f4ab6d7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="net.io\connect_notify">
+      <UniqueIdentifier>{8ad1171d-a4c0-4d46-b600-2fff84e2f20e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.definitions.socket.cpp" />
@@ -158,9 +161,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream.cpp">
       <Filter>net.io\receivable</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_crypt.cpp">
-      <Filter>net.io\receivable</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.socket.tcp.cpp">
       <Filter>net.io\socket</Filter>
     </ClCompile>
@@ -171,9 +171,6 @@
       <Filter>net.io\socket</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.executable_send_buffer.cpp">
-      <Filter>net.io\sendable</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.cpp">
       <Filter>net.io\sendable</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sender.stream.cpp">
@@ -200,13 +197,10 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.Itcp_gather.cpp">
       <Filter>net.io\sendable</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.statistics.cpp">
-      <Filter>net.io\statistics</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.messageable.queue.cpp">
       <Filter>net.io\messageable</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.restorable.clinet.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.restorable.client.cpp">
       <Filter>net.io\receivable</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.restorable.server.cpp">
@@ -221,12 +215,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.udp.rio.cpp">
       <Filter>net.io\sendable</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.epoll.cpp">
-      <Filter>net.io\sendable</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.iocp.cpp">
-      <Filter>net.io\sendable</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.datagram.epoll.cpp">
       <Filter>net.io\receivable</Filter>
     </ClCompile>
@@ -236,16 +224,13 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream.epoll.cpp">
       <Filter>net.io\receivable</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream.uring.cpp">
+      <Filter>net.io\receivable</Filter>
+    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream.iocp.cpp">
       <Filter>net.io\receivable</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream.rio.cpp">
-      <Filter>net.io\receivable</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_crypt.epoll.cpp">
-      <Filter>net.io\receivable</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_crypt.iocp.cpp">
       <Filter>net.io\receivable</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_queue.epoll.cpp">
@@ -257,20 +242,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_queue.rio.cpp">
       <Filter>net.io\receivable</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.socket_secure.epoll.cpp">
-      <Filter>net.io\socket</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.socket_secure.iocp.cpp">
-      <Filter>net.io\socket</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.executable_send_buffer_list.cpp">
       <Filter>net.io\sendable</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.tcp_client_crypt.cpp">
-      <Filter>net.io</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.tcp_server_crypt.cpp">
-      <Filter>net.io</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.udp_resend.cpp">
       <Filter>net.io</Filter>
@@ -311,16 +284,19 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather.epoll.cpp">
       <Filter>net.io\sendable\async</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather.uring.cpp">
+      <Filter>net.io\sendable\async</Filter>
+    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather_buffered.epoll.cpp">
       <Filter>net.io\sendable\async</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.executable_buffer.cpp">
-      <Filter>net.io\sendable</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather_buffered.uring.cpp">
+      <Filter>net.io\sendable\async</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.gathering_queue.cpp">
       <Filter>net.io\sendable\gathering_queue</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.gathering_queue_bufferd.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.gathering_queue_buffered.cpp">
       <Filter>net.io\sendable\gathering_queue</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather_raw.iocp.cpp">
@@ -329,6 +305,26 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather_buffered_raw.iocp.cpp">
       <Filter>net.io\sendable\async\raw</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connective.acceptor_tcp.process.cpp">
+      <Filter>net.io\connective</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connective.acceptor_tcp.uring.cpp">
+      <Filter>net.io\connective</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.statistics.connective.cpp">
+      <Filter>net.io\statistics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.statistics.socket.cpp">
+      <Filter>net.io\statistics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.statistics.traffic.cpp">
+      <Filter>net.io\statistics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connective.acceptor_tcp.parameters.cpp">
+      <Filter>net.io\connective</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.emergency.acceptor.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.emergency.manager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)net.io.add_on.manager_socket_sustain.h">
@@ -358,9 +354,6 @@
       <Filter>net.io</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Ibinder.h">
-      <Filter>net.io</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Iconnect_requestable.h">
       <Filter>net.io</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Iconnectable.h">
@@ -465,9 +458,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_buffered.h">
       <Filter>templates</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_client.crypt.h">
-      <Filter>templates</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_client.h">
       <Filter>templates</Filter>
     </ClInclude>
@@ -546,12 +536,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.Itcp_gather.h">
       <Filter>net.io\sendable</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_crypt.executable_buffer.h">
-      <Filter>net.io\sendable</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_crypt.h">
-      <Filter>net.io\sendable</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.udp.h">
       <Filter>net.io\sendable</Filter>
     </ClInclude>
@@ -576,16 +560,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.receivable.stream.rio.h">
       <Filter>net.io\receivable</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.receivable.stream_crypt.h">
-      <Filter>net.io\receivable</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.receivable.stream_queue.h">
       <Filter>net.io\receivable</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.messageable.queue.h">
-      <Filter>net.io\messageable</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.messageable.h">
       <Filter>net.io\messageable</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.messageable.proxy.h">
@@ -630,15 +608,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.sockaddr.h">
       <Filter>ip</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.socket_secure.h">
-      <Filter>net.io</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.tcp_client.crypt.h">
-      <Filter>net.io</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.tcp_server.crypt.h">
-      <Filter>net.io</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.udp_resend.h">
       <Filter>net.io</Filter>
     </ClInclude>
@@ -681,7 +650,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.gathering_queue.h">
       <Filter>net.io\sendable\gathering_queue</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.gathering_queue_bufferd.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.gathering_queue_buffered.h">
       <Filter>net.io\sendable\gathering_queue</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_async_gather_raw.h">
@@ -690,6 +659,44 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_async_gather_buffered_raw.h">
       <Filter>net.io\sendable\async\raw</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.io.Imessageable.h">
+      <Filter>net.io\messageable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.io.Iconnect_requestable.h">
+      <Filter>net.io</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.io.Iconnect_notify.h">
+      <Filter>net.io</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.io.connect_notify.Nbase.h">
+      <Filter>net.io\connect_notify</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.socket.Nlambda.h">
+      <Filter>templates</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.messageable.Nbase.h">
+      <Filter>net.io\messageable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.io.Itcp_socket.h">
+      <Filter>net.io</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.socket.Itcp.h">
+      <Filter>templates</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_lambda.h">
+      <Filter>templates</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.socket.Itcp_crypt.h">
+      <Filter>templates</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_crypt.h">
+      <Filter>templates</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_crypt_client.h">
+      <Filter>templates</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.emergency.acceptor.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.emergency.manager.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)CMakeLists.txt" />

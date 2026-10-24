@@ -1,0 +1,23 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="query.01.rdb_simple\tutorial.query.rdb_simple.vs18.vcxproj" Id="3f2048b6-1bdb-407b-b1ce-638e9770e1de" />
+  <Project Path="query.02.rdb_parameter\tutorial.query.rdb_parameter.vs18.vcxproj" Id="5413e7b6-2d86-40e4-8d33-15563af366d8" />
+  <Project Path="query.03.rdb_multiple_result\tutorial.query.rdb_multiple_result.vs18.vcxproj" Id="dcd717a1-abca-4c20-84ca-b6d75f099819" />
+  <Project Path="query.04.rdb_alloc_query\tutorial.query.rdb_alloc_query.vs18.vcxproj" Id="d294729a-08c6-4755-990b-12a1ec5e16e9" />
+  <Project Path="query.ex01.rdb_blob\tutorial.query.rdb_blob.vs18.vcxproj" Id="3feec028-0c39-40da-8d0c-aae78deee5de" />
+  <Project Path="query.ex02.rdb_varchar_max\tutorial.query.rdb_varchar_max.vs18.vcxproj" Id="6ffe4538-8733-47e4-a798-43f13f510931" />
+  <Project Path="query.ex03.rdb_transaction\tutorial.query.rdb_transaction.vs18.vcxproj" Id="2f440382-fae3-4897-a918-1f4fb9a50d34" />
+  <Project Path="query.ex04.excel_file\tutorial.query.excel_file.vs18.vcxproj" Id="86f05ce0-cd4a-479f-a830-c1622792792f" />
+  <Project Path="query.ex05.initializing_querier\tutorial.query.initializing_querier.vs18.vcxproj" Id="c436630d-b283-4dd7-80f5-5927c9fcffa7" />
+  <Project Path="query.ex06.query.struct_get_value\tutorial.query.struct_get_value.vs18.vcxproj" Id="241cf874-2c9b-4ebd-aadd-09343bbdf139" />
+  <Project Path="query.ex07.mfc_controls\tutorial.query.mfc_controls.vs18.vcxproj" Id="9d9e4c82-f07f-4aa6-83b9-8bfc7c5c7082" />
+  <Project Path="query.05.schema\tutorial.query.schema.vs18.vcxproj" Id="b635d796-1baf-444a-84e6-c521f9b24ba6" />
+  <Project Path="query.06.redis\tutorial.query.redis.vs18.vcxproj" Id="8edbb5a7-b692-49eb-b05d-08d5cdbb7a5e" />
+  <Project Path="query.07.http\tutorial.query.http.vs18.vcxproj" Id="5a5f8d76-e2a3-4a7a-b422-decbe04602a3" />
+  <Project Path="query.08.kafka\tutorial.query.kafka.vs18.vcxproj" Id="b6dfca2c-b76f-4a5a-9789-ca72377107df" />
+  <Project Path="query.09.rdb_coroutine\tutorial.query.rdb_coroutine.vs18.vcxproj" Id="b5c9bef5-845a-487b-8b2a-90d5a45d20b3" />
+  <Project Path="query.10.redis_coroutine\tutorial.query.redis_coroutine.vs18.vcxproj" Id="02a89d95-b388-4aea-87dc-f109de99cb60" />
+  <Project Path="query.11.http_coroutine\tutorial.query.http_coroutine.vs18.vcxproj" Id="a141474e-4af5-4345-b977-c91918de5509" />
+</Solution>

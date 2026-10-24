@@ -1,9 +1,10 @@
-﻿#pragma once
+#pragma once
 
 
 class socket_tcp : 
 	public						net::io::socket::tcp::Ndefault,
 	public						net::io::connectable::tcp::Ndefault,
+	public						net::io::connect_notify::tcp::Ndefault,
 	public						net::io::sendable::Ntcp_async_gather,
 	public				 		net::io::send_request::tcp::Ndefault,
 	public						net::io::sender::tcp::Ndefault<uint32_t>,
@@ -49,7 +50,7 @@ public:
 			void				request_disconnect_socket(std::size_t _count);
 			void				request_disconnect_socket_all();
 			void				request_send();
-			void				request_send_immidiately(std::size_t _count);
+			void				request_send_immediately(std::size_t _count);
 			void				request_send_error_message_zero();
 
 public:
@@ -59,7 +60,7 @@ public:
 			std::size_t			m_connect_test_max = 0;
 
 	// 2) send test
-			lockable<>			m_lockable_traffic_send_requested;
+			lock_object			m_lockable_traffic_send_requested;
 			std::atomic<uint64_t> m_traffic_send_requested = 0;
 			bool				m_enable_traffic_test = false;
 			std::size_t			m_traffic_test_selected = 0;

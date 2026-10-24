@@ -36,7 +36,6 @@ public:
 			result_code			initialize(const context& _context) { context context_copy(_context); return this->initialize(context_copy);}
 	virtual	result_code			initialize(context& _context) PURE;
 
-public:
 			void				enable_ignore_exception_on_initialize(bool _flag_enable = true) noexcept { this->m_ignore_exception_on_initialize = _flag_enable; }
 			void				disable_ignore_exception_on_initialize() noexcept { this->m_ignore_exception_on_initialize = false; }
 	[[nodiscard]] bool			ignore_exception_on_initialize() const noexcept { return this->m_ignore_exception_on_initialize; }

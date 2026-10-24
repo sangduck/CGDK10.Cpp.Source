@@ -1,4 +1,4 @@
-ï»¿// CGDK.network.update.controls.MFC.vs16.cpp : DLLì˜ ì´ˆê¸°í™” ë£¨í‹´ì„ ì •ì˜í•©ë‹ˆë‹¤.
+// CGDK.network.update.controls.MFC.cpp : DLLÀÇ ÃÊ±âÈ­ ·çÆ¾À» Á¤ÀÇÇÕ´Ï´Ù.
 //
 
 #include "pch.h"

@@ -27,7 +27,7 @@ class observable_websocket_peer_network_info :
 	public						Iobservable_websocket
 {
 protected:
-	explicit observable_websocket_peer_network_info(const std::string_view _name);
+			observable_websocket_peer_network_info();
 	virtual ~observable_websocket_peer_network_info();
 
 public:
@@ -39,5 +39,5 @@ private:
 	virtual	uintptr_t			on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t _ocid) override;
 
 public:
-			server_admin::instance_Iservice* m_pservice_entity = nullptr;
+			server_system::instance_service* m_pservice_entity = nullptr;
 };

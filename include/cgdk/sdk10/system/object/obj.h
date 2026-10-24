@@ -24,71 +24,71 @@
  
 */
 //-----------------------------------------------------------------------------
-template<class TOBJECT, class FLAG = void>
+template<class T, class FLAG = void>
 class CGDK::OBJ :
 	public	Nreferenceable_no_act,
-	public	TOBJECT
+	public	T
 {
 public:
-	OBJ() noexcept : Nreferenceable_no_act(), TOBJECT() {}
-	OBJ(const TOBJECT& _copy) noexcept : Nreferenceable_no_act(), TOBJECT(_copy) {}
-	OBJ(TOBJECT&& _move) noexcept : Nreferenceable_no_act(), TOBJECT(std::move(_move)) {}
-	template <class T, class... TARGS>
-	OBJ(T&& _first, TARGS&&... _args) : Nreferenceable_no_act(), TOBJECT(std::forward<T>(_first), std::forward<TARGS>(_args)...) {}
-	OBJ(const OBJ<TOBJECT,FLAG>& _copy) : Nreferenceable_no_act(), TOBJECT(static_cast<TOBJECT&>(_copy)) {}
-	OBJ(OBJ<TOBJECT, FLAG>&& _move) : Nreferenceable_no_act(), TOBJECT(std::move(static_cast<TOBJECT&>(_move))) {}
+	OBJ() noexcept : Nreferenceable_no_act(), T() {}
+	OBJ(const T& _copy) noexcept : Nreferenceable_no_act(), T(_copy) {}
+	OBJ(T&& _move) noexcept : Nreferenceable_no_act(), T(std::move(_move)) {}
+	template <class P, class... TARGS>
+	OBJ(P&& _first, TARGS&&... _args) : Nreferenceable_no_act(), T(std::forward<P>(_first), std::forward<TARGS>(_args)...) {}
+	OBJ(const OBJ<T,FLAG>& _copy) : Nreferenceable_no_act(), T(static_cast<T&>(_copy)) {}
+	OBJ(OBJ<T, FLAG>&& _move) : Nreferenceable_no_act(), T(std::move(static_cast<T&>(_move))) {}
 	virtual ~OBJ() noexcept { _process_on_final_release();}
 
 public:
 	template<class NTYPE>
-	OBJ<TOBJECT>&		operator=(const NTYPE& _rhs) { TOBJECT::operator=(_rhs); return *this; }
+	OBJ<T>&				operator=(const NTYPE& _rhs) { T::operator=(_rhs); return *this; }
 	template<class NTYPE>
-	OBJ<TOBJECT>&		operator=(NTYPE&& _rhs) { TOBJECT::operator=(std::forward<NTYPE>(_rhs)); return *this; }
-	OBJ<TOBJECT>&		operator=(const OBJ<TOBJECT, FLAG>& _rhs) { TOBJECT::operator=(static_cast<const TOBJECT&>(_rhs)); return *this; }
-	OBJ<TOBJECT>&		operator=(OBJ<TOBJECT, FLAG>&& _rhs) { TOBJECT::operator=(std::move(static_cast<TOBJECT&>(_rhs))); return *this; }
+	OBJ<T>&				operator=(NTYPE&& _rhs) { T::operator=(std::forward<NTYPE>(_rhs)); return *this; }
+	OBJ<T>&				operator=(const OBJ<T, FLAG>& _rhs) { T::operator=(static_cast<const T&>(_rhs)); return *this; }
+	OBJ<T>&				operator=(OBJ<T, FLAG>&& _rhs) { T::operator=(std::move(static_cast<T&>(_rhs))); return *this; }
 
 	template<class NTYPE>
-	bool				operator==(const NTYPE& _rhs) const noexcept { return TOBJECT::operator==(_rhs); }
+	bool				operator==(const NTYPE& _rhs) const noexcept { return T::operator==(_rhs); }
 	template<class NTYPE>
-	bool				operator!=(const NTYPE& _rhs) const noexcept { return TOBJECT::operator!=(_rhs); }
+	bool				operator!=(const NTYPE& _rhs) const noexcept { return T::operator!=(_rhs); }
 	template<class NTYPE>
-	bool				operator>=(const NTYPE& _rhs) const noexcept { return TOBJECT::operator>=(_rhs); }
+	bool				operator>=(const NTYPE& _rhs) const noexcept { return T::operator>=(_rhs); }
 	template<class NTYPE>
-	bool				operator> (const NTYPE& _rhs) const noexcept { return TOBJECT::operator> (_rhs); }
+	bool				operator> (const NTYPE& _rhs) const noexcept { return T::operator> (_rhs); }
 	template<class NTYPE>
-	bool				operator<=(const NTYPE& _rhs) const noexcept { return TOBJECT::operator<=(_rhs); }
+	bool				operator<=(const NTYPE& _rhs) const noexcept { return T::operator<=(_rhs); }
 	template<class NTYPE>
-	bool				operator< (const NTYPE& _rhs) const noexcept { return TOBJECT::operator< (_rhs); }
+	bool				operator< (const NTYPE& _rhs) const noexcept { return T::operator< (_rhs); }
 };
 
-template<class TOBJECT>
-class CGDK::OBJ<TOBJECT, std::enable_if_t<std::is_base_of_v<CGDK::object::Idestroyable, TOBJECT>>> :
+template<class T>
+class CGDK::OBJ<T, std::enable_if_t<std::is_base_of_v<CGDK::object::Idestroyable, T>>> :
 	public	Nreferenceable_no_act,
-	public	TOBJECT
+	public	T
 {
 public:
-	OBJ() : Nreferenceable_no_act(), TOBJECT() {}
-	OBJ(const TOBJECT& _copy) : Nreferenceable_no_act(), TOBJECT(_copy) {}
-	template <class T, class... TARGS>
-	OBJ(T&& _first, TARGS&&... _args) : Nreferenceable_no_act(), TOBJECT(std::forward<T>(_first), std::forward<TARGS>(_args)...) {}
-	virtual ~OBJ() { TOBJECT::destroy(); _process_on_final_release(); }
+	OBJ() : Nreferenceable_no_act(), T() {}
+	OBJ(const T& _copy) : Nreferenceable_no_act(), T(_copy) {}
+	template <class P, class... TARGS>
+	OBJ(P&& _first, TARGS&&... _args) : Nreferenceable_no_act(), T(std::forward<P>(_first), std::forward<TARGS>(_args)...) {}
+	virtual ~OBJ() { T::destroy(); _process_on_final_release(); }
 
 public:
 	template<class NTYPE>
-	OBJ<TOBJECT>&		operator=(const NTYPE& _rhs) { TOBJECT::operator=(_rhs); return *this; }
+	OBJ<T>&				operator=(const NTYPE& _rhs) { T::operator=(_rhs); return *this; }
 	template<class NTYPE>
-	OBJ<TOBJECT>&		operator=(NTYPE&& _rhs) { TOBJECT::operator=(std::forward<NTYPE>(_rhs)); return *this; }
+	OBJ<T>&				operator=(NTYPE&& _rhs) { T::operator=(std::forward<NTYPE>(_rhs)); return *this; }
 
 	template<class NTYPE>
-	bool				operator==(const NTYPE& _rhs) const noexcept { return TOBJECT::operator==(_rhs); }
+	bool				operator==(const NTYPE& _rhs) const noexcept { return T::operator==(_rhs); }
 	template<class NTYPE>
-	bool				operator!=(const NTYPE& _rhs) const noexcept { return TOBJECT::operator!=(_rhs); }
+	bool				operator!=(const NTYPE& _rhs) const noexcept { return T::operator!=(_rhs); }
 	template<class NTYPE>
-	bool				operator>=(const NTYPE& _rhs) const noexcept { return TOBJECT::operator>=(_rhs); }
+	bool				operator>=(const NTYPE& _rhs) const noexcept { return T::operator>=(_rhs); }
 	template<class NTYPE>
-	bool				operator> (const NTYPE& _rhs) const noexcept { return TOBJECT::operator> (_rhs); }
+	bool				operator> (const NTYPE& _rhs) const noexcept { return T::operator> (_rhs); }
 	template<class NTYPE>
-	bool				operator<=(const NTYPE& _rhs) const noexcept { return TOBJECT::operator<=(_rhs); }
+	bool				operator<=(const NTYPE& _rhs) const noexcept { return T::operator<=(_rhs); }
 	template<class NTYPE>
-	bool				operator< (const NTYPE& _rhs) const noexcept { return TOBJECT::operator< (_rhs); }
+	bool				operator< (const NTYPE& _rhs) const noexcept { return T::operator< (_rhs); }
 };

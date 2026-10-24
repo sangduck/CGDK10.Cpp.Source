@@ -1,4 +1,14 @@
-ï»¿#include "pch.h"
+#include "pch.h"
+
+namespace
+{
+	// closes a file handle when leaving the scope (normal return or exception)
+	struct file_handle_closer
+	{
+		CGDK::FILE_HANDLE handle;
+		~file_handle_closer() { if (this->handle != CGDK::INVALID_FILE_HANDLE) CGDK::api::file::close(this->handle); }
+	};
+}
 
 
 void _get_md5(std::string_view _full_file_path, CGDK::edc::md5& _md5, uint64_t _end)
@@ -12,8 +22,11 @@ void _get_md5(std::string_view _full_file_path, CGDK::edc::md5& _md5, uint64_t _
 	// check)
 	THROW_IF(file_handle == CGDK::INVALID_FILE_HANDLE, CGDK::throwable::failure(eRESULT::INVALID_HANDLE, 0, "invalid handle (file is not opened)"sv));
 
+	// - close the file when leaving this function (also on exception)
+	file_handle_closer file_closer{ file_handle };
+
 	// 2) alloc shared buffer
-	auto buf_temp = alloc_shared_buffer(CGDK::update::_FILE_BLOCK_SIZE * 2);
+	auto buf_temp = alloc_shared_buffer(CGDK::update::_FILE_BLOCK_SIZE);
 
 	// declare) 
 	uint64_t pos_now = 0;
@@ -36,9 +49,6 @@ void _get_md5(std::string_view _full_file_path, CGDK::edc::md5& _md5, uint64_t _
 		// - pos_now...
 		pos_now += size_read;
 	}
-
-	// 4) close file
-	CGDK::api::file::close(file_handle);
 }
 
 void _get_md5(CGDK::FILE_HANDLE _file_handle, CGDK::edc::md5& _md5, uint64_t _end)
@@ -117,8 +127,8 @@ CGDK::sUPDATABLE_PREPARE_INFO CGDK::update::receivable::file::process_prepare(st
 	// 2) 
 	if (!ec)
 	{
-		// ì„¤ëª…) ê¸°ì¡´ì˜ íŒŒì¼ì´ ìžˆëŠ” ê²½ìš°ì´ë‹¤.
-		//       - íŒŒì¼ì˜ ê¸¸ì´ê°€ ì™„ë£Œ ê¸¸ì´ì™€ ë™ì¼í•œ ê²½ìš° md5ê°’ë„ êµ¬í•´ì„œ ë³´ë‚¸ë‹¤.
+		// ¼³¸í) ±âÁ¸ÀÇ ÆÄÀÏÀÌ ÀÖ´Â °æ¿ìÀÌ´Ù.
+		//       - ÆÄÀÏÀÇ ±æÀÌ°¡ ¿Ï·á ±æÀÌ¿Í µ¿ÀÏÇÑ °æ¿ì md5°ªµµ ±¸ÇØ¼­ º¸³½´Ù.
 
 		// - get md5
 		this->m_md5_check.initialize();
@@ -140,19 +150,19 @@ CGDK::sUPDATABLE_PREPARE_INFO CGDK::update::receivable::file::process_prepare(st
 
 		// - ...
 		updatable_prepare_info.size = file_length;
-		updatable_prepare_info.result = eRESULT::ALEADY_EXIST;
+		updatable_prepare_info.result = eRESULT::ALREADY_EXIST;
 	}
 	else
 	{
-		// ì„¤ëª…) íŒŒì¼ì´ ì—†ëŠ” ê²½ìš°ì´ë‹¤. 
-		//       - sizeë¥¼ 0ìœ¼ë¡œ ì„¤ì •í•˜ê³  resultëŠ” NOT_EXISTë¡œ ì„¤ì •í•œë‹¤.
+		// ¼³¸í) ÆÄÀÏÀÌ ¾ø´Â °æ¿ìÀÌ´Ù. 
+		//       - size¸¦ 0À¸·Î ¼³Á¤ÇÏ°í result´Â NOT_EXIST·Î ¼³Á¤ÇÑ´Ù.
 
 		updatable_prepare_info.size = 0;
 		updatable_prepare_info.result = eRESULT::NOT_EXIST;
 	}
 
 	// 2) set meta info
-	scoped_lock(this->m_cs_info)
+	SCOPED_LOCK(this->m_lockable_info)
 	{
 		this->m_full_file_path = std::move(_full_file_path);
 	}
@@ -163,14 +173,26 @@ CGDK::sUPDATABLE_PREPARE_INFO CGDK::update::receivable::file::process_prepare(st
 
 void CGDK::update::receivable::file::process_begin(uint64_t _pos_begin)
 {
-	// check)
-	CGASSERT_ERROR(m_file_handle == INVALID_FILE_HANDLE);
+	// declare)
+	FILE_HANDLE file_handle_old = INVALID_FILE_HANDLE;
 
-	// declare) 
+	// 1) a handle left open by a previous attempt (retry after a check-code mismatch) is closed first
+	SCOPED_LOCK(this->m_lockable_info)
+	{
+		file_handle_old = this->m_file_handle;
+		this->m_file_handle = INVALID_FILE_HANDLE;
+	}
+
+	if (file_handle_old != INVALID_FILE_HANDLE)
+	{
+		CGDK::api::file::close(file_handle_old);
+	}
+
+	// declare)
 	eFILE_OPERATION file_operation = eFILE_OPERATION::UPDATE;
 
-	// 1) resource::eFILE_FLAG::RECREATE flag
-	if ((this->m_meta_info.flag & resource::eFILE_FLAG::RECREATE) == resource::eFILE_FLAG::RECREATE)
+	// 2) a transfer from the start (or a RECREATE retry) truncates the file; a resume keeps the existing contents
+	if (_pos_begin == 0 || (this->m_meta_info.flag & resource::eFILE_FLAG::RECREATE) == resource::eFILE_FLAG::RECREATE)
 	{
 		file_operation = eFILE_OPERATION::WRITE;
 	}
@@ -196,7 +218,7 @@ void CGDK::update::receivable::file::process_begin(uint64_t _pos_begin)
 	}
 
 	// 4) set result
-	scoped_lock(this->m_cs_info) 
+	SCOPED_LOCK(this->m_lockable_info) 
 	{
 		// - file handle
 		this->m_file_handle = file_handle;
@@ -213,7 +235,7 @@ CGDK::result_code CGDK::update::receivable::file::process_process(const  CGDK::r
 	FILE_HANDLE file_handle;
 
 	// 1) get file_handle
-	scoped_lock(this->m_cs_info)
+	SCOPED_LOCK(this->m_lockable_info)
 	{
 		file_handle = this->m_file_handle;
 	}
@@ -264,7 +286,7 @@ CGDK::result_code CGDK::update::receivable::file::process_end()
 	std::filesystem::path full_file_path;
 
 	// 1) reset meta info
-	scoped_lock(this->m_cs_info)
+	SCOPED_LOCK(this->m_lockable_info)
 	{
 		// - move file handle
 		file_handle = this->m_file_handle;
@@ -283,6 +305,6 @@ CGDK::result_code CGDK::update::receivable::file::process_end()
 	// 2) close file
 	CGDK::api::file::close(file_handle);
 
-	// reuturn)
+	// return)
 	return eRESULT::DONE;
 }

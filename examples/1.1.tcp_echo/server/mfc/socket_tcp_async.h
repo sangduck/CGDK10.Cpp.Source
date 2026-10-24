@@ -26,6 +26,7 @@
 class socket_tcp_async :
 	public net::io::socket::tcp::Ndefault,
 	public net::io::connectable::tcp::Ndefault,
+	public net::io::connect_notify::tcp::Ndefault,
 	public net::io::sendable::Ntcp_async, // <- this
 	public net::io::send_request::tcp::Ndefault,
 	public net::io::sender::tcp::Ndefault<>,

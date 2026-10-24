@@ -1,8 +1,9 @@
-﻿#pragma once
+#pragma once
 
 class socket_tcp :
 	public						net::io::socket::tcp::Ndefault,
 	public						net::io::connectable::tcp::Ndefault,
+	public						net::io::connect_notify::tcp::Ndefault,
 	public						net::io::sendable::Ntcp_sync,
 	public				 		net::io::send_request::tcp::Ndefault,
 	public						net::io::sender::tcp::Ndefault<uint32_t>,
@@ -35,7 +36,7 @@ public:
 	void				request_closesocket_all();
 	void				request_disconnect_socket(std::size_t _count);
 	void				request_disconnect_socket_all();
-	void				request_send_immidiately();
+	void				request_send_immediately();
 
 public:
 	static const size_t			TEST_MESSAGE_TYPE_COUNT = 9;

@@ -2,6 +2,15 @@
 
 #if defined(_SYS_EPOLL_H)
 
+#include <climits>
+
+// - sendmsg의 최대 buffer 수
+#if defined(IOV_MAX)
+	static constexpr std::size_t CGDK_SEND_MAX_IOV = IOV_MAX;
+#else
+	static constexpr std::size_t CGDK_SEND_MAX_IOV = 1024;
+#endif
+
 using namespace CGDK;
 
 
@@ -15,16 +24,18 @@ void net::io::sendable::Ntcp_sync_buffered::QUEUE_SEND::clear() noexcept
 bool net::io::sendable::Ntcp_sync_buffered::process_sendable( const buffer_view _buffer, object_ptr<Ireferenceable>&& _powner, std::size_t _count_message, const net::sockaddr& /*_paddress*/)
 {
 	// check) _buffer.size()이 0이 아닌가?
-	CGASSERT(_buffer.size() != 0, false);
+	CGASSERT_FATAL(_buffer.size() != 0);
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	RETURN_IF(_buffer.size() == 0, false);
+	if(_buffer.size() == 0)
+		return false;
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	CGASSERT(_buffer.data() != nullptr, false);
+	CGASSERT_ERROR(_buffer.data() != nullptr);
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	THROW_IF(_buffer.data() == nullptr, throwable::failure(eRESULT::INVALID_MESSAGE_BUFFER_IS_NULL, 0, "buffer.data is null ('net::io::sendable::Ntcp_sync_buffered::process_sendable')"sv));
+	if(_buffer.data() == nullptr)
+		return false;
 
 	// 1) get buffer size
 	auto bytes_requested = _buffer.size();
@@ -32,28 +43,30 @@ bool net::io::sendable::Ntcp_sync_buffered::process_sendable( const buffer_view 
 	// declare)
 	CGSOCKET handle_socket;
 
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		// check) if socket is not connected, return false (after lock)
-		RETURN_IF(this->socket_state() < eSOCKET_STATE::ESTABLISHED, false);
+		if(this->socket_state() < eSOCKET_STATE::ESTABLISHED)
+			return false;
 
 		// 2) get socket native handle
 		handle_socket = this->native_handle();
 
 		// check) if invalid socket, return false 
-		RETURN_IF(handle_socket == INVALID_SOCKET, false);
+		if(handle_socket == INVALID_SOCKET)
+			return false;
 
 		// check) m_flag_sending이 signal된 상태(true)라면 EPOLLOUT이 뜰 때까지 대기해야 한다.
 		if (this->m_flag_sending == true)
 		{
-			// check) quque overflowed?
+			// check) queue overflowed?
 			if ((this->m_queue_pending.array_node.size() >= this->m_max_depth_of_send_buffer) || (this->m_queue_pending.bytes_data >= this->m_bytes_max_queued) )
 			{
 				// statistics)
 				this->statistics_on_error_send();
 
 				// check)
-				THROW_IF(this->exception_on_send_overflow(), throwable::failure(eRESULT::OVERFLOW_ERROR, 0, "occure send overflow"sv));
+				this->process_on_send_overflow();
 
 				// return)
 				return false;
@@ -62,7 +75,7 @@ bool net::io::sendable::Ntcp_sync_buffered::process_sendable( const buffer_view 
 			// - BYTES_SEND_GATHER_BUFFER_MIN보다 작으면 복사를 한다.
 			if (bytes_requested <= BYTES_SEND_GATHER_BUFFER_MIN)
 			{
-				// - is buffer enought to copy (create new)
+				// - is buffer enough to copy (create new)
 				if (this->m_queue_pending.array_node.empty() || this->m_queue_pending.array_node.back().bytes_remained < bytes_requested)
 				{
 					// - get buffer size
@@ -89,7 +102,7 @@ bool net::io::sendable::Ntcp_sync_buffered::process_sendable( const buffer_view 
 				data_node.count_message += _count_message;
 				this->m_queue_pending.bytes_data += _buffer.size();
 			}
-			// - BYTES_SEND_GATHER_BUFFER_MIN보다 크면 통채로 추가한다.
+			// - BYTES_SEND_GATHER_BUFFER_MIN보다 크면 통째로 추가한다.
 			else
 			{
 				// - ...
@@ -101,14 +114,14 @@ bool net::io::sendable::Ntcp_sync_buffered::process_sendable( const buffer_view 
 			return true;
 		}
 
-		// check) EPOLLOUT이 이미 설정된 상태면 안됀다.
+		// check) EPOLLOUT이 이미 설정된 상태면 안 된다.
 		CGASSERT_ERROR((this->m_epoll_event_flag & EPOLLOUT) == 0);
 
 		// - set flag_sending
 		this->m_flag_sending = true;
 	}
 
-	// check) EPOLLOUT이 이미 설정된 상태면 안됀다.
+	// check) EPOLLOUT이 이미 설정된 상태면 안 된다.
 	CGASSERT_ERROR((this->m_epoll_event_flag& EPOLLOUT) == 0);
 
 	// - temporary buffer
@@ -118,11 +131,17 @@ bool net::io::sendable::Ntcp_sync_buffered::process_sendable( const buffer_view 
 	CGASSERT_ERROR(buf_now.size() != 0);
 
 	// - request send
-	auto bytes_sended = ::send(handle_socket, buf_now.data(), buf_now.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
+	// declare) 모두 전송했는가?
+	bool is_send_completed = false;
+
+	auto bytes_sent = ::send(handle_socket, buf_now.data(), buf_now.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
 
 	// case) send completed~
-	if (bytes_sended == buf_now.size<int>())
+	if (bytes_sent == buf_now.size<int>())
 	{
+		// - 모두 전송했다.
+		is_send_completed = true;
+
 		// statistics) 
 		this->statistics_on_send_bytes(bytes_requested);
 		this->statistics_on_send_message(_count_message);
@@ -138,19 +157,21 @@ bool net::io::sendable::Ntcp_sync_buffered::process_sendable( const buffer_view 
 		}
 	}
 	// case) send partial - retry
-	else if (bytes_sended >= 0)
+	else if (bytes_sent >= 0)
 	{
 		// check)
-		CGASSERT_ERROR(static_cast<std::size_t>(bytes_sended) < buf_now.size());
+		CGASSERT_ERROR(static_cast<std::size_t>(bytes_sent) < buf_now.size());
 
 		// - 전송한 만큼 이동시킨다.
-		buf_now += offset(bytes_sended);
+		buf_now += offset(bytes_sent);
 
 		// - push front processed buffers
-		scoped_lock(this->m_lockable_sending)
+		SCOPED_LOCK(this->m_lockable_sending)
 		{
 			// - queuing to head
 			this->m_queue_pending.array_node.push_front(QUEUE_SEND::NODE{ buf_now, 0, std::move(_powner), bytes_requested, _count_message });
+			// - 남은 bytes를 queue 크기에 더한다. (바이트 한도 검사에 사용된다.)
+			this->m_queue_pending.bytes_data += buf_now.size();
 		}
 	}
 	else
@@ -158,11 +179,11 @@ bool net::io::sendable::Ntcp_sync_buffered::process_sendable( const buffer_view 
 		// - get last error
 		auto error_code = api::get_last_error();
 
-		// case) bytes_sended < 0 && error ==  EWOULDBLOCK (wait for EPOLLOUT)
-		if (error_code == EWOULDBLOCK)
+		// case) bytes_sent < 0 && error ==  EWOULDBLOCK (wait for EPOLLOUT)
+		if (error_code == EWOULDBLOCK || error_code == EINPROGRESS)	// - EINPROGRESS : a TCP Fast Open connect (TCP_FASTOPEN_CONNECT) without a cookie. the SYN is sent, the data waits for EPOLLOUT
 		{
 			// - push front processed buffers
-			scoped_lock(this->m_lockable_sending)
+			SCOPED_LOCK(this->m_lockable_sending)
 			{
 				// - queuing to head
 				this->m_queue_pending.array_node.push_front(QUEUE_SEND::NODE{ buf_now, 0, std::move(_powner), bytes_requested, _count_message });
@@ -178,7 +199,7 @@ bool net::io::sendable::Ntcp_sync_buffered::process_sendable( const buffer_view 
 			// statistics) 
 			this->statistics_on_error_send();
 
-			scoped_lock(this->m_lockable_sending)
+			SCOPED_LOCK(this->m_lockable_sending)
 			{
 				this->m_flag_sending = false;
 			}
@@ -188,8 +209,15 @@ bool net::io::sendable::Ntcp_sync_buffered::process_sendable( const buffer_view 
 		}
 	}
 
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
+		// check) 모두 전송했고 그 사이 queuing된 데이터가 없으면 EPOLLOUT을 걸 필요가 없다. (송신 끝)
+		if (is_send_completed && this->m_queue_pending.array_node.empty())
+		{
+			this->m_flag_sending = false;
+			return true;
+		}
+
 		// check)
 		CGASSERT_ERROR((this->m_epoll_event_flag & EPOLLOUT) == 0);
 
@@ -210,7 +238,7 @@ uint32_t net::io::sendable::Ntcp_sync_buffered::process_recover_sendable( intptr
 	container_t<QUEUE_SEND::NODE> queue_send;
 
 	// 1) get queued SENDING_INFO
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		// 설명) EPOLLOUT 이벤트는 중복 실행될 수 있으므로 적절한 처리가 필요하다.
 		//  결론을 말하면 m_queue_pending.array_node.empty() 면 바로 리턴한다. m_flag_sending는 true일수도 있고 false일 수도 있다.
@@ -225,7 +253,7 @@ uint32_t net::io::sendable::Ntcp_sync_buffered::process_recover_sendable( intptr
 		//            모두 처리하고 나간 상태이기 때문에 m_flag_sending == false가 되고 m_queue_pending.array_node는 empty() 상태가 된ㄷㄷ.
 		//             => 이런 경욷도 그냥 return만 하면 된다.
 		//
-		//  중복 이벤트가 발생하더라도 절대로 발생해서는 안돼는 상황으르 설명하자면...
+		//  중복 이벤트가 발생하더라도 절대로 발생해서는 안 되는 상황으로 설명하자면...
 		//
 		//    case 1) m_queue_pending.array_node가 empty()가 아닌데 m_flag_sending가 false인 상황
 		//    case 1) m_queue_sending.array_node이 empty()가 아닌 상황. 
@@ -233,7 +261,8 @@ uint32_t net::io::sendable::Ntcp_sync_buffered::process_recover_sendable( intptr
 		//
 
 		// check)
-		RETURN_IF(this->m_queue_pending.array_node.empty(), 0);
+		if(this->m_queue_pending.array_node.empty())
+			return 0;
 
 		// check) 
 		CGASSERT_ERROR(this->m_flag_sending == true);
@@ -244,6 +273,18 @@ uint32_t net::io::sendable::Ntcp_sync_buffered::process_recover_sendable( intptr
 		// - swap data
 		this->m_queue_sending.array_node.swap(this->m_queue_pending.array_node);
 		this->m_queue_pending.bytes_data = 0;
+
+		// - sendmsg는 한번에 IOV_MAX(linux: 1024)개의 buffer까지만 보낼 수 있다. (넘으면 sendmsg가 실패한다.)
+		//   넘는 buffer는 m_queue_pending으로 되돌려 다음 EPOLLOUT에서 보낸다. (순서는 유지된다.)
+		if (this->m_queue_sending.array_node.size() > CGDK_SEND_MAX_IOV)
+		{
+			auto iter_split = std::next(this->m_queue_sending.array_node.begin(), CGDK_SEND_MAX_IOV);
+			this->m_queue_pending.array_node.splice(this->m_queue_pending.array_node.end(), this->m_queue_sending.array_node, iter_split, this->m_queue_sending.array_node.end());
+
+			for (const auto& iter : this->m_queue_pending.array_node)
+				this->m_queue_pending.bytes_data += iter.buf_send.size();
+		}
+
 		queue_send.swap(this->m_queue_sending.array_node);
 	}
 
@@ -286,7 +327,7 @@ uint32_t net::io::sendable::Ntcp_sync_buffered::process_recover_sendable( intptr
 		// 4-1) [case] send completed~
 		if (bytes_result == static_cast<int>(bytes_sending))
 		{
-			// - process sended buffer
+			// - process sent buffer
 			for (auto iter = queue_send.begin(), iter_end = queue_send.end(); iter != iter_end; ++iter, queue_send.pop_front())
 			{
 				// statistics) 
@@ -323,7 +364,7 @@ uint32_t net::io::sendable::Ntcp_sync_buffered::process_recover_sendable( intptr
 			// check)
 			CGASSERT_ERROR(bytes_sending != 0);
 
-			// - process sended buffer
+			// - process sent buffer
 			for (auto iter = queue_send.begin(), iter_end = queue_send.end(); iter != iter_end; ++iter, queue_send.pop_front(), ++msg_send.msg_iov, --msg_send.msg_iovlen)
 			{
 				auto bytes_iter = iter->buf_send.size<int>();
@@ -356,10 +397,10 @@ uint32_t net::io::sendable::Ntcp_sync_buffered::process_recover_sendable( intptr
 			auto error_code = api::get_last_error();
 
 			// 4-3) [case] it send not at all but not failure, need waiting for EPOLLOUT (EWOULDBLOCK)
-			if (error_code == EWOULDBLOCK)
+			if (error_code == EWOULDBLOCK || error_code == EINPROGRESS)	// - EINPROGRESS : a TCP Fast Open connect (TCP_FASTOPEN_CONNECT) without a cookie. the SYN is sent, the data waits for EPOLLOUT
 			{
 				// - move remained to m_queue_pending.array_node
-				scoped_lock(this->m_lockable_sending)
+				SCOPED_LOCK(this->m_lockable_sending)
 				{
 					this->m_queue_pending.array_node.splice(this->m_queue_pending.array_node.begin(), queue_send);
 					this->m_queue_pending.bytes_data += bytes_sending;
@@ -384,7 +425,7 @@ uint32_t net::io::sendable::Ntcp_sync_buffered::process_recover_sendable( intptr
 				this->closesocket();
 
 				// - clear send queue
-				scoped_lock(this->m_lockable_sending)
+				SCOPED_LOCK(this->m_lockable_sending)
 				{
 					_process_clear_send_buffers();
 				}
@@ -399,9 +440,9 @@ uint32_t net::io::sendable::Ntcp_sync_buffered::process_recover_sendable( intptr
 	bool flag_sending;
 
 	// 5) set event flag
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
-		// check) EPOLLOUT이 이미 설정된 상태면 안됀다.
+		// check) EPOLLOUT이 이미 설정된 상태면 안 된다.
 		CGASSERT_ERROR((this->m_epoll_event_flag & EPOLLOUT) == 0);
 
 		// - set 
@@ -429,9 +470,7 @@ uint32_t net::io::sendable::Ntcp_sync_buffered::process_recover_sendable( intptr
 void net::io::sendable::Ntcp_sync_buffered::_process_clear_send_buffers()
 {
 	for ([[maybe_unused]] auto& iter : this->m_queue_pending.array_node)
-	{
 		this->process_complete_sendable(1, 0, 0);
-	}
 
 	this->m_queue_pending.clear();
 	this->m_queue_sending.clear();
@@ -446,7 +485,7 @@ void net::io::sendable::Ntcp_sync_buffered::process_close_sender()
 	// check)
 	bool do_shutdown;
 
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		do_shutdown = !this->m_flag_sending;
 	}
@@ -464,7 +503,7 @@ void net::io::sendable::Ntcp_sync_buffered::process_close_sender()
 void net::io::sendable::Ntcp_sync_buffered::process_reset_sendable() noexcept
 {
 	// 1) prepare & reset sending status
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		// - prepare and reset send buffer
 		this->_process_clear_send_buffers();

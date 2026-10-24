@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -16,11 +16,10 @@
 //*                                                                           *
 //*****************************************************************************
 
-// option) Windowsì˜ ê²½ìš° Nativeë¥¼ ì‚¬ìš©í•  ê²ƒì¸ê°€ í˜¹ì€ ODBCë¥¼ ì‚¬ìš©í•  ê²ƒì¸ê°€ë¥¼ ê²°ì •í•  ìˆ˜ ìˆë‹¤.
-//         Linuxì˜ ê²½ìš° ê¸°ë³¸ìœ¼ë¡œ ODBCë¥¼ ì‚¬ìš©í•˜ë¯€ë¡œ ì´ ì˜µì…˜ì€ ë¬´ì‹œëœë‹¤.
-#define _USE_ODBC
+// option) WindowsÀÇ °æ¿ì Native¸¦ »ç¿ëÇÒ °ÍÀÎ°¡ È¤Àº ODBC¸¦ »ç¿ëÇÒ °ÍÀÎ°¡¸¦ °áÁ¤ÇÒ ¼ö ÀÖ´Ù.
+//         LinuxÀÇ °æ¿ì ±âº»À¸·Î ODBC¸¦ »ç¿ëÇÏ¹Ç·Î ÀÌ ¿É¼ÇÀº ¹«½ÃµÈ´Ù.
 
-// option) SQL Serverì— ì ‘ì†í•  ê²ƒì¸ê°€? MySQLì— ì ‘ì†í•  ê²ƒì¸ê°€?
+// option) SQL Server¿¡ Á¢¼ÓÇÒ °ÍÀÎ°¡? MySQL¿¡ Á¢¼ÓÇÒ °ÍÀÎ°¡?
 #define _SQL_SERVER
 
 #include <iostream>
@@ -48,7 +47,7 @@ int main()
 	}
 	catch (throwable::failure_ex& _e)
 	{
-		// - error stringì„ ì¶œë ¥í•œë‹¤.
+		// - error stringÀ» Ãâ·ÂÇÑ´Ù.
 		_e >> std::cout;
 
 		// return) 
@@ -59,33 +58,33 @@ int main()
 	{
 		// ------------------------------------------------------------------
 		//
-		// 2. alloc_session()ëŠ” ì™œ í•„ìš”í•œê°€?
-		//    - querierì— ì§ì ‘ execute_queryë¥¼ ìˆ˜í–‰í•˜ë©´ ë‚´ë¶€ì ìœ¼ë¡œ sessionì„ 
-		//      í• ë‹¹ë°›ì€ í›„ queryê°ì²´ë¥¼ ìƒì„±í•˜ì—¬ queryë¥¼ ìˆ˜í–‰í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.
-		//    - sessionì„ ì§ì ‘ í• ë‹¹ë°›ìœ¼ë©´ í• ë‹¹ ë°›ì€ sessionì—ì„œ qeuryë¥¼ í• ë‹¹
-		//      ë°›ì•„ queryë¥¼ ìˆ˜í–‰í•  ìˆ˜ ìˆë‹¤.
-		//    - í•œë²ˆì˜ session í• ë‹¹ìœ¼ë¡œ ì—¬ëŸ¬ ê°œì˜ query ê°ì²´ë¥¼ ìƒì„±í•  ìˆ˜ 
-		//      ìˆìœ¼ë©° ì—¬ëŸ¬ ë²ˆì˜ queryë¥¼ ìˆ˜í–‰í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.
-		//    - í•˜ë‚˜ì˜ query ê°ì²´ëŠ” execute_query()ë¥¼ ìš”ì²­ í›„ close_query()í•¨ìˆ˜ë¥¼
-		//      ì‚¬ìš©í•´ queryë¥¼ ë‹«ì€ í›„ ë‹¤ì‹œ execute_query()ë¥¼ í˜¸ì¶œí•´ queryë¥¼
-		//      ìˆ˜í–‰í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+		// 2. alloc_session()´Â ¿Ö ÇÊ¿äÇÑ°¡?
+		//    - querier¿¡ Á÷Á¢ execute_query¸¦ ¼öÇàÇÏ¸é ³»ºÎÀûÀ¸·Î sessionÀ» 
+		//      ÇÒ´ç¹ŞÀº ÈÄ query°´Ã¼¸¦ »ı¼ºÇÏ¿© query¸¦ ¼öÇàÇÒ ¼ö ÀÖ½À´Ï´Ù.
+		//    - sessionÀ» Á÷Á¢ ÇÒ´ç¹ŞÀ¸¸é ÇÒ´ç ¹ŞÀº session¿¡¼­ qeury¸¦ ÇÒ´ç
+		//      ¹Ş¾Æ query¸¦ ¼öÇàÇÒ ¼ö ÀÖ´Ù.
+		//    - ÇÑ¹øÀÇ session ÇÒ´çÀ¸·Î ¿©·¯ °³ÀÇ query °´Ã¼¸¦ »ı¼ºÇÒ ¼ö 
+		//      ÀÖÀ¸¸ç ¿©·¯ ¹øÀÇ query¸¦ ¼öÇàÇÒ ¼ö ÀÖ½À´Ï´Ù.
+		//    - ÇÏ³ªÀÇ query °´Ã¼´Â execute_query()¸¦ ¿äÃ» ÈÄ close_query()ÇÔ¼ö¸¦
+		//      »ç¿ëÇØ query¸¦ ´İÀº ÈÄ ´Ù½Ã execute_query()¸¦ È£ÃâÇØ query¸¦
+		//      ¼öÇàÇÒ ¼ö ÀÖ½À´Ï´Ù.
 		//
 		// ------------------------------------------------------------------
 		{
-			// 1) sessionì„ í• ë‹¹ë°›ëŠ”ë‹¤.
+			// 1) sessionÀ» ÇÒ´ç¹Ş´Â´Ù.
 			auto psession = pquerier->alloc_session();
 
-			// 2) queryê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+			// 2) query°´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 			auto pquery = psession->alloc_query();
 
-			// 3) queryë¥¼ ìˆ˜í–‰í•œë‹¤.
-			//    (ì‹¤íŒ¨í•˜ë©´ ë‚´ë¶€ì—ì„œ exceptionì„ ë˜ì§€ë¯€ë¡œ ë”°ë¡œ ë¦¬í„´ê°’ì„ ê²€ì‚¬í•  í•„ìš”ëŠ” ì—†ë‹¤.)
+			// 3) query¸¦ ¼öÇàÇÑ´Ù.
+			//    (½ÇÆĞÇÏ¸é ³»ºÎ¿¡¼­ exceptionÀ» ´øÁö¹Ç·Î µû·Î ¸®ÅÏ°ªÀ» °Ë»çÇÒ ÇÊ¿ä´Â ¾ø´Ù.)
 			pquery->execute_query("SELECT * FROM test_table"sv);
 
-			// 4) forë¬¸ì„ ì‚¬ìš©í•´ queryê²°ê³¼ë¥¼ ì°¨ë¡€ë¡œ ì½ì–´ë“¤ì¸ë‹¤.
+			// 4) for¹®À» »ç¿ëÇØ query°á°ú¸¦ Â÷·Ê·Î ÀĞ¾îµéÀÎ´Ù.
 			for (auto& iter : *pquery)
 			{
-				// - Indexë¡œ Columnê°’ì„ ì½ì–´ë“¤ì¸ë‹¤.(Columnì€ 1ë¶€í„° ì‹œì‘)
+				// - Index·Î Column°ªÀ» ÀĞ¾îµéÀÎ´Ù.(ColumnÀº 1ºÎÅÍ ½ÃÀÛ)
 				auto value_1 = iter.get_value<bool>(1);
 				auto value_2 = iter.get_value<char*>(2);
 				auto value_3 = iter.get_value<wchar_t*>(3);
@@ -96,16 +95,16 @@ int main()
 				std::wcout << L"value_3 "sv << value_3 << L'\n';
 			}
 
-			// 5) ì²˜ë¦¬ê°€ ëëƒˆìœ¼ë©´ ë‹«ëŠ”ë‹¤.
+			// 5) Ã³¸®°¡ ³¡³ÂÀ¸¸é ´İ´Â´Ù.
 			pquery->close_query();
 
-			// 6) ë‹¤ìŒ queryë¥¼ ìš”ì²­í•œë‹¤.
+			// 6) ´ÙÀ½ query¸¦ ¿äÃ»ÇÑ´Ù.
 			pquery->execute_query("SELECT * FROM test_table"sv);
 
-			// 7) forë¬¸ì„ ì‚¬ìš©í•´ queryê²°ê³¼ë¥¼ ì°¨ë¡€ë¡œ ì½ì–´ë“¤ì¸ë‹¤.
+			// 7) for¹®À» »ç¿ëÇØ query°á°ú¸¦ Â÷·Ê·Î ÀĞ¾îµéÀÎ´Ù.
 			for (auto& iter : *pquery)
 			{
-				// - Indexë¡œ Columnê°’ì„ ì½ì–´ë“¤ì¸ë‹¤.(Columnì€ 1ë¶€í„° ì‹œì‘)
+				// - Index·Î Column°ªÀ» ÀĞ¾îµéÀÎ´Ù.(ColumnÀº 1ºÎÅÍ ½ÃÀÛ)
 				auto value_1 = iter.get_value<bool>(1);
 				auto value_2 = iter.get_value<char*>(2);
 				auto value_3 = iter.get_value<wchar_t*>(3);
@@ -116,46 +115,46 @@ int main()
 				std::wcout << L"value_3 "sv << value_3 << L'\n';
 			}
 
-			// 7) ì¿¼ë¦¬ë¥¼ ë‹«ëŠ”ë‹¤.
+			// 7) Äõ¸®¸¦ ´İ´Â´Ù.
 			pquery->close_query();
 
-			// ì„¤ëª…) query ê°ì²´ê°€ ì†Œë©¸ë˜ë©´ ìë™ì ìœ¼ë¡œ í• ë‹¹ í•´ì œì²˜ë¦¬ê°€ ëœë‹¤.
-			//       session ê°ì²´ëŠ” ìƒì„±í•œ ëª¨ë“  queryê°ì²´ê°€ í• ë‹¹ í•´ì œë˜ê³  
-			//       ìì‹ ì´ í• ë‹¹í•´ì œë˜ë©´ ë‹¤ì‹œ querierë¡œ ëŒì•„ê°€ ë‹¤ìŒ í• ë‹¹ì„
-			//       ëŒ€ê¸°í•˜ê²Œ ëœë‹¤.
+			// ¼³¸í) query °´Ã¼°¡ ¼Ò¸êµÇ¸é ÀÚµ¿ÀûÀ¸·Î ÇÒ´ç ÇØÁ¦Ã³¸®°¡ µÈ´Ù.
+			//       session °´Ã¼´Â »ı¼ºÇÑ ¸ğµç query°´Ã¼°¡ ÇÒ´ç ÇØÁ¦µÇ°í 
+			//       ÀÚ½ÅÀÌ ÇÒ´çÇØÁ¦µÇ¸é ´Ù½Ã querier·Î µ¹¾Æ°¡ ´ÙÀ½ ÇÒ´çÀ»
+			//       ´ë±âÇÏ°Ô µÈ´Ù.
 		}
 
 
 		// ------------------------------------------------------------------
 		//
-		// 3. ë¹„ë™ê¸°ì‹ post_alloc_session()
-		//    - ë¹„ë™ê¸°ì‹ session í• ë‹¹ì„ í†µí•´ ë‹¤ì¤‘ ì“°ë ˆë“œ ì²˜ë¦¬ë¥¼ í• ìˆ˜ ìˆë‹¤.
-		//    - poat_aaloc_session()ì„ í˜¸ì¶œí•  ê²½ìš° ë¹„ë™ê¸°ì‹ìœ¼ë¡œ sessionì„
-		//      í• ë‹¹ ë°›ì€ í›„ ì„¤ì •ëœ lambdaí•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œë‹¤.
-		//    - ë§ì€ sessionì˜ í• ë‹¹ ìš”êµ¬ë¥¼ í•  ê²½ìš° session poolì— ì¡´ì¬í•˜ëŠ”
-		//      ëª¨ë“  session ê°ì²´ê°€ ëª¨ë‘ í• ë‹¹ë˜ëŠ” ê²½ìš° 
-		//      alloc_session()í•¨ìˆ˜ë¡œ session ê°ì²´ë¥¼ í• ë‹¹ ìš”êµ¬í•  ê²½ìš° ì—¬ìœ  sessionì´
-		//      ë‹¤ì‹œ ìƒê¸°ê¸° ê¹Œì§€ ëŒ€ê¸°í•´ì•¼ í•˜ëŠ”ë° ì´ë•Œ blockingì´ ë°œìƒí•˜ê²Œ ëœë‹¤.
-		//      ì´ëŸ° ê²½ìš° post_alloc_sessionì„ ì‚¬ìš©í•˜ì—¬ ë¹„ë™ê¸°ì ìœ¼ë¡œ í• ë‹¹ë°›ìœ¼ë©´
-		//      ë”ìš± íš¨ìœ¨ì„ ë†’ì¼ ìˆ˜ ìˆë‹¤.
+		// 3. ºñµ¿±â½Ä post_alloc_session()
+		//    - ºñµ¿±â½Ä session ÇÒ´çÀ» ÅëÇØ ´ÙÁß ½º·¹µå Ã³¸®¸¦ ÇÒ ¼ö ÀÖ´Ù.
+		//    - poat_aaloc_session()À» È£ÃâÇÒ °æ¿ì ºñµ¿±â½ÄÀ¸·Î sessionÀ»
+		//      ÇÒ´ç ¹ŞÀº ÈÄ ¼³Á¤µÈ lambdaÇÔ¼ö¸¦ È£ÃâÇÑ´Ù.
+		//    - ¸¹Àº sessionÀÇ ÇÒ´ç ¿ä±¸¸¦ ÇÒ °æ¿ì session pool¿¡ Á¸ÀçÇÏ´Â
+		//      ¸ğµç session °´Ã¼°¡ ¸ğµÎ ÇÒ´çµÇ´Â °æ¿ì 
+		//      alloc_session()ÇÔ¼ö·Î session °´Ã¼¸¦ ÇÒ´ç ¿ä±¸ÇÒ °æ¿ì ¿©À¯ sessionÀÌ
+		//      ´Ù½Ã »ı±â±â ±îÁö ´ë±âÇØ¾ß ÇÏ´Âµ¥ ÀÌ¶§ blockingÀÌ ¹ß»ıÇÏ°Ô µÈ´Ù.
+		//      ÀÌ·± °æ¿ì post_alloc_sessionÀ» »ç¿ëÇÏ¿© ºñµ¿±âÀûÀ¸·Î ÇÒ´ç¹ŞÀ¸¸é
+		//      ´õ¿í È¿À²À» ³ôÀÏ ¼ö ÀÖ´Ù.
 		//
 		// ------------------------------------------------------------------
-		// 1) ë¹„ë™ê¸°ì‹ query í• ë‹¹ì„ ìš”êµ¬í•œë‹¤.
+		// 1) ºñµ¿±â½Ä query ÇÒ´çÀ» ¿ä±¸ÇÑ´Ù.
 		pquerier->post_alloc_session([=](query::rdb::session_t* _psession)
 		{
-			// check) í• ë‹¹ë°›ì§€ ëª»í–ˆìœ¼ë©´ _psessionê°€ nullptrì´ ëœë‹¤.
+			// check) ÇÒ´ç¹ŞÁö ¸øÇßÀ¸¸é _psession°¡ nullptrÀÌ µÈ´Ù.
 			RETURN_IF(_psession == nullptr,);
 
 			// 1) alloc_query
 			auto pquery = _psession->alloc_query<query::rdb::query_t>();
 		
-			// 2) queryë¥¼ ìš”ì²­í•œë‹¤. (ì‹¤íŒ¨í•˜ë©´ ë‚´ë¶€ì—ì„œ exceptionì„ ë˜ì§„ë‹¤.)
+			// 2) query¸¦ ¿äÃ»ÇÑ´Ù. (½ÇÆĞÇÏ¸é ³»ºÎ¿¡¼­ exceptionÀ» ´øÁø´Ù.)
 			pquery->execute_query("SELECT * FROM test_table"sv);
 
-			// 3) forë¬¸ì„ ì‚¬ìš©í•´ Queryê²°ê³¼ë¥¼ ì°¨ë¡€ë¡œ ì½ì–´ë“¤ì¸ë‹¤.
+			// 3) for¹®À» »ç¿ëÇØ Query°á°ú¸¦ Â÷·Ê·Î ÀĞ¾îµéÀÎ´Ù.
 			for (auto& iter : *pquery)
 			{
-				// - Indexë¡œ Columnê°’ì„ ì½ì–´ë“¤ì¸ë‹¤.(Columnì€ 1ë¶€í„° ì‹œì‘)
+				// - Index·Î Column°ªÀ» ÀĞ¾îµéÀÎ´Ù.(ColumnÀº 1ºÎÅÍ ½ÃÀÛ)
 				auto value_1 = iter.get_value<bool>(1);
 				auto value_2 = iter.get_value<char*>(2);
 				auto value_3 = iter.get_value<wchar_t*>(3);
@@ -166,16 +165,16 @@ int main()
 				std::wcout << L"value_3 "sv << value_3 << L'\n';
 			}
 
-			// 4) ì²˜ë¦¬ê°€ ëëƒˆìœ¼ë©´ ë‹«ëŠ”ë‹¤.
+			// 4) Ã³¸®°¡ ³¡³ÂÀ¸¸é ´İ´Â´Ù.
 			pquery->close_query();
 
-			// 5) ë‹¤ì‹œ ë‹¤ë¥¸ queryë¥¼ ìš”ì²­í•œë‹¤.
+			// 5) ´Ù½Ã ´Ù¸¥ query¸¦ ¿äÃ»ÇÑ´Ù.
 			pquery->execute_query("SELECT * FROM test_table"sv);
 
-			// 6) forë¬¸ì„ ì‚¬ìš©í•´ Queryê²°ê³¼ë¥¼ ì°¨ë¡€ë¡œ ì½ì–´ë“¤ì¸ë‹¤.
+			// 6) for¹®À» »ç¿ëÇØ Query°á°ú¸¦ Â÷·Ê·Î ÀĞ¾îµéÀÎ´Ù.
 			for (auto& iter : *pquery)
 			{
-				// - Indexë¡œ Columnê°’ì„ ì½ì–´ë“¤ì¸ë‹¤.(Columnì€ 1ë¶€í„° ì‹œì‘)
+				// - Index·Î Column°ªÀ» ÀĞ¾îµéÀÎ´Ù.(ColumnÀº 1ºÎÅÍ ½ÃÀÛ)
 				auto value_1 = iter.get_value<bool>(1);
 				auto value_2 = iter.get_value<char*>(2);
 				auto value_3 = iter.get_value<wchar_t*>(3);
@@ -186,13 +185,13 @@ int main()
 				std::wcout << L"value_3 "sv << value_3 << L'\n';
 			}
 
-			// 7) ì¿¼ë¦¬ë¥¼ ë‹«ëŠ”ë‹¤.
+			// 7) Äõ¸®¸¦ ´İ´Â´Ù.
 			pquery->close_query();
 		});
 	}
 	catch (throwable::failure_ex& _e)
 	{
-		// - error stringì„ ì¶œë ¥í•œë‹¤.
+		// - error stringÀ» Ãâ·ÂÇÑ´Ù.
 		_e >> std::cout;
 
 		// return) 

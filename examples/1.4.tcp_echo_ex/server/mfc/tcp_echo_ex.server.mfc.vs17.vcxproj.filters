@@ -10,7 +10,7 @@
     <ClInclude Include="socket_tcp_async_gather.h" />
     <ClInclude Include="tcp_echo_ex.server.mfc.h" />
     <ClInclude Include="tcp_echo_ex.server.mfc.dlg.h" />
-    <ClInclude Include="..\..\common\packatable.h" />
+    <ClInclude Include="..\..\common\packetable.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />

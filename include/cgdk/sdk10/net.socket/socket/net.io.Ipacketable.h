@@ -55,9 +55,9 @@ protected:
 				// check)
 				RETURN_IF(this->m_enable_history == false);
 
-				scoped_lock(this->m_queue_history)
+				SCOPED_LOCK(this->m_lockable_queue_history)
 				{
-					// check) 최대 History 갯수를 넘길 경우 제일 앞에 것을 빼낸다.
+					// check) 최대 History 개수를 넘길 경우 제일 앞에 것을 빼낸다.
 					if (this->m_queue_history.size() > 16)
 					{
 						this->m_queue_history.pop_front();
@@ -69,7 +69,7 @@ protected:
 			}
 			void				reset_message_history() noexcept
 			{
-				scoped_lock(this->m_queue_history)
+				SCOPED_LOCK(this->m_lockable_queue_history)
 				{
 					this->m_queue_history.clear();
 				}
@@ -77,7 +77,8 @@ protected:
 
 	// debug) History of messages
 			bool				m_enable_history = false;
-			lockable<circular_list<shared_buffer>> m_queue_history;
+	mutable	lock_object			m_lockable_queue_history;
+			circular_list<shared_buffer> m_queue_history;
 };
 
 

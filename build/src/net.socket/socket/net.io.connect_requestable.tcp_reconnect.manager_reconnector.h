@@ -39,11 +39,12 @@ public:
 	virtual	intptr_t			process_execute( intptr_t _result, size_t _param) override;
 
 public:
-			lockable<std::set<object_ptr<net::io::connect_requestable::Ntcp_reconnect>>> m_set_reconnect;
+	mutable	lock_object			m_lockable_set_reconnect;
+			std::set<object_ptr<net::io::connect_requestable::Ntcp_reconnect>> m_set_reconnect;
 
 public:
 	// 1) Init Instance/run_executor
-	static 	auto				instance() { if (m_pinstance.empty()) { initialize_instance();} return object_ptr<manager_reconnector>(m_pinstance); }
+	static 	auto				instance() { auto p = m_pinstance.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_pinstance.get_acquire(); } return object_ptr<manager_reconnector>(p); }
 	static	void				initialize_instance();
 	static	void				set_instance(own_ptr<manager_reconnector>&& _pinstance) noexcept;
 	static	void				reset_instance() noexcept;

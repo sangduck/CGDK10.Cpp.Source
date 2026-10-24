@@ -1,9 +1,9 @@
-Ôªø#include "pch.h"
+#include "pch.h"
 #include "framework.h"
 #include "tcp_echo_ex.server.mfc.h"
 #include "tcp_echo_ex.server.mfc.dlg.h"
 #include "afxdialogex.h"
-#include "../../common/packatable.h"
+#include "../../common/packetable.h"
 #include "socket_tcp_async.h"
 #include "socket_tcp_async_gather.h"
 #include "socket_tcp_async_gather_buffered.h"
@@ -52,7 +52,7 @@ END_MESSAGE_MAP()
 BOOL tcp_echo_ex_server_dlg::OnInitDialog()
 {
 	//-----------------------------------------------------------------
-	// 1. Í∏∞Î≥∏Ï†ÅÏúºÎ°ú Îì§Ïñ¥ ÏûàÎäî Î∂ÄÎ∂Ñ.
+	// 1. ±‚∫ª¿˚¿∏∑Œ µÈæÓ ¿÷¥¬ ∫Œ∫–.
 	//-----------------------------------------------------------------
 	CDialogEx::OnInitDialog();
 
@@ -91,7 +91,7 @@ BOOL tcp_echo_ex_server_dlg::OnInitDialog()
 
 
 	//-----------------------------------------------------------------
-	// 3. ÏÉùÏÑ±ÌïòÎäî Î∂ÄÎ∂Ñ.
+	// 3. ª˝º∫«œ¥¬ ∫Œ∫–.
 	//
 	//    socket_type
 	//    - 0 -> socket_tcp_nogather
@@ -102,17 +102,17 @@ BOOL tcp_echo_ex_server_dlg::OnInitDialog()
 	// 1)
 	this->ReadSetting();
 
-	// 2) AcceptorÎ•º ÏÉùÏÑ±ÌïúÎã§.
+	// 2) Acceptor∏¶ ª˝º∫«—¥Ÿ.
 	//set_socket_type(0);
 	//set_socket_type(1);
 	this->set_socket_type(2);
 
-	// 3) acceptorÎ•º ÏãúÏûëÌïúÎã§.
+	// 3) acceptor∏¶ Ω√¿€«—¥Ÿ.
 	g_pacceptor_client->start({ this->m_endpoint_accept });
 
 
 	//-----------------------------------------------------------------
-	// 4. Ïó∞Í≤∞
+	// 4. ø¨∞·
 	//-----------------------------------------------------------------
 	// 1) Link~
 	m_child_acceptor_control.AddTargetWnd(&m_child_connective_info);
@@ -165,10 +165,10 @@ void tcp_echo_ex_server_dlg::OnBnClickedCancel()
 
 void tcp_echo_ex_server_dlg::OnBnClickedButtonSend1()
 {
-	// 1) Acceptor ÏûÑÏãú Î≥µÏÇ¨
+	// 1) Acceptor ¿”Ω√ ∫πªÁ
 	object_ptr<net::io::connective::acceptor::Ntcp> pacceptor = g_pacceptor_client;
 
-	// check) pacceptorÍ∞Ä nullptrÏù¥Î©¥ Í∑∏ÎÉ• Î¶¨ÌÑ¥~
+	// check) pacceptor∞° nullptr¿Ã∏È ±◊≥… ∏Æ≈œ~
 	RETURN_IF(pacceptor.empty());
 
 	// 2) alloc buffer
@@ -187,10 +187,10 @@ void tcp_echo_ex_server_dlg::OnBnClickedButtonSend1()
 
 void tcp_echo_ex_server_dlg::OnBnClickedButtonSend2()
 {
-	// 1) Acceptor ÏûÑÏãú Î≥µÏÇ¨
+	// 1) Acceptor ¿”Ω√ ∫πªÁ
 	object_ptr<net::io::connective::acceptor::Ntcp> pacceptor = g_pacceptor_client;
 
-	// check) pacceptorÍ∞Ä nullptrÏù¥Î©¥ Í∑∏ÎÉ• Î¶¨ÌÑ¥~
+	// check) pacceptor∞° nullptr¿Ã∏È ±◊≥… ∏Æ≈œ~
 	RETURN_IF(pacceptor.empty());
 
 	// 2) alloc buffer
@@ -216,10 +216,10 @@ void tcp_echo_ex_server_dlg::OnBnClickedButtonSend2()
 
 void tcp_echo_ex_server_dlg::OnBnClickedButtonSend3()
 {
-	// 1) acceptor ÏûÑÏãú Î≥µÏÇ¨
+	// 1) acceptor ¿”Ω√ ∫πªÁ
 	object_ptr<net::io::connective::acceptor::Ntcp> pacceptor = g_pacceptor_client;
 
-	// check) pacceptorÍ∞Ä nullptrÏù¥Î©¥ Í∑∏ÎÉ• Î¶¨ÌÑ¥~
+	// check) pacceptor∞° nullptr¿Ã∏È ±◊≥… ∏Æ≈œ~
 	RETURN_IF(pacceptor.empty());
 
 	// 2) alloc buffer
@@ -244,19 +244,19 @@ void tcp_echo_ex_server_dlg::OnBnClickedButtonSend3()
 
 void tcp_echo_ex_server_dlg::OnBnClickedButtonDisconnectAll()
 {
-	// 1) acceptor ÏûÑÏãú Î≥µÏÇ¨
+	// 1) acceptor ¿”Ω√ ∫πªÁ
 	object_ptr<net::io::connective::acceptor::Ntcp> pacceptor = g_pacceptor_client;
 
-	// check) pacceptorÍ∞Ä nullptrÏù¥Î©¥ Í∑∏ÎÉ• Î¶¨ÌÑ¥~
+	// check) pacceptor∞° nullptr¿Ã∏È ±◊≥… ∏Æ≈œ~
 	RETURN_IF(pacceptor.empty());
 
-	// 2) AcceptorÏùò SocketÏùÑ Î™®Îëê Ï†ëÏÜçÏ¢ÖÎ£åÌïúÎã§.
+	// 2) Acceptor¿« Socket¿ª ∏µŒ ¡¢º”¡æ∑·«—¥Ÿ.
 	pacceptor->disconnect_connectable_all();
 }
 
 void tcp_echo_ex_server_dlg::OnBnClickedButtonClosesocketSingle()
 {
-	// 1) acceptorÏùò socket iteratorÎ•º ÏñªÎäîÎã§.
+	// 1) acceptor¿« socket iterator∏¶ æÚ¥¬¥Ÿ.
 	auto iterator  = g_pacceptor_client->alloc_iterator();
 
 	// check) 
@@ -268,7 +268,7 @@ void tcp_echo_ex_server_dlg::OnBnClickedButtonClosesocketSingle()
 
 void tcp_echo_ex_server_dlg::OnBnClickedButtonDisconnectSingle()
 {
-	// 1) acceptorÏùò socket iteratorÎ•º ÏñªÎäîÎã§.
+	// 1) acceptor¿« socket iterator∏¶ æÚ¥¬¥Ÿ.
 	auto iterator = g_pacceptor_client->alloc_iterator();
 
 	// check) 
@@ -295,7 +295,7 @@ void tcp_echo_ex_server_dlg::OnBnClickedCheckDisableEcho()
 
 void tcp_echo_ex_server_dlg::OnSystemOptions()
 {
-	// check) AcceptorÍ∞Ä ÎèôÏûëÏ§ëÏùº ÎïåÎäî Ïù¥ Î©îÎâ¥Î•º ÎùÑÏö∞ÏßÄ Î™ªÌïòÍ≤å ÌïúÎã§.
+	// check) Acceptor∞° µø¿€ ¡ﬂ¿œ ∂ß¥¬ ¿Ã ∏ﬁ¥∫∏¶ ∂ÁøÏ¡ˆ ∏¯«œ∞‘ «—¥Ÿ.
 	if (g_pacceptor_client != nullptr && g_pacceptor_client->is_listening())
 	{
 		AfxMessageBox(TEXT("Please close Acceptor first. Click 'start' button to closing Acceptor"), MB_OK);
@@ -307,7 +307,7 @@ void tcp_echo_ex_server_dlg::OnSystemOptions()
 	//// Declare) Dialog
 	//CSocketTuningDlg	dlg;
 
-	//// 1) Socket TypeÏùÑ ÏÑ§Ï†ïÌïúÎã§.
+	//// 1) Socket Type¿ª º≥¡§«—¥Ÿ.
 	//dlg.m_socket_type = get_socket_type();
 
 	//// 2) DoModal~
@@ -320,7 +320,7 @@ void tcp_echo_ex_server_dlg::OnSystemOptions()
 void tcp_echo_ex_server_dlg::OnSystemExit()
 {
 	// 1) confirm
-	auto result = AfxMessageBox(TEXT("ÏÑúÎ≤ÑÎ•º Ï¢ÖÎ£åÌïòÏãúÍ≤†ÏäµÎãàÍπå?"), MB_OKCANCEL);
+	auto result = AfxMessageBox(TEXT("º≠πˆ∏¶ ¡æ∑·«œΩ√∞⁄Ω¿¥œ±Ó?"), MB_OKCANCEL);
 
 	// check)
 	RETURN_IF(result != IDOK);
@@ -358,19 +358,19 @@ void tcp_echo_ex_server_dlg::set_socket_type(int _socket_type)
 	// check) 
 	RETURN_IF(m_socket_type == _socket_type);
 
-	// 1) Í∞íÏùÑ ÏÑ§Ï†ïÌïúÎã§.
+	// 1) ∞™¿ª º≥¡§«—¥Ÿ.
 	m_socket_type = _socket_type;
 
-	// 2) AcceptorÎ•º Îã§Ïãú ÎßåÎì†Îã§.
+	// 2) Acceptor∏¶ ¥ŸΩ√ ∏∏µÁ¥Ÿ.
 	create_acceptor(_socket_type);
 
-	// 3) PoolÏùÑ Î™®Îëê shrinkÌïúÎã§.
+	// 3) Pool¿ª ∏µŒ shrink«—¥Ÿ.
 	factory::manager::instance()->sustain(eFACTORY_GC_LEVEL::STACKED_ALL);
 }
 
 void tcp_echo_ex_server_dlg::create_acceptor(int _SocketType)
 {
-	// 1) Í∏∞Ï°¥ AcceptorÎ•º Ï†úÍ±∞ÌïúÎã§.
+	// 1) ±‚¡∏ Acceptor∏¶ ¡¶∞≈«—¥Ÿ.
 	if(g_pacceptor_client.exist())
 	{
 		g_pacceptor_client->stop();
@@ -380,38 +380,41 @@ void tcp_echo_ex_server_dlg::create_acceptor(int _SocketType)
 	// Declare) 
 	own_ptr<net::io::connective::acceptor::Ntcp> pacceptor;
 
-	// 2) ÏÉàÎ°úÏö¥ AcceptorÎ•º ÏÉùÏÑ±ÌïúÎã§.
+	// 2) ªı∑ŒøÓ Acceptor∏¶ ª˝º∫«—¥Ÿ.
 	switch(_SocketType)
 	{
 	case	0:
 			{
-				pacceptor = make_own<net::acceptor<socket_tcp_async>>("acceptor_async");
+				pacceptor = make_own<net::acceptor<socket_tcp_async>>();
+				pacceptor->name("acceptor_async"s);
 			}
 			break;
 
 	case	1:
 			{
-				pacceptor = make_own<net::acceptor<socket_tcp_async_gather>>("acceptor_async_gather");
-			}
+				pacceptor = make_own<net::acceptor<socket_tcp_async_gather>>();
+				pacceptor->name("acceptor_async_gather"s);
+	}
 			break;
 
 	case	2:
 			{
-				pacceptor = make_own<net::acceptor<socket_tcp_async_gather_buffered>>("acceptor_async_gather_buffered");
-			}
+				pacceptor = make_own<net::acceptor<socket_tcp_async_gather_buffered>>();
+				pacceptor->name("acceptor_async_gather_buffered"s);
+	}
 			break;
 	}
 
-	// 3) AcceptorÎ•º ÏÑ§Ï†ïÌïúÎã§.
+	// 3) Acceptor∏¶ º≥¡§«—¥Ÿ.
 	g_pacceptor_client = std::move(pacceptor);
 
-	// 4) ConnectiveÎ•º ResetÌïúÎã§.
+	// 4) Connective∏¶ Reset«—¥Ÿ.
 	m_child_acceptor_control.SetAcceptor(g_pacceptor_client);
 
-	// 5) AcceptorÏùò Ïù¥Î¶ÑÏùÑ ÏñªÎäîÎã§.
-	auto name = g_pacceptor_client->get_name<TCHAR>();
+	// 5) Acceptor¿« ¿Ã∏ß¿ª æÚ¥¬¥Ÿ.
+	auto name = g_pacceptor_client->name<TCHAR>();
 
-	// 6) AcceptorÏùò Ïù¥Î¶ÑÏùÑ ÏÑ§Ï†ïÌïúÎã§.
+	// 6) Acceptor¿« ¿Ã∏ß¿ª º≥¡§«—¥Ÿ.
 	SetDlgItemText(IDC_STATIC_ACCEPTOR_NAME, name.c_str());
 }
 
@@ -421,7 +424,7 @@ void tcp_echo_ex_server_dlg::ReadSetting()
 	context context_config;
 
 	// 1) read json file
-	context_config.read_from_json_file("message_format.json"sv);
+	context_config.from_json(api::file::read_file("message_format.json"sv));
 
 	// 2) get message format
 	{

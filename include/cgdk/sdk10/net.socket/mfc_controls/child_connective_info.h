@@ -84,14 +84,14 @@ protected:
 			LONGLONG			m_count_connect;
 			LONGLONG			m_count_disconnect;
 
-			LONGLONG			m_statistics_offet_count_try = 0;
-			LONGLONG			m_statistics_offet_success_connect = 0;
-			LONGLONG			m_statistics_offet_disconnect = 0;
-			LONGLONG			m_statistics_offet_fail_connect = 0;
-			LONGLONG			m_statistics_offet_error_disconnect = 0;
+			LONGLONG			m_statistics_offset_count_try = 0;
+			LONGLONG			m_statistics_offset_success_connect = 0;
+			LONGLONG			m_statistics_offset_disconnect = 0;
+			LONGLONG			m_statistics_offset_fail_connect = 0;
+			LONGLONG			m_statistics_offset_error_disconnect = 0;
 
 			const statistics::unit_connective*	m_pstatistics;
-			lockable<>			m_lockable_statistics;
+	mutable	lock_object			m_lockable_statistics;
 
 			void				SetSocketStatus(net::io::Iconnective* _pconnective);
 };

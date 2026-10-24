@@ -66,7 +66,7 @@ protected:
 			LONGLONG			m_count_receivedByte;
 
 			const statistics::unit_traffic*	m_pstatistics;
-			lockable<>			m_lockable_statistics;
+	mutable	lock_object			m_lockable_statistics;
 };
 
 

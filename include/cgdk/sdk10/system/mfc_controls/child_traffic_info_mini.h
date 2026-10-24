@@ -63,9 +63,9 @@ public:
 protected:
 			chrono::tick::time_point m_tick_last;
 
-			LONGLONG			m_count_sended;
+			LONGLONG			m_count_sent;
 			LONGLONG			m_count_received;
-			LONGLONG			m_count_sendedByte;
+			LONGLONG			m_count_sentByte;
 			LONGLONG			m_count_receivedByte;
 
 			CStatic_graph		m_graph_traffic;

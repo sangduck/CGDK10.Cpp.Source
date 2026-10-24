@@ -1,9 +1,9 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
 //*                                                                           *
-//*                     tutorials common - object_pointer                     *
+//*                         tutorials execute - time                          *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -33,102 +33,102 @@ using namespace CGDK;
 //
 // tutorial common - tick
 //
-//     1) ë‹¨ì¼ê°’(monotonic) íƒ€ì´ë¨¸ë¡œ 
-//     2) ì ˆëŒ€ ì‹œê°„ë³´ë‹¤ ì‹œê°„ ë¹„êµ ë° ì—°ì‚°ì„ ëª©ì ìœ¼ë¡œ í•œë‹¤.
-//     3) ë¹„êµì  ì •ë°€(ë°€ë¦¬ì´ˆ ì´í•˜)í•˜ë©° ë¹„ìš©ì´ ë§¤ìš° ì ë‹¤.
-//     5) threadë‚˜ executor ë“±ì˜ ì‹¤ì‹œê°„ ì²˜ë¦¬ìš© íƒ€ì´ë¨¸ë¡œ ì‚¬ìš©ëœë‹¤.
-//     6) CGCIIì˜ tick timerëŠ” C++11ë¥¼ ê·¸ëŒ€ë¡œ ë”°ë¥¸ë‹¤.
+//     1) ´ÜÀÏ°ª(monotonic) Å¸ÀÌ¸Ó·Î 
+//     2) Àı´ë ½Ã°£º¸´Ù ½Ã°£ ºñ±³ ¹× ¿¬»êÀ» ¸ñÀûÀ¸·Î ÇÑ´Ù.
+//     3) ºñ±³Àû Á¤¹Ğ(¹Ğ¸®ÃÊ ÀÌÇÏ)ÇÏ¸ç ºñ¿ëÀÌ ¸Å¿ì Àû´Ù.
+//     5) thread³ª executor µîÀÇ ½Ç½Ã°£ Ã³¸®¿ë Å¸ÀÌ¸Ó·Î »ç¿ëµÈ´Ù.
+//     6) CGCIIÀÇ tick timer´Â C++11¸¦ ±×´ë·Î µû¸¥´Ù.
 //
 //-----------------------------------------------------------------------------
 void tutorial_TICK()
 {
 	//-----------------------------------------------------------------------------
 	//
-	// 1. time_point => íŠ¹ì • ì‹œê°„ê°’
-	//    duration   => time_pointê°„ì˜ ì°¨ì´
+	// 1. time_point => Æ¯Á¤ ½Ã°£°ª
+	//    duration   => time_point°£ÀÇ Â÷ÀÌ
 	// 
 	//    - chrono::tick::time_point
-	//      íŠ¹ì • ì‹œì ì˜ ì‹œê°„ì„ í‘œí˜„í•˜ëŠ” í‘œí˜„í•˜ëŠ” í˜•ìœ¼ë¡œ
-	//      'std::chrono::stead_timer::time_point'ì™€ ë™ì¼í•˜ë‹¤.
+	//      Æ¯Á¤ ½ÃÁ¡ÀÇ ½Ã°£À» Ç¥ÇöÇÏ´Â Ç¥ÇöÇÏ´Â ÇüÀ¸·Î
+	//      'std::chrono::stead_timer::time_point'¿Í µ¿ÀÏÇÏ´Ù.
 	// 
 	//    - chrono::tick::now()
-	//      í˜„ì¬ ì‹œì ì˜ ì‹œê°„ì„ ì–»ì„ ìˆ˜ ìˆë‹¤.
+	//      ÇöÀç ½ÃÁ¡ÀÇ ½Ã°£À» ¾òÀ» ¼ö ÀÖ´Ù.
 	// 
 	//    - chrono::tick::duration
-	//      time_pointerê°„ì˜ ì°¨ì´ ì¦‰ ì‹œê°„ ì°¨ë¥¼ ì˜ë¯¸í•œë‹¤.
-	//      ë‹¤ë¥¸ ë‹¨ìœ„ë¡œ ì„¤ì •ëœ ë‹¤ì–‘í•œ durationì´ ì¡´ì¬í•œë‹¤.
-	//      std::chrono::duration'ê³¼ ë™ì¼í•˜ë‹¤.
+	//      time_pointer°£ÀÇ Â÷ÀÌ Áï ½Ã°£ Â÷¸¦ ÀÇ¹ÌÇÑ´Ù.
+	//      ´Ù¸¥ ´ÜÀ§·Î ¼³Á¤µÈ ´Ù¾çÇÑ durationÀÌ Á¸ÀçÇÑ´Ù.
+	//      std::chrono::duration'°ú µ¿ÀÏÇÏ´Ù.
 	// 
-	//      1/1000ì´ˆ		chrono::tick::milliseconds (std::chrono::milliseconds)
-	//      ì´ˆ			chrono::tick::seconds (std::chrono::seconds)
-	//      ë¶„			chrono::tick::minutes (std::chrono::minutes)
-	//      ì‹œ			chrono::tick::hours (std::chrono::hours)
-	//      ì¼			chrono::tick::days
-	//      ì£¼			chrono::tick::weeks
+	//      1/1000ÃÊ	chrono::tick::milliseconds (std::chrono::milliseconds)
+	//      ÃÊ			chrono::tick::seconds (std::chrono::seconds)
+	//      ºĞ			chrono::tick::minutes (std::chrono::minutes)
+	//      ½Ã			chrono::tick::hours (std::chrono::hours)
+	//      ÀÏ			chrono::tick::days
+	//      ÁÖ			chrono::tick::weeks
 	//
 	//-----------------------------------------------------------------------------
-	// 1) í˜„ì¬ tick ì‹œê°„ì„ ì–»ëŠ”ë‹¤.
+	// 1) ÇöÀç tick ½Ã°£À» ¾ò´Â´Ù.
 	chrono::tick::time_point tick_now = chrono::tick::now();
 
-	// ì¶œë ¥) ì‹œê°„ì„ ì¶œë ¥í•œë‹¤. (tick ì‹œê°„ì€ í˜„ì¬ ì‹œê°„ì„ ì •í™•íˆ ë‚˜íƒ€ë‚´ì§€ëŠ” ëª»í•œë‹¤.)
-	std::cout << "1) tick::now()   "sv << to_string<char>(tick_now) << std::endl;
+	// Ãâ·Â) ½Ã°£À» Ãâ·ÂÇÑ´Ù. (tick ½Ã°£Àº ÇöÀç ½Ã°£À» Á¤È®È÷ ³ªÅ¸³»Áö´Â ¸øÇÑ´Ù.)
+	std::cout << "1) tick::now()   "sv << to_string(tick_now) << std::endl;
 
-	// ì¶œë ¥) ê¸°ì› ì´í›„ ì‹œê°„ì„ ì¶œë ¥í•œë‹¤.
+	// Ãâ·Â) ±â¿ø ÀÌÈÄ ½Ã°£À» Ãâ·ÂÇÑ´Ù.
 	std::cout << "time_since_epoch  "sv << tick_now.time_since_epoch().count() <<std::endl;
 
 
 	//-----------------------------------------------------------------------------
 	//
-	//  chrono::tick::durationì€ ë‹¤ë¥¸ ë‹¨ìœ„ì˜ chrono::tick::durationì˜ ì¡°í•©ìœ¼ë¡œ ì–»ì„ ìˆ˜ ìˆë‹¤.
+	//  chrono::tick::durationÀº ´Ù¸¥ ´ÜÀ§ÀÇ chrono::tick::durationÀÇ Á¶ÇÕÀ¸·Î ¾òÀ» ¼ö ÀÖ´Ù.
 	//
-	//    ì˜ˆ1) 2ì´ˆ 345ë°€ë¦¬ì´ˆ
+	//    ¿¹1) 2ÃÊ 345¹Ğ¸®ÃÊ
 	//         chrono::tick::duration t1_1 = tick::seconds(2) + tick::milliseconds(345);
-	//		   chrono::tick::duration t1_2 = std::chrono::seconds(2) + std::chrono::milliseconds(345); // C++ í‘œì¤€ std::chronoë„ ê·¸ëŒ€ë¡œ ì‚¬ìš©ê°€ëŠ¥
-	//		   chrono::tick::duration t1_2 = 2s + 345ms; // C++ std::chrono_literalë¡œë„ í‘œì‹œ ê°€ëŠ¥
+	//		   chrono::tick::duration t1_2 = std::chrono::seconds(2) + std::chrono::milliseconds(345); // C++ Ç¥ÁØ std::chronoµµ ±×´ë·Î »ç¿ë°¡´É
+	//		   chrono::tick::duration t1_2 = 2s + 345ms; // C++ std::chrono_literal·Îµµ Ç¥½Ã °¡´É
 	//
-	//    ì˜ˆ2) 3ë¶„ 12ì´ˆ
+	//    ¿¹2) 3ºĞ 12ÃÊ
 	//         chrono::tick::duration t2_1 = tick::minutes(3) + tick::seconds(12)
 	//		   chrono::tick::duration t2_2 = 2min + 345s;
 	//
-	//    ì˜ˆ3) 1ì‹œê°„ 0ë¶„ 12ì´ˆ 200ë¯¸ë¦¬ì´ˆ
+	//    ¿¹3) 1½Ã°£ 0ºĞ 12ÃÊ 200¹Ì¸®ÃÊ
 	//         chrono::tick::duration t3_1 = tick::hours(1) + tick::seconds(12) + tick::milliseconds(200)
 	//		   chrono::tick::duration t3_2 = 1h + 12s + 200ms;
 	//
 	//-----------------------------------------------------------------------------
-	// 2) durationì„ 2ì´ˆ 345msë¡œ ì„¤ì •í•œë‹¤.
+	// 2) durationÀ» 2ÃÊ 345ms·Î ¼³Á¤ÇÑ´Ù.
 	chrono::tick::duration tick_diff = 2s + 345ms;
 
-	// ì¶œë ¥) durationì„ Milliseondë¡œ ì¶œë ¥í•œë‹¤.
+	// Ãâ·Â) durationÀ» Milliseond·Î Ãâ·ÂÇÑ´Ù.
 	std::cout << "2) [2s 345ms]  "sv <<std::chrono::duration_cast<chrono::tick::milliseconds>(tick_diff).count() << "ms"sv << std::endl;
 
-	// Durationë§Œí¼ Sleepí•œë‹¤.
+	// Duration¸¸Å­ SleepÇÑ´Ù.
 	api::sleep_for(tick_diff);
 
-	// 3) í˜„ì¬ ì‹œê°„ì—ì„œ tick_nowì„ ë¹¼ë©´ ê·¸ ì°¨ì´ ë§Œí¼ì˜ ì°¨ì´(duration)ì„ ì–»ì„ ìˆ˜ ìˆë‹¤.
+	// 3) ÇöÀç ½Ã°£¿¡¼­ tick_nowÀ» »©¸é ±× Â÷ÀÌ ¸¸Å­ÀÇ Â÷ÀÌ(duration)À» ¾òÀ» ¼ö ÀÖ´Ù.
 	chrono::tick::duration tick_diff_now = chrono::tick::now() - tick_now;
 
-	// ì¶œë ¥) 
+	// Ãâ·Â) 
 	std::cout << "3) Differ Time after Sleep [2s 345ms]  "sv <<std::chrono::duration_cast<chrono::tick::milliseconds>(tick_diff_now).count() << "ms"sv <<std::endl;
 
 
 	//-----------------------------------------------------------------------------
 	//
-	// 2. chrono::tick::time_pointì™€ chrono::tick::duration ì—°ì‚°.
+	// 2. chrono::tick::time_point¿Í chrono::tick::duration ¿¬»ê.
 	//
-	//    - chrono::tick::time_pointì— chrono::tick::durationì„ ë”í•˜ë©´ chrono::tick::time_point ì‹œì ì—ì„œ
-	//      chrono::tick::duration ë§Œí¼ì˜ ì‹œê°„ì´ ë”í•´ì§„ chrono::tick::time_point(ì‹œì )ì„ ì–»ì„ ìˆ˜ ìˆë‹¤.
+	//    - chrono::tick::time_point¿¡ chrono::tick::durationÀ» ´õÇÏ¸é chrono::tick::time_point ½ÃÁ¡¿¡¼­
+	//      chrono::tick::duration ¸¸Å­ÀÇ ½Ã°£ÀÌ ´õÇØÁø chrono::tick::time_point(½ÃÁ¡)À» ¾òÀ» ¼ö ÀÖ´Ù.
 	//
-	//    - chrono::tick::time_pointì—ì„œ ë‹¤ë¥¸ ì‹œì ì˜ chrono::tick::time_pointë¥¼ ë¹¼ë©´ 
-	//      ê·¸ ì°¨ì´ chrono::tick::durationì„ ì–»ì„ ìˆ˜ ì´ë‹¤.
+	//    - chrono::tick::time_point¿¡¼­ ´Ù¸¥ ½ÃÁ¡ÀÇ chrono::tick::time_point¸¦ »©¸é 
+	//      ±× Â÷ÀÌ chrono::tick::durationÀ» ¾òÀ» ¼ö ÀÌ´Ù.
 	//
 	//-----------------------------------------------------------------------------
-	// 4) í˜„ì¬ ì‹œê°„ì—ì„œ 3ë¶„ 12ì´ˆ ì´í›„ì˜ ì‹œê°„ì„ ì–»ëŠ”ë‹¤.
+	// 4) ÇöÀç ½Ã°£¿¡¼­ 3ºĞ 12ÃÊ ÀÌÈÄÀÇ ½Ã°£À» ¾ò´Â´Ù.
 	chrono::tick::time_point tick_next = tick_now + 3min + 12s;
 
-	// ì¶œë ¥)
+	// Ãâ·Â)
 	std::cout << "4) NOW(" <<tick_now.time_since_epoch().count() <<") + [3min 12s]   "sv <<tick_next.time_since_epoch().count() << "ms"sv <<std::endl;
 
-	// ì¶œë ¥) ë‘ì¤„ë„ê¸°
+	// Ãâ·Â) µÎÁÙ¶ç±â
 	std::cout << std::endl << std::endl;
 
 
@@ -136,13 +136,13 @@ void tutorial_TICK()
 	//
 	// 4. duration_cast
 	//
-	//    - durationê°’ì„ ë°€ë¦¬ì´ˆ/ì´ˆ/ë¶„/ì‹œ/ì¼ ë“±ì˜ ì¼ì • ë‹¨ìœ„ì˜ ì •ìˆ˜ê°’ìœ¼ë¡œ ì–»ëŠ” ê²ƒì„ ë§í•œë‹¤.
+	//    - duration°ªÀ» ¹Ğ¸®ÃÊ/ÃÊ/ºĞ/½Ã/ÀÏ µîÀÇ ÀÏÁ¤ ´ÜÀ§ÀÇ Á¤¼ö°ªÀ¸·Î ¾ò´Â °ÍÀ» ¸»ÇÑ´Ù.
 	//
 	//-----------------------------------------------------------------------------
 
 	//-----------------------------------------------------------------------------
 	//
-	// 5. time_pointì™€ durationì˜ ì¶œë ¥
+	// 5. time_point¿Í durationÀÇ Ãâ·Â
 	//
 	//-----------------------------------------------------------------------------
 }

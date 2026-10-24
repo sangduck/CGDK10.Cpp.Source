@@ -1,0 +1,166 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "windows", "windows", "{07B53414-22E6-464D-8BA1-2A198618D0D5}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.net.socket.shared", "socket\CGDK10.net.socket.shared.vcxitems", "{0E6DEBE3-F24F-4935-9F55-ADF9F7D26E07}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.socket", "socket\CGDK10.net.socket.vs17.vcxproj", "{9C12A1D3-598E-4B1A-B7C7-67C838D14B14}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8E08592B-8D9C-4DD9-91CC-A018560DA8CE} = {8E08592B-8D9C-4DD9-91CC-A018560DA8CE}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.socket.http", "socket.http\CGDK10.net.socket.http.vs17.vcxproj", "{7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.socket.kafka", "socket.kafka\CGDK10.net.socket.kafka.vs17.vcxproj", "{DC702373-6AA8-4EE9-AE24-6A837B15E8FC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.socket.mail", "socket.mail\CGDK10.net.socket.mail.vs17.vcxproj", "{882F894A-4166-444A-A5CE-A0E5E7D14A5D}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.socket.mfc_controls", "mfc_controls\CGDK10.net.socket.mfc_controls.vs17.vcxproj", "{FD1C1343-18CC-4E0F-A817-724509415453}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.socket.crypt", "socket.crypt\CGDK10.net.socket.crypt.vs17.vcxproj", "{38F4B200-0C3B-47BD-998F-FB6D1DE9F39F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{708FA86B-0F99-473D-BD10-BD51819328DC} = {708FA86B-0F99-473D-BD10-BD51819328DC}
+	EndProjectSection
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.net.socket.mfc_controls.shared", "mfc_controls\CGDK10.net.socket.mfc_controls.shared.vcxitems", "{5351B858-CB59-483F-B329-67D47F9A7D44}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.net.socket.http.shared", "socket.http\CGDK10.net.socket.http.shared.vcxitems", "{79A9E477-6827-4EA9-8834-B4146EE4485F}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.net.socket.mail.shared", "socket.mail\CGDK10.net.socket.mail.shared.vcxitems", "{606BBF71-8448-4357-BADB-B28F3F220769}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "cgdk_info.shared", "..\common\cgdk_info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.net.socket.crypt.shared", "socket.crypt\CGDK10.net.socket.crypt.shared.vcxitems", "{94F89245-A64D-4993-B093-E95DB24788A8}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.net.socket.kafka.shared", "socket.kafka\CGDK10.net.socket.kafka.shared.vcxitems", "{6A5EB3A8-44B9-4485-8766-FD3F97B29E93}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unit_test.net_socket.http", "unit_test\unit_test.net_socket.http\unit_test.net_socket.http.vcxproj", "{8E3A1F52-6C4B-4D7E-9A1F-3B5C7D9E2F41}"
+	ProjectSection(ProjectDependencies) = postProject
+		{9C12A1D3-598E-4B1A-B7C7-67C838D14B14} = {9C12A1D3-598E-4B1A-B7C7-67C838D14B14}
+		{7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0} = {7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0}
+		{38F4B200-0C3B-47BD-998F-FB6D1DE9F39F} = {38F4B200-0C3B-47BD-998F-FB6D1DE9F39F}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unit_test.net_socket.kafka", "unit_test\unit_test.net_socket.kafka\unit_test.net_socket.kafka.vcxproj", "{A7C2D9E4-5B1F-4C3A-8E6D-2F9B4A1C7D53}"
+	ProjectSection(ProjectDependencies) = postProject
+		{9C12A1D3-598E-4B1A-B7C7-67C838D14B14} = {9C12A1D3-598E-4B1A-B7C7-67C838D14B14}
+		{DC702373-6AA8-4EE9-AE24-6A837B15E8FC} = {DC702373-6AA8-4EE9-AE24-6A837B15E8FC}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.system.object", "..\system\object\CGDK10.system.object.vs17.vcxproj", "{8E08592B-8D9C-4DD9-91CC-A018560DA8CE}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.system.util.crypt", "..\system\util.crypt\CGDK10.system.util.crypt.vs17.vcxproj", "{708FA86B-0F99-473D-BD10-BD51819328DC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.system.mfc_controls", "..\system\mfc_controls\CGDK10.system.mfc_controls.vs17.vcxproj", "{3810221C-D6CE-4EFD-A05F-97FB15D8CE61}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug.NDI|x64 = Debug.NDI|x64
+		Release|x64 = Release|x64
+		Release.NDI|x64 = Release.NDI|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8E08592B-8D9C-4DD9-91CC-A018560DA8CE}.Debug|x64.ActiveCfg = Debug|x64
+		{8E08592B-8D9C-4DD9-91CC-A018560DA8CE}.Debug|x64.Build.0 = Debug|x64
+		{8E08592B-8D9C-4DD9-91CC-A018560DA8CE}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{8E08592B-8D9C-4DD9-91CC-A018560DA8CE}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{8E08592B-8D9C-4DD9-91CC-A018560DA8CE}.Release|x64.ActiveCfg = Release|x64
+		{8E08592B-8D9C-4DD9-91CC-A018560DA8CE}.Release|x64.Build.0 = Release|x64
+		{8E08592B-8D9C-4DD9-91CC-A018560DA8CE}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{8E08592B-8D9C-4DD9-91CC-A018560DA8CE}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{708FA86B-0F99-473D-BD10-BD51819328DC}.Debug|x64.ActiveCfg = Debug|x64
+		{708FA86B-0F99-473D-BD10-BD51819328DC}.Debug|x64.Build.0 = Debug|x64
+		{708FA86B-0F99-473D-BD10-BD51819328DC}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{708FA86B-0F99-473D-BD10-BD51819328DC}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{708FA86B-0F99-473D-BD10-BD51819328DC}.Release|x64.ActiveCfg = Release|x64
+		{708FA86B-0F99-473D-BD10-BD51819328DC}.Release|x64.Build.0 = Release|x64
+		{708FA86B-0F99-473D-BD10-BD51819328DC}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{708FA86B-0F99-473D-BD10-BD51819328DC}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{3810221C-D6CE-4EFD-A05F-97FB15D8CE61}.Debug|x64.ActiveCfg = Debug|x64
+		{3810221C-D6CE-4EFD-A05F-97FB15D8CE61}.Debug|x64.Build.0 = Debug|x64
+		{3810221C-D6CE-4EFD-A05F-97FB15D8CE61}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{3810221C-D6CE-4EFD-A05F-97FB15D8CE61}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{3810221C-D6CE-4EFD-A05F-97FB15D8CE61}.Release|x64.ActiveCfg = Release|x64
+		{3810221C-D6CE-4EFD-A05F-97FB15D8CE61}.Release|x64.Build.0 = Release|x64
+		{3810221C-D6CE-4EFD-A05F-97FB15D8CE61}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{3810221C-D6CE-4EFD-A05F-97FB15D8CE61}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{9C12A1D3-598E-4B1A-B7C7-67C838D14B14}.Debug|x64.ActiveCfg = Debug|x64
+		{9C12A1D3-598E-4B1A-B7C7-67C838D14B14}.Debug|x64.Build.0 = Debug|x64
+		{9C12A1D3-598E-4B1A-B7C7-67C838D14B14}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{9C12A1D3-598E-4B1A-B7C7-67C838D14B14}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{9C12A1D3-598E-4B1A-B7C7-67C838D14B14}.Release|x64.ActiveCfg = Release|x64
+		{9C12A1D3-598E-4B1A-B7C7-67C838D14B14}.Release|x64.Build.0 = Release|x64
+		{9C12A1D3-598E-4B1A-B7C7-67C838D14B14}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{9C12A1D3-598E-4B1A-B7C7-67C838D14B14}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0}.Debug|x64.ActiveCfg = Debug|x64
+		{7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0}.Debug|x64.Build.0 = Debug|x64
+		{7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0}.Release|x64.ActiveCfg = Release|x64
+		{7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0}.Release|x64.Build.0 = Release|x64
+		{7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{DC702373-6AA8-4EE9-AE24-6A837B15E8FC}.Debug|x64.ActiveCfg = Debug|x64
+		{DC702373-6AA8-4EE9-AE24-6A837B15E8FC}.Debug|x64.Build.0 = Debug|x64
+		{DC702373-6AA8-4EE9-AE24-6A837B15E8FC}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{DC702373-6AA8-4EE9-AE24-6A837B15E8FC}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{DC702373-6AA8-4EE9-AE24-6A837B15E8FC}.Release|x64.ActiveCfg = Release|x64
+		{DC702373-6AA8-4EE9-AE24-6A837B15E8FC}.Release|x64.Build.0 = Release|x64
+		{DC702373-6AA8-4EE9-AE24-6A837B15E8FC}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{DC702373-6AA8-4EE9-AE24-6A837B15E8FC}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{882F894A-4166-444A-A5CE-A0E5E7D14A5D}.Debug|x64.ActiveCfg = Debug|x64
+		{882F894A-4166-444A-A5CE-A0E5E7D14A5D}.Debug|x64.Build.0 = Debug|x64
+		{882F894A-4166-444A-A5CE-A0E5E7D14A5D}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{882F894A-4166-444A-A5CE-A0E5E7D14A5D}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{882F894A-4166-444A-A5CE-A0E5E7D14A5D}.Release|x64.ActiveCfg = Release|x64
+		{882F894A-4166-444A-A5CE-A0E5E7D14A5D}.Release|x64.Build.0 = Release|x64
+		{882F894A-4166-444A-A5CE-A0E5E7D14A5D}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{882F894A-4166-444A-A5CE-A0E5E7D14A5D}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{FD1C1343-18CC-4E0F-A817-724509415453}.Debug|x64.ActiveCfg = Debug|x64
+		{FD1C1343-18CC-4E0F-A817-724509415453}.Debug|x64.Build.0 = Debug|x64
+		{FD1C1343-18CC-4E0F-A817-724509415453}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{FD1C1343-18CC-4E0F-A817-724509415453}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{FD1C1343-18CC-4E0F-A817-724509415453}.Release|x64.ActiveCfg = Release|x64
+		{FD1C1343-18CC-4E0F-A817-724509415453}.Release|x64.Build.0 = Release|x64
+		{FD1C1343-18CC-4E0F-A817-724509415453}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{FD1C1343-18CC-4E0F-A817-724509415453}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{38F4B200-0C3B-47BD-998F-FB6D1DE9F39F}.Debug|x64.ActiveCfg = Debug|x64
+		{38F4B200-0C3B-47BD-998F-FB6D1DE9F39F}.Debug|x64.Build.0 = Debug|x64
+		{38F4B200-0C3B-47BD-998F-FB6D1DE9F39F}.Debug.NDI|x64.ActiveCfg = Debug.NDI|x64
+		{38F4B200-0C3B-47BD-998F-FB6D1DE9F39F}.Debug.NDI|x64.Build.0 = Debug.NDI|x64
+		{38F4B200-0C3B-47BD-998F-FB6D1DE9F39F}.Release|x64.ActiveCfg = Release|x64
+		{38F4B200-0C3B-47BD-998F-FB6D1DE9F39F}.Release|x64.Build.0 = Release|x64
+		{38F4B200-0C3B-47BD-998F-FB6D1DE9F39F}.Release.NDI|x64.ActiveCfg = Release.NDI|x64
+		{38F4B200-0C3B-47BD-998F-FB6D1DE9F39F}.Release.NDI|x64.Build.0 = Release.NDI|x64
+		{8E3A1F52-6C4B-4D7E-9A1F-3B5C7D9E2F41}.Debug|x64.ActiveCfg = Debug|x64
+		{8E3A1F52-6C4B-4D7E-9A1F-3B5C7D9E2F41}.Debug|x64.Build.0 = Debug|x64
+		{8E3A1F52-6C4B-4D7E-9A1F-3B5C7D9E2F41}.Debug.NDI|x64.ActiveCfg = Debug|x64
+		{8E3A1F52-6C4B-4D7E-9A1F-3B5C7D9E2F41}.Release|x64.ActiveCfg = Release|x64
+		{8E3A1F52-6C4B-4D7E-9A1F-3B5C7D9E2F41}.Release|x64.Build.0 = Release|x64
+		{8E3A1F52-6C4B-4D7E-9A1F-3B5C7D9E2F41}.Release.NDI|x64.ActiveCfg = Release|x64
+		{A7C2D9E4-5B1F-4C3A-8E6D-2F9B4A1C7D53}.Debug|x64.ActiveCfg = Debug|x64
+		{A7C2D9E4-5B1F-4C3A-8E6D-2F9B4A1C7D53}.Debug|x64.Build.0 = Debug|x64
+		{A7C2D9E4-5B1F-4C3A-8E6D-2F9B4A1C7D53}.Debug.NDI|x64.ActiveCfg = Debug|x64
+		{A7C2D9E4-5B1F-4C3A-8E6D-2F9B4A1C7D53}.Release|x64.ActiveCfg = Release|x64
+		{A7C2D9E4-5B1F-4C3A-8E6D-2F9B4A1C7D53}.Release|x64.Build.0 = Release|x64
+		{A7C2D9E4-5B1F-4C3A-8E6D-2F9B4A1C7D53}.Release.NDI|x64.ActiveCfg = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9C12A1D3-598E-4B1A-B7C7-67C838D14B14} = {07B53414-22E6-464D-8BA1-2A198618D0D5}
+		{7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0} = {07B53414-22E6-464D-8BA1-2A198618D0D5}
+		{DC702373-6AA8-4EE9-AE24-6A837B15E8FC} = {07B53414-22E6-464D-8BA1-2A198618D0D5}
+		{882F894A-4166-444A-A5CE-A0E5E7D14A5D} = {07B53414-22E6-464D-8BA1-2A198618D0D5}
+		{FD1C1343-18CC-4E0F-A817-724509415453} = {07B53414-22E6-464D-8BA1-2A198618D0D5}
+		{38F4B200-0C3B-47BD-998F-FB6D1DE9F39F} = {07B53414-22E6-464D-8BA1-2A198618D0D5}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5B07BBC0-F378-426C-A826-581F5517210C}
+	EndGlobalSection
+EndGlobal

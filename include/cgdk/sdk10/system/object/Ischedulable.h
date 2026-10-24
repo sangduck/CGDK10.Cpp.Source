@@ -38,10 +38,10 @@ public:
 	[[nodiscard]] auto			next_tick() const noexcept { return this->m_tick_next; }
 
 	[[nodiscard]] auto			schedulable_manager() const noexcept { return this->m_pschedulable_manager; }
-	[[nodiscard]] auto			executor() const noexcept { scoped_lock(this->m_cs_pexecutor) { return this->m_pexecutor; } }
+	[[nodiscard]] auto			executor() const noexcept { std::lock_guard lock(this->m_lockable_pexecutor); return this->m_pexecutor; }
 			void				executor(const object_ptr<Iexecutor>& _pexecutor) noexcept { this->executor(object_ptr<Iexecutor>(_pexecutor)); }
-			void				executor(object_ptr<Iexecutor>&& _pexecutor) noexcept { scoped_lock(this->m_cs_pexecutor) { this->m_pexecutor = std::move(_pexecutor); } }
-	[[nodiscard]] bool			has_executor() const noexcept { scoped_lock(this->m_cs_pexecutor) { return this->m_pexecutor.exist(); } }
+			void				executor(object_ptr<Iexecutor>&& _pexecutor) noexcept { std::lock_guard lock(this->m_lockable_pexecutor); this->m_pexecutor = std::move(_pexecutor); }
+	[[nodiscard]] bool			has_executor() const noexcept { std::lock_guard lock(this->m_lockable_pexecutor); return this->m_pexecutor.exist(); }
 
 	[[nodiscard]] const auto&	statistics() const noexcept { return this->m_statistics_schedulable;}
 
@@ -51,11 +51,13 @@ public:
 	virtual	bool				process_schedule() PURE;
 
 protected:
-			lockable<>			m_cs_pexecutor;
+	mutable	lock_object			m_lockable_pexecutor;
 			object_ptr<Iexecutor> m_pexecutor;
 
 			object_ptr<schedulable::manager> m_pschedulable_manager;
 			chrono::tick::time_point m_tick_next = (chrono::tick::max)();
+			object_ptr<Iexecutable> m_pexecutable_schedule;		// execution object posted to the scheduler (managed by schedulable::manager)
+			uint8_t				m_schedule_state = 0;			// 0: idle, 1: pending (in scheduler), 2: running
 			statistics::schedulable m_statistics_schedulable;
 
 			friend class schedulable::manager;

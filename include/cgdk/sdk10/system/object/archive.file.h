@@ -38,30 +38,30 @@ class archive::file :
 	public						object::Ninitializable_startable,
 	public						object::Nnameable,
 	virtual public				Iarchive,
-	virtual public				Iexecutable
+	virtual public				Iexecutable,
+	private						non_copyable
 {
 // constructor/destructor)
 public:
 			file() noexcept {};
-			file(std::string_view _name) : object::Nnameable(_name) {};
 	virtual ~file() noexcept {};
 
 // public)
 public:
 			struct START_PARAMETER
 			{
-				std::string_view filename;
-				eFILE_OPERATION file_operation = eFILE_OPERATION::NONE;
-				eFILE_LOCATION	file_location = eFILE_LOCATION::DEFAULT;
-				bool			is_create_new = false;
-				bool			is_instant_open = false;
+				std::string		filename;
+				eFILE_OPERATION file_operation{ eFILE_OPERATION::NONE };
+				eFILE_LOCATION	file_location{ eFILE_LOCATION::DEFAULT };
+				bool			is_create_new{ false };
+				bool			is_instant_open{ false };
 			};
 
 // public)
 public:
 			result_code			start() { context _context; return this->start(_context);}
-			result_code			start(const START_PARAMETER& _parameter) { return this->start(context{ buffer_view((char*)&_parameter, sizeof(START_PARAMETER)) }); }
-			result_code			start(START_PARAMETER&& _parameter) { return this->start(context{ buffer_view((char*)&_parameter, sizeof(START_PARAMETER)) }); }
+			result_code			start(const START_PARAMETER& _parameter) { context temp; temp = buffer_view((char*)&_parameter, sizeof(START_PARAMETER));  return this->start(temp); }
+			result_code			start(START_PARAMETER&& _parameter) { context temp; temp = buffer_view((char*)&_parameter, sizeof(START_PARAMETER));  return this->start(temp); }
 			result_code			start(const context& _context) { context context_copy(_context); return this->start(context_copy);}
 	virtual	result_code			start(context& _context) override { return this->object::Nstartable::start(_context); }
 			
@@ -149,10 +149,16 @@ protected:
 			bool				m_instant_open = false;
 
 	// 6) For write
-			lockable<>			m_lockable_buffer;
+			lock_object			m_lockable_buffer;
 			bool				m_is_write = false;
 			std::list<shared_buffer> m_list_buffer_queuing;
-			shared_buffer		m_buffer_sended;
+			shared_buffer		m_buffer_sent;
+
+	// - queues a buffer while writing (with m_lockable_buffer locked)
+	//   a large buffer is queued as it is (no copy : the caller must not change it after the write)
+	//   a small buffer is copied into a queue buffer of this file (fewer writes)
+			void				_process_queue_buffer(const shared_buffer& _buffer);
+			bool				m_is_back_owned = false;	// - the last queued buffer is a copy buffer of this file
 		#if defined(_WIN32)
 			size_t				m_file_length = 0;
 		#elif defined(__linux__) || defined(__ANDROID__)

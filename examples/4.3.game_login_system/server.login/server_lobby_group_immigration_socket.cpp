@@ -115,11 +115,11 @@ int ServerLobby::CGroupImmigrationSocket::OnMessage_REQUEST_CERTIFICATION(CGNETM
 	// 3) Message Casting
 	auto	pSocket = _msg.GetSource<ServerLobby::CSocket>();
 
-	// check) pSocket이 nullptr이면 안됀다.
+	// check) pSocket이 nullptr이면 안 된다.
 	CGASSERT_ERROR(pSocket != nullptr);
 
 	// 4) Server 정보를 저장한다.
-	scoped_lock(pSocket->m_ServerInfo)
+	SCOPED_LOCK(pSocket->m_ServerInfo)
 	{
 		pSocket->m_ServerInfo	 = _msg.Buffer.front<SERVER_INFO>(8);
 	}
@@ -128,10 +128,10 @@ int ServerLobby::CGroupImmigrationSocket::OnMessage_REQUEST_CERTIFICATION(CGNETM
 	pSocket->Send(Message_ACCEPT_CERTICIATION());
 
 	// 6) group Login으로 옮긴다.
-	g_pService->m_pgroupServerLobby->EnterMember(pSocket);
+	g_pservice->m_pgroupServerLobby->EnterMember(pSocket);
 
 	// View)
-	g_pService->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_LOBBYSERVER_UPDATE, (DWORD_PTR)pSocket));
+	g_pservice->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_LOBBYSERVER_UPDATE, (DWORD_PTR)pSocket));
 
 	// Return)
 	return	1;

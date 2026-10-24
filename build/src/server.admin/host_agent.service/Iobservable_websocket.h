@@ -31,8 +31,7 @@ class Iobservable_websocket :
 	public						net::io::messageable::Nbase
 {
 protected:
-			Iobservable_websocket() {}
-	explicit Iobservable_websocket(const std::string_view _name);
+			Iobservable_websocket();
 	virtual ~Iobservable_websocket();
 
 private:
@@ -40,6 +39,7 @@ private:
 	virtual	void				on_destroy() override;
 	virtual	void				on_start(context& _context) override;
 	virtual	void				on_stop() override;
+	virtual result_code			on_message(sMESSAGE_NETWORK& /*_msg*/) override { return eRESULT::BYPASS; }
 
 public:
 			std::string_view	m_webpage_str_target;

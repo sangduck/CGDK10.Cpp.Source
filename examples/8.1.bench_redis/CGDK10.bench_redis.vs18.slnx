@@ -1,0 +1,6 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="1.basic\CGDK.bench_redis.basic.vs18.vcxproj" Id="8edbb5a7-b692-49eb-b05d-08d5cdbb7a5e" />
+</Solution>

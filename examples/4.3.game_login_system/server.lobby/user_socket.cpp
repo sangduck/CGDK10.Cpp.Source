@@ -12,7 +12,7 @@ User::CSocket::~CSocket()
 void User::CSocket::OnConnect(CGNet::IO::IConnective* /*_pConnective*/)
 {
 	// 1) Enter group User Immigration
-	g_pService->m_pgroupUserImmigration->EnterMember(this);
+	g_pservice->m_pgroupUserImmigration->EnterMember(this);
 }
 
 void User::CSocket::OnDisconnect(uint32_t /*_Reason*/)

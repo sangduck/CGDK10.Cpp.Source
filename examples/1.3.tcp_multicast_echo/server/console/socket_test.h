@@ -1,8 +1,9 @@
-﻿#pragma once
+#pragma once
 
 class socket_tcp :
 	public net::io::socket::tcp::Ndefault,
 	public net::io::connectable::tcp::Ndefault,
+	public net::io::connect_notify::tcp::Ndefault,
 	public net::io::sendable::Ntcp_async_gather_buffered,
 	public net::io::send_request::tcp::Ndefault,
 	public net::io::sender::Nstream_header<uint32_t>,

@@ -1,4 +1,4 @@
-﻿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -76,7 +76,7 @@ int main()
 			{
 			// disconnect
 			case	'6':
-					scoped_lock(pacceptor->get_lockable())
+					SCOPED_LOCK(pacceptor->get_lockable())
 					{
 						if (pacceptor->count() != 0)
 							(*pacceptor->begin())->closesocket();
@@ -88,7 +88,7 @@ int main()
 
 			// closesocket
 			case	'8':
-					scoped_lock(pacceptor->get_lockable())
+					SCOPED_LOCK(pacceptor->get_lockable())
 					{
 						if (pacceptor->count() != 0)
 							(*pacceptor->begin())->disconnect();

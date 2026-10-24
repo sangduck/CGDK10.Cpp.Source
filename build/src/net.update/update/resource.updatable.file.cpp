@@ -1,11 +1,28 @@
-﻿#include "pch.h"
+#include "pch.h"
+
+namespace
+{
+	// closes a file handle when leaving the scope (normal return or exception)
+	struct file_handle_closer
+	{
+		CGDK::FILE_HANDLE handle;
+		~file_handle_closer() { if (this->handle != CGDK::INVALID_FILE_HANDLE) CGDK::api::file::close(this->handle); }
+	};
+
+	// configuration string (native narrow encoding) -> UTF-8 (the encoding every resource string carries)
+	std::string to_utf8_from_native(const std::string& _native)
+	{
+		const auto u8 = std::filesystem::path(_native).u8string();
+		return std::string(reinterpret_cast<const char*>(u8.data()), u8.size());
+	}
+}
 
 
 CGDK::update::UPDATABLE_ID _get_unique_updatable_id() noexcept
 {
-	static CGDK::update::UPDATABLE_ID g_updatable_id = 0;
+	static std::atomic<CGDK::update::UPDATABLE_ID> g_updatable_id{ 0 };
 
-	auto v = ++g_updatable_id;
+	auto v = g_updatable_id.fetch_add(1, std::memory_order_relaxed) + 1;
 
 	// check)
 	CGASSERT_ERROR(v != 0);
@@ -21,19 +38,19 @@ CGDK::resource_pos_src _get_updatable_resource_pos_src(CGDK::context& _context)
 	// 1) path_base
 	if (std::string str_find = _context.find("path_base"sv, "pathbase"sv); str_find.empty() == false)
 	{
-		pos.path_base = std::move(str_find);
+		pos.path_base = to_utf8_from_native(str_find);
 	}
 
 	// 2) path_base
 	if (std::string str_find = _context.find("path"sv); str_find.empty() == false)
 	{
-		pos.path = std::move(str_find);
+		pos.path = to_utf8_from_native(str_find);
 	}
 
 	// 3) path_base
 	if (std::string str_find = _context.find("filename"sv, "file_name"sv); str_find.empty() == false)
 	{
-		pos.filename = std::move(str_find);
+		pos.filename = to_utf8_from_native(str_find);
 	}
 
 	// return)
@@ -48,13 +65,13 @@ CGDK::resource_pos_dst _get_updatable_resource_pos_dst(CGDK::context& _context)
 	// 2) path_base
 	if (std::string str_find = _context.find("path"sv); str_find.empty() == false)
 	{
-		pos.path = std::move(str_find);
+		pos.path = to_utf8_from_native(str_find);
 	}
 
 	// 3) path_base
 	if (std::string str_find = _context.find("filename"sv, "file_name"sv); str_find.empty() == false)
 	{
-		pos.filename = std::move(str_find);
+		pos.filename = to_utf8_from_native(str_find);
 	}
 
 	// return)
@@ -92,7 +109,7 @@ CGDK::resource::Iupdatable::INITIALIZE_PARAMETER get_parameter_resource_updatabl
 
 		if (context_options.is_valid())
 		{
-			// delcare)
+			// declare)
 			CGDK::resource::eOPTION options = CGDK::resource::eOPTION::NONE;
 
 			for (auto& iter : context_options)
@@ -178,7 +195,7 @@ CGDK::result_code CGDK::resource::updatable::file::_process_initializing(context
 		INITIALIZE_PARAMETER parameter;
 
 		// 1) parsing socket setting options
-		if (_context.type() == eCONTEXT_VALUE_TYPE::BUFFER_)
+		if (_context.type() == context::value_type_t::buffer_)
 		{
 			parameter = _context.v.value_buffer.front<INITIALIZE_PARAMETER>();
 		}
@@ -203,7 +220,7 @@ CGDK::result_code CGDK::resource::updatable::file::_process_initializing(context
 		auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string_view();
 
 		// log) 
-		LOG_ERROR << "(excp) exception occure on '_process_starting' ['"sv << pname << "']"sv;
+		LOG_ERROR << "(excp) exception occurred on '_process_starting' ['"sv << pname << "']"sv;
 
 		// reraise)
 		throw;
@@ -215,7 +232,7 @@ CGDK::result_code CGDK::resource::updatable::file::_process_initializing(context
 		auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string_view();
 
 		// log) 
-		LOG_ERROR << "(excp) exception occure on '_process_starting' ['"sv << pname << "']"sv;
+		LOG_ERROR << "(excp) exception occurred on '_process_starting' ['"sv << pname << "']"sv;
 
 		// reraise)
 		throw;
@@ -270,7 +287,7 @@ CGDK::shared_buffer CGDK::resource::updatable::file::get_block(uint64_t _pos)
 	// declare)
 	CGDK::shared_buffer buf;
 
-	scoped_lock(this->m_cs_info)
+	SCOPED_LOCK(this->m_lockable_info)
 	{
 		// check)
 		RETURN_IF(_pos >= this->m_meta_info.size, buf);
@@ -361,32 +378,42 @@ void CGDK::resource::updatable::file::process_resource_load(const sINITIALIZE_IN
 	// check) 
 	THROW_IF(file_handle == INVALID_FILE_HANDLE, throwable::failure(eRESULT::FAIL_TO_OPEN, 0, "fail to to open file"sv), LOG_ERROR << "     (!) fail to to open file");
 
+	// - close the file when leaving this function
+	file_handle_closer file_closer{ file_handle };
+
 	// 5) get file length
 	file_meta_info.size = CGDK::api::file::get_length(file_handle);
 
-	// declare) 
+	// 6) file blocks (the whole file is read and, if requested, compressed once here; get_block() only hands out ready blocks)
 	std::vector<shared_buffer> vector_buffer;
+	vector_buffer.reserve(static_cast<size_t>((file_meta_info.size + file_meta_info.block_size - 1) / file_meta_info.block_size));
 
-	// 6) reserve
-	vector_buffer.reserve(file_meta_info.size / file_meta_info.block_size + 1);
-
-	// 7) get
+	// 7) block meta
 	sMETA_FILE_BLOCK meta_file_block;
 	meta_file_block.id = file_meta_info.id;
 	meta_file_block.pos = 0;
 	meta_file_block.size = 0;
 	meta_file_block.flag = _initlaize_updable_parameter.options;
 
-	// 8) get flag
-	bool is_bcompress = (_initlaize_updable_parameter.options & resource::eOPTION::BLOCK_COMPRESSED) == resource::eOPTION::BLOCK_COMPRESSED;
+	// 8) compression flag
+	const bool is_bcompress = (_initlaize_updable_parameter.options & resource::eOPTION::BLOCK_COMPRESSED) == resource::eOPTION::BLOCK_COMPRESSED;
 
-	// declare) 
+	// - scratch buffer reused for every block's compression (zlib may need slightly more than the source size)
+	shared_buffer buf_compress_scratch;
+
+	if (is_bcompress)
+	{
+		buf_compress_scratch = alloc_shared_buffer(file_meta_info.block_size * 2 + 64);
+	}
+
+	// declare)
 	edc::md5 md5_file;
 
 	// 9) initialize md5
 	md5_file.initialize();
 
-	do
+	// 10) read all blocks
+	while (meta_file_block.pos < file_meta_info.size)
 	{
 		// - get block size
 		meta_file_block.size = (meta_file_block.pos + file_meta_info.block_size <= file_meta_info.size) ? file_meta_info.block_size : (file_meta_info.size - meta_file_block.pos);
@@ -397,7 +424,7 @@ void CGDK::resource::updatable::file::process_resource_load(const sINITIALIZE_IN
 		// - reserve
 		buf_block.append<sMETA_FILE_BLOCK>();
 
-		// - set meta info
+		// - read file block
 		auto size_read = CGDK::api::file::read(file_handle, meta_file_block.size, buf_block.data() + CGDK::get_size_of(meta_file_block));
 
 		// check)
@@ -416,19 +443,16 @@ void CGDK::resource::updatable::file::process_resource_load(const sINITIALIZE_IN
 		}
 		else
 		{
-			// - alloc shared buffer
-			auto temp_buf = alloc_shared_buffer(size_read * 2);
-
-			// declare) 
+			// declare)
 			buffer_view buf_temp_source(buf_block.data() + sizeof(sMETA_FILE_BLOCK), size_read);
 
-			// - compress block
-			auto temp_compressed = CGDK::compress::zip(buffer_view(temp_buf.data(), temp_buf.get_remained_size()), buf_temp_source);
+			// - compress block into the scratch buffer
+			auto temp_compressed = CGDK::compress::zip(buffer_view(buf_compress_scratch.data(), buf_compress_scratch.get_remained_size()), buf_temp_source);
 
-			// - 만약 압축된 크기가 원본의 90%보다 작을 경우에만 압축을 적용한다.
+			// - keep the compressed block only when it is smaller than 90% of the original
 			if ((buf_temp_source.size() / 10 * 9) > temp_compressed.size())
 			{
-				// - adde resource::eOPTION::BLOCK_COMPRESSED
+				// - add resource::eOPTION::BLOCK_COMPRESSED
 				meta_file_block.flag = meta_file_block.flag | resource::eOPTION::BLOCK_COMPRESSED;
 
 				// - copy compressed data
@@ -444,7 +468,7 @@ void CGDK::resource::updatable::file::process_resource_load(const sINITIALIZE_IN
 			}
 		}
 
-		// - append buf
+		// - write block head info
 		buf_block.front<sMETA_FILE_BLOCK>() = meta_file_block;
 
 		// - update
@@ -452,27 +476,25 @@ void CGDK::resource::updatable::file::process_resource_load(const sINITIALIZE_IN
 
 		// - push back
 		vector_buffer.push_back(std::move(buf_block));
-	} while (meta_file_block.pos < file_meta_info.size);
-
-	// check)
-	CGASSERT_ERROR(file_handle != INVALID_FILE_HANDLE)
-
-	// 10) close file
-	CGDK::api::file::close(file_handle);
+	}
 
 	// 11) get last file time
-	file_meta_info.time_write = std::filesystem::last_write_time(full_file_path.string());
+	file_meta_info.time_write = std::filesystem::last_write_time(full_file_path);
 
-	// 12) 최종 md5 구하기
+	// 12) 理쒖쥌 md5 援ы븯湲?
 	md5_file.padding();
 	md5_file.get_md5(&file_meta_completion.check_code);
 
 	// log) 
 	LOG_INFO << "      - file size: "sv << file_meta_info.size << " bloco size:"sv << file_meta_info.block_size;
-	LOG_INFO << NFMT::format("        md5: {:08x} {:08x} {:08x} {:08x}", file_meta_completion.check_code.data.at(0), file_meta_completion.check_code.data.at(1), file_meta_completion.check_code.data.at(2), file_meta_completion.check_code.data.at(3));
+	LOG_INFO << "        md5: "sv
+		<< CGDK::stream_hex(file_meta_completion.check_code.data.at(0), 8) << " "
+		<< CGDK::stream_hex(file_meta_completion.check_code.data.at(1), 8) << " "
+		<< CGDK::stream_hex(file_meta_completion.check_code.data.at(2), 8) << " "
+		<< CGDK::stream_hex(file_meta_completion.check_code.data.at(3), 8);
 
 	// 13) 
-	scoped_lock(this->m_cs_info)
+	SCOPED_LOCK(this->m_lockable_info)
 	{
 		this->m_meta_info = std::move(file_meta_info);
 		this->m_meta_completion = std::move(file_meta_completion);

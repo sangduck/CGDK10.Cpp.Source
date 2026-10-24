@@ -41,7 +41,7 @@ public:
 	[[nodiscard]] sSESSION_ID	get_session_id() const noexcept { return m_id_session; }
 			bool				send_restoreable(Itransactable* _ptransactable);
 			bool				send_restoreable(eTRANSACTION_TYPE _command, const sCHECKIN_ID& _cid, sREQUEST_ID _rid, eRESULT _result, const shared_buffer& _buf_response);
-			bool				send_restoreable_control_resquest(eTRANSACTION_TYPE _command, const sCHECKIN_ID& _cid, sREQUEST_ID _rid, eRESULT _result);
+			bool				send_restoreable_control_request(eTRANSACTION_TYPE _command, const sCHECKIN_ID& _cid, sREQUEST_ID _rid, eRESULT _result);
 			void				process_send_ack(uint64_t _send_sequence) noexcept;
 			void				process_receive_ack(uint64_t _receive_sequence) noexcept;
 
@@ -57,18 +57,19 @@ private:
 // implementation) 
 public:
 	// 3) Checkined Account from this socket
-			lockable<circular_list<sCHECKIN_ID>> m_list_entity_checkined;
+			lock_object			m_lockable_list_entity_checkined;
+			circular_list<sCHECKIN_ID> m_list_entity_checkined;
 
 			sREPOSITORY_ID		m_rid_remote;
 			sSESSION_ID			m_id_session;
 			object_ptr<restore>	m_prestore;
 
 	// 4) send sequence
-			lockable<>			m_lockable_send_sequence;
+			lock_object			m_lockable_send_sequence;
 			uint64_t			m_send_sequence = 0;
 			uint64_t			m_send_sequence_ack = 0;
 			circular_list<shared_buffer> m_send_sequence_buffer;
-			std::atomic<uint64_t> m_receive_sequence = 0;
+			CGDK::statistics::stat_counter<uint64_t> m_receive_sequence{ 0 };	// - 받은 sequence (이 socket의 수신 thread만 쓴다 : relaxed. 메시지마다 xchg가 없다)
 };
 
 

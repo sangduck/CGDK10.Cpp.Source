@@ -22,8 +22,10 @@ schedulable::system::exception_observer::~exception_observer() noexcept
 bool schedulable::system::exception_observer::process_on_register()
 {
 	// 1) set dump manager
-	scoped_lock(this->m_pmanager_dump)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_pmanager_dump);
+
 		this->m_pmanager_dump = dump_manager::instance();
 	}
 
@@ -36,11 +38,11 @@ bool schedulable::system::exception_observer::process_on_register()
 
 void schedulable::system::exception_observer::process_on_unregister()
 {
+	// lock)
+	std::lock_guard lock(this->m_lockable_pmanager_dump);
+
 	// 1) reset dump manager
-	scoped_lock(this->m_pmanager_dump)
-	{
-		this->m_pmanager_dump.reset();
-	}
+	this->m_pmanager_dump.reset();
 }
 
 bool schedulable::system::exception_observer::process_schedule()
@@ -49,25 +51,29 @@ bool schedulable::system::exception_observer::process_schedule()
 	auto tick_now = chrono::tick::now();
 
 	// check) Next Tick보다 현재 tick이 크면 그냥 되돌린다.
-	RETURN_IF(tick_now < this->m_tick_next, false);
+	if(tick_now < this->m_tick_next)
+		return false;
 
 	// declare) 
 	object_ptr<dump_manager> pmanager_exception;
 
 	// 2) Pool Manager를 복사한다.
-	scoped_lock(this->m_pmanager_dump)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_pmanager_dump);
+
 		pmanager_exception = this->m_pmanager_dump;
 	}
 
 	// check) 
-	RETURN_IF(pmanager_exception.empty(), true);
+	if(pmanager_exception.empty())
+		return true;
 
 	// 3) Object Pool을 sustain한다.
 	pmanager_exception->dispatch_exception_message_all();
 
 	// 4) Tick을 Update한다.
-	this->m_tick_next = this->m_tick_next + this->m_tick_diff_execute;
+	this->process_advance_next_tick();
 
 	// return)
 	return true;

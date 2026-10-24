@@ -59,71 +59,10 @@ wchar_t* get_filename_only(wchar_t* _dest, const wchar_t* _source)
 	return	_dest;
 }
 
-char16_t* get_filename_only(char16_t* _dest, const char16_t* _source)
+
+resource::manager::manager() noexcept
 {
-	const int	tempLength	 = static_cast<int>(__strlen(_source)) - 1;
-	int			tempPP		 = tempLength;
-	int			tempStart	 = 0;
-	int			tempEnd		 = tempPP - 1;
-	while (tempPP)
-	{
-		if (_source[tempPP] == u'.')
-		{
-			tempEnd = tempPP;
-		}
-
-		if (_source[tempPP] == u'\\' || _source[tempPP] == u'/')
-		{
-			tempStart = tempPP + 1;
-			break;
-		}
-
-		tempPP--;
-	}
-	memcpy((void*)_dest, (void*)&_source[tempStart], (static_cast<size_t>(tempEnd) - tempStart + 1) * sizeof(char16_t));
-	_dest[tempEnd - tempStart] = 0;
-
-	// return) 
-	return	_dest;
-}
-
-char32_t* get_filename_only(char32_t* _dest, const char32_t* _source)
-{
-	const int	tempLength	 = static_cast<int>(__strlen(_source)) - 1;
-	int			tempPP		 = tempLength;
-	int			tempStart	 = 0;
-	int			tempEnd		 = tempPP - 1;
-	while (tempPP)
-	{
-		if (_source[tempPP] == U'.')
-		{
-			tempEnd = tempPP;
-		}
-
-		if (_source[tempPP] == U'\\' || _source[tempPP] == U'/')
-		{
-			tempStart = tempPP + 1;
-			break;
-		}
-
-		tempPP--;
-	}
-	memcpy((void*)_dest, (void*)&_source[tempStart], (static_cast<size_t>(tempEnd) - static_cast<size_t>(tempStart) + 1) * sizeof(char32_t));
-	_dest[tempEnd - tempStart] = 0;
-
-	// return) 
-	return	_dest;
-}
-
-resource::manager::manager() noexcept :
-	object::Nnameable("resource_manager"),
-#if defined(__ANDROID__)
-	m_activity(nullptr),
-#endif
-	m_vector_path(),
-	m_map_resources()
-
-{
+	this->name("resource_manager"sv);
 }
 
 resource::manager::~manager() noexcept
@@ -137,17 +76,17 @@ result_code resource::manager::destroy() noexcept
 
 void resource::manager::initialize_instance()
 {
-	scoped_lock(m_s_lockable_create)
-	{
-		// check)
-		RETURN_IF(m_s_pinstance.exist());
+	// lock)
+	std::lock_guard<std::mutex> lock(m_s_lockable_create);
+
+	// check)
+	RETURN_IF(m_s_pinstance.exist());
 		
-		// 1) create manager
-		auto pmanager = _make_own_raw<resource::manager>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL); 
+	// 1) create manager
+	auto pmanager = _make_own_raw<resource::manager>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL); 
 		
-		// 2) set manager
-		m_s_pinstance = std::move(pmanager);
-	}
+	// 2) set manager
+	m_s_pinstance.exchange_release(std::move(pmanager));
 }
 
 void resource::manager::set_instance(own_ptr<manager>&& _pinstance)
@@ -155,14 +94,14 @@ void resource::manager::set_instance(own_ptr<manager>&& _pinstance)
 	// declare)
 	own_ptr<manager> pinstance_pre;
 
-	scoped_lock(m_s_lockable_create)
-	{
-		// 1) move old instance
-		pinstance_pre = std::move(m_s_pinstance);
+	// lock)
+	std::lock_guard<std::mutex> lock(m_s_lockable_create);
 
-		// 2) set new instance
-		m_s_pinstance = std::move(_pinstance);
-	}
+	// 1) move old instance
+	pinstance_pre = std::move(m_s_pinstance);
+
+	// 2) set new instance
+	m_s_pinstance.exchange_release(std::move(_pinstance));
 
 	// 3) reset old instance
 	pinstance_pre.reset();
@@ -173,8 +112,10 @@ void resource::manager::reset_instance() noexcept
 	// declare)
 	own_ptr<manager> pinstance;
 
-	scoped_lock(m_s_lockable_create)
 	{
+		// lock)
+		std::lock_guard<std::mutex> lock(m_s_lockable_create);
+
 		// 1) move instance
 		pinstance = std::move(m_s_pinstance);
 
@@ -191,8 +132,10 @@ bool resource::manager::register_resource_path(const std::string& _path)
 	// check) _path이 nullptr이면 false를 리턴한다.
 	RETURN_IF(_path.empty(), false);
 
-	scoped_lock(m_vector_path)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_vector_path);
+
 		// 1) 해당하는 Resource를 찾는다.
 		const auto iter_find = std::find(m_vector_path.begin(), m_vector_path.end(), _path);
 
@@ -212,8 +155,10 @@ bool resource::manager::register_resource_path(const std::string& _path)
 
 bool resource::manager::unregister_resource_path(const std::string& _path) noexcept
 {
-	scoped_lock(m_vector_path)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_vector_path);
+
 		// 1) 해당하는 Resource를 찾는다.
 		auto iter_find = std::find(m_vector_path.begin(), m_vector_path.end(), _path);
 
@@ -242,13 +187,15 @@ void resource::manager::register_resource(Iresource* _presource)
 	// check) name이 nullptr이면 Exception을 던진다.
 	THROW_IF(str_name.empty(), throwable::failure(eRESULT::NO_INITIALIZED));
 
-	scoped_lock(m_map_resources)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_map_resources);
+
 		// 2) 해당하는 Resource를 찾는다.
 		auto iter_find = m_map_resources.find(str_name.data());
 
 		// check) 이미 동일한 것이 존재하면 Exception을 던진다.
-		THROW_IF(iter_find != m_map_resources.end(), throwable::failure(eRESULT::ALEADY_EXIST));
+		THROW_IF(iter_find != m_map_resources.end(), throwable::failure(eRESULT::ALREADY_EXIST));
 
 		// 3) 해당 Resource를 추가한다.
 		m_map_resources.emplace(str_name.data(), _presource);
@@ -256,8 +203,10 @@ void resource::manager::register_resource(Iresource* _presource)
 }
 bool resource::manager::unregister_resource(Iresource* _presource) noexcept
 {
-	scoped_lock(m_map_resources)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_map_resources);
+
 		// 1) 해당하는 Resource를 찾는다.
 		auto iter_find = m_map_resources.find(_presource->name().data());
 
@@ -275,8 +224,10 @@ bool resource::manager::unregister_resource(Iresource* _presource) noexcept
 // 이름으로 찾아 제거한다.   [12/27/2016 BSH]
 bool resource::manager::unregister_resource(const std::string& _name) noexcept
 {
-	scoped_lock(m_map_resources)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_map_resources);
+
 		// 1) 해당하는 Resource를 찾는다.
 		auto iter_find = m_map_resources.find(_name);
 
@@ -296,8 +247,10 @@ object_ptr<Iresource> resource::manager::find(const std::string& _name) noexcept
 	// declare) 
 	object_ptr<Iresource> pResource;
 
-	scoped_lock(m_map_resources)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_map_resources);
+
 		// 1) find 한다.
 		auto iter_find = m_map_resources.find(_name);
 
@@ -309,7 +262,7 @@ object_ptr<Iresource> resource::manager::find(const std::string& _name) noexcept
 	}
 
 	// return) 
-	return	pResource;
+	return pResource;
 }
 
 

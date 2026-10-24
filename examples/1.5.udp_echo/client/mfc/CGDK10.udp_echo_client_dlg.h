@@ -1,14 +1,14 @@
-ï»¿
-// tcp_echo_dlg.h: í—¤ë” íŒŒì¼
+
+// tcp_echo_dlg.h: Çì´õ ÆÄÀÏ
 //
 
 #pragma once
 
 class Ctcp_echo_client_dlg : public CDialogEx
 {
-// ìƒì„±ì…ë‹ˆë‹¤.
+// »ı¼ºÀÔ´Ï´Ù.
 public:
-	Ctcp_echo_client_dlg(CWnd* pParent = nullptr);	// í‘œì¤€ ìƒì„±ìì…ë‹ˆë‹¤.
+	Ctcp_echo_client_dlg(CWnd* pParent = nullptr);	// Ç¥ÁØ »ı¼ºÀÚÀÔ´Ï´Ù.
 
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_TCP_ECHOWINDOWSMFC_DIALOG };
@@ -51,9 +51,9 @@ protected:
 	afx_msg void				OnDeltaposSpinTps100000(NMHDR* pNMHDR, LRESULT* pResult);
 
 private:
-			lockable<>			m_cs_listctrl_sockets;
+			lock_object			m_cs_listctrl_sockets;
 			CListCtrl			m_listctrl_sockets;
-			lockable<>			m_cs_listctrl_dest_address;
+			lock_object			m_cs_listctrl_dest_address;
 			CListCtrl			m_listctrl_dest_address;
 			CSliderCtrl			m_sliderSendTimes;
 			CComboBox			m_comboMessageSize;

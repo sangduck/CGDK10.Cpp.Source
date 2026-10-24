@@ -1,4 +1,6 @@
 #include "pch.h"
+#include <charconv>
+#include <cstring>
 
 
 #if defined(_WIN32)
@@ -35,10 +37,10 @@ std::string _get_os_release_id() noexcept
 	RETURN_IF(result != ERROR_SUCCESS, std::string());
 
 	// declare) 
-	char str_value[256];
+	char str_value[256] = {};
 
 	// declare) 
-	DWORD size1 = sizeof(str_value);
+	DWORD size1 = sizeof(str_value) - 1;
 	DWORD Type = 0;
 
 	// 2) 
@@ -66,10 +68,10 @@ sVERSION_EX _get_os_version() noexcept
 	RETURN_IF(result != ERROR_SUCCESS, temp_version);
 
 	// declare) 
-	char str_value[256];
+	char str_value[256] = {};
 
 	// declare) 
-	DWORD size1 = sizeof(str_value);
+	DWORD size1 = sizeof(str_value) - 1;
 	DWORD Type = 0;
 
 	// 2) MajorVersionNumber
@@ -88,13 +90,16 @@ sVERSION_EX _get_os_version() noexcept
 	Type = 0;
 
 	RegQueryValueExA(handle_key, "CurrentBuildNumber", NULL, &Type, reinterpret_cast<BYTE*>(str_value), &size1);
-	temp_version.build = __from_string<uint32_t>((char*)str_value);
+	{
+		const std::string_view str_build(reinterpret_cast<const char*>(str_value));
+		std::from_chars(str_build.data(), str_build.data() + str_build.size(), temp_version.build);
+	}
 
 	// 6) close key
 	RegCloseKey(handle_key);
 
 	// 7) string version
-	temp_version.str_version = NFMT::format("{}.{}.{}", temp_version.major, temp_version.minor, temp_version.build);
+	temp_version.str_version = CGDK::stream_string(temp_version.major, ".", temp_version.minor, ".", temp_version.build);
 
 	// return)
 	return temp_version;
@@ -129,10 +134,10 @@ std::string _get_os_product_name() noexcept
 	RETURN_IF(result != ERROR_SUCCESS, std::string());
 
 	// declare) 
-	char str_value[256];
+	char str_value[256] = {};
 
 	// declare) 
-	DWORD size1 = sizeof(str_value);
+	DWORD size1 = sizeof(str_value) - 1;
 	DWORD Type = 0;
 
 	// 2) 
@@ -174,7 +179,7 @@ SYSTEM::sINFO api::get_system_info() noexcept
 	::SYSTEM_INFO ssi;
 
 	// 1) 값을 초기화
-	__zero_memory(&ssi, sizeof(ssi));
+	std::memset(&ssi, 0, sizeof(ssi));
 
 	// 2) 생성되면 먼저 System Info를 설정한다.
 	GetSystemInfo(&ssi);
@@ -201,7 +206,7 @@ SYSTEM::sSTATUS api::get_system_status() noexcept
 	::SYSTEM_INFO ssi;
 
 	// 1) 값을 초기화
-	__zero_memory(&ssi, sizeof(ssi));
+	std::memset(&ssi, 0, sizeof(ssi));
 
 	// 2) 생성되면 먼저 System Info를 설정한다.
 	GetSystemInfo(&ssi);
@@ -225,7 +230,7 @@ sOS_INFO api::get_os_info() noexcept
 	sOS_INFO os_info;
 
 	// 1) set values
-	os_info.type = eOS_TYPE::WINDOWS_NAVTIVE;
+	os_info.type = eOS_TYPE::WINDOWS_NATIVE;
 	os_info.name = "Windows";
 	os_info.version = _get_os_version();
 	os_info.product_name = _get_os_product_name();
@@ -247,10 +252,10 @@ std::string api::get_os_unique_id() noexcept
 	RETURN_IF(result != ERROR_SUCCESS, std::string());
 
 	// declare) 
-	char str_value[256];
+	char str_value[256] = {};
 
 	// declare) 
-	DWORD size1 = sizeof(str_value);
+	DWORD size1 = sizeof(str_value) - 1;
 	DWORD Type = 0;
 
 	// 2) 
@@ -271,6 +276,36 @@ uint64_t api::get_process_id()
 std::size_t	api::get_core_count() noexcept
 {
 	return std::thread::hardware_concurrency();
+}
+
+bool api::set_current_thread_affinity(int _cpu) noexcept
+{
+	// check) one processor group (64 CPUs) only
+	RETURN_IF(_cpu < 0 || _cpu >= 64, false);
+
+	// 1) pin this thread
+	return ::SetThreadAffinityMask(::GetCurrentThread(), static_cast<DWORD_PTR>(1) << _cpu) != 0;
+}
+
+bool api::set_current_thread_priority(eTHREAD_PRIORITY _priority) noexcept
+{
+	// declare)
+	int priority;
+
+	// 1) the priority of windows
+	switch (_priority)
+	{
+	case eTHREAD_PRIORITY::LOWEST:			priority = THREAD_PRIORITY_LOWEST; break;
+	case eTHREAD_PRIORITY::LOW:				priority = THREAD_PRIORITY_BELOW_NORMAL; break;
+	case eTHREAD_PRIORITY::NORMAL:			priority = THREAD_PRIORITY_NORMAL; break;
+	case eTHREAD_PRIORITY::HIGH:			priority = THREAD_PRIORITY_ABOVE_NORMAL; break;
+	case eTHREAD_PRIORITY::HIGHEST:			priority = THREAD_PRIORITY_HIGHEST; break;
+	case eTHREAD_PRIORITY::TIME_CRITICAL:	priority = THREAD_PRIORITY_TIME_CRITICAL; break;
+	default:								return true;	// - DEFAULT : not changed
+	}
+
+	// 2) set
+	return ::SetThreadPriority(::GetCurrentThread(), priority) != FALSE;
 }
 
 int64_t	api::get_memory_usage() noexcept
@@ -300,28 +335,31 @@ uint64_t api::get_physical_memory_max() noexcept
 
 uint64_t api::get_max_open_files() noexcept
 {
-	// declare) 
-	HKEY handle_key;
+	//// declare) 
+	//HKEY handle_key;
 
-	// 1) 
-	auto result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "System\\CurrentControlSet\\Services\\Tcpip\\Parameters", 0, KEY_QUERY_VALUE | KEY_WOW64_64KEY, &handle_key);
+	//// 1) 
+	//auto result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "System\\CurrentControlSet\\Services\\Tcpip\\Parameters", 0, KEY_QUERY_VALUE | KEY_WOW64_64KEY, &handle_key);
 
-	// check) 
-	RETURN_IF(result != ERROR_SUCCESS, 0);
+	//// check) 
+	//RETURN_IF(result != ERROR_SUCCESS, 0);
 
-	// declare) 
-	DWORD value = 0;
-	DWORD size1 = sizeof(value);
-	DWORD type = 0;
+	//// declare) 
+	//DWORD value = 0;
+	//DWORD size1 = sizeof(value);
+	//DWORD type = 0;
 
-	// 2) 
-	result = RegQueryValueExA(handle_key, "MaxUserPort", NULL, &type, reinterpret_cast<BYTE*>(&value), &size1);
+	//// 2) 
+	//result = RegQueryValueExA(handle_key, "MaxUserPort", NULL, &type, reinterpret_cast<BYTE*>(&value), &size1);
 
-	// 3) Key 닫는다.
-	RegCloseKey(handle_key);
+	//// 3) Key 닫는다.
+	//RegCloseKey(handle_key);
 
-	// return) ...
-	return (type == REG_DWORD) ? value : 0;
+	//// return) ...
+	//return (type == REG_DWORD) ? value : 0;
+
+	// return
+	return std::numeric_limits<uint64_t>::max();
 }
 
 void api::set_max_open_files(uint64_t _max_open_files) noexcept
@@ -338,10 +376,10 @@ void api::set_max_open_files(uint64_t _max_open_files) noexcept
 	// check) 
 	RETURN_IF((status != ERROR_SUCCESS) || (handle_key == NULL));
 
-	// 2) set valuee
+	// 2) set value
 	status = RegSetValueEx(handle_key, "MaxUserPort", 0, REG_DWORD, (const BYTE*)&_max_open_files, sizeof(DWORD));
 
-	// 3) closee key
+	// 3) close key
 	RegCloseKey(handle_key);
 }
 
@@ -436,7 +474,7 @@ std::string _dmi_system_uuid(const BYTE* _p, short _version)
 	if (_version >= 0x0206)
 	{
 		char temp[256];
-		sprintf_s(temp, 256, "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+		std::snprintf(temp, sizeof(temp), "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
 			_p[3], _p[2], _p[1], _p[0], _p[5], _p[4], _p[7], _p[6], _p[8], _p[9], _p[10], _p[11], _p[12], _p[13], _p[14], _p[15]);
 
 		result = temp;
@@ -445,7 +483,7 @@ std::string _dmi_system_uuid(const BYTE* _p, short _version)
 	{
 		char temp[256];
 
-		sprintf_s(temp, 256, "-%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+		std::snprintf(temp, sizeof(temp), "-%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
 			_p[0], _p[1], _p[2], _p[3], _p[4], _p[5], _p[6], _p[7], _p[8], _p[9], _p[10], _p[11], _p[12], _p[13], _p[14], _p[15]);
 
 		result = temp;

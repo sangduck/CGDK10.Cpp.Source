@@ -1,13 +1,13 @@
 #include "pch.h"
 
 
-server_admin::Iinstance::~Iinstance() noexcept
+server_system::Iinstance::~Iinstance() noexcept
 {
 }
 
-bool server_admin::Iinstance::process_sservice_disconnected(socket_peer* _psocket)
+bool server_system::Iinstance::process_sservice_disconnected(socket_peer* _psocket)
 {
-	scoped_lock(this->m_cs_instance)
+	SCOPED_LOCK(this->m_lockable_instance)
 	{
 		// check)
 		RETURN_IF(this->m_psocket != _psocket, true);
@@ -23,13 +23,13 @@ bool server_admin::Iinstance::process_sservice_disconnected(socket_peer* _psocke
 	return false;
 }
 
-bool server_admin::Iinstance::process_send(shared_buffer&& _buffer, std::size_t _count_message, uint64_t _option)
+bool server_system::Iinstance::process_send(shared_buffer&& _buffer, std::size_t _count_message, uint64_t _option)
 {
 	// declare) 
 	object_ptr<socket_peer> psocket;
 
 	// 1) socket
-	scoped_lock(this->m_cs_instance)
+	SCOPED_LOCK(this->m_lockable_instance)
 	{
 		psocket = this->m_psocket;
 	}

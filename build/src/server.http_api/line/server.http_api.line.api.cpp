@@ -1,18 +1,33 @@
-ï»¿#include "pch.h"
+#include "pch.h"
+
+// - CGDK: enable rapidjson SSE4.2 SIMD on x86-64 (skip whitespace/scan strings with _mm_cmpestri)
+#if (defined(_M_X64) || defined(__x86_64__)) && !defined(RAPIDJSON_SSE42) && !defined(RAPIDJSON_SSE2) && !defined(RAPIDJSON_NEON)
+	#if defined(_MSC_VER) || defined(__SSE4_2__)
+		#define RAPIDJSON_SSE42		// msvc compiles sse4.2 intrinsics without a flag; gcc needs -msse4.2 (__SSE4_2__)
+	#else
+		#define RAPIDJSON_SSE2		// sse2 is baseline on x86-64 (gcc enables it without a flag)
+	#endif
+#endif
+
+#ifdef _MSC_VER
+	#pragma warning(disable:6102)
+	#pragma warning(disable:6313)
+	#pragma warning(disable:6385)
+	#pragma warning(disable:4996)
+	#pragma warning(disable:5054)
+	#pragma warning(disable:26495)
+	#pragma warning(disable:33010)
+#endif
 
 #if !defined(__linux__)
-	#pragma warning (disable:5054)
-	#pragma warning (disable:6340)
-	#pragma warning (disable:6313)
-	//#pragma diag_suppress 177 // supress #177-D function  was declared but never referenced
-	#include "../../common/rapidjson/document.h"
-	#include "../../common/rapidjson/writer.h"
-	#include "../../common/rapidjson/stringbuffer.h"
-	#include "../../common/rapidjson/filereadstream.h"
-	#include "../../common/rapidjson/filewritestream.h"
-	#pragma warning (default:5054)
-	#pragma warning (default:6340)
-	#pragma warning (default:6313)
+	#pragma warning(disable:5054)
+	//#pragma diag_suppress 177 // suppress #177-D function  was declared but never referenced
+	#include "rapidjson/document.h"
+	#include "rapidjson/writer.h"
+	#include "rapidjson/stringbuffer.h"
+	#include "rapidjson/filereadstream.h"
+	#include "rapidjson/filewritestream.h"
+	#pragma warning(default:5054)
 #else
 	#include "../../common/rapidjson/document.h"
 	#include "../../common/rapidjson/writer.h"
@@ -21,597 +36,607 @@
 	#include "../../common/rapidjson/filewritestream.h"
 #endif
 
+#ifdef _MSC_VER
+	#pragma warning(default:6102)
+	#pragma warning(default:6313)
+	#pragma warning(default:6385)
+	#pragma warning(default:4996)
+	#pragma warning(default:5054)
+	#pragma warning(default:26495)
+	#pragma warning(default:33010)
+#endif
+
 namespace CGDK
 {
 
 // 1) LINE OAuth
-http_api::line::RESPONSE_LINE_ACCESS_TOKEN http_api::line::request(const REQUEST_LINE_ACCESS_TOKEN& _request)
+http_api::line::RESPONSE_LINE_ACCESS_TOKEN http_api::line::request(const REQUEST_LINE_ACCESS_TOKEN& /*_request*/)
 {
-	// ------------------------------------------------------------------
-	// 
-	// LINE ì¸ì¦ - ì½”ë“œ ë°›ê¸°
-	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
-	//   
-	//   2) HTTP URL		/v2/oauth/accessToken
-	//	 3) HTTP Method		POST
-	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded"
-	//   5) Parameters
-	//		- grant_type		(í•„ìˆ˜)	client_credentials
-	//		- client_id			(í•„ìˆ˜)	Channel ID. Found on the console.
-	//		- client_secret		(í•„ìˆ˜)	Channel secret. Found on the console.
-	//
-	//   ìš”ì²­)	GET /oauth/authorize?client_id={app_key}&redirect_uri={redirect_uri}&response_type=code HTTP/1.1 
-	//			Host: kauth.kakao.com
-	//
-	//   ê²°ê³¼)	HTTP / 1.1 302 Found
-	//				Content - Length: 0
-	//				Location : {redirect_uri} ? code = { authorize_code }
-	//
-	// ------------------------------------------------------------------
-	// declare) 
-	const std::size_t SIZE_BUFFER = 8192;
+	//// ------------------------------------------------------------------
+	//// 
+	//// LINE ÀÎÁõ - ÄÚµå ¹Ş±â
+	////
+	//// ¿äÃ» ¸Ş½ÃÁö URL
+	////   
+	////   2) HTTP URL		/v2/oauth/accessToken
+	////	 3) HTTP Method		POST
+	////	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded"
+	////   5) Parameters
+	////		- grant_type		(ÇÊ¼ö)	client_credentials
+	////		- client_id			(ÇÊ¼ö)	Channel ID. Found on the console.
+	////		- client_secret		(ÇÊ¼ö)	Channel secret. Found on the console.
+	////
+	////   ¿äÃ»)	GET /oauth/authorize?client_id={app_key}&redirect_uri={redirect_uri}&response_type=code HTTP/1.1 
+	////			Host: kauth.kakao.com
+	////
+	////   °á°ú)	HTTP / 1.1 302 Found
+	////				Content - Length: 0
+	////				Location : {redirect_uri} ? code = { authorize_code }
+	////
+	//// ------------------------------------------------------------------
+	//// declare) 
+	//const std::size_t SIZE_BUFFER = 8192;
 
-	// check) 
-	CGASSERT_ERROR(_request.str_url.empty() == false);
+	//// check) 
+	//CGASSERT_ERROR(_request.str_url.empty() == false);
 
-	// check) 
-	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
+	//// check) 
+	//THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
-	auto prequest_http = make_object<query::http::query>();
+	//// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
+	//auto prequest_http = make_object<query::http::query>();
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto str_object = "/v2/oauth/accessToken";
+	//// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	//auto str_object = "/v2/oauth/accessToken";
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
-	auto http_method = eHTTP_METHOD::POST_;
+	//// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
+	//auto http_method = eHTTP_METHOD::POST_;
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤. - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type:application/x-www-form-urlencoded" };
+	//// 4) Header¸¦ ¼³Á¤ÇÑ´Ù. - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	//std::vector<std::string_view> vector_header{ "Content-Type:application/x-www-form-urlencoded" };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
-	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	buf_option.append<TEXT_WEB>("client_id="); buf_option.append<TEXT_WEB>(_request.client_id);
-	buf_option.append<TEXT_WEB>("&grant_type=client_credentials");
-	buf_option.append<TEXT_WEB>("&client_secret=");	buf_option.append<TEXT_WEB>(_request.client_secret);
-	buf_option[buf_option.size()] = 0;
+	//// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
+	//auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
+	//buf_option.append<text<char>>("client_id="); buf_option.append<text<char>>(_request.client_id);
+	//buf_option.append<text<char>>("&grant_type=client_credentials");
+	//buf_option.append<text<char>>("&client_secret=");	buf_option.append<text<char>>(_request.client_secret);
+	//buf_option[buf_option.size()] = 0;
 
-	// declare)
-	char temp_length[256];
-	__sprintf(temp_length, "Content-Length:%I64u", buf_option.size());
+	//// declare)
+	//char temp_length[256];
+	//std::snprintf(temp_length, std::size(temp_length), std::string_view("Content-Length:%I64u").data(), buf_option.size());
 
-	// 6) ê¸¸ì´ ì •ë³´ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	vector_header.push_back(temp_length);
+	//// 6) ±æÀÌ Á¤º¸¸¦ ½á³Ö´Â´Ù.
+	//vector_header.push_back(temp_length);
 
-	// 7) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
+	//// 7) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	//std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 
-	// 8) requestë¥¼ Setí•œë‹¤.
-	prequest_http->set_request(
-		http_method,
-		_request.str_url,
-		443,
-		"HTTP/1.1",
-		str_object,
-		std::string_view(),
-		std::move(vector_header),
-		buf_option,
-		std::move(vector_accept),
-		1		// 0: normal, 1:ssl
-	);
+	//// 8) request¸¦ SetÇÑ´Ù.
+	//prequest_http->set_request(
+	//	http_method,
+	//	_request.str_url,
+	//	443,
+	//	"HTTP/1.1",
+	//	str_object,
+	//	std::string_view(),
+	//	std::move(vector_header),
+	//	buf_option,
+	//	std::move(vector_accept),
+	//	1		// 0: normal, 1:ssl
+	//);
 
 	// declare) 
 	http_api::line::RESPONSE_LINE_ACCESS_TOKEN	response;
 
-	// 9) ê¸°ë³¸ê°’ì„ ì„¤ì •...
-	response.rsp_code = eRESPONSE_CODE::A0000_;
-	response.rsp_message.clear();
+	//// 9) ±âº»°ªÀ» ¼³Á¤...
+	//response.rsp_code = eRESPONSE_CODE::A0000_;
+	//response.rsp_message.clear();
 
-	// 10) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
-	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
-	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
-		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
-		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
-			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
-			response.rsp_message = _msg.status_message;
+	//// 10) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
+	//prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
+	//{
+	//	// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
+	//	if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
+	//	{
+	//		// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
+	//		response.rsp_code	 = eRESPONSE_CODE::FAIL_;
+	//		response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
-			response.buf_response.clear();
+	//		// - buffer¸¦ clearÇÑ´Ù.
+	//		response.buf_response.clear();
 
-			// Return)
-			return;
-		}
+	//		// Return)
+	//		return;
+	//	}
 
-		// - ë§ˆì§€ë§‰ì„ nullì„ ë¶™ì¸ë‹¤.
-		_msg.contents[0].append<char>(0);
+	//	// - ¸¶Áö¸·À» nullÀ» ºÙÀÎ´Ù.
+	//	_msg.contents[0].append<char>(0);
 
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
-		response.buf_response = _msg.contents[0];
+	//	// - buffer¸¦ ³Ö´Â´Ù.
+	//	response.buf_response = _msg.contents[0];
 
-		// declare) 
-		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
+	//	// declare) 
+	//	rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data());
+	//	// - ParsingÇÑ´Ù.
+	//	const auto&	result = json_data.Parse(_msg.contents[0].data());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
-		RETURN_IF(result.IsNull())
+	//	// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
+	//	RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
-		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
-		{
-			auto str_name = (*iter).name.GetString();
-			auto& value = (*iter).value;
+	//	// - °ªÀ» ¼³Á¤ÇÑ´Ù.
+	//	for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
+	//	{
+	//		auto str_name = (*iter).name.GetString();
+	//		auto& value = (*iter).value;
 
-			// - accessToken
-			if (strcmp(str_name, "access_token")==0)
-			{
-				response.access_token = value.GetString();
-			}
-			// - expire_in
-			else if(strcmp(str_name, "expires_in") == 0)
-			{
-				response.expire_in = value.GetInt64();
-			}
-			// - token_type
-			else if (strcmp(str_name, "token_type") == 0)
-			{
-				response.token_type = value.GetString();
-			}
-			// - error
-			else if (strcmp(str_name, "error") == 0)
-			{
-				response.rsp_code = eRESPONSE_CODE::FAIL_;
-			}
-			// - error_message
-			else if (strcmp(str_name, "error_description") == 0)
-			{
-				response.rsp_message = value.GetString();
-			}
-		}
-	});
+	//		// - accessToken
+	//		if (strcmp(str_name, "access_token")==0)
+	//		{
+	//			response.access_token = value.GetString();
+	//		}
+	//		// - expire_in
+	//		else if(strcmp(str_name, "expires_in") == 0)
+	//		{
+	//			response.expire_in = value.GetInt64();
+	//		}
+	//		// - token_type
+	//		else if (strcmp(str_name, "token_type") == 0)
+	//		{
+	//			response.token_type = value.GetString();
+	//		}
+	//		// - error
+	//		else if (strcmp(str_name, "error") == 0)
+	//		{
+	//			response.rsp_code = eRESPONSE_CODE::FAIL_;
+	//		}
+	//		// - error_message
+	//		else if (strcmp(str_name, "error_description") == 0)
+	//		{
+	//			response.rsp_message = value.GetString();
+	//		}
+	//	}
+	//});
 
-	// 11) requestë¥¼ ìš”ì²­í•œë‹¤.
-	prequest_http->request();
+	//// 11) request¸¦ ¿äÃ»ÇÑ´Ù.
+	//prequest_http->request();
 
-	// 12) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
-	prequest_http->wait();
+	//// 12) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
+	//prequest_http->wait();
 
 	// return) 
 	return response;
 }
-http_api::line::RESPONSE_LINE_REVOKE http_api::line::request(const REQUEST_LINE_REVOKE& _request)
+http_api::line::RESPONSE_LINE_REVOKE http_api::line::request(const REQUEST_LINE_REVOKE& /*_request*/)
 {
-	// ------------------------------------------------------------------
-	// 
-	// LINE ì¸ì¦ - Revoke channel access token
-	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
-	//   
-	//   2) HTTP URL		https://api.line.me/v2/oauth/revoke
-	//	 3) HTTP Method		POST
-	//	 4) Content-Type	"Content-Type: application/json;charset=UTF-8"
-	//   5) Parameters
-	//		- access_token		(í•„ìˆ˜)	Channel access token
-	//
-	//	ìš”ì²­)	POST https://api.line.me/v2/oauth/revoke
-	//
-	// ------------------------------------------------------------------
-	// declare) 
-	const std::size_t SIZE_BUFFER = 8192;
+	//// ------------------------------------------------------------------
+	//// 
+	//// LINE ÀÎÁõ - Revoke channel access token
+	////
+	//// ¿äÃ» ¸Ş½ÃÁö URL
+	////   
+	////   2) HTTP URL		https://api.line.me/v2/oauth/revoke
+	////	 3) HTTP Method		POST
+	////	 4) Content-Type	"Content-Type: application/json;charset=UTF-8"
+	////   5) Parameters
+	////		- access_token		(ÇÊ¼ö)	Channel access token
+	////
+	////	¿äÃ»)	POST https://api.line.me/v2/oauth/revoke
+	////
+	//// ------------------------------------------------------------------
+	//// declare) 
+	//const std::size_t SIZE_BUFFER = 8192;
 
-	// check) 
-	CGASSERT_ERROR(_request.str_url.empty() == false);
+	//// check) 
+	//CGASSERT_ERROR(_request.str_url.empty() == false);
 
-	// check) 
-	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
+	//// check) 
+	//THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
-	auto prequest_http = make_object<query::http::query>();
+	//// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
+	//auto prequest_http = make_object<query::http::query>();
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto str_object = "/v2/oauth/revoke";
+	//// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	//auto str_object = "/v2/oauth/revoke";
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
-	auto http_method = eHTTP_METHOD::POST_;
+	//// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
+	//auto http_method = eHTTP_METHOD::POST_;
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤. - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded" };
+	//// 4) Header¸¦ ¼³Á¤ÇÑ´Ù. - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	//std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded" };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
-	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	buf_option.append<TEXT_WEB>("access_token="); buf_option.append<TEXT_WEB>(_request.access_token);
-	buf_option[buf_option.size()] = 0;
+	//// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
+	//auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
+	//buf_option.append<text<char>>("access_token="); buf_option.append<text<char>>(_request.access_token);
+	//buf_option[buf_option.size()] = 0;
 
-	// declare)
-	char temp_length[256];
-	__sprintf(temp_length, "Content-Length:%I64u", buf_option.size());
+	//// declare)
+	//char temp_length[256];
+	//std::snprintf(temp_length, std::size(temp_length), std::string_view("Content-Length:%I64u").data(), buf_option.size());
 
-	// 6) ê¸¸ì´ ì •ë³´ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	vector_header.push_back(temp_length);
+	//// 6) ±æÀÌ Á¤º¸¸¦ ½á³Ö´Â´Ù.
+	//vector_header.push_back(temp_length);
 
-	// 7) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
+	//// 7) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	//std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 
-	// 8) requestë¥¼ Setí•œë‹¤.
-	prequest_http->set_request(
-		http_method,
-		_request.str_url,
-		443,
-		//800,
-		"HTTP/1.1",
-		str_object,
-		std::string_view(),
-		std::move(vector_header),
-		buf_option,
-		std::move(vector_accept),
-		1		// 0: normal, 1:ssl
-	);
+	//// 8) request¸¦ SetÇÑ´Ù.
+	//prequest_http->set_request(
+	//	http_method,
+	//	_request.str_url,
+	//	443,
+	//	//800,
+	//	"HTTP/1.1",
+	//	str_object,
+	//	std::string_view(),
+	//	std::move(vector_header),
+	//	buf_option,
+	//	std::move(vector_accept),
+	//	1		// 0: normal, 1:ssl
+	//);
 
 	// declare) 
 	http_api::line::RESPONSE_LINE_REVOKE response;
 
-	// 9) ê¸°ë³¸ê°’ì„ ì„¤ì •...
-	response.rsp_code = eRESPONSE_CODE::A0000_;
-	response.rsp_message.clear();
+	//// 9) ±âº»°ªÀ» ¼³Á¤...
+	//response.rsp_code = eRESPONSE_CODE::A0000_;
+	//response.rsp_message.clear();
 
-	// 10) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
-	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
-	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
-		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
-		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
-			response.rsp_code = eRESPONSE_CODE::FAIL_;
-			response.rsp_message = _msg.status_message;
+	//// 10) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
+	//prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
+	//{
+	//	// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
+	//	if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
+	//	{
+	//		// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
+	//		response.rsp_code = eRESPONSE_CODE::FAIL_;
+	//		response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
-			response.buf_response.clear();
+	//		// - buffer¸¦ clearÇÑ´Ù.
+	//		response.buf_response.clear();
 
-			// Return)
-			return;
-		}
+	//		// Return)
+	//		return;
+	//	}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
+	//	// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
+	//	_msg.contents[0].append<char>(0);
 
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
-		response.buf_response = _msg.contents[0];
+	//	// - buffer¸¦ ³Ö´Â´Ù.
+	//	response.buf_response = _msg.contents[0];
 
-		// declare) 
-		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
+	//	// declare) 
+	//	rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data());
+	//	// - ParsingÇÑ´Ù.
+	//	const auto&	result = json_data.Parse(_msg.contents[0].data());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
-		RETURN_IF(result.IsNull())
+	//	// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
+	//	RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
-		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
-		{
-			auto str_name = (*iter).name.GetString();
-			auto& value = (*iter).value;
+	//	// - °ªÀ» ¼³Á¤ÇÑ´Ù.
+	//	for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
+	//	{
+	//		auto str_name = (*iter).name.GetString();
+	//		auto& value = (*iter).value;
 
-			// - error
-			if (strcmp(str_name, "error") == 0)
-			{
-				response.rsp_code = eRESPONSE_CODE::FAIL_;
-			}
-			// - error_message
-			else if (strcmp(str_name, "error_description") == 0)
-			{
-				response.rsp_message = value.GetString();
-			}
-		}
-	});
+	//		// - error
+	//		if (strcmp(str_name, "error") == 0)
+	//		{
+	//			response.rsp_code = eRESPONSE_CODE::FAIL_;
+	//		}
+	//		// - error_message
+	//		else if (strcmp(str_name, "error_description") == 0)
+	//		{
+	//			response.rsp_message = value.GetString();
+	//		}
+	//	}
+	//});
 
-	// 11) requestë¥¼ ìš”ì²­í•œë‹¤.
-	prequest_http->request();
+	//// 11) request¸¦ ¿äÃ»ÇÑ´Ù.
+	//prequest_http->request();
 
-	// 12) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
-	prequest_http->wait();
+	//// 12) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
+	//prequest_http->wait();
 
 	// return) 
 	return response;
 }
 
 // 2) LINE Message
-http_api::line::RESPONSE_LINE_MESSAGE_REPLY http_api::line::request(const REQUEST_LINE_MESSAGE_REPLY& _request)
+http_api::line::RESPONSE_LINE_MESSAGE_REPLY http_api::line::request(const REQUEST_LINE_MESSAGE_REPLY& /*_request*/)
 {
-	// ------------------------------------------------------------------
-	// 
-	// LINE ì¸ì¦ - ë¡œê·¸ì•„ì›ƒ
-	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
-	//   
-	//   2) HTTP URL		https://api.line.me/v2/bot/message/reply
-	//	 3) HTTP Method		POST
-	//	 4) Content-Type	"Content-Type: application/json"
-	//   5) Parameters
-	//		- Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	//
-	//	ìš”ì²­)	POST https://api.line.me/v2/bot/message/reply
-	//
-	// ------------------------------------------------------------------
-	// declare) 
-	const std::size_t SIZE_BUFFER = 8192;
+	//// ------------------------------------------------------------------
+	//// 
+	//// LINE ÀÎÁõ - ·Î±×¾Æ¿ô
+	////
+	//// ¿äÃ» ¸Ş½ÃÁö URL
+	////   
+	////   2) HTTP URL		https://api.line.me/v2/bot/message/reply
+	////	 3) HTTP Method		POST
+	////	 4) Content-Type	"Content-Type: application/json"
+	////   5) Parameters
+	////		- Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	////
+	////	¿äÃ»)	POST https://api.line.me/v2/bot/message/reply
+	////
+	//// ------------------------------------------------------------------
+	//// declare) 
+	//const std::size_t SIZE_BUFFER = 8192;
 
-	// check) 
-	CGASSERT_ERROR(_request.str_url.empty() == false);
+	//// check) 
+	//CGASSERT_ERROR(_request.str_url.empty() == false);
 
-	// check) 
-	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
+	//// check) 
+	//THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
-	auto prequest_http = make_object<query::http::query>();
+	//// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
+	//auto prequest_http = make_object<query::http::query>();
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto str_object = "/v2/bot/message/reply";
+	//// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	//auto str_object = "/v2/bot/message/reply";
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
-	auto http_method = eHTTP_METHOD::POST_;
+	//// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
+	//auto http_method = eHTTP_METHOD::POST_;
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤. - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type: application/json" };
+	//// 4) Header¸¦ ¼³Á¤ÇÑ´Ù. - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	//std::vector<std::string_view> vector_header{ "Content-Type: application/json" };
 
-	// 5) Headerì— Ahthorizationì„ ì¶”ê°€í•œë‹¤.
-	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	__sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.access_token.c_str());
-	vector_header.push_back(buf_header.data());
+	//// 5) Header¿¡ AuthorizationÀ» Ãß°¡ÇÑ´Ù.
+	//auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
+	//std::snprintf(buf_header.data<char>(), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.access_token.c_str());
+	//vector_header.push_back(buf_header.data());
 
-	// 6) parameterë¥¼ ì„¤ì •í•œë‹¤.
-	auto buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	buf_option.append<TEXT_WEB>("replyToken=");	buf_option.append<TEXT_WEB>(_request.replyToken);
-	buf_option.append<TEXT_WEB>("&messages=");	buf_option.append<TEXT_WEB>(_request.messages.front());
-	buf_option[buf_option.size()] = 0;
+	//// 6) parameter¸¦ ¼³Á¤ÇÑ´Ù.
+	//auto buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
+	//buf_option.append<text<char>>("replyToken=");	buf_option.append<text<char>>(_request.replyToken);
+	//buf_option.append<text<char>>("&messages=");	buf_option.append<text<char>>(_request.messages.front());
+	//buf_option[buf_option.size()] = 0;
 
-	// declare)
-	char temp_length[256];
-	__sprintf(temp_length, "Content-Length:%I64u", buf_option.size());
+	//// declare)
+	//char temp_length[256];
+	//std::snprintf(temp_length, std::size(temp_length), std::string_view("Content-Length:%I64u").data(), buf_option.size());
 
-	// 7) ê¸¸ì´ ì •ë³´ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	vector_header.push_back(temp_length);
+	//// 7) ±æÀÌ Á¤º¸¸¦ ½á³Ö´Â´Ù.
+	//vector_header.push_back(temp_length);
 
-	// 8) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
+	//// 8) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	//std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 
-	// 9) requestë¥¼ Setí•œë‹¤.
-	prequest_http->set_request(
-		http_method,
-		_request.str_url,
-		443,
-		//800,
-		"HTTP/1.1",
-		str_object,
-		std::string_view(),
-		std::move(vector_header),
-		buf_option,
-		std::move(vector_accept),
-		1		// 0: normal, 1:ssl
-	);
+	//// 9) request¸¦ SetÇÑ´Ù.
+	//prequest_http->set_request(
+	//	http_method,
+	//	_request.str_url,
+	//	443,
+	//	//800,
+	//	"HTTP/1.1",
+	//	str_object,
+	//	std::string_view(),
+	//	std::move(vector_header),
+	//	buf_option,
+	//	std::move(vector_accept),
+	//	1		// 0: normal, 1:ssl
+	//);
 
 	// declare) 
 	http_api::line::RESPONSE_LINE_MESSAGE_REPLY response;
 
-	// 10) ê¸°ë³¸ê°’ì„ ì„¤ì •...
-	response.rsp_code = eRESPONSE_CODE::A0000_;
-	response.rsp_message.clear();
+	//// 10) ±âº»°ªÀ» ¼³Á¤...
+	//response.rsp_code = eRESPONSE_CODE::A0000_;
+	//response.rsp_message.clear();
 
-	// 11) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
-	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
-	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
-		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
-		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
-			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
-			response.rsp_message = _msg.status_message;
+	//// 11) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
+	//prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
+	//{
+	//	// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
+	//	if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
+	//	{
+	//		// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
+	//		response.rsp_code	 = eRESPONSE_CODE::FAIL_;
+	//		response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
-			response.buf_response.clear();
+	//		// - buffer¸¦ clearÇÑ´Ù.
+	//		response.buf_response.clear();
 
-			// Return)
-			return;
-		}
+	//		// Return)
+	//		return;
+	//	}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
+	//	// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
+	//	_msg.contents[0].append<char>(0);
 
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
-		response.buf_response = _msg.contents[0];
+	//	// - buffer¸¦ ³Ö´Â´Ù.
+	//	response.buf_response = _msg.contents[0];
 
-		// declare) 
-		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
+	//	// declare) 
+	//	rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+	//	// - ParsingÇÑ´Ù.
+	//	const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
-		RETURN_IF(result.IsNull())
+	//	// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
+	//	RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
-		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
-		{
-			auto str_name = (*iter).name.GetString();
-			auto& value = (*iter).value;
+	//	// - °ªÀ» ¼³Á¤ÇÑ´Ù.
+	//	for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
+	//	{
+	//		auto str_name = (*iter).name.GetString();
+	//		auto& value = (*iter).value;
 
-			// - error
-			if (strcmp(str_name, "error") == 0)
-			{
-				response.rsp_code = eRESPONSE_CODE::FAIL_;
-			}
-			// - error_message
-			else if (strcmp(str_name, "error_description") == 0)
-			{
-				response.rsp_message = value.GetString();
-			}
-		}
-	});
+	//		// - error
+	//		if (strcmp(str_name, "error") == 0)
+	//		{
+	//			response.rsp_code = eRESPONSE_CODE::FAIL_;
+	//		}
+	//		// - error_message
+	//		else if (strcmp(str_name, "error_description") == 0)
+	//		{
+	//			response.rsp_message = value.GetString();
+	//		}
+	//	}
+	//});
 
-	// 12) requestë¥¼ ìš”ì²­í•œë‹¤.
-	prequest_http->request();
+	//// 12) request¸¦ ¿äÃ»ÇÑ´Ù.
+	//prequest_http->request();
 
-	// 13) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
-	prequest_http->wait();
+	//// 13) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
+	//prequest_http->wait();
 
 	// return) 
 	return response;
 }
-http_api::line::RESPONSE_LINE_MESSAGE_PUSH http_api::line::request(const REQUEST_LINE_MESSAGE_PUSH& _request)
+http_api::line::RESPONSE_LINE_MESSAGE_PUSH http_api::line::request(const REQUEST_LINE_MESSAGE_PUSH& /*_request*/)
 {
-	// ------------------------------------------------------------------
-	// 
-	// LINE ì¸ì¦ - ì•±ì—°ê²°
-	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
-	//   
-	//   2) HTTP URL		https://api.line.me/v2/bot/message/push
-	//	 3) HTTP Method		POST
-	//	 4) Content-Type	"Content-Type: application/json;charset=UTF-8"
-	//   5) Parameters
-	//		- Authorization: Bearer {access_token}
-	//	    - Content-Type: application/x-www-form-urlencoded;charset=utf-8
-	//
-	//	ìš”ì²­)	curl - v - X POST https ://kapi.kakao.com/v1/user/signup 
-	//				-H "Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" 
-	//				--data-urlencode 'properties={"age":"23", "gender":"female"}'
-	//
-	//	ê²°ê³¼)	HTTP / 1.1 200 OK
-	//			Content-Type: application/json;charset=UTF-8
-	//			{
-	//				"id":123456789
-	//			}
-	//
-	// ------------------------------------------------------------------
-	// check) messagesê°€ í•˜ë‚˜ë„ ì—†ë‹¤ë©´ ê·¸ëƒ¥ ëë‚¸ë‹¤.
-	RETURN_IF(_request.messages.empty(), http_api::line::RESPONSE_LINE_MESSAGE_PUSH());
+	//// ------------------------------------------------------------------
+	//// 
+	//// LINE ÀÎÁõ - ¾Û¿¬°á
+	////
+	//// ¿äÃ» ¸Ş½ÃÁö URL
+	////   
+	////   2) HTTP URL		https://api.line.me/v2/bot/message/push
+	////	 3) HTTP Method		POST
+	////	 4) Content-Type	"Content-Type: application/json;charset=UTF-8"
+	////   5) Parameters
+	////		- Authorization: Bearer {access_token}
+	////	    - Content-Type: application/x-www-form-urlencoded;charset=utf-8
+	////
+	////	¿äÃ»)	curl - v - X POST https ://kapi.kakao.com/v1/user/signup 
+	////				-H "Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" 
+	////				--data-urlencode 'properties={"age":"23", "gender":"female"}'
+	////
+	////	°á°ú)	HTTP / 1.1 200 OK
+	////			Content-Type: application/json;charset=UTF-8
+	////			{
+	////				"id":123456789
+	////			}
+	////
+	//// ------------------------------------------------------------------
+	//// check) messages°¡ ÇÏ³ªµµ ¾ø´Ù¸é ±×³É ³¡³½´Ù.
+	//RETURN_IF(_request.messages.empty(), http_api::line::RESPONSE_LINE_MESSAGE_PUSH());
 
-	// declare) 
-	const std::size_t SIZE_BUFFER = 8192;
+	//// declare) 
+	//const std::size_t SIZE_BUFFER = 8192;
 
-	// check) 
-	CGASSERT_ERROR(_request.str_url.empty() == false);
+	//// check) 
+	//CGASSERT_ERROR(_request.str_url.empty() == false);
 
-	// check) 
-	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
+	//// check) 
+	//THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
-	auto prequest_http = make_object<query::http::query>();
+	//// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
+	//auto prequest_http = make_object<query::http::query>();
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto str_object = "/v2/bot/message/push";
+	//// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	//auto str_object = "/v2/bot/message/push";
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
-	auto http_method = eHTTP_METHOD::POST_;
+	//// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
+	//auto http_method = eHTTP_METHOD::POST_;
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤. - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type: application/json" };
+	//// 4) Header¸¦ ¼³Á¤ÇÑ´Ù. - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	//std::vector<std::string_view> vector_header{ "Content-Type: application/json" };
 
-	// 5) Headerì— Ahthorizationì„ ì¶”ê°€í•œë‹¤.
-	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	__sprintf(buf_header.data(), SIZE_BUFFER, "Authorization: Bearer %s", _request.access_token.c_str());
-	vector_header.push_back(buf_header.data());
+	//// 5) Header¿¡ AuthorizationÀ» Ãß°¡ÇÑ´Ù.
+	//auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
+	//std::snprintf(buf_header.data(), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.access_token.c_str());
+	//vector_header.push_back(buf_header.data());
 
-	// 7) parameterë¥¼ ì„¤ì •í•œë‹¤.
-	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	buf_option.append<TEXT_WEB>("{\"to\":\"");			buf_option.append<TEXT_WEB>(_request.to);
-	buf_option.append<TEXT_WEB>("\", \"messages\":[");
-	buf_option.append(_request.messages.size() - 1, _request.messages.data());	// NULLì„ ì œê±°í•˜ê¸° ìœ„í•´ message.size_ì—ì„œ -1ì„ í•´ì¤€ë‹¤.
-	buf_option.append<TEXT_WEB>("]}");
-	buf_option[buf_option.size()] = 0;
+	//// 7) parameter¸¦ ¼³Á¤ÇÑ´Ù.
+	//auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
+	//buf_option.append<text<char>>("{\"to\":\"");			buf_option.append<text<char>>(_request.to);
+	//buf_option.append<text<char>>("\", \"messages\":[");
+	//buf_option.append(_request.messages.size() - 1, _request.messages.data());	// NULLÀ» Á¦°ÅÇÏ±â À§ÇØ message.size_¿¡¼­ -1À» ÇØÁØ´Ù.
+	//buf_option.append<text<char>>("]}");
+	//buf_option[buf_option.size()] = 0;
 
-	// declare)
-	char temp_length[256];
-	__sprintf(temp_length, "Content-Length:%I64u", buf_option.size());
+	//// declare)
+	//char temp_length[256];
+	//std::snprintf(temp_length, std::size(temp_length), std::string_view("Content-Length:%I64u").data(), buf_option.size());
 
-	// 8) ê¸¸ì´ ì •ë³´ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	vector_header.push_back(temp_length);
+	//// 8) ±æÀÌ Á¤º¸¸¦ ½á³Ö´Â´Ù.
+	//vector_header.push_back(temp_length);
 
-	// 9) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
+	//// 9) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	//std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 
-	// 10) requestë¥¼ Setí•œë‹¤.
-	prequest_http->set_request(
-		http_method,
-		_request.str_url,
-		443,
-		//800,
-		"HTTP/1.1",
-		str_object,
-		std::string_view(),
-		std::move(vector_header),
-		buf_option,
-		std::move(vector_accept),
-		1		// 0: normal, 1:ssl
-	);
+	//// 10) request¸¦ SetÇÑ´Ù.
+	//prequest_http->set_request(
+	//	http_method,
+	//	_request.str_url,
+	//	443,
+	//	//800,
+	//	"HTTP/1.1",
+	//	str_object,
+	//	std::string_view(),
+	//	std::move(vector_header),
+	//	buf_option,
+	//	std::move(vector_accept),
+	//	1		// 0: normal, 1:ssl
+	//);
 
 	// declare) 
 	http_api::line::RESPONSE_LINE_MESSAGE_PUSH	response;
 
-	// 11) ê¸°ë³¸ê°’ì„ ì„¤ì •...
-	response.rsp_code = eRESPONSE_CODE::A0000_;
-	response.rsp_message.clear();
+	//// 11) ±âº»°ªÀ» ¼³Á¤...
+	//response.rsp_code = eRESPONSE_CODE::A0000_;
+	//response.rsp_message.clear();
 
-	// 12) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
-	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
-	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
-		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
-		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
-			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
-			response.rsp_message = _msg.status_message;
+	//// 12) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
+	//prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
+	//{
+	//	// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
+	//	if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
+	//	{
+	//		// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
+	//		response.rsp_code	 = eRESPONSE_CODE::FAIL_;
+	//		response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
-			response.buf_response.clear();
+	//		// - buffer¸¦ clearÇÑ´Ù.
+	//		response.buf_response.clear();
 
-			// Return)
-			return;
-		}
+	//		// Return)
+	//		return;
+	//	}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
+	//	// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
+	//	_msg.contents[0].append<char>(0);
 
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
-		response.buf_response = _msg.contents[0];
+	//	// - buffer¸¦ ³Ö´Â´Ù.
+	//	response.buf_response = _msg.contents[0];
 
-		// declare) 
-		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
+	//	// declare) 
+	//	rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data());
+	//	// - ParsingÇÑ´Ù.
+	//	const auto&	result = json_data.Parse(_msg.contents[0].data());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
-		RETURN_IF(result.IsNull())
+	//	// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
+	//	RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
-		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
-		{
-			auto str_name = (*iter).name.GetString();
-			auto& value = (*iter).value;
+	//	// - °ªÀ» ¼³Á¤ÇÑ´Ù.
+	//	for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
+	//	{
+	//		auto str_name = (*iter).name.GetString();
+	//		auto& value = (*iter).value;
 
-			// - error
-			if (strcmp(str_name, "error") == 0)
-			{
-				response.rsp_code = eRESPONSE_CODE::FAIL_;
-			}
-			// - error_message
-			else if (strcmp(str_name, "error_description") == 0)
-			{
-				response.rsp_message = value.GetString();
-			}
-		}
-	});
+	//		// - error
+	//		if (strcmp(str_name, "error") == 0)
+	//		{
+	//			response.rsp_code = eRESPONSE_CODE::FAIL_;
+	//		}
+	//		// - error_message
+	//		else if (strcmp(str_name, "error_description") == 0)
+	//		{
+	//			response.rsp_message = value.GetString();
+	//		}
+	//	}
+	//});
 
-	// 13) requestë¥¼ ìš”ì²­í•œë‹¤.
-	prequest_http->request();
+	//// 13) request¸¦ ¿äÃ»ÇÑ´Ù.
+	//prequest_http->request();
 
-	// 14) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
-	prequest_http->wait();
+	//// 14) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
+	//prequest_http->wait();
 
 	// return) 
 	return response;
@@ -620,9 +645,9 @@ http_api::line::RESPONSE_LINE_MESSAGE_MULTICAST http_api::line::request(const RE
 {
 	// ------------------------------------------------------------------
 	// 
-	// LINE ì¸ì¦ - ì•±ì—°ê²°í•´ì œ
+	// LINE ÀÎÁõ - ¾Û¿¬°áÇØÁ¦
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		https://kapi.kakao.com/v1/user/unlink HTTP/1.1
 	//	 3) HTTP Method		POST
@@ -641,14 +666,14 @@ http_api::line::RESPONSE_LINE_MESSAGE_MULTICAST http_api::line::request(const RE
 	//			Authorization: KakaoAK {admin_key}
 	//
 	//
-	//	ìš”ì²­1)	curl -v -X POST https://kapi.kakao.com/v1/user/unlink 
+	//	¿äÃ»1)	curl -v -X POST https://kapi.kakao.com/v1/user/unlink 
 	//			  -H "Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 	//
-	//	ìš”ì²­)	curl -v -X POST https://kapi.kakao.com/v1/user/unlink 
+	//	¿äÃ»)	curl -v -X POST https://kapi.kakao.com/v1/user/unlink 
 	//			  -H "Authorization: KakaoAK kkkkkkkkkkkkkkkkkkkkkkkkkkkkkk" 
 	//			  -d 'target_id_type=user_id&target_id=123456789'
 	//
-	//	ê²°ê³¼)	HTTP/1.1 200 OK
+	//	°á°ú)	HTTP/1.1 200 OK
 	//			Content-Type: application/json;charset=UTF-8
 	//			{
 	//			    "id":123456789

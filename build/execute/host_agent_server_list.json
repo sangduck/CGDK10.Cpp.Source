@@ -1,0 +1,108 @@
+{
+  "GRUMA certification server": {
+    "iid": 12106,
+    "rank": {
+      "group": 0,
+      "field": 0,
+      "role": 1,
+      "index": 1
+    },
+    "comment": "GRUMA certification server",
+    "execute_file": "GRUMA.certification_server.Debug.mfc.exe",
+    "path": "D:/project_gruma/server/execute/certification_server",
+    "working_path": "D:/project_gruma/server/execute/certification_server",
+    "SVN_URL": "",
+    "SVN_revision": ""
+  },
+  "GRUMA account server": {
+    "iid": 12105,
+    "rank": {
+      "group": 0,
+      "field": 0,
+      "role": 2,
+      "index": 1
+    },
+    "comment": "GRUMA account server",
+    "execute_file": "GRUMA.account_server.Debug.mfc.exe",
+    "path": "D:/project_gruma/server/execute/account_server",
+    "working_path": "D:/project_gruma/server/execute/account_server",
+    "SVN_URL": "",
+    "SVN_revision": ""
+  },
+  "GRUMA area server": {
+    "iid": 12102,
+    "rank": {
+      "group": 0,
+      "field": 0,
+      "role": 3,
+      "index": 1
+    },
+    "comment": "GRUMA stage instance server",
+    "execute_file": "GRUMA.server.area.mfc.Debug.exe",
+    "path": "D:/project_gruma/server/execute/area_server",
+    "working_path": "D:/project_gruma/server/execute/area_server",
+    "SVN_URL": "",
+    "SVN_revision": ""
+  },
+  "GRUMA stage instance_server": {
+    "iid": 12101,
+    "rank": {
+      "group": 0,
+      "field": 0,
+      "role": 4,
+      "index": 1
+    },
+    "comment": "GRUMA stage instance server",
+    "execute_file": "GRUMA.server.stage_instance.console.Debug.exe",
+    "path": "D:/project_gruma/server/execute/stage_instance_server",
+    "working_path": "D:/project_gruma/server/execute/stage_instance_server",
+    "SVN_URL": "",
+    "SVN_revision": ""
+  },
+  "GRUMA notify server": {
+    "iid": 12103,
+    "rank": {
+      "group": 0,
+      "field": 0,
+      "role": 5,
+      "index": 1
+    },
+    "comment": "GRUMA notify server",
+    "execute_file": "GRUMA.notify_server.Debug.mfc.exe",
+    "path": "D:/project_gruma/server/execute/notify_server",
+    "working_path": "D:/project_gruma/server/execute/notify_server",
+    "SVN_URL": "",
+    "SVN_revision": ""
+  },
+  "GRUMA shop server": {
+    "iid": 12104,
+    "rank": {
+      "group": 0,
+      "field": 0,
+      "role": 6,
+      "index": 1
+    },
+    "comment": "GRUMA shop server",
+    "execute_file": "GRUMA.shop_server.Debug.mfc.exe",
+    "path": "D:/project_gruma/server/execute/shop_server",
+    "working_path": "D:/project_gruma/server/execute/shop_server",
+    "SVN_URL": "",
+    "SVN_revision": ""
+  },
+  "for linux": {
+    "iid": 21101,
+    "rank": {
+      "group": 0,
+      "field": 0,
+      "role": 10,
+      "index": 1
+    },
+    "comment": "Trade server for CGII trade System",
+    "execute_file": "CGDK10.net.socket.tcp_simple.server.console_linux.debug",
+    "path": "/home/sangduck/projects/CGDK10.C++/tutorial/network.1.socket/socket.01.tcp_simple/server.console/",
+    "working_path": "/home/sangduck/projects/CGDK10.C++/tutorial/network.1.socket/socket.01.tcp_simple/server.console/",
+    "SVN_URL": "",
+    "SVN_revision": ""
+  }
+
+}

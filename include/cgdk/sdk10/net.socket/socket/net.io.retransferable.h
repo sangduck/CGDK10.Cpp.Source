@@ -39,7 +39,7 @@ public:
 			bool				send_reliable(const shared_buffer& _buffer);
 	//! @brief 재전송을 리셋한다.
 			void				reset_retransfer();
-	//! @brief 재전송을 요청한다.(일반적으로 처음 접속할때 호출한다.)
+	//! @brief 재전송을 요청한다.(일반적으로 처음 접속할 때 호출한다.)
 			bool				request_restore();
 
 protected:
@@ -60,8 +60,9 @@ protected:
 	[[nodiscard]] static shared_buffer message_SEND_ACK(uint64_t _serial_received);
 
 private:
-			lockable<circular_list<shared_buffer>> m_list_retransfer;
-			uint64_t			m_ack_sended = 0;
+	mutable	lock_object			m_lockable_list_retransfer;
+			circular_list<shared_buffer> m_list_retransfer;
+			uint64_t			m_ack_sent = 0;
 			uint64_t			m_ack_received = 0;
 };
 

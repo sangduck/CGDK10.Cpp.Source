@@ -41,7 +41,7 @@ public:
 	virtual	result_code			start(context& _context);
 			result_code			start(std::string_view _filename, int _file_confirm_level=1, bool _auto_save = true);
 
-			sUPDATABLE_PREPARE_INFO get_prepare_info(const std::string& _full_file_path) const noexcept;
+			auto				get_prepare_info(const std::string& _full_file_path) const noexcept -> sUPDATABLE_PREPARE_INFO;
 			void				put_prepare_info(const std::string& _full_file_path, const sUPDATABLE_PREPARE_INFO& _prepare_info);
 			void				pop_prepare_info(const std::string& _fullpath) noexcept;
 
@@ -51,7 +51,7 @@ public:
 			void				load_from(std::string_view _filename = std::string_view());
 			void				set_filename(const std::string& _filename);
 			void				set_filename(std::string&& _filename);			
-			std::filesystem::path get_filename() const noexcept;
+			auto				get_filename() const noexcept -> std::filesystem::path;
 
 protected:
 	virtual	void				on_caching_file_saved() {}
@@ -70,6 +70,6 @@ protected:
 			bool				m_is_auto_save = true;
 			bool				m_is_changed = true;
 
-			lockable<>			m_cs_map_prepare_info;
+			lock_object			m_lockable_map_prepare_info;
 			std::map<std::string, sPREPARE_INFO> m_map_prepare_info;
 };

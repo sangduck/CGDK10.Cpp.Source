@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -20,32 +20,35 @@
 
 int main()
 {
-	// *1) consoleìš© log ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// *1) console¿ë log °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto plogger_console = make_own<logger_console>();
 
-	// *2) loggerë¥¼ ì´ˆê¸°í™”í•œë‹¤.
+	// *2) logger¸¦ ÃÊ±âÈ­ÇÑ´Ù.
 	plogger_console->initialize();
 
-	// *3) consoleìš© log ê°ì²´ë¥¼ ë“±ë¡í•œë‹¤.
+	// *3) console¿ë log °´Ã¼¸¦ µî·ÏÇÑ´Ù.
 	service::get_logger()->register_log_targetable(plogger_console);
 
-	// 4) serviceë¥¼ ìƒì„±í•œë‹¤.
+	// 4) service¸¦ »ı¼ºÇÑ´Ù.
 	g_pservice = make_own<service>();
 
-	// 5) serviceë¥¼ ì‹œì‘í•œë‹¤.
-	g_pservice->start();
+	// 5) ¼³Á¤ ÆÄÀÏ(server_setting.json)À» ÀĞ¾î service¸¦ ½ÃÀÛÇÑ´Ù.
+	//    - ÀÚ½Ä °´Ã¼(acceptor_user, socket_tcp)´Â ÀÚ½ÅÀÇ ÀÌ¸§À¸·Î ¼³Á¤À» Ã£´Â´Ù.
+	context context_setting;
+	context_setting.from_json(api::file::read_file("server_setting.json"sv));
+	g_pservice->start(context_setting);
 
-	// 6) destroyë  ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+	// 6) destroyµÉ ¶§±îÁö ´ë±âÇÑ´Ù.
 	while (g_pservice->wait_destroy(1s) == false)
 	{
-		// check) ESCë¥¼ ì…ë ¥í•˜ë©´ ì¢…ë£Œí•œë‹¤.
+		// check) ESC¸¦ ÀÔ·ÂÇÏ¸é Á¾·áÇÑ´Ù.
 		if (_kbhit() && _getch() == 0x1b)
 		{
 			break;;
 		}
 	}
 
-	// 7) serviceë¥¼ ë‹«ëŠ”ë‹¤. (own_ptrì´ë¯€ë¡œ resetí•˜ëŠ” ê²ƒë§Œìœ¼ë¡œ destroyê°€ í˜¸ì¶œëœë‹¤.)
+	// 7) service¸¦ ´İ´Â´Ù. (own_ptrÀÌ¹Ç·Î resetÇÏ´Â °Í¸¸À¸·Î destroy°¡ È£ÃâµÈ´Ù.)
 	g_pservice.reset();
 
 	// return) 

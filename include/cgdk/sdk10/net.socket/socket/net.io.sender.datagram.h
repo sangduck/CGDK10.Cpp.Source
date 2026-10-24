@@ -47,10 +47,14 @@ public:
 inline bool net::io::sender::Ndatagram::process_send( shared_buffer&& _buffer, std::size_t _count_message, const net::sockaddr& _address, [[maybe_unused]] uint64_t _option)
 {
 	// check) _buffer->data_가 nullptr이 아닌가?
-	CGASSERT(_buffer.data() != nullptr, false)
+	CGASSERT_FATAL(_buffer.data() != nullptr);
 
 	// check) _buffer.size_이 0이 아닌가?
-	CGASSERT(_buffer.size() != 0, false)
+	CGASSERT_FATAL(_buffer.size() != 0);
+
+	// check) data가 nullptr이거나 size가 0이면 보내지 않는다. (Release)
+	if(_buffer.data() == nullptr || _buffer.size() == 0)
+		return false;
 
 	// check) 버퍼가 Overflow되었는가?
 	CGASSERT(_buffer._is_buffer_overflow()==false, false);

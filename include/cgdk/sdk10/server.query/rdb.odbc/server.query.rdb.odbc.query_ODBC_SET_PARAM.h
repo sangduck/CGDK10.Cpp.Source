@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                         Server Query odbc Classes                         *
+//*                          server.query.rdb.odbc                            *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -72,7 +72,7 @@ public:
 template <class TTYPE>
 			inline SQLRETURN ODBC_SET_PARAM_signed_integer					(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const TTYPE& _data)
 {
-	// declar) 
+	// declare) 
 	SQLLEN value_max;
 	SQLSMALLINT column_type;
 
@@ -133,7 +133,7 @@ template <class TTYPE>
 template <class TTYPE>
 			inline SQLRETURN ODBC_SET_PARAM_unsigned_integer				(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const TTYPE& _data)
 {
-	// declar) 
+	// declare) 
 	SQLLEN value_max;
 	SQLSMALLINT column_type;
 
@@ -183,7 +183,7 @@ template <class TTYPE>
 template <class TTYPE>
 			inline SQLRETURN ODBC_SET_PARAM_float							(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const TTYPE& _data)
 {
-	// declar) 
+	// declare) 
 	SQLLEN value_max;
 	SQLSMALLINT column_type;
 
@@ -271,13 +271,9 @@ template<>	inline SQLRETURN ODBC_SET_PARAM<NUMERIC>						(SQLHSTMT _handle_stmt,
 template<>	inline SQLRETURN ODBC_SET_PARAM<std::string>					(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const std::string&						_data) { return SQLBindParameter(_handle_stmt, static_cast<SQLUSMALLINT>(_ordinal), SQL_PARAM_INPUT, SQL_C_CHAR,  _param_info.data_type, _param_info.param_size, _param_info.decimal_digits, const_cast<char*>    (_data.c_str()), _data.size() * sizeof(char),      &_param_info.strLen_or_indptr); }
 template<>	inline SQLRETURN ODBC_SET_PARAM<std::wstring>					(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const std::wstring&						_data) { return SQLBindParameter(_handle_stmt, static_cast<SQLUSMALLINT>(_ordinal), SQL_PARAM_INPUT, SQL_C_WCHAR, _param_info.data_type, _param_info.param_size, _param_info.decimal_digits, const_cast<wchar_t*> (_data.c_str()), _data.size() * sizeof(wchar_t),   &_param_info.strLen_or_indptr); }
 template<>	inline SQLRETURN ODBC_SET_PARAM<std::u8string>					(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const std::u8string&						_data) { return SQLBindParameter(_handle_stmt, static_cast<SQLUSMALLINT>(_ordinal), SQL_PARAM_INPUT, SQL_C_CHAR,  _param_info.data_type, _param_info.param_size, _param_info.decimal_digits, const_cast<char8_t*> (_data.c_str()), _data.size() * sizeof(char8_t),   &_param_info.strLen_or_indptr); }
-template<>	inline SQLRETURN ODBC_SET_PARAM<std::u16string>					(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const std::u16string&					_data) { return SQLBindParameter(_handle_stmt, static_cast<SQLUSMALLINT>(_ordinal), SQL_PARAM_INPUT, SQL_C_WCHAR, _param_info.data_type, _param_info.param_size, _param_info.decimal_digits, const_cast<char16_t*>(_data.c_str()), _data.size() * sizeof(char16_t),  &_param_info.strLen_or_indptr); }
-template<>	inline SQLRETURN ODBC_SET_PARAM<std::u32string>					(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const std::u32string&					_data) { return SQLBindParameter(_handle_stmt, static_cast<SQLUSMALLINT>(_ordinal), SQL_PARAM_INPUT, SQL_C_CHAR,  _param_info.data_type, _param_info.param_size, _param_info.decimal_digits, const_cast<char32_t*>(_data.c_str()), _data.size() * sizeof(char32_t),  &_param_info.strLen_or_indptr); }
 template<>	inline SQLRETURN ODBC_SET_PARAM<std::string_view>				(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const std::string_view&					_data) { return SQLBindParameter(_handle_stmt, static_cast<SQLUSMALLINT>(_ordinal), SQL_PARAM_INPUT, SQL_C_CHAR,  _param_info.data_type, _param_info.param_size, _param_info.decimal_digits, const_cast<char*>    (_data.data()), _data.length() * sizeof(char),     &_param_info.strLen_or_indptr); }
 template<>	inline SQLRETURN ODBC_SET_PARAM<std::wstring_view>				(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const std::wstring_view&					_data) { return SQLBindParameter(_handle_stmt, static_cast<SQLUSMALLINT>(_ordinal), SQL_PARAM_INPUT, SQL_C_WCHAR, _param_info.data_type, _param_info.param_size, _param_info.decimal_digits, const_cast<wchar_t*> (_data.data()), _data.length() * sizeof(wchar_t),  &_param_info.strLen_or_indptr); }
 template<>	inline SQLRETURN ODBC_SET_PARAM<std::u8string_view>				(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const std::u8string_view&				_data) { return SQLBindParameter(_handle_stmt, static_cast<SQLUSMALLINT>(_ordinal), SQL_PARAM_INPUT, SQL_C_CHAR,  _param_info.data_type, _param_info.param_size, _param_info.decimal_digits, const_cast<char8_t*> (_data.data()), _data.length() * sizeof(char8_t),  &_param_info.strLen_or_indptr); }
-template<>	inline SQLRETURN ODBC_SET_PARAM<std::u16string_view>			(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const std::u16string_view&				_data) { return SQLBindParameter(_handle_stmt, static_cast<SQLUSMALLINT>(_ordinal), SQL_PARAM_INPUT, SQL_C_WCHAR, _param_info.data_type, _param_info.param_size, _param_info.decimal_digits, const_cast<char16_t*>(_data.data()), _data.length() * sizeof(char16_t), &_param_info.strLen_or_indptr); }
-template<>	inline SQLRETURN ODBC_SET_PARAM<std::u32string_view>			(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const std::u32string_view&				_data) { return SQLBindParameter(_handle_stmt, static_cast<SQLUSMALLINT>(_ordinal), SQL_PARAM_INPUT, SQL_C_CHAR,  _param_info.data_type, _param_info.param_size, _param_info.decimal_digits, const_cast<char32_t*>(_data.data()), _data.length() * sizeof(char32_t), &_param_info.strLen_or_indptr); }
 template<>	inline SQLRETURN ODBC_SET_PARAM<chrono::time::time_point>		(SQLHSTMT _handle_stmt, sPARAM& _param_info, std::size_t _ordinal, const chrono::time::time_point&			_data) 
 {
 	_param_info.data_timestamp = __to_sql_TIMESTAMP_struct(_data); 

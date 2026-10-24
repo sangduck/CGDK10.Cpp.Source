@@ -12,7 +12,7 @@
 #endif
 
 extern CGPTR<CCGLogHub>	g_pLog;
-CGPTR<CService>			g_pService;
+CGPTR<CService>			g_pservice;
 
 
 // CLobbyServerDlg 대화 상자
@@ -39,7 +39,7 @@ BEGIN_MESSAGE_MAP(CLobbyServerDlg, CDialogEx)
 	ON_COMMAND(ID_SYSTEM_START, &CLobbyServerDlg::OnSystemServiceStart)
 	ON_COMMAND(ID_SYSTEM_STOP, &CLobbyServerDlg::OnSystemServiceStop)
 	ON_COMMAND(ID_SYSTEM_EXIT, &CLobbyServerDlg::OnSystemExit)
-	ON_COMMAND(ID_SETTING_CONFIQURES, &CLobbyServerDlg::OnSettingConfigures)
+	ON_COMMAND(ID_SETTING_CONFIGURES, &CLobbyServerDlg::OnSettingConfigures)
 	ON_COMMAND(ID_SETTING_ENGINETUNNING, &CLobbyServerDlg::OnSettingEnginetunning)
 	ON_COMMAND(ID_ABOUT_SYSTEM_INFO, &CLobbyServerDlg::OnAboutSystemInfo)
 	ON_COMMAND(ID_SYSTEM_CANCEL, &CLobbyServerDlg::OnSystemServiceCancel)
@@ -103,10 +103,10 @@ BOOL CLobbyServerDlg::OnInitDialog()
 	// 4. 초기화.
 	//-----------------------------------------------------------------
 	// 1) Service를 생성한다.
-	g_pService = make_object<service>();
+	g_pservice = make_object<service>();
 
 	// 2) Unregister한다.
-	g_pService->RegisterMessageable(this);
+	g_pservice->RegisterMessageable(this);
 
 	// 3) Initialize
 	RequestServiceInitialize();
@@ -122,18 +122,18 @@ BOOL CLobbyServerDlg::OnInitDialog()
 	tempContext.read_from_JSON_file("LobbyServer_Setting.json");
 
 	// 2) Server Login
-	m_childConnectorServerLogin.CreateChild(g_pService->m_psocketServerLogin, 20000, this);
+	m_childConnectorServerLogin.CreateChild(g_pservice->m_psocketServerLogin, 20000, this);
 	//m_childConnectorServerLogin.SetDefaultPort(tempContext["acceptorServerLogin"]["Port"]);
 	m_childConnectorServerLogin.Move(5, 0, ORIGIN_REAR | ORIGIN_CENTER_Y, GetDlgItem(IDC_STATIC_SOCKET_LOGINSERVER));
 
 
 	// 3) User
-	m_childAcceptorUser.CreateChild(g_pService->m_pacceptorUser, this);
+	m_childAcceptorUser.CreateChild(g_pservice->m_pacceptorUser, this);
 	//m_childAcceptorUser.SetDefaultPort(tempContext["acceptorServerGame"]["Port"]);
 	m_childAcceptorUser.Move(5, 0, ORIGIN_REAR | ORIGIN_CENTER_Y, GetDlgItem(IDC_STATIC_ACCEPTOR_USER));
 
 	// 4) User
-	m_childConnectiveUser.CreateChild(g_pService->m_pacceptorUser->Statistics_GetConnectionInfo(), this);
+	m_childConnectiveUser.CreateChild(g_pservice->m_pacceptorUser->Statistics_GetConnectionInfo(), this);
 	m_childConnectiveUser.Move(0, 60, ORIGIN_CENTER_X | ORIGIN_TOP, GetDlgItem(IDC_STATIC_FRAME_USER));
 
 	m_listUser.InsertColumn(0, TEXT("Name"),				LVCFMT_LEFT,	200,	 0);
@@ -257,7 +257,7 @@ int CLobbyServerDlg::OnMessage(CGMSG& _msg)
 		{
 		case	CGNOTIFY_SERVER_UPDATE:
 				{
-					g_pService->AddRef();
+					g_pservice->AddRef();
 				}
 				break;
 
@@ -335,7 +335,7 @@ LRESULT CLobbyServerDlg::OnNotifyMessage_Update(WPARAM _wParam, LPARAM _lParam)
 	case	CGNOTIFY_SERVER_UPDATE:
 			{
 				//UpdateServerInfo();
-				g_pService->Release();
+				g_pservice->Release();
 			}
 			break;
 
@@ -453,12 +453,12 @@ void CLobbyServerDlg::OnTimer(UINT_PTR nIDEvent)
 	if (nIDEvent == 0)
 	{
 		// check) 
-		RETURN_IF(g_pService.empty());
+		RETURN_IF(g_pservice.empty());
 
-		//SetDlgItemInt(IDC_STATIC_SERVER_VERSION, g_pService->GetServerVersion());
+		//SetDlgItemInt(IDC_STATIC_SERVER_VERSION, g_pservice->GetServerVersion());
 		//SetDlgItemText(IDC_STATIC_SVN_VERSION, SVN_UPDATE_REVISION);
 
-		//time::local::time_point	timeUpdated	 = g_pService->m_timeServerList_Updated;
+		//time::local::time_point	timeUpdated	 = g_pservice->m_timeServerList_Updated;
 		//SetDlgItemText(IDC_STATIC_SERVERLIST_LAST_UPDATED, timeUpdated.to_string<TCHAR>().c_str());
 	}
 
@@ -481,13 +481,13 @@ void CLobbyServerDlg::RequestServiceInitialize()
 	CGMSG_CONTEXT	msgContext;
 
 	// 1) Service를 초기화한다.
-	g_pService->Initialize(msgContext);
+	g_pservice->Initialize(msgContext);
 }
 
 void CLobbyServerDlg::RequestServiceStart()
 {
 	// check) 
-	RETURN_IF(g_pService.empty());
+	RETURN_IF(g_pservice.empty());
 
 	// 1) Menu Control
 	GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_DISABLED);
@@ -501,7 +501,7 @@ void CLobbyServerDlg::RequestServiceStart()
 		// Declar)
 		CGMSG_CONTEXT	msgContext;
 
-		g_pService->Start(msgContext);
+		g_pservice->Start(msgContext);
 	});
 }
 
@@ -512,7 +512,7 @@ void CLobbyServerDlg::RequestServiceCancel()
 void CLobbyServerDlg::RequestServiceStop()
 {
 	// check) 
-	RETURN_IF(g_pService.empty());
+	RETURN_IF(g_pservice.empty());
 
 	// 1) Menu Control
 	GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_ENABLED);
@@ -523,7 +523,7 @@ void CLobbyServerDlg::RequestServiceStop()
 	// 2) Close의 실행을 요청한다.
 	POST_EXECUTE([]()
 	{
-		g_pService->Stop();
+		g_pservice->Stop();
 	});
 }
 
@@ -542,15 +542,15 @@ void CLobbyServerDlg::RequestServiceDestroy()
 	POST_EXECUTE([=]
 	{
 		// - Server를 닫는다.
-		g_pService->Destroy();
+		g_pservice->Destroy();
 
 		// - Trace를 등록해제한다.
 		g_pLog->UnregisterMessageable(&m_childLogView);
 
 		// - Unregister한다.
-		g_pService->UnregisterMessageable(this);
+		g_pservice->UnregisterMessageable(this);
 
-		// - QUIT Message를 현재의 Thread에 날린다.(이것으로 어플리케이션은 종료된다.)
+		// - QUIT Message를 현재의 Thread에 날린다.(이것으로 애플리케이션은 종료된다.)
 		PostThreadMessage(iThreadID, WM_QUIT, (WPARAM)-1, 0);
 	});
 }
@@ -614,7 +614,7 @@ int CLobbyServerDlg::List_UserAdd(User::CSocket* _pSocket)
 	LV_ITEM	list_item;
 	int		iCountUser;
 
-	scoped_lock(m_listUser)
+	SCOPED_LOCK(m_listUser)
 	{
 		// 1) 추가한다.
 		list_item.iItem = m_listUser.InsertItem(m_listUser.GetItemCount(), TEXT(""));
@@ -651,7 +651,7 @@ void CLobbyServerDlg::List_UserRemove(User::CSocket* _pSocket)
 	// Declare) 
 	int		iCountUser;
 
-	scoped_lock(m_listUser)
+	SCOPED_LOCK(m_listUser)
 	{
 		// 1) Index를 얻는다.
 		int	iIndex	 = m_listUser.MapIDToIndex(_pSocket->m_idxList);
@@ -678,7 +678,7 @@ void CLobbyServerDlg::List_UserRemove(User::CSocket* _pSocket)
 
 void CLobbyServerDlg::List_UserUpdate(User::CSocket* _pSocket)
 {
-	scoped_lock(m_listUser)
+	SCOPED_LOCK(m_listUser)
 	{
 		// 1) Index를 얻는다.
 		int	iIndex = m_listUser.MapIDToIndex(_pSocket->m_idxList);
@@ -770,9 +770,9 @@ void CLobbyServerDlg::List_UserUpdate(int _Index)
 
 void CLobbyServerDlg::List_UserUpdateAll()
 {
-	scoped_lock(m_listUser)
+	SCOPED_LOCK(m_listUser)
 	{
-		// 1) Game Server의 갯수를 얻는다.
+		// 1) Game Server의 개수를 얻는다.
 		int	countUser = m_listUser.GetItemCount();
 
 		/// 2) 모든 Game Server를 Update한다.
@@ -785,6 +785,6 @@ void CLobbyServerDlg::List_UserUpdateAll()
 
 //void CLobbyServerDlg::UpdateServerInfo()
 //{
-//	//SetDlgItemInt(IDC_STATIC_SERVER_VERSION, g_pService->GetServerVersion());
+//	//SetDlgItemInt(IDC_STATIC_SERVER_VERSION, g_pservice->GetServerVersion());
 //	//SetDlgItemText(IDC_STATIC_SVN_VERSION, _TO_CGSTRING(SVN_UPDATE_REVISION));
 //}

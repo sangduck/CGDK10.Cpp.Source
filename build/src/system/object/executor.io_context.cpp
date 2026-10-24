@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "platform.h"
 
 using namespace CGDK;
 
@@ -12,22 +13,12 @@ executor::io_context::io_context() noexcept
 	this->process_register_executor();
 }
 
-executor::io_context::io_context(std::string_view _name) :
-	Nexecutor(_name)
-{
-	// 1) set object type
-	this->set_object_type(eOBJECT_TYPE::EXECUTOR_COMPLETION_PORT);
-
-	// 2) register to factory manager
-	this->process_register_executor();
-}
-
 executor::io_context::~io_context() noexcept
 {
 	// 1) stop executor
 	executor::io_context::stop();
 
-	// 2) unrregister from factory manager
+	// 2) unregister from factory manager
 	this->process_unregister_executor();
 
 	// 3) set state to eOBJECT_STATE::NONE
@@ -95,11 +86,32 @@ result_code executor::io_context::_process_starting(context& _context)
 
 result_code executor::io_context::_process_start(context& _context)
 {
-	// 1) queeue을 생성한다.
+	// 1) queue을 생성한다.
 	auto result = this->m_io_context.create();
 
 	// check) IOCP의 생성에 실패했으면 Exception을 던진다.
 	THROW_IF(result == false, throwable::failure(eRESULT::FAIL_TO_CREATE));
+
+#if defined(__ANDROID__) || defined(__linux__)
+	// - the backend (epoll / io_uring / io_uring_completion : executor::default_io_backend())
+	LOG_INFO << "  - io_context['"sv << name() << "'] backend : "sv << ((this->m_io_context.backend() == executor::io_backend::io_uring_completion) ? "io_uring_completion"sv : (this->m_io_context.backend() == executor::io_backend::io_uring) ? "io_uring"sv : "epoll"sv);
+
+	// - the default busy poll of epoll_wait() (executor::set_default_busy_poll()). an own value of the executor replaces it (io_context_threads)
+	{
+		uint32_t busy_poll_usecs = 0;
+		uint16_t busy_poll_budget = 0;
+		bool prefer_busy_poll = false;
+		executor::get_default_busy_poll(busy_poll_usecs, busy_poll_budget, prefer_busy_poll);
+
+		if (busy_poll_usecs != 0)
+		{
+			if (this->m_io_context.backend() != executor::io_backend::epoll)
+				LOG_WARNING << "(warn) io_context['"sv << name() << "']: the busy poll of epoll_wait() is ignored on the io_uring backend"sv;
+			else if (this->m_io_context.set_busy_poll(busy_poll_usecs, busy_poll_budget, prefer_busy_poll))
+				LOG_INFO << "  - io_context['"sv << name() << "'] busy poll : "sv << busy_poll_usecs << "us (budget:"sv << busy_poll_budget << ", prefer:"sv << prefer_busy_poll << ")"sv;
+		}
+	}
+#endif
 
 	// 2) 
 	this->on_start(_context);
@@ -149,10 +161,29 @@ result_code executor::io_context::_process_stop() noexcept
 	return result_code(eRESULT::SUCCESS);
 }
 
+void executor::io_context::process_bind_worker(bool _is_transient) noexcept
+{
+#if defined(__ANDROID__) || defined(__linux__)
+	// - io_uring_completion : the ring of this thread (the others : nothing). a transient thread (an extra thread while the
+	//   workers block : it exits later, and the kernel cancels the requests of an exiting thread) gets no ring
+	this->m_io_context.bind_worker(_is_transient);
+#else
+	static_cast<void>(_is_transient);
+#endif
+}
+
+void executor::io_context::process_unbind_worker() noexcept
+{
+#if defined(__ANDROID__) || defined(__linux__)
+	this->m_io_context.unbind_worker();
+#endif
+}
+
 bool executor::io_context::process_post(object_ptr<Iexecutable>&& _pexecutable)
 {
 	// check) _pexecutable가 NULL이면 Post를 던지지 않는다.
-	RETURN_IF(_pexecutable.empty(), false);
+	if(_pexecutable.empty())
+		return false;
 
 	// 1) Post한다.
 	return this->m_io_context.post_executable(0, 0, std::move(_pexecutable)) != 0;
@@ -166,6 +197,7 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 	public:
 		Iexecutable*		m_pexecutable;
 		api::Nthread*		m_pthread_current;
+		chrono::tick::time_point m_start_time;
 
 	#if defined(_ENABLE_DEBUG_NEW)
 		char				m_debugInfo_pexecutable[sizeof(Iexecutable)];
@@ -186,7 +218,7 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 		#endif
 		{
 			// check) m_pthread_current가 null이면 안된다.
-			CGASSERT_ERROR(this->m_pthread_current != nullptr);
+			CGASSERT_FATAL(this->m_pthread_current != nullptr);
 
 		#if defined(_ENABLE_DEBUG_NEW)
 			// check) ....
@@ -196,20 +228,28 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 			memcpy(this->m_debugInfo_pexecutable, reinterpret_cast<void*>(_pexecutable), 32);
 		#endif
 
+			// - 실행 시작 시간을 기록한다.
+			this->m_start_time = chrono::tick::now();
+
 			// statistics)
 			this->m_pthread_current->statistics_executing_begin();
 		}
 
 		~AUTO_RELEASE_EXECUTABLE() noexcept
 		{
+			this->reset();
+		}
+
+		void reset() noexcept
+		{
 			// check) m_pexecutable가 nullptr이면 그냥 리턴한다.
-			CGASSERT_ERROR(this->m_pexecutable != nullptr);
+			CGASSERT_FATAL(this->m_pexecutable != nullptr);
 
 			// statistics)
 			this->m_pthread_current->statistics_executing_end();
 
 			// statistics)
-			this->m_pexecutable->statistics_on_extra();
+			this->m_pexecutable->statistics_on_execute_elapsed_time(chrono::tick::now() - this->m_start_time);
 
 			// 2) m_pexecutable을 release한다.
 			this->m_pexecutable->release();
@@ -219,10 +259,115 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 		}
 	};
 	//-----------------------------------------------------------------
-	// check)
-	RETURN_IF(this->handle() == INVALID_CGHANDLE_VALUE, false);
 
-	// declare) 
+	// check)
+	if(this->handle() == INVALID_CGHANDLE_VALUE)
+		return false;
+
+#if defined(__ANDROID__) || defined(__linux__)
+	// declare)
+	api::io_context::POP_RESULT array_result[api::io_context::MAX_EVENT_BATCH];
+
+	// - 한번에 받을 event 수 (thread별로 실행 시간에 맞춰 조절한다)
+	//   epoll fd는 모든 thread가 함께 쓴다. 한 thread가 받은 event들은 순서대로 실행되므로 뒤쪽 event는 앞의 실행 시간만큼 기다린다.
+	//   event 처리가 짧으면 많이 받아 epoll_wait 횟수와 경합을 줄이고, 길면 적게 받아 다른 thread가 나눠 실행하도록 한다.
+	//   (batch 하나의 실행 시간이 EVENT_BATCH_DURATION 정도가 되도록 한다)
+	static constexpr auto EVENT_BATCH_DURATION = std::chrono::microseconds(10);
+	thread_local int t_count_event_batch = 1;
+
+	// 1) get results from io_context (한번의 epoll_wait/io_uring_enter로 여러 event를 받는다. executable은 add_ref된 상태다)
+	//    (epoll/io_uring : event와 executable. io_uring_completion : 이 thread의 ring의 CQE (op의 res/flags), post된 executable)
+	int count_event = this->m_io_context.pop_results(array_result, t_count_event_batch, _ticks_wait);
+
+	// - 실행 시작 시간
+	const auto tick_start = (count_event != 0) ? chrono::tick::now() : chrono::tick::time_point{};
+
+	// declare)
+	std::size_t count_executed = 0;
+	std::exception_ptr pexception;
+
+	// 2) 'process_execute'
+	//    - 받은 event는 모두 실행한다. 하나가 exception을 던져도 나머지를 실행한 뒤 첫 exception을 다시 던진다.
+	//      (EPOLLONESHOT event는 다시 오지 않는다 : 실행하지 않고 버리면 그 socket은 더 이상 event를 받지 못한다)
+	//    - io_uring_completion : the batch is visible to the backend while it runs (a handler that blocks hands the rest of it to the
+	//      workers that run the ring of this thread meanwhile : count_event is cut. api::io_context_uring_cq::thread_blocked())
+	api::io_context_uring_cq::BATCH batch{ array_result, &count_event, 0, this->m_io_context.completion_context(), api::io_context_uring_cq::current_batch() };
+
+	if (batch.pcontext != nullptr)
+		api::io_context_uring_cq::current_batch() = &batch;
+
+	for (int i = 0; i < count_event; ++i)
+	{
+		// declare)
+		const auto& result_event = array_result[i];
+
+		// - the result executing now
+		batch.index = i;
+
+		// check)
+		CONTINUE_IF(result_event.pexecutable == nullptr);
+
+		try
+		{
+			// declare)
+			AUTO_RELEASE_EXECUTABLE	pexecutable(result_event.pexecutable);
+
+			// - call 'process_execute'
+			pexecutable.m_pexecutable->process_execute(result_event.result, result_event.param);
+		}
+		catch (...)
+		{
+			if (!pexception)
+				pexception = std::current_exception();
+
+			// continue)
+			continue;
+		}
+
+		// - count
+		++count_executed;
+	}
+
+	// - the batch is not visible any more (the outer one of a handler pumping the executor again)
+	if (batch.pcontext != nullptr)
+		api::io_context_uring_cq::current_batch() = batch.pouter;
+
+	// - io_uring : submits the re-arms this thread deferred while processing the batch (one io_uring_enter). epoll : nothing
+	//   io_uring_completion : writes them (submitted with the enter of the next pop_results())
+	this->m_io_context.flush_pending();
+
+	// 3) 다음에 받을 event 수를 정한다. (event 하나의 평균 실행 시간으로 EVENT_BATCH_DURATION을 채울 수 있는 수)
+	if (count_event != 0)
+	{
+		const auto tick_elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(chrono::tick::now() - tick_start).count();
+		const auto count_fit = (tick_elapsed > 0) ? (std::chrono::nanoseconds(EVENT_BATCH_DURATION).count() * count_event / tick_elapsed) : api::io_context::MAX_EVENT_BATCH;
+
+		// - 한번에 크게 바뀌지 않도록 이전 값과 평균한다.
+		t_count_event_batch = std::clamp(static_cast<int>((t_count_event_batch + std::min<int64_t>(count_fit, api::io_context::MAX_EVENT_BATCH) + 1) / 2), 1, api::io_context::MAX_EVENT_BATCH);
+	}
+
+	// statistics)
+	if (count_executed != 0)
+		this->m_statistics.now.count_execute.fetch_add(count_executed, std::memory_order_relaxed);		// - statistics (relaxed)
+
+	// reraise)
+	if (pexception)
+		std::rethrow_exception(pexception);
+
+	// check)
+	if (count_executed == 0)
+	{
+		// - process idle
+		this->process_idle();
+
+		// return)
+		return false;
+	}
+
+	// return)
+	return true;
+#else
+	// declare)
 	api::io_context::RESULT result_event;
 
 	// 1) get executable from io_context 
@@ -248,23 +393,24 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 	}
 
 	// statistics)
-	++this->m_statistics.now.count_execute;
+	this->m_statistics.now.count_execute.fetch_add(1, std::memory_order_relaxed);		// - statistics (relaxed)
 
-	// return) 
+	// return)
 	return true;
+#endif
 }
 
 void executor::io_context::execute_all() noexcept
 {
 	//-----------------------------------------------------------------
 	// 설명) 이중 for문인 이유!!!
-	//   만약 execute(0)함수의 실행중 Exception이 발생했을 경우 
+	//   만약 execute(0)함수의 실행 중 Exception이 발생했을 경우 
 	//   Catch에서 잡은 후 다시 다음을 실행하기 위해 for문이 이중이다.
-	//   만약에 더이상 실행할 executor가 없을 경우 false가 리턴되면
+	//   만약에 더 이상 실행할 executor가 없을 경우 false가 리턴되면
 	//   바로 리턴 된다.
 	//
 	//   이때 for문을 이중으로해서 TRY문을 뺀 이유는 성능의 향상을 위해서다.
-	//   매번 for문이 돌때마다 try와 catch가 반복될 경우 성능을 하락시킬수
+	//   매번 for문이 돌때마다 try와 catch가 반복될 경우 성능을 하락시킬 수
 	//   있기 때문이다.
 	//-----------------------------------------------------------------
 	for(;;)
@@ -284,4 +430,37 @@ void executor::io_context::execute_all() noexcept
 		{
 		}
 	}
+}
+
+
+//-----------------------------------------------------------------------------
+// the default busy poll of epoll_wait() (executor::set_default_busy_poll : applied by _process_start() to every epoll io_context created afterwards)
+//-----------------------------------------------------------------------------
+namespace
+{
+	// - packed : usecs (32) | budget (16) | prefer (1). one atomic : read as a whole by _process_start()
+	std::atomic<uint64_t> s_default_busy_poll{ 0 };
+}
+
+void executor::set_default_busy_poll(uint32_t _usecs, uint16_t _budget, bool _prefer) noexcept
+{
+	const uint64_t packed = (static_cast<uint64_t>(_usecs) << 32) | (static_cast<uint64_t>(_budget) << 16) | (_prefer ? 1u : 0u);
+	s_default_busy_poll.store(packed, std::memory_order_release);
+}
+
+void executor::get_default_busy_poll(uint32_t& _usecs, uint16_t& _budget, bool& _prefer) noexcept
+{
+	const uint64_t packed = s_default_busy_poll.load(std::memory_order_acquire);
+	_usecs = static_cast<uint32_t>(packed >> 32);
+	_budget = static_cast<uint16_t>(packed >> 16);
+	_prefer = (packed & 1u) != 0;
+}
+
+bool executor::is_busy_poll_available() noexcept
+{
+#if defined(__ANDROID__) || defined(__linux__)
+	return api::io_context_Nepoll::is_busy_poll_available();
+#else
+	return false;
+#endif
 }

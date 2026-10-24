@@ -1,32 +1,32 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 
 namespace CGDK
 {
 
-//// 1) google ì‚¬ìš©ì
+//// 1) google »ç¿ëÀÚ
 //http_api::google::RESPONSE_AUTHORIZE http_api::google::request(const REQUEST_AUTHORIZE& _request)
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// google ì¸ì¦ - ì½”ë“œ ë°›ê¸°
+//	// google ÀÎÁõ - ÄÚµå ¹Ş±â
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		https://kauth.google.com/oauth/authorize
 //	//	 3) HTTP Method		GET
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Parameters
-//	//		- client_id			(í•„ìˆ˜)	ì•± ìƒì„±ì‹œ ë°œê¸‰ ë°›ì€ REST API í‚¤.
-//	//		- redirect_uri		(í•„ìˆ˜)	ì½”ë“œê°€ ë¦¬ë‹¤ì´ë ‰íŠ¸ ëœ URI. ì„¤ì •>ì¼ë°˜>ì›¹>ì‚¬ì´íŠ¸ ë„ë©”ì¸ì—ì„œ ì„¤ì •í•œ ê°ê°ì˜ ë„ë©”ì¸ì— ì„¤ì •>ì¼ë°˜>ì›¹>Redirect Pathë¥¼ ë¶™ì¸ URI
-//	//		- response_type		(í•„ìˆ˜)	code ë¬¸ìì—´ ê°’ìœ¼ë¡œ ê³ ì •
-//	//		- state						Cross-site request Forgery ê³µê²©ì„ ë³´í˜¸í•˜ê¸° ìœ„í•œ ì„ì˜ì˜ ê³ ìœ í•œ ë¬¸ìì—´, ë¦¬ë‹¤ì´ë ‰íŠ¸ì‹œ í•´ë‹¹ê°’ì´ ì „ë‹¬ë¨.
-//	//		- encode_state				stateê°€ encodeë˜ì–´ ìˆëŠ”ì§€ì— ëŒ€í•œ ìœ ë¬´(boolean). true(yë˜ëŠ” 1)ì¼ ê²½ìš° state ì „ë‹¬ì‹œ decoded stateë¡œ ì „ë‹¬.
-//	//									false(në˜ëŠ”0)ì¼ ê²½ìš° ë³„ë„ì˜ decodeë¥¼ í•˜ì§€ ì•Šê³  stateë¥¼ ê·¸ëŒ€ë¡œ ì „ë‹¬. default false
+//	//		- client_id			(ÇÊ¼ö)	¾Û »ı¼º ½Ã ¹ß±Ş ¹ŞÀº REST API Å°.
+//	//		- redirect_uri		(ÇÊ¼ö)	ÄÚµå°¡ ¸®´ÙÀÌ·ºÆ® µÈ URI. ¼³Á¤>ÀÏ¹İ>À¥>»çÀÌÆ® µµ¸ŞÀÎ¿¡¼­ ¼³Á¤ÇÑ °¢°¢ÀÇ µµ¸ŞÀÎ¿¡ ¼³Á¤>ÀÏ¹İ>À¥>Redirect Path¸¦ ºÙÀÎ URI
+//	//		- response_type		(ÇÊ¼ö)	code ¹®ÀÚ¿­ °ªÀ¸·Î °íÁ¤
+//	//		- state						Cross-site request Forgery °ø°İÀ» º¸È£ÇÏ±â À§ÇÑ ÀÓÀÇÀÇ °íÀ¯ÇÑ ¹®ÀÚ¿­, ¸®´ÙÀÌ·ºÆ®½Ã ÇØ´ç°ªÀÌ Àü´ŞµÊ.
+//	//		- encode_state				state°¡ encodeµÇ¾î ÀÖ´ÂÁö¿¡ ´ëÇÑ À¯¹«(boolean). true(y¶Ç´Â 1)ÀÏ °æ¿ì state Àü´Ş ½Ã decoded state·Î Àü´Ş.
+//	//									false(n¶Ç´Â0)ÀÏ °æ¿ì º°µµÀÇ decode¸¦ ÇÏÁö ¾Ê°í state¸¦ ±×´ë·Î Àü´Ş. default false
 //	//
-//	//   ìš”ì²­)	GET /oauth/authorize?client_id={app_key}&redirect_uri={redirect_uri}&response_type=code HTTP/1.1 
+//	//   ¿äÃ»)	GET /oauth/authorize?client_id={app_key}&redirect_uri={redirect_uri}&response_type=code HTTP/1.1 
 //	//			Host: kauth.google.com
 //	//
-//	//   ê²°ê³¼)	HTTP / 1.1 302 Found
+//	//   °á°ú)	HTTP / 1.1 302 Found
 //	//				Content - Length: 0
 //	//				Location : {redirect_uri} ? code = { authorize_code }
 //	//
@@ -40,20 +40,20 @@ namespace CGDK
 //	// check)
 //	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 //
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto prequest_http = make_object<query::http::query>();
 //	
 //	// declare)
 //	auto bufObject = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	//auto	sizeWrite = __sprintf(reinterpret_cast<char*>(bufObject.data()), SIZE_BUFFER, "/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code&state=%s", _request.client_id.c_str(), _request.redirect_uri.c_str(), _request.state.c_str());
-//	auto sizeWrite = __sprintf(bufObject.data<char>(), SIZE_BUFFER, "/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code", _request.client_id.c_str(), _request.redirect_uri.c_str());
+//	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	//auto	sizeWrite = std::snprintf(reinterpret_cast<char*>(bufObject.data()), SIZE_BUFFER, std::string_view("/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code&state=%s").data(), _request.client_id.c_str(), _request.redirect_uri.c_str(), _request.state.c_str());
+//	auto sizeWrite = std::snprintf(bufObject.data<char>(), SIZE_BUFFER, std::string_view("/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code").data(), _request.client_id.c_str(), _request.redirect_uri.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite<0, throwable::failure(eRESULT::FAIL));
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method = eHTTP_METHOD::GET_;
 //
 //	// declare) 
@@ -62,10 +62,10 @@ namespace CGDK
 //	// declare) 
 //	shared_buffer buf_option;
 //
-//	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //
-//	// 6) requestë¥¼ Setí•œë‹¤.
+//	// 6) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -82,43 +82,43 @@ namespace CGDK
 //	// declare) 
 //	http_api::google::RESPONSE_AUTHORIZE response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		//// declare) 
 //		//rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		//// - Parsingí•œë‹¤.
+//		//// - ParsingÇÑ´Ù.
 //		//const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		//// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		//// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		//RETURN_IF(result.IsNull())
 //
-//		//// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		//// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		//for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		//{
 //		//	auto	str_name	 = (*iter).name.GetString();
@@ -139,10 +139,10 @@ namespace CGDK
 //		//}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -152,27 +152,27 @@ namespace CGDK
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// google ì¸ì¦ - ì‚¬ìš©ì í† í° ë°›ê¸°
+//	// google ÀÎÁõ - »ç¿ëÀÚ ÅäÅ« ¹Ş±â
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		https://kauth.google.com/oauth/token
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/json;charset=UTF-8"
 //	//   5) Parameters
-//	//		- grant_type		(í•„ìˆ˜)	authorization_codeë¡œ ê³ ì •
-//	//		- client_id			(í•„ìˆ˜)	ì•± ìƒì„±ì‹œ ë°œê¸‰ ë°›ì€ REST APIí‚¤.
-//	//		- redirect_uri		(í•„ìˆ˜)	ì½”ë“œê°€ ë¦¬ë‹¤ì´ë ‰íŠ¸ ëœ URI. ì„¤ì •>ì¼ë°˜>ì›¹>ì‚¬ì´íŠ¸ ë„ë©”ì¸ì—ì„œ ì„¤ì •ëœ ê°ê°ì˜ ë„ë©”ì¸ì— ì„¤ì •>ì¼ë°˜>ì›¹>Redirect Pathë¥¼ ë¶™ì¸ URI
-//	//		- code				(í•„ìˆ˜)	ìœ„ ì½”ë“œ ë°›ê¸°ì—ì„œ ë°œê¸‰ ë°›ì€ ì¸ì¦ëœ ì½”ë“œ
-//	//		- client_secret				ì„¤ì •>ì¼ë°˜>Client Secretì—ì„œ ìƒì„±ëœ client_secret ì½”ë“œ ACTIVE ìƒíƒœì¸ ê²½ìš° í•„ìˆ˜ë¡œ ì„¤ì •í•´ì•¼ í•¨.
+//	//		- grant_type		(ÇÊ¼ö)	authorization_code·Î °íÁ¤
+//	//		- client_id			(ÇÊ¼ö)	¾Û »ı¼º ½Ã ¹ß±Ş ¹ŞÀº REST APIÅ°.
+//	//		- redirect_uri		(ÇÊ¼ö)	ÄÚµå°¡ ¸®´ÙÀÌ·ºÆ® µÈ URI. ¼³Á¤>ÀÏ¹İ>À¥>»çÀÌÆ® µµ¸ŞÀÎ¿¡¼­ ¼³Á¤µÈ °¢°¢ÀÇ µµ¸ŞÀÎ¿¡ ¼³Á¤>ÀÏ¹İ>À¥>Redirect Path¸¦ ºÙÀÎ URI
+//	//		- code				(ÇÊ¼ö)	À§ ÄÚµå ¹Ş±â¿¡¼­ ¹ß±Ş ¹ŞÀº ÀÎÁõµÈ ÄÚµå
+//	//		- client_secret				¼³Á¤>ÀÏ¹İ>Client Secret¿¡¼­ »ı¼ºµÈ client_secret ÄÚµå ACTIVE »óÅÂÀÎ °æ¿ì ÇÊ¼ö·Î ¼³Á¤ÇØ¾ß ÇÔ.
 //	//
-//	//	ìš”ì²­)	curl -v -X POST https://kauth.google.com/oauth/token 
+//	//	¿äÃ»)	curl -v -X POST https://kauth.google.com/oauth/token 
 //	//			 -d 'grant_type=authorization_code' 
 //	//			 -d 'client_id={app_key}' 
 //	//			 -d 'redirect_uri={redirect_uri}' 
 //	//			 -d 'code={authorize_code}'	
 //	//
-//	//	ê²°ê³¼)	HTTP/1.1 200 OK
+//	//	°á°ú)	HTTP/1.1 200 OK
 //	//			Content-Type: application/json;charset=UTF-8
 //	//			{
 //	//				"access_token":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -192,37 +192,37 @@ namespace CGDK
 //	// check)
 //	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 //
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto prequest_http = make_object<query::http::query>();
 //
-//	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
+//	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
 //	auto str_object = "/oauth/2.0/token";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method = eHTTP_METHOD::POST_;
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤. - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù. - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" };
 //
-//	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-//	buf_option.append<TEXT_WEB>("code=");			buf_option.append<TEXT_WEB>(_request.code);
-//	buf_option.append<TEXT_WEB>("&client_id=");		buf_option.append<TEXT_WEB>(_request.client_id);
-//	buf_option.append<TEXT_WEB>("&redirect_uri=");	buf_option.append<TEXT_WEB>(_request.redirect_uri);
-//	buf_option.append<TEXT_WEB>("&grant_type=authorization_code");
+//	buf_option.append<text<char>>("code=");			buf_option.append<text<char>>(_request.code);
+//	buf_option.append<text<char>>("&client_id=");		buf_option.append<text<char>>(_request.client_id);
+//	buf_option.append<text<char>>("&redirect_uri=");	buf_option.append<text<char>>(_request.redirect_uri);
+//	buf_option.append<text<char>>("&grant_type=authorization_code");
 //
 //	// 6) Options
 //	if(_request.client_secret.empty()==false)
 //	{
-//		buf_option.append<TEXT_WEB>("&client_secret=");	buf_option.append<TEXT_WEB>(_request.client_secret);
+//		buf_option.append<text<char>>("&client_secret=");	buf_option.append<text<char>>(_request.client_secret);
 //	}
 //	buf_option[buf_option.size()] = 0;
 //
-//	// 7) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 7) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 8) requestë¥¼ Setí•œë‹¤.
+//	// 8) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -240,43 +240,43 @@ namespace CGDK
 //	// declare) 
 //	http_api::google::RESPONSE_TOKEN response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data());
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto str_name = (*iter).name.GetString();
@@ -297,10 +297,10 @@ namespace CGDK
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -310,9 +310,9 @@ namespace CGDK
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// google ì¸ì¦ - ë¡œê·¸ì•„ì›ƒ
+//	// google ÀÎÁõ - ·Î±×¾Æ¿ô
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		https://kapi.google.com/v1/user/logout
 //	//	 3) HTTP Method		POST
@@ -320,10 +320,10 @@ namespace CGDK
 //	//   5) Parameters
 //	//		- Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 //	//
-//	//	ìš”ì²­)	curl -v -X POST https://kapi.google.com/v1/user/logout 
+//	//	¿äÃ»)	curl -v -X POST https://kapi.google.com/v1/user/logout 
 //	//			 -H "Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 //	//
-//	//	ê²°ê³¼)	HTTP / 1.1 200 OK
+//	//	°á°ú)	HTTP / 1.1 200 OK
 //	//				Content - Type: application / json; charset = UTF - 8
 //	//			{
 //	//				"id":123456789
@@ -341,9 +341,9 @@ namespace CGDK
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// google ì¸ì¦ - ì•±ì—°ê²°
+//	// google ÀÎÁõ - ¾Û¿¬°á
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		https://kapi.google.com/v1/user/signup
 //	//	 3) HTTP Method		POST
@@ -352,11 +352,11 @@ namespace CGDK
 //	//		- Authorization: Bearer {access_token}
 //	//	    - Content-Type: application/x-www-form-urlencoded;charset=utf-8
 //	//
-//	//	ìš”ì²­)	curl - v - X POST https ://kapi.google.com/v1/user/signup 
+//	//	¿äÃ»)	curl - v - X POST https ://kapi.google.com/v1/user/signup 
 //	//				-H "Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" 
 //	//				--data-urlencode 'properties={"age":"23", "gender":"female"}'
 //	//
-//	//	ê²°ê³¼)	HTTP / 1.1 200 OK
+//	//	°á°ú)	HTTP / 1.1 200 OK
 //	//			Content-Type: application/json;charset=UTF-8
 //	//			{
 //	//				"id":123456789
@@ -373,9 +373,9 @@ namespace CGDK
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// google ì¸ì¦ - ì•±ì—°ê²°í•´ì œ
+//	// google ÀÎÁõ - ¾Û¿¬°áÇØÁ¦
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		https://kapi.google.com/v1/user/unlink HTTP/1.1
 //	//	 3) HTTP Method		POST
@@ -394,14 +394,14 @@ namespace CGDK
 //	//			Authorization: googleAK {admin_key}
 //	//
 //	//
-//	//	ìš”ì²­1)	curl -v -X POST https://kapi.google.com/v1/user/unlink 
+//	//	¿äÃ»1)	curl -v -X POST https://kapi.google.com/v1/user/unlink 
 //	//			  -H "Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 //	//
-//	//	ìš”ì²­)	curl -v -X POST https://kapi.google.com/v1/user/unlink 
+//	//	¿äÃ»)	curl -v -X POST https://kapi.google.com/v1/user/unlink 
 //	//			  -H "Authorization: googleAK kkkkkkkkkkkkkkkkkkkkkkkkkkkkkk" 
 //	//			  -d 'target_id_type=user_id&target_id=123456789'
 //	//
-//	//	ê²°ê³¼)	HTTP/1.1 200 OK
+//	//	°á°ú)	HTTP/1.1 200 OK
 //	//			Content-Type: application/json;charset=UTF-8
 //	//			{
 //	//			    "id":123456789

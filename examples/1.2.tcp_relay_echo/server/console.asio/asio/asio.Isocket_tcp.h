@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
@@ -42,7 +42,7 @@ public:
 			tcp::socket& native_handle() noexcept { return m_socket; }
 
 public:
-	virtual void process_connect_complate() = 0;
+	virtual void process_connect_complete() = 0;
 	virtual bool process_send(const SEND_NODE& _send_node) = 0;
 	virtual bool process_closesocket() noexcept = 0;
 

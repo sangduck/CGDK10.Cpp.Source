@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 
 #if defined(_WIN32)
 	#include <conio.h>
@@ -6,32 +6,38 @@
 
 int main()
 {
-	// *1) consoleìš© log ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// *1) console¿ë log °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto plogger_console = make_own<logger_console>();
 
-	// *2) loggerë¥¼ ì´ˆê¸°í™”í•œë‹¤.
+	// *2) logger¸¦ ÃÊ±âÈ­ÇÑ´Ù.
 	plogger_console->initialize();
 
-	// *3) consoleìš© log ê°ì²´ë¥¼ ë“±ë¡í•œë‹¤.
+	// *3) console¿ë log °´Ã¼¸¦ µî·ÏÇÑ´Ù.
 	service::get_logger()->register_log_targetable(plogger_console);
 
-	// 4) serviceë¥¼ ìƒì„±í•œë‹¤.
+	// 4) service¸¦ »ı¼ºÇÑ´Ù.
 	g_pservice = make_own<service>();
 
-	// 5) serviceë¥¼ ì‹œì‘í•œë‹¤.
-	g_pservice->start();
+	// declare)
+	context context_start;
+	
+	// 5) read setting file
+	context_start.from_json(api::file::read_file(JSON_SETTING_FILE));
 
-	// 6) destroyë  ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+	// 6) service¸¦ ½ÃÀÛÇÑ´Ù.
+	g_pservice->start(context_start);
+
+	// 7) destroyµÉ ¶§±îÁö ´ë±âÇÑ´Ù.
 	while (g_pservice->wait_destroy(1s) == false)
 	{
-		// check) ESCë¥¼ ì…ë ¥í•˜ë©´ ì¢…ë£Œí•œë‹¤.
+		// check) ESC¸¦ ÀÔ·ÂÇÏ¸é Á¾·áÇÑ´Ù.
 		if (_kbhit() && _getch() == 0x1b)
 		{
 			break;;
 		}
 	}
 
-	// 7) serviceë¥¼ ë‹«ëŠ”ë‹¤. (own_ptrì´ë¯€ë¡œ resetí•˜ëŠ” ê²ƒë§Œìœ¼ë¡œ destroyê°€ í˜¸ì¶œëœë‹¤.)
+	// 7) service¸¦ ´İ´Â´Ù. (own_ptrÀÌ¹Ç·Î resetÇÏ´Â °Í¸¸À¸·Î destroy°¡ È£ÃâµÈ´Ù.)
 	g_pservice.reset();
 
 	// return) 

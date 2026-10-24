@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -16,11 +16,10 @@
 //*                                                                           *
 //*****************************************************************************
 
-// option) Windowsì˜ ê²½ìš° Nativeë¥¼ ì‚¬ìš©í•  ê²ƒì¸ê°€ í˜¹ì€ ODBCë¥¼ ì‚¬ìš©í•  ê²ƒì¸ê°€ë¥¼ ê²°ì •í•  ìˆ˜ ìžˆë‹¤.
-//         Linuxì˜ ê²½ìš° ê¸°ë³¸ìœ¼ë¡œ ODBCë¥¼ ì‚¬ìš©í•˜ë¯€ë¡œ ì´ ì˜µì…˜ì€ ë¬´ì‹œëœë‹¤.
-#define _USE_ODBC
+// option) WindowsÀÇ °æ¿ì Native¸¦ »ç¿ëÇÒ °ÍÀÎ°¡ È¤Àº ODBC¸¦ »ç¿ëÇÒ °ÍÀÎ°¡¸¦ °áÁ¤ÇÒ ¼ö ÀÖ´Ù.
+//         LinuxÀÇ °æ¿ì ±âº»À¸·Î ODBC¸¦ »ç¿ëÇÏ¹Ç·Î ÀÌ ¿É¼ÇÀº ¹«½ÃµÈ´Ù.
 
-// option) SQL Serverì— ì ‘ì†í•  ê²ƒì¸ê°€? MySQLì— ì ‘ì†í•  ê²ƒì¸ê°€?
+// option) SQL Server¿¡ Á¢¼ÓÇÒ °ÍÀÎ°¡? MySQL¿¡ Á¢¼ÓÇÒ °ÍÀÎ°¡?
 #define _SQL_SERVER
 
 #include <iostream>
@@ -36,7 +35,7 @@ int main()
 {
 	// ------------------------------------------------------------------
 	//
-	// ì„¤ëª… transaction
+	// ¼³¸í transaction
 	//
 	//   
 	// ------------------------------------------------------------------
@@ -53,7 +52,7 @@ int main()
 		pquerier->start(eDB_PROVIDER::MYSQL, "www.cgcii.co.kr"sv, "test_user"sv, "1234"sv, "test_db"sv); // MySQL
 	#endif
 
-		// 1) queryë¥¼ í• ë‹¹ ë°›ëŠ”ë‹¤. (ì´ë•Œ sessionì„ í• ë‹¹ë°›ëŠ”ê²Œ ì¤‘ìš”í•˜ë‹¤.)
+		// 1) query¸¦ ÇÒ´ç ¹Þ´Â´Ù. (ÀÌ¶§ sessionÀ» ÇÒ´ç¹Þ´Â°Ô Áß¿äÇÏ´Ù.)
 		auto psession = pquerier->alloc_session();
 
 		// check)
@@ -64,19 +63,19 @@ int main()
 		{
 			auto pquery = psession->alloc_query();
 
-			// - queryë¥¼ ì‹¤í–‰í•œë‹¤.
+			// - query¸¦ ½ÇÇàÇÑ´Ù.
 			pquery->execute_query("INSERT INTO test(a,b,c) VALUES (1,2,3)");
 
-			// - ë˜ë‹¤ë¥¸ queryë¥´ ì‹«í–‰í•œë‹¤.
+			// - ¶Ç´Ù¸¥ query¸£ ½ÈÇàÇÑ´Ù.
 			pquery->execute_query("INSERT INTO test(a,b,c) VALUES (4,5,6)");
 
-			// 3) ì™„ë£Œ! 
+			// 3) ¿Ï·á! 
 			commit;
 		}
 	}
 	catch (throwable::failure_ex& _e)
 	{
-		// - error stringì„ ì¶œë ¥í•œë‹¤.
+		// - error stringÀ» Ãâ·ÂÇÑ´Ù.
 		_e >> std::cout;
 
 		// return) 

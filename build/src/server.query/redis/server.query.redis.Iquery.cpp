@@ -3,17 +3,25 @@
 using namespace CGDK;
 
 
-query::redis::Iquery::Iquery()
-{
-}
-
 query::redis::Iquery::~Iquery()			
 {
 }
 
+void query::redis::Iquery::wait()
+{
+	SCOPED_LOCK_NAMED(this->m_lockable_state_query, cs)
+	{
+		// check)
+		RETURN_IF(this->m_state_query != eOBJECT_STATE::REQUESTING,);
+
+		// 1) wait
+		this->m_cv_complete.wait(cs);
+	}
+}
+
 void query::redis::Iquery::process_set_session(session* _psession)
 {
-	scoped_lock(this->m_lockable_state_query)
+	SCOPED_LOCK(this->m_lockable_state_query)
 	{
 		// check) 같은 session이면 여기서 끝낸다.
 		RETURN_IF(this->m_psession == _psession);
@@ -41,7 +49,7 @@ void query::redis::Iquery::process_set_session(session* _psession)
 
 void query::redis::Iquery::close_query() noexcept
 {
-	scoped_lock(this->m_lockable_state_query)
+	SCOPED_LOCK(this->m_lockable_state_query)
 	{
 		// check) 
 		RETURN_IF(this->m_state_query != eOBJECT_STATE::PROCESSED && this->m_state_query != eOBJECT_STATE::REQUESTING);
@@ -57,11 +65,20 @@ void query::redis::Iquery::close_query() noexcept
 
 void query::redis::Iquery::process_response()
 {
-	// 1) set state
-	this->m_state_query = eOBJECT_STATE::PROCESSED; 
-	
-	// 2) notify 
-	this->notify();
+	SCOPED_LOCK(this->m_lockable_state_query)
+	{
+		// check)
+		RETURN_IF(this->m_state_query!= eOBJECT_STATE::REQUESTING);
+
+		// 2) set state
+		this->m_state_query = eOBJECT_STATE::PROCESSED;
+
+		// 3) requesting
+		this->m_cv_complete.notify_one();
+	}
+
+	// - coroutine) resume the coroutine awaiting this request
+	this->_process_on_complete();
 }
 
 void query::redis::Iquery::process_execute_query()
@@ -72,7 +89,7 @@ void query::redis::Iquery::process_execute_query()
 
 void query::redis::Iquery::process_reset_session() noexcept
 {
-	scoped_lock(this->m_lockable_state_query)
+	SCOPED_LOCK(this->m_lockable_state_query)
 	{
 		// check) session이 없으면 그냥 여기서 끝낸다.
 		RETURN_IF(this->m_psession.empty());
@@ -110,10 +127,6 @@ void query::redis::Iquery::_process_notify_to_requestor() noexcept
 		
 	// 2) reset requestor
 	this->m_prequestor.reset();
-}
-
-void query::redis::Iquery::_process_regenerate_session()
-{
 }
 
 shared_buffer generate_redis_command(std::string_view _command)
@@ -181,7 +194,7 @@ shared_buffer generate_redis_command(std::string_view _command)
 	return bufTemp ^ buffer_view{ str_now_head, static_cast<std::size_t>(str_now - str_now_head) };
 }
 
-void query::redis::Iquery::execute_query(std::string_view _command)
+void query::redis::Iquery::execute_query_sync(std::string_view _command)
 {
 	// check) _pquery must not be nullptr
 	CGASSERT_ERROR(_command.empty() == false);
@@ -189,15 +202,24 @@ void query::redis::Iquery::execute_query(std::string_view _command)
 	// check) throw exception if _pquery is nullptr
 	THROW_IF(_command.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT, 0, std::string_view("parameter '_command' is nullptr")));
 
+	// 1) process execute
+	_process_execute_query(_command);
+}
+
+void query::redis::Iquery::_process_execute_query(std::string_view _command)
+{
+	// check) _pquery must not be nullptr
+	CGASSERT_ERROR(_command.empty() == false);
+
 	// 1) generate redis command
 	auto buf_query = generate_redis_command(_command);
 
-	scoped_lock_named(this->m_lockable_state_query, cs)
+	SCOPED_LOCK_NAMED(this->m_lockable_state_query, cs)
 	{
 		// check) 
 		CGASSERT_ERROR(this->m_state_query == eOBJECT_STATE::READY);
 
-		// check) must be preapre
+		// check) must be prepare
 		THROW_IF(this->m_state_query != eOBJECT_STATE::READY, throwable::failure(eRESULT::NOT_READY));
 
 		// 2) set query
@@ -205,34 +227,34 @@ void query::redis::Iquery::execute_query(std::string_view _command)
 
 		try
 		{
-			// 4) ...
+			// 3) ...
 			this->m_state_query = eOBJECT_STATE::REQUESTING;
-
-			// statistics) 
-			this->m_psession->m_pquerier->statistics_on_query_try();
 
 			// declare) 
 			CGDK::query::redis::session::REQUEST_QUERY request_info;
 			request_info.pquery = this;
-			request_info.buf_request = buf_query;
+			request_info.buf_request = std::move(buf_query);
 
-			// 5) query를 요구한다.
+			// notify) thread block
+			scoped_thread_block thread_block;
+
+			// 4) query를 요구한다.
 			this->m_psession->execute_query(std::move(request_info));
 
-			// statistics) 
-			++this->m_psession->m_pquerier->m_count_query_queued;
+			// - wait for the response (the state is changed by process_response())
+			while (this->m_state_query == eOBJECT_STATE::REQUESTING)
+				this->m_cv_complete.wait(cs);
+		}
+		catch (throwable::failure& /*_e*/)
+		{
+			// - set state (roll back) 
+			this->m_state_query = eOBJECT_STATE::READY;
 
-			// 6) _tickdiff만큼 기다린다.
-			this->wait(cs);
+			// reraise) 
+			throw;
 		}
 		catch (...)
 		{
-			// statistics) 
-			--this->m_psession->m_pquerier->m_count_query_queued;
-
-			// - set state
-			this->m_psession->m_pquerier->statistics_on_query_fail();
-
 			// - set state (roll back) 
 			this->m_state_query = eOBJECT_STATE::READY;
 
@@ -242,12 +264,7 @@ void query::redis::Iquery::execute_query(std::string_view _command)
 	}
 }
 
-void query::redis::Iquery::post_execute_query(const std::string_view _command)
-{
-	post_execute_query(_command, nullptr);
-}
-
-void query::redis::Iquery::post_execute_query(std::string_view _command, std::function<void()>&& _response)
+void query::redis::Iquery::post_execute_query(std::string&& _command, std::function<void()>&& _response)
 {
 	// check) _pquery must not be nullptr
 	CGASSERT_ERROR(_command.empty() == false);
@@ -255,18 +272,27 @@ void query::redis::Iquery::post_execute_query(std::string_view _command, std::fu
 	// check) throw exception if _pquery is nullptr
 	THROW_IF(_command.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT, 0, std::string_view("parameter '_command' is nullptr")));
 
+	// 1) post execute query
+	this->_process_post_execute_query(std::move(_command), std::move(_response));
+}
+
+void query::redis::Iquery::_process_post_execute_query(std::string&& _command, std::function<void()>&& _response)
+{
+	// check) _pquery must not be nullptr
+	CGASSERT_ERROR(_command.empty() == false);
+
 	// 1) generate redis command
 	auto buf_query = generate_redis_command(_command);
 
-	scoped_lock_named(this->m_lockable_state_query, cs)
+	SCOPED_LOCK_NAMED(this->m_lockable_state_query, cs)
 	{
 		// check) 
 		CGASSERT_ERROR(this->m_state_query >= eOBJECT_STATE::READY);
 
-		// check) must be preapre
+		// check) must be prepare
 		THROW_IF(this->m_state_query < eOBJECT_STATE::READY, throwable::failure(eRESULT::NOT_READY));
 
-		// 1) query commona를 작성한다.
+		// 1) query command를 작성한다.
 		if (this->m_state_query == eOBJECT_STATE::READY)
 		{
 			// - query string
@@ -278,26 +304,20 @@ void query::redis::Iquery::post_execute_query(std::string_view _command, std::fu
 
 		try
 		{
-			// statistics) 
-			++this->m_psession->m_pquerier->m_count_query_queued;
-
 			// 2) set request query
 			CGDK::query::redis::session::REQUEST_QUERY request_info;
 			request_info.pquery = this;
-			request_info.buf_request = buf_query;
-			request_info.response = _response;
+			request_info.buf_request = std::move(buf_query);
+			request_info.response = std::move(_response);
+
+			// notify) thread block
+			scoped_thread_block thread_block;
 
 			// 3) query를 요구한다.
 			this->m_psession->execute_query(std::move(request_info));
 		}
 		catch (...)
 		{
-			// statistics) 
-			--this->m_psession->m_pquerier->m_count_query_queued;
-
-			// - set state
-			this->m_psession->m_pquerier->statistics_on_query_fail();
-
 			// - rollback state
 			this->m_state_query = eOBJECT_STATE::READY;
 

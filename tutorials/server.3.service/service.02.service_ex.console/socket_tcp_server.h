@@ -19,13 +19,10 @@
 
 class socket_tcp_server : public net::socket::tcp_client<>
 {
-public:
-	explicit socket_tcp_server(std::string_view _name) : net::socket::tcp_client<>(_name) {}
-
 private:
 	virtual void on_connect() override
 	{
-		LOG_INFO << "'socket_tcp_server' connected ("sv << to_string<char>(remote_endpoint()) << ")"sv;
+		LOG_INFO << "'socket_tcp_server' connected ("sv << to_string(remote_endpoint()) << ")"sv;
 	}
 	virtual void on_disconnect(uint64_t /*_disconnect_reason*/) override
 	{

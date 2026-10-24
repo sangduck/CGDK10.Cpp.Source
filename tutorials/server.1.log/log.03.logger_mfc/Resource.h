@@ -1,8 +1,8 @@
-ï»¿//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ì—ì„œ ìƒì„±í•œ í¬í•¨ íŒŒì¼ìž…ë‹ˆë‹¤.
-// tutorialserverloggermfcwindows.rcì—ì„œ ì‚¬ìš©ë˜ê³  ìžˆìŠµë‹ˆë‹¤.
+//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++¿¡¼­ »ý¼ºÇÑ Æ÷ÇÔ ÆÄÀÏÀÔ´Ï´Ù.
+// tutorialserverloggermfcwindows.rc¿¡¼­ »ç¿ëµÇ°í ÀÖ½À´Ï´Ù.
 //
-#define IDD_TUTORIALSERVERLOGMFCWINDOWSVS16_DIALOG 102
+#define IDD_TUTORIALSERVERLOGMFCWINDOWS_DIALOG 102
 #define IDR_MAINFRAME                   128
 #define IDC_STATIC_LOG                  1001
 

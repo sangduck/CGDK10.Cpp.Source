@@ -3,7 +3,7 @@
 #*                      Cho sanghyun's Game Classes II                       *
 #*                      Ver 10.0 / release 2019.12.11                        *
 #*                                                                           *
-#*      CMake - CGDK10.tutorial.net.socket.ex.tcp_graceful_close.client      *
+#*              CMake - CGDK10.tutorial.socket.ex.tcp_connector              *
 #*                                                                           *
 #*                                                                           *
 #*                                                                           *
@@ -19,45 +19,49 @@
 # ----------------------------------------------------------------------------
 # setting
 # ----------------------------------------------------------------------------
-# 1) project name
-PROJECT ( "CGDK10.tutorial.net.socket.ex.tcp_connector" )
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY( VERSION 3.20 )
 
-# 2) project version
+# 2) project name
+PROJECT ( "CGDK10.tutorial.socket.ex.tcp_connector" )
+
+# 3) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 SET ( DEFAULT_BUILD_TYPE Debug )
 
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
-
 # 4) default BUILD_TYPE
 IF (NOT DEFINED CMAKE_BULD_TYPE)
 	SET (CMAKE_BULD_TYPE "Debug")
 ENDIF()
 
-# 5) directories
+# 5) find os platform
+#    (compatible platform : 'linux_<arch>_glibc<version>_<compiler><major>' / 'windows' - see build/cmake/cgdk_platform.cmake)
+INCLUDE ( ${CMAKE_CURRENT_SOURCE_DIR}/../../../build/cmake/cgdk_platform.cmake )
+
+# 6) directories
 SET ( CMAKE_RUNTIME_OTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 SET ( EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR} )
 
-# 6) compile options
+# 7) compile options
 set ( CMAKE_CXX_STANDARD 20)
 set ( CMAKE_CXX_STANDARD_REQUIRED ON)
-SET ( CMAKE_CXX_FLAGS "-DC_FLAGS -fexceptions -std=c++20" )
-SET ( CMAKE_CXX_FLAGS_DEBUG "-D_DEBUG -g3 -Wall -Wextra" )
-SET ( CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -Wall -Wextra" )
+SET ( CMAKE_CXX_FLAGS "-DC_FLAGS -fexceptions -std=c++20 -g -Wall -Wextra" )
+SET ( CMAKE_CXX_FLAGS_DEBUG "-D_DEBUG -Wformat=2 -Wformat-security" )
+SET ( CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -Wformat -fnon-call-exceptions" )
 
-# 7) include directories
+# 8) include directories
 INCLUDE_DIRECTORIES(
 	${CMAKE_CURRENT_SOURCE_DIR}/../../../include
 	./
 )
 
-# 8) library directories
+# 9) library directories
 LINK_DIRECTORIES(
-	${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/cgdk/sdk10/${DIST}
+	${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/cgdk/sdk10/${PLATFORM_OS}
 )
 
 
@@ -88,6 +92,8 @@ ENDIF ()
 # 2) messages
 MESSAGE (STATUS "compile ${PROJECT_NAME}")
 MESSAGE (STATUS "  - configure['${BUILD_MESSAGE}']")
+MESSAGE (STATUS "  - platform['${PLATFORM_OS}']")
+MESSAGE (STATUS "  - output to['${EXECUTABLE_OUTPUT_PATH}']")
 
 # 3) executable
 ADD_EXECUTABLE(${PROJECT_NAME}.${BUILD_TYPE} ${SRC_FILES})
@@ -96,6 +102,7 @@ ADD_EXECUTABLE(${PROJECT_NAME}.${BUILD_TYPE} ${SRC_FILES})
 TARGET_LINK_LIBRARIES( ${PROJECT_NAME}.${BUILD_TYPE}
 	CGDK10.net.socket_linux.${BUILD_TYPE}
 	CGDK10.system.object_linux.${BUILD_TYPE}
+	crypto
 	rt
 	pthread
 )

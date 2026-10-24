@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 
 
 own_ptr<update::md5_caching> g_pmd5_caching;
@@ -6,32 +6,32 @@ own_ptr<update::md5_caching> g_pmd5_caching;
 int main()
 {
 	// trace) 
-	std::cout << "start client [tut.update.01.simple_update.client]..."sv << '\n';
+	std::cout << "start client [tut.update.01.simple_update.client]..." << '\n';
 
-	// 1) md5 ìºì‹± íŒŒì¼ì„ ìƒì„±í•˜ê³  ì½ì–´ ë“¤ì¸ë‹¤.
+	// 1) md5 Ä³½Ì ÆÄÀÏÀ» »ı¼ºÇÏ°í ÀĞ¾î µéÀÎ´Ù.
 	{
-		// - caching íŒŒì¼ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// - caching ÆÄÀÏ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		g_pmd5_caching = make_own<update::md5_caching>();
 
-		// - md5 ìºì‹± íŒŒì¼ì„ ì½ì–´ ë“¤ì¸ë‹¤.
-		g_pmd5_caching->start("destination/update_caching.info"sv);
+		// - md5 Ä³½Ì ÆÄÀÏÀ» ÀĞ¾î µéÀÎ´Ù.
+		g_pmd5_caching->start("destination/update_caching.info");
 	}
 
-	// 2) socket ê°ì²´ë¥¼ ìƒˆì„±í•œë‹¤.
+	// 2) socket °´Ã¼¸¦ »õ¼ºÇÑ´Ù.
 	auto psocket = make_own<socket_tcp>();
 
-	// 3) socketì˜ ìµœëŒ€ ë©”ì‹œì§€ í¬ê¸°ë¥¼ ì¶©ë¶„íˆ ëŠ˜ë ¤ì¤€ë‹¤.
+	// 3) socketÀÇ ÃÖ´ë ¸Ş½ÃÁö Å©±â¸¦ ÃæºĞÈ÷ ´Ã·ÁÁØ´Ù.
 	psocket->maximum_message_buffer_size(16 * 1024 * 1024); // 16Mbyte
 
-	// 4) socketì„ 'localhost:20000'ë¡œ ì ‘ì†ì„ ì‹œë„í•œë‹¤. (ip::addressë‚˜ resolverë¡œ ì„¤ì •ì´ ê°€ëŠ¥í•˜ë‹¤.)
+	// 4) socketÀ» 'localhost:20000'·Î Á¢¼ÓÀ» ½ÃµµÇÑ´Ù. (ip::address³ª resolver·Î ¼³Á¤ÀÌ °¡´ÉÇÏ´Ù.)
 	psocket->start({ { net::ip::address_v4::loopback(), 31000 } });
 
-	// 5) ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+	// 5) ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 	while (_getch() != 27);
 
 	// trace) 
-	std::cout << "stop client [tut.update.01.simple_update.client]..."sv << '\n';
+	std::cout << "stop client [tut.update.01.simple_update.client]..." << '\n';
 
-	// end) ì¢…ë£Œ
+	// end) Á¾·á
 	return 0;
 }

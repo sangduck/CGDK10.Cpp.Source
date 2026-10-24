@@ -38,16 +38,20 @@ public:
 	virtual	bool				complete_transaction(Itransactable* _ptransactable) noexcept;
 	virtual bool				cancel_transaction(Itransactable* _ptransactable) noexcept { return process_cancel_command(_ptransactable); }
 			void				checkout_all() noexcept;
+			// - breaks the references to transactions and sessions (called when the repository is destroyed)
+			void				clear_references() noexcept;
 
 	// 2) entity id & state
 			const sENTITY_ID&	get_entity_id() const noexcept { return m_eid;}
 			eOBJECT_STATE		get_entity_state() const noexcept { return m_state_entity;}
-			std::size_t			get_queued_transaction_count() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_queue_transaction)); return this->m_queue_command.size(); }
-			std::size_t			get_checkin_count() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_queue_transaction)); return this->m_list_cid.size(); }
+			std::size_t			get_queued_transaction_count() const noexcept { std::lock_guard cs(const_cast<lock_object&>(this->m_lockable_queue_transaction)); return this->m_queue_command.size(); }
+			std::size_t			get_checkin_count() const noexcept { std::lock_guard cs(const_cast<lock_object&>(this->m_lockable_queue_transaction)); return this->m_list_cid.size(); }
 			object_ptr<Isession> find_session(const sCHECKIN_ID& _cid) const noexcept;
 
 protected:
 	virtual	result_code			process_request_transaction(Itransactable* _ptransactable);
+			// - executes a transaction as a coroutine started on the system_executor (it completes itself and runs the next queued one)
+			void				process_execute_transaction(object_ptr<Itransactable>&& _ptransactable) noexcept;
 			object_ptr<Itransactable> process_complete_transaction(Itransactable* _ptransactable) noexcept;
 			bool				process_cancel_command(Itransactable* _ptransactable) noexcept;
 
@@ -61,7 +65,7 @@ public:
 			uint64_t			generate_request_id() noexcept;
 public:
 	// 1) lockable
-			lockable<>			m_lockable_entity;
+			lock_object			m_lockable_entity;
 
 	// 2) entity id
 			sENTITY_ID			m_eid;
@@ -76,7 +80,7 @@ public:
 
 	// 5) queue command
 			std::atomic<uint64_t> m_index_request{0};
-			lockable<>			m_lockable_queue_transaction;
+			lock_object			m_lockable_queue_transaction;
 			circular_list<object_ptr<Itransactable>> m_queue_command;
 
 	// 6) session

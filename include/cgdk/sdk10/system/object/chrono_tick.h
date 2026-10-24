@@ -62,7 +62,7 @@ namespace chrono
 			constexpr time_point() = default;
 			template <class TCLOCK, class TDURATION = typename TCLOCK::duration>
 			constexpr time_point(const std::chrono::time_point<TCLOCK,TDURATION>& _time) noexcept : clock::time_point(_time) {}
-			constexpr time_point(const duration& _other) noexcept : clock::time_point(_other) {}
+			constexpr explicit time_point(const duration& _other) noexcept : clock::time_point(_other) {}
 			template <class TDURATION, class = std::enable_if_t<std::is_convertible_v<TDURATION, duration>>>
 			constexpr time_point(const std::chrono::time_point<clock, TDURATION> & _tp) noexcept(std::is_arithmetic_v<rep> && std::is_arithmetic_v<typename TDURATION::rep>) : clock::time_point(_tp.time_since_epoch()) {}
 			constexpr time_point& operator+=(const duration& _dur) noexcept(std::is_arithmetic_v<rep>) { clock::time_point::operator += (_dur); return *this; }

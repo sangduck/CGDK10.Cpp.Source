@@ -8,7 +8,7 @@
     <ClInclude Include="echo_client.h" />
     <ClInclude Include="tcp_echo_ex.client.mfc.h" />
     <ClInclude Include="tcp_echo_ex.client_dlg.h" />
-    <ClInclude Include="..\..\common\packatable.h" />
+    <ClInclude Include="..\..\common\packetable.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />

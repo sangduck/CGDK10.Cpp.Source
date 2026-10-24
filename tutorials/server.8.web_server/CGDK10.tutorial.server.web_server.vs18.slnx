@@ -1,0 +1,7 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="web_server.01.simple\tutorial.server.web_server.simple.vs18.vcxproj" Id="f376bf00-063a-4534-94c2-107f043cb3fd" />
+  <Project Path="web_server.01.simple\tutorial.server.web_server.simple.vcxitems" Id="3836ebbf-20f0-4f99-a031-a9b6bba905f4" />
+</Solution>

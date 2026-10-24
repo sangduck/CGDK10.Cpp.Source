@@ -87,14 +87,14 @@ uint32_t api::get_service_path_name(char* _str_service_name, char* _str_binary_p
 	// 3) PathName을 복사한다.
 	if(_str_binary_path_name != nullptr)
 	{
-		__strcpy(_str_binary_path_name, MAX_PATH, strModuleFileName);
+		_str_binary_path_name[std::basic_string_view(strModuleFileName).copy(_str_binary_path_name, (MAX_PATH) - 1)] = 0;
 	}
 
 	// 4) 초기화
-	_str_service_name[0] = NULL;
+	_str_service_name[0] = '\0';
 
 	// 5) String의 길이를 얻는다.
-	size_t iStrLength = __strlen(strModuleFileName);
+	size_t iStrLength = std::char_traits<std::remove_cv_t<std::remove_pointer_t<std::decay_t<decltype(strModuleFileName)>>>>::length(strModuleFileName);
 
 	// 6) File 이름부분만을 얻어낸다.
 	int i = static_cast<int>(iStrLength) - 1;
@@ -102,19 +102,19 @@ uint32_t api::get_service_path_name(char* _str_service_name, char* _str_binary_p
 	{
 		if(strModuleFileName[i] == '\\') 
 		{
-			__strcpy(_str_service_name, MAX_PATH, strModuleFileName + (i+1));
+			_str_service_name[std::basic_string_view(strModuleFileName + (i+1)).copy(_str_service_name, (MAX_PATH) - 1)] = 0;
 			break;
 		}
 	}
 
-	// 7) '\\'를 찾지 못했을 경우 그냥 통체로 복사한다.
+	// 7) '\\'를 찾지 못했을 경우 그냥 통째로 복사한다.
 	if (i<0)
 	{
-		__strcpy(_str_service_name, MAX_PATH, strModuleFileName);
+		_str_service_name[std::basic_string_view(strModuleFileName).copy(_str_service_name, (MAX_PATH) - 1)] = 0;
 	}
 
 	// 8) ServiceName을 얻는다.
-	for (i = (int)__strlen(_str_service_name) - 1; i >= 0; --i)
+	for (i = (int)std::char_traits<std::remove_cv_t<std::remove_pointer_t<std::decay_t<decltype(_str_service_name)>>>>::length(_str_service_name) - 1; i >= 0; --i)
 	{
 		if(_str_service_name[i] == '.') 
 		{
@@ -144,14 +144,14 @@ uint32_t api::get_service_path_name(wchar_t* _str_service_name, wchar_t* _str_bi
 	// 3) PathName을 복사한다.
 	if (_str_binary_path_name != nullptr)
 	{
-		__strcpy(_str_binary_path_name, MAX_PATH, strModuleFileName);
+		_str_binary_path_name[std::basic_string_view(strModuleFileName).copy(_str_binary_path_name, (MAX_PATH) - 1)] = 0;
 	}
 
 	// 4) 초기화
-	_str_service_name[0] = NULL;
+	_str_service_name[0] = L'\0';
 
 	// 5) String의 길이를 얻는다.
-	size_t	iStrLength = __strlen(strModuleFileName);
+	size_t	iStrLength = std::char_traits<std::remove_cv_t<std::remove_pointer_t<std::decay_t<decltype(strModuleFileName)>>>>::length(strModuleFileName);
 
 	// 6) File 이름부분만을 얻어낸다.
 	int i = (int)iStrLength - 1;
@@ -159,19 +159,19 @@ uint32_t api::get_service_path_name(wchar_t* _str_service_name, wchar_t* _str_bi
 	{
 		if (strModuleFileName[i] == '\\')
 		{
-			__strcpy(_str_service_name, MAX_PATH, strModuleFileName + (i + 1));
+			_str_service_name[std::basic_string_view(strModuleFileName + (i + 1)).copy(_str_service_name, (MAX_PATH) - 1)] = 0;
 			break;
 		}
 	}
 
-	// 7) '\\'를 찾지 못했을 경우 그냥 통체로 복사한다.
+	// 7) '\\'를 찾지 못했을 경우 그냥 통째로 복사한다.
 	if (i<0)
 	{
-		__strcpy(_str_service_name, MAX_PATH, strModuleFileName);
+		_str_service_name[std::basic_string_view(strModuleFileName).copy(_str_service_name, (MAX_PATH) - 1)] = 0;
 	}
 
 	// 8) ServiceName을 얻는다.
-	for (i = (int)__strlen(_str_service_name) - 1; i >= 0; --i)
+	for (i = (int)std::char_traits<std::remove_cv_t<std::remove_pointer_t<std::decay_t<decltype(_str_service_name)>>>>::length(_str_service_name) - 1; i >= 0; --i)
 	{
 		if (_str_service_name[i] == '.')
 		{
@@ -679,17 +679,24 @@ extern char* __progname;
 uint32_t api::get_service_path_name(char* _str_service_name, char* /*_str_binary_path_name*/) noexcept
 {
 	// check)
+	RETURN_IF(_str_service_name == nullptr, 0);
 	RETURN_IF(__progname == nullptr, 0);
 
-	strcpy(_str_service_name, __progname);
+	auto length = std::snprintf(_str_service_name, MAX_PATH, "%s", __progname);
 
 	// return) 
-	return 1;
+	return (length > 0 && length < MAX_PATH) ? 1 : 0;
 }
 
-uint32_t api::get_service_path_name(wchar_t* /*_str_service_name*/, wchar_t* /*_str_binary_path_name*/) noexcept
+uint32_t api::get_service_path_name(wchar_t* _str_service_name, wchar_t* /*_str_binary_path_name*/) noexcept
 {
-	return 1;
+	// check)
+	RETURN_IF(_str_service_name == nullptr, 0);
+
+	_str_service_name[0] = L'\0';
+
+	// return)
+	return 0;
 }
 
 bool api::service_install(

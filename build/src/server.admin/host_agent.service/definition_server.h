@@ -23,6 +23,16 @@
 #define	SERVICE_DISPLAYNAME		"CGCII HostAgent"
 #define	SERVICE_DESCRIPTION		"CGCII Admin System's Host Agent"
 
+// - instance type (host_agent local. CGDK does not have it anymore)
+namespace eINSTANCE_TYPE
+{
+	constexpr static int NONE = 0;
+	constexpr static int HOST = 1;
+	constexpr static int SERVICE = 2;
+	constexpr static int ADMIN_SERVER = 3;
+	constexpr static int ADMIN_CLIENT = 4;
+}
+
 const uint32_t	CGNETMESSAGE_SERVER_REGISTER = (eMESSAGE::SERVER::ADMIN::BASE | CODE_TYPE::TAIL_SUB_0 | 0);
 const uint32_t	CGNETMESSAGE_SERVER_UNREGISTER = (eMESSAGE::SERVER::ADMIN::BASE | CODE_TYPE::TAIL_SUB_0 | 1);
 const uint32_t	CGNETMESSAGE_SERVER_UPDATE = (eMESSAGE::SERVER::ADMIN::BASE | CODE_TYPE::TAIL_SUB_0 | 2);

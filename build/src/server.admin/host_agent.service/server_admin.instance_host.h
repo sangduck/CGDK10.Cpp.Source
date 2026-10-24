@@ -19,27 +19,27 @@
 #pragma once
 // ----------------------------------------------------------------------------
 //
-// server_admin::instance_host
+// server_system::instance_host
 //
 // ----------------------------------------------------------------------------
-class server_admin::instance_host :	virtual public Iinstance
+class server_system::instance_host :	virtual public Iinstance
 {
 public:
-	virtual	iid_t				get_iid() const override { return this->m_instance.setting.iid; }
-	virtual std::string			get_name() const override { return this->m_instance.setting.name; }
-	virtual int					get_instance_type() const override { return this->m_instance.service_type; }
+	virtual	iid_t				get_iid() const override { return this->m_instance.info.setting.iid; }
+	virtual std::string			get_name() const override { return this->m_instance.info.setting.name; }
+	virtual int					get_instance_type() const override { return eINSTANCE_TYPE::HOST; }
 
-			void				register_service_instance(object_ptr<server_admin::instance_Iservice>&& _pinstance);
+			void				register_service_instance(object_ptr<server_system::instance_service>&& _pinstance);
 			void				unregister_service_instance() noexcept;
 
-			server_admin::sINSTANCE_HOST m_instance;
+			OBJ<server_system::host::instance> m_instance;
 
 			DEFINE_BUFFER_SERIALIZE(m_instance)
 private:
 	virtual	eOBJECT_STATE		set_instance_state(eOBJECT_STATE _state) noexcept override;
 	virtual result_code			on_message(sMESSAGE_NETWORK& _msg) override;
-			result_code			on_message_SERVER_ADMIN_INSTANCE_UPDATE_STATE(sMESSAGE_NETWORK& _msg);
-			result_code			on_message_SERVER_ADMIN_INSTANCE_UPDATE(sMESSAGE_NETWORK& _msg);
+			result_code			on_message_server_system_INSTANCE_UPDATE_STATE(sMESSAGE_NETWORK& _msg);
+			result_code			on_message_server_system_INSTANCE_UPDATE(sMESSAGE_NETWORK& _msg);
 			result_code			on_message_SERVER_TIME_EVENT_EVENT_LIST_UPDATE(sMESSAGE_NETWORK& _msg);
 			result_code			on_message_SERVER_TIME_EVENT_EVENT_REGISTER(sMESSAGE_NETWORK& _msg);
 			result_code			on_message_SERVER_TIME_EVENT_EVENT_UNREGISTER(sMESSAGE_NETWORK& _msg);

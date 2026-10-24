@@ -33,7 +33,6 @@ class doss::repository::remote :
 {
 public:
 			remote();
-			remote(const std::string_view _name);
 	virtual	~remote() noexcept;
 
 public:
@@ -69,7 +68,7 @@ protected:
 	[[nodiscard]] virtual object_ptr<TENTITY>	process_alloc_entity(sENTITY_ID _entity_id) override;
 			void				process_reset_repository(const sREPOSITORY_ID& _id_repository_remote, std::vector<sREPOSITORY_ID>&& _vec_repository);
 	[[nodiscard]] virtual uint16_t process_get_default_port() noexcept override { return 31001; }
-	virtual result_code			process_request_transaction(Itransactable* _ptransactable) override;
+	virtual coroutine::task<result_code> co_request_transaction(object_ptr<Itransactable> _ptransactable) override;
 	virtual void				process_fail_transaction(Itransactable* _ptransactable) noexcept;
 			bool				process_send_restoreable(Itransactable* _ptransactable);
 			bool				process_send_restoreable_COMMAND_FAIL(Itransactable* _ptransactable);
@@ -79,11 +78,11 @@ protected:
 			sREPOSITORY_ID		m_id_repository_remote_alloc;
 			std::vector<sREPOSITORY_ID> m_vector_id_repository_remote;
 
-			lockable<>			m_lockable_send_sequence;
+			lock_object			m_lockable_send_sequence;
 			uint64_t			m_send_sequence = 0;
 			uint64_t			m_send_sequence_ack = 0;
 			circular_list<shared_buffer> m_send_sequence_buffer;
-			std::atomic<uint64_t> m_receive_sequence = 0;
+			CGDK::statistics::stat_counter<uint64_t> m_receive_sequence{ 0 };	// - 받은 sequence (이 socket의 수신 thread만 쓴다 : relaxed. 메시지마다 xchg가 없다)
 };
 
 

@@ -30,7 +30,7 @@ class net::io::connective::Iacceptor :
 	virtual public				net::io::Isocket,
 	virtual	public				net::io::Iconnective
 {
-// defintions)
+// definitions)
 public:
 			using end_point_type = net::ip::tcp::endpoint;
 			using START_PARAMETER = sSOCKET_ACCEPT_PARAMETER;

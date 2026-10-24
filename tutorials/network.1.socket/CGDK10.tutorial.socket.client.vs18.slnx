@@ -1,0 +1,19 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="socket.01.tcp_simple\client\tutorial.socket.tcp_simple.client.vs18.vcxproj" Id="1a185146-dd1c-45a7-b57b-60ed12d3f8f9" />
+  <Project Path="socket.02.tcp_send_receive\client\tutorial.socket.tcp_send_receive.client.console.vs18.vcxproj" Id="dd9906f3-a8d7-48f9-8c9b-e0a03d12bf1b" />
+  <Project Path="socket.03.tcp_configure\client\tutorial.socket.tcp_configure.client.vs18.vcxproj" Id="56260cbe-d3f5-4814-9b1d-311c07f318d8" />
+  <Project Path="socket.04.udp_simple\client\tutorial.socket.udp_simple.client.vs18.vcxproj" Id="417e09dd-a823-44e8-8aa0-c46b9a2127cc" />
+  <Project Path="socket.05.http\client\tutorial.socket.http.client.vs18.vcxproj" Id="54a80764-eb14-4008-84ee-335de9cf47c8" />
+  <Project Path="socket.06.websocket\client\tutorial.socket.websocket.client.vs18.vcxproj" Id="7fb16979-1789-4cfc-a8f8-14cf7f043790" />
+  <Project Path="socket.ex01.tcp_graceful_close\client.console\tutorial.socket.ex.tcp_graceful_close.client.console.vs18.vcxproj" Id="b7e23cd1-0e12-4b72-b1f4-677966b8699e" />
+  <Project Path="socket.ex03.reconnect\tutorial.socket.ex.reconnect.client.console.vs18.vcxproj" Id="03c2f637-e648-43ba-9fc7-cd53afe828ea" />
+  <Project Path="socket.ex02.net.ip\tutorial.socket.ex.net.ip.console.vs18.vcxproj" Id="6b4e1de2-a7d0-486f-ba8c-66c3b2e58095" />
+  <Project Path="socket.ex06.tcp_protobuf\client\tutorial.socket.tcp_protobuf.client.console.vs18.vcxproj" Id="4c6ed7b9-2300-4e7d-9192-3953461d995b" />
+  <Project Path="socket.ex07.tcp_connector\tutorial.socket.tcp_connector.vs18.vcxproj" Id="313e9b19-89df-4a5d-be94-3e46bb5fb3e6" />
+  <Project Path="socket.ex09.lambda_socket\client\tutorial.socket.lambda_socket.client.vs18.vcxproj" Id="d23cb5d9-2e8e-4def-899e-93bed2bd6564" />
+  <Project Path="socket.ex10.crypted_send_receive\client\tutorial.socket.ex.crypted_send_receive.client.vs18.vcxproj" Id="22d4254a-d367-48ad-bec3-b05d3e4ff6ad" />
+  <Project Path="socket.ex11.ssl_send_receive\client\tutorial.socket.ex.ssl_send_receive.client.console.vs18.vcxproj" Id="762573d4-99ff-4499-93ad-19dffd446c09" />
+</Solution>

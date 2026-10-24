@@ -44,8 +44,9 @@ namespace CGDK
 // ----------------------------------------------------------------------------
 // group_system.observable
 // ----------------------------------------------------------------------------
-// 1) observerd ata
+// 1) observed ata
 #include "cgdk/sdk10/server.system/group/server.observer_data.h"
+#include "cgdk/sdk10/server.system/group/server.group.member_snapshot.h"
 
 // 2) observerable
 #include "cgdk/sdk10/server.system/group/server.Iobservable.h"

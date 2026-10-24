@@ -14,7 +14,15 @@ query::rdb::odbc::data_source::~data_source() noexcept
 {
 	if (this->m_handle_env != 0)
 	{
-		::SQLFreeHandle(SQL_HANDLE_ENV, this->m_handle_env);
+		try
+		{
+			::SQLFreeHandle(SQL_HANDLE_ENV, this->m_handle_env);
+		}
+		catch (...)
+		{
+			// ignore any exception
+		}
+
 		this->m_handle_env = 0;
 	}
 }
@@ -52,7 +60,7 @@ void query::rdb::odbc::data_source::open(const std::string_view _initialization)
 	catch (...)
 	{
 		// - ATL trace
-		LOG_ERROR << "(err ) fail to initlaize ENV";
+		LOG_ERROR << "(err ) fail to initialize ENV";
 
 		// reraise)
 		throw;

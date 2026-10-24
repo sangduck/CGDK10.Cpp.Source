@@ -24,7 +24,7 @@
 //
 //    - AccountID : 계정의 고유 번호:DB에 저장된 번호며 영원 불변
 //    - LoginID   : 로긴 때마다 부여되는 ID로 해당 로긴에서만 유효하다.
-//    - CheckinID : 체크인 할때 마다 부여되는 ID로 해당 서버에서만 유효한 ID이다.
+//    - CheckinID : 체크인 할 때 마다 부여되는 ID로 해당 서버에서만 유효한 ID이다.
 //    - TransactableID : 요청때마다 할당되는 ID로 Transactable을 구분하기 위해 사용된다.
 //
 //-----------------------------------------------------------------------------
@@ -49,7 +49,7 @@ namespace SERVER
 
 		// 3) transaction Command 메시지들
 		//    - Check-In 요청 시 LoginID를 가지고 있으면 그것을 발행한 쪽에서 강제 이행 받을 수 있다.
-		//    - Check-In 요청 시 LoginID를 가지고 있지 않으면 중복 접속시 Reject된다.
+		//    - Check-In 요청 시 LoginID를 가지고 있지 않으면 중복 접속 시 Reject된다.
 		//    - Request-ID의 신규 발행은 Log-In시에만 된다.
 		const message_t	COMMAND_REQUEST					 = BASE | 30;
 		const message_t	COMMAND_RESPONSE				 = BASE | 31;

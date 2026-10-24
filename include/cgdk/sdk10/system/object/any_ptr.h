@@ -59,7 +59,7 @@ public:
 								reset(const object_ptr<T>& _ref) noexcept { _reset<T>(_ref); }
 			template <class T>													  
 			std::enable_if_t<std::is_base_of_v<Ireferenceable, T>, void>
-								reset(object_ptr<T>&& _ref) noexcept { _reset<T>(_ref); }
+								reset(object_ptr<T>&& _ref) noexcept { _reset<T>(std::move(_ref)); }
 
 			void				swap(any_ptr& _ref) noexcept { m_data.swap(_ref.m_data); }
 			void				swap(std::any& _ref) noexcept { m_data.swap(_ref); }

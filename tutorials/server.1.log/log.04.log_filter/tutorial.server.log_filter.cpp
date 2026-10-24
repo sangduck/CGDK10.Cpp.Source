@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/server.log.h"
+#include "cgdk/sdk10/server.log.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -11,24 +11,24 @@ using namespace CGDK;
 int main()
 {
 	// ------------------------------------------------------------------
-	// 1. ë¡œê·¸ í•„í„° (Log Filter)
-	//    1) [ë¡œê·¸ í•„í„°ë§ ê°ì²´]ëŠ” íŠ¹ì • ë¡œê·¸ë§Œ í•„í„°ë§í•´ë‚¼ ìˆ˜ ìžˆë„ë¡ í•´ì¤€ë‹¤.
-	//    2) [ë¡œê·¸ í•„í„°ë§ ê°ì²´]ë¥¼ ìƒì„±í•˜ì—¬ [ë¡œê·¸ ëŒ€ìƒ ê°ì²´]ì— ì„¤ì •í•´ ì¤Œìœ¼ë¡œì¨ ë™ìž‘í•œë‹¤.
-	//    3) [ë¡œê·¸ í•„í„°ë§ ê°ì²´]ë¥¼ ì‚¬ìš©í•˜ê¸° ìœ„í•´ì„œëŠ” ë‹¤ìŒê³¼ ê°™ì€ ìž‘ì—…ì„ ìˆ˜í–‰í•´ì•¼ í•œë‹¤.
-	//       - ë¨¼ì € [ë¡œê·¸ í•„í„° ê°ì²´]ë¥¼ ìƒì„±í•œë‹¤.
-	//       - ìƒì„±í•œ [ë¡œê·¸ í•„í„° ê°ì²´]ì˜ í•„í„°ë§ ì •ë³´ë¥¼ ì„¤ì •í•œë‹¤.
-	//       - [ë¡œê·¸ í•„í„°ë§ ê°ì²´]ë¥¼ [ë¡œê·¸ ëŒ€ìƒ ê°ì²´]ì— ì„¤ì •í•œë‹¤.
+	// 1. ·Î±× ÇÊÅÍ (Log Filter)
+	//    1) [·Î±× ÇÊÅÍ¸µ °´Ã¼]´Â Æ¯Á¤ ·Î±×¸¸ ÇÊÅÍ¸µÇØ³¾ ¼ö ÀÖµµ·Ï ÇØÁØ´Ù.
+	//    2) [·Î±× ÇÊÅÍ¸µ °´Ã¼]¸¦ »ý¼ºÇÏ¿© [·Î±× ´ë»ó °´Ã¼]¿¡ ¼³Á¤ÇØ ÁÜÀ¸·Î½á µ¿ÀÛÇÑ´Ù.
+	//    3) [·Î±× ÇÊÅÍ¸µ °´Ã¼]¸¦ »ç¿ëÇÏ±â À§ÇØ¼­´Â ´ÙÀ½°ú °°Àº ÀÛ¾÷À» ¼öÇàÇØ¾ß ÇÑ´Ù.
+	//       - ¸ÕÀú [·Î±× ÇÊÅÍ °´Ã¼]¸¦ »ý¼ºÇÑ´Ù.
+	//       - »ý¼ºÇÑ [·Î±× ÇÊÅÍ °´Ã¼]ÀÇ ÇÊÅÍ¸µ Á¤º¸¸¦ ¼³Á¤ÇÑ´Ù.
+	//       - [·Î±× ÇÊÅÍ¸µ °´Ã¼]¸¦ [·Î±× ´ë»ó °´Ã¼]¿¡ ¼³Á¤ÇÑ´Ù.
 	//
-	//    4) [ë¡œê·¸ í•„í„° ê°ì²´]ì˜ í•„í„°ë§ ì •ë³´ëŠ” [ë¡œê·¸ í˜•íƒœ]ë³„ë¡œ ê°€ëŠ¥í•˜ë‹¤.
-	//       - enable_log() ë©¤ë²„ í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•˜ì—¬ íŠ¹ì • [ë¡œê·¸ í˜•íƒœ]ì˜ í•„í„°ë§ ê°€ëŠ¥ ì—¬ë¶€ë¥¼ ì„¤ì •í•œë‹¤.
-	//       - enable_filtering_by_level_range()ë¥¼ ì‚¬ìš©í•˜ì—¬ ë ˆë²¨ ì •ë³´ë¡œ í•„í„°ë§í•  ê²ƒìž„ì„ ì„¤ì •í•´ì•¼ í•œë‹¤.
-	//       - set_filtering_range_by_level()í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•˜ì—¬ í†µê³¼í•  ë ˆë²¨ ì •ë³´ë¥¼ ì„¤ì •í•´ì•¼ í•œë‹¤.
+	//    4) [·Î±× ÇÊÅÍ °´Ã¼]ÀÇ ÇÊÅÍ¸µ Á¤º¸´Â [·Î±× ÇüÅÂ]º°·Î °¡´ÉÇÏ´Ù.
+	//       - enable_log() ¸â¹ö ÇÔ¼ö¸¦ »ç¿ëÇÏ¿© Æ¯Á¤ [·Î±× ÇüÅÂ]ÀÇ ÇÊÅÍ¸µ °¡´É ¿©ºÎ¸¦ ¼³Á¤ÇÑ´Ù.
+	//       - enable_filtering_by_level_range()¸¦ »ç¿ëÇÏ¿© ·¹º§ Á¤º¸·Î ÇÊÅÍ¸µÇÒ °ÍÀÓÀ» ¼³Á¤ÇØ¾ß ÇÑ´Ù.
+	//       - set_filtering_range_by_level()ÇÔ¼ö¸¦ »ç¿ëÇÏ¿© Åë°úÇÒ ·¹º§ Á¤º¸¸¦ ¼³Á¤ÇØ¾ß ÇÑ´Ù.
 	//
-	//       ì£¼ì˜) í•„í„°ë§ ì •ë³´ëŠ” Level, Source, Destination, Location ë“±ì´ ìžˆì§€ë§Œ í˜„ìž¬ëŠ” Levelë§Œ ì‚¬ìš©í•œë‹¤.
+	//       ÁÖÀÇ) ÇÊÅÍ¸µ Á¤º¸´Â Level, Source, Destination, Location µîÀÌ ÀÖÁö¸¸ ÇöÀç´Â Level¸¸ »ç¿ëÇÑ´Ù.
 	//
-	//    5) set_filtering_range_by_level()í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ í•„í„°ë§ ë ˆë²¨ ë²”ìœ„ë¥¼ ì„¤ì •í•  ìˆ˜ ìžˆë‹¤.
-	//       Levelê°’ì€ intí˜•ì´ë¯€ë¡œ -21ì–µì—ì„œ 21ì–µ ì •ë„ì˜ ë²”ìœ„ë¥¼ ê°€ì§„ë‹¤.
-	//       í•˜ì§€ë§Œ ì¼ë°˜ì ìœ¼ë¡œ ë§Žì´ ì‚¬ìš©í•˜ëŠ” ê°’ì„ enumìœ¼ë¡œ ì„¤ì •í•´ ë†“ì•˜ë‹¤.
+	//    5) set_filtering_range_by_level()ÇÔ¼ö¸¦ »ç¿ëÇØ ÇÊÅÍ¸µ ·¹º§ ¹üÀ§¸¦ ¼³Á¤ÇÒ ¼ö ÀÖ´Ù.
+	//       Level°ªÀº intÇüÀÌ¹Ç·Î -21¾ï¿¡¼­ 21¾ï Á¤µµÀÇ ¹üÀ§¸¦ °¡Áø´Ù.
+	//       ÇÏÁö¸¸ ÀÏ¹ÝÀûÀ¸·Î ¸¹ÀÌ »ç¿ëÇÏ´Â °ªÀ» enumÀ¸·Î ¼³Á¤ÇØ ³õ¾Ò´Ù.
 	//
 	//			log_level_t::LOWEST		 = INT_MIN,
 	//			log_level_t::lower()		 = -256,
@@ -36,28 +36,28 @@ int main()
 	//			log_level_t::higher()	 = 256,
 	//			log_level_t::highest()	 = INT_MAX,
 	//
-	//      Log Level ê°’ì€ ê¼­ enumìœ¼ë¡œ ì„¤ì •ëœ log_level_tê°’ì´ ì•„ë‹ˆë¼ë„ 
-	//      ìž„ì˜ì˜ ê°’ì„ ì„¤ì •í•  ìˆ˜ ìžˆë‹¤.
+	//      Log Level °ªÀº ²À enumÀ¸·Î ¼³Á¤µÈ log_level_t°ªÀÌ ¾Æ´Ï¶óµµ 
+	//      ÀÓÀÇÀÇ °ªÀ» ¼³Á¤ÇÒ ¼ö ÀÖ´Ù.
 	//       
 	// ------------------------------------------------------------------
-	// 1) [ë¡œê·¸ í•„í„°](log filter) ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) [·Î±× ÇÊÅÍ](log filter) °´Ã¼¸¦ »ý¼ºÇÑ´Ù.
 	auto plog_filter = make_own<log_filter>();
 
-	// 2) ê° ë¡œê·¸ ì¢…ë¥˜(log_type_t) ë§ˆë‹¤ í•„í„°ë§ì„ í• ì§€ í•˜ì§€ ì•Šì„ ì§€ ì„¤ì •í•  ìˆ˜ ìžˆë‹¤.
-	//    - í•„í„°ë§ì„ ì›í•˜ëŠ” ë¡œê·¸ ì¢…ë¥˜ëŠ” enableí•´ ì¤€ë‹¤.
-	//    - ë ˆë²¨ ë²”ìœ„ì— ë”°ë¥¸ í•„í„°ë§ì„ í• ì§€ í•˜ì§€ ì•Šì„ ì§€ ì„¤ì •í•œë‹¤.
-	//      í•„í„°ë§í•  ë¡œê·¸ ë ˆë²¨ ë²”ìœ„ë¥¼ ì„¤ì •í•´ì¤€ë‹¤.
+	// 2) °¢ ·Î±× Á¾·ù(log_type_t) ¸¶´Ù ÇÊÅÍ¸µÀ» ÇÒÁö ÇÏÁö ¾ÊÀ» Áö ¼³Á¤ÇÒ ¼ö ÀÖ´Ù.
+	//    - ÇÊÅÍ¸µÀ» ¿øÇÏ´Â ·Î±× Á¾·ù´Â enableÇØ ÁØ´Ù.
+	//    - ·¹º§ ¹üÀ§¿¡ µû¸¥ ÇÊÅÍ¸µÀ» ÇÒÁö ÇÏÁö ¾ÊÀ» Áö ¼³Á¤ÇÑ´Ù.
+	//      ÇÊÅÍ¸µÇÒ ·Î±× ·¹º§ ¹üÀ§¸¦ ¼³Á¤ÇØÁØ´Ù.
 	plog_filter->enable_log							(log_type_t::info);
 	plog_filter->enable_filtering_by_level_range	(log_type_t::info);
 	plog_filter->set_filtering_range_by_level		(log_type_t::info, log_level_t::higher(), log_level_t::highest());
 
-	// 3) PROGRESS Log typeì— ëŒ€í•´ì„œ filteringì„ enableí•œë‹¤.
-	//    PROGRESS Log typeì€ log_level_t::normal()ì´ìƒ log_level_t::highest()ì´í•˜ì¼ ë•Œë§Œ ì¶œë ¥í•œë‹¤.
+	// 3) PROGRESS Log type¿¡ ´ëÇØ¼­ filteringÀ» enableÇÑ´Ù.
+	//    PROGRESS Log typeÀº log_level_t::normal()ÀÌ»ó log_level_t::highest()ÀÌÇÏÀÏ ¶§¸¸ Ãâ·ÂÇÑ´Ù.
 	plog_filter->enable_log							(log_type_t::progress);
 	plog_filter->enable_filtering_by_level_range	(log_type_t::progress);
 	plog_filter->set_filtering_range_by_level		(log_type_t::progress, log_level_t::normal(), log_level_t::highest());
 
-	// 4) Exception LogëŠ” enableí•©ë‹ˆë‹¤.
+	// 4) Exception Log´Â enableÇÕ´Ï´Ù.
 	plog_filter->enable_log(log_type_t::debug,		false);
 	plog_filter->enable_log(log_type_t::fatal,		true);
 	plog_filter->enable_log(log_type_t::error,		true);
@@ -65,35 +65,35 @@ int main()
 	plog_filter->enable_log(log_type_t::system,		true);
 
 	// 
-	// ì—¬ê¸°ì„œ enableë˜ì§€ ì•Šì€ ë¡œê·¸í˜•(LOG TYPE)ì— ëŒ€í•´ì„œëŠ” ì•„ë¬´ëŸ° Filteringì„ í•˜ì§€ ì•Šê²Œ ëœë‹¤.
-	// ì¦‰ log_type_t::INFOì™€ log_type_t::progressë§Œ filteringì„ ìˆ˜í–‰í•˜ë©° ë‚˜ë¨¸ì§€ëŠ” ê·¸ëƒ¥ ì¶œë ¥í•œë‹¤.
+	// ¿©±â¼­ enableµÇÁö ¾ÊÀº ·Î±×Çü(LOG TYPE)¿¡ ´ëÇØ¼­´Â ¾Æ¹«·± FilteringÀ» ÇÏÁö ¾Ê°Ô µÈ´Ù.
+	// Áï log_type_t::INFO¿Í log_type_t::progress¸¸ filteringÀ» ¼öÇàÇÏ¸ç ³ª¸ÓÁö´Â ±×³É Ãâ·ÂÇÑ´Ù.
 	//
-	//	log_type_t::info        => LEVELê°’ì´ log_level_t::HIGHì´ìƒ log_level_t::highest()ì´í•˜ì¼ ë•Œë§Œ ì¶œë ¥í•œë‹¤.
-	//	log_type_t::progress	=> LEVELê°’ì´ log_level_t::normal()ì´ìƒ log_level_t::highest()ì´í•˜ì¼ ë•Œë§Œ ì¶œë ¥í•œë‹¤.
-	//	log_type_t::debug		=> ë¬´ì¡°ê±´ ì¶œë ¥í•˜ì§€ ì•ŠìŒ.
-	//	log_type_t::fatal		=> ë¬´ì¡°ê±´ ì¶œë ¥í•¨.
-	//	log_type_t::error		=> ë¬´ì¡°ê±´ ì¶œë ¥í•¨.
-	//	log_type_t::user		=> ë¬´ì¡°ê±´ ì¶œë ¥ë ¥í•˜ì§€ ì•ŠìŒ.
-	//	log_type_t::system		=> ë¬´ì¡°ê±´ ì¶œë ¥í•¨.
+	//	log_type_t::info        => LEVEL°ªÀÌ log_level_t::HIGHÀÌ»ó log_level_t::highest()ÀÌÇÏÀÏ ¶§¸¸ Ãâ·ÂÇÑ´Ù.
+	//	log_type_t::progress	=> LEVEL°ªÀÌ log_level_t::normal()ÀÌ»ó log_level_t::highest()ÀÌÇÏÀÏ ¶§¸¸ Ãâ·ÂÇÑ´Ù.
+	//	log_type_t::debug		=> ¹«Á¶°Ç Ãâ·ÂÇÏÁö ¾ÊÀ½.
+	//	log_type_t::fatal		=> ¹«Á¶°Ç Ãâ·ÂÇÔ.
+	//	log_type_t::error		=> ¹«Á¶°Ç Ãâ·ÂÇÔ.
+	//	log_type_t::user		=> ¹«Á¶°Ç Ãâ·Â·ÂÇÏÁö ¾ÊÀ½.
+	//	log_type_t::system		=> ¹«Á¶°Ç Ãâ·ÂÇÔ.
 	// 
 
 
 	// ------------------------------------------------------------------
-	// 1. Log Fileì„ opení•œë‹¤.
+	// 1. Log FileÀ» openÇÑ´Ù.
 	// ------------------------------------------------------------------
-	// 1) [ë¡œê·¸ ëŒ€ìƒ ê°ì²´]ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) [·Î±× ´ë»ó °´Ã¼]¸¦ »ý¼ºÇÑ´Ù.
 	auto plogger_console = make_own<logger_console>();
 
-	// 2) [ë¡œê·¸ í•„í„°ë§ ê°ì²´]ë¥¼ [ë¡œê·¸ ëŒ€ìƒ ê°ì²´]ì— ì„¤ì •í•œë‹¤.
+	// 2) [·Î±× ÇÊÅÍ¸µ °´Ã¼]¸¦ [·Î±× ´ë»ó °´Ã¼]¿¡ ¼³Á¤ÇÑ´Ù.
 	plogger_console->set_filter(plog_filter);
 
-	// 3) ì‹œìž‘í•œë‹¤.
+	// 3) ½ÃÀÛÇÑ´Ù.
 	plogger_console->initialize();
 
 	// view) 
-	std::cout << "Log Filter ì˜ˆì œë¥¼ ì‹œìž‘í•©ë‹ˆë‹¤."sv << std::endl;
+	std::cout << "Log Filter \uC608\uC81C\uB97C \uC2DC\uC791\uD569\uB2C8\uB2E4."sv << std::endl;	// "Log Filter ¿¹Á¦¸¦ ½ÃÀÛÇÕ´Ï´Ù."
 
-	// 4) logë¥¼ ì¶œë ¥í•œë‹¤.
+	// 4) log¸¦ Ãâ·ÂÇÑ´Ù.
 	LOG(plogger_console, log_type_t::info)		<< log_level_t::lower()		<< "Type:INFO, Level:log_level_t::lower()"sv;
 	LOG(plogger_console, log_type_t::info)		<< log_level_t::normal()	<< "Type:INFO, Level:log_level_t::normal()"sv;
 	LOG(plogger_console, log_type_t::info)		<< log_level_t::higher()	<< "Type:INFO, Level:log_level_t::higher()"sv;

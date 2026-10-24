@@ -22,7 +22,7 @@
 // instance::instance
 //
 // ----------------------------------------------------------------------------
-class server_admin::instance_service_local : public	server_admin::instance_Iservice
+class server_system::instance_service_local : public	server_system::instance_service
 {
 public:
 			instance_service_local();
@@ -38,7 +38,7 @@ public:
 	virtual	bool				request_service_update() override;
 	virtual	bool				request_service_check_out() override;
 	virtual	bool				request_service_switch() override;
-	virtual	void				set_instance_info(server_admin::sINSTANCE_SERVICE&& _service_info) override;
+	virtual	void				set_instance_info(server_system::sSERVICE&& _service_info) override;
 	virtual	void				reset_instance_status_info() override;
 	virtual	void				update_application_status() override;
 
@@ -49,5 +49,9 @@ private:
 
 			PROCESS_HANDLE		process_handle{ INVALID_PROCESS_HANDLE };
 			std::atomic<int>	status{ 0 };
-			object_ptr<api::performance_counter> perfornamce_processor;
+			object_ptr<api::performance_counter> performance_processor;
+
+			// - service type SERVICE/DOCKER: status check (no process handle)
+			bool				process_check_service_running();
+			std::chrono::steady_clock::time_point m_time_check_service_status{};
 };

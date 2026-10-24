@@ -65,9 +65,9 @@ public:
 protected:
 			chrono::tick::time_point m_tick_last;
 
-			uint64_t			m_count_sended;
+			uint64_t			m_count_sent;
 			uint64_t			m_count_received;
-			uint64_t			m_count_sendedByte;
+			uint64_t			m_count_sentByte;
 			uint64_t			m_count_receivedByte;
 			uint64_t			m_count_send_io_call;
 			uint64_t			m_count_receive_io_call;

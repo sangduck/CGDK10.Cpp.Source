@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 #include <openssl/ssl3.h>
 #include <openssl/tls1.h>

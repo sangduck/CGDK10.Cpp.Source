@@ -37,7 +37,7 @@ public:
 public:
 	[[nodiscard]] virtual eOBJECT_STATE get_object_state() const noexcept override { return this->m_state_object;}
 	virtual	eOBJECT_STATE		set_object_state(eOBJECT_STATE _state) noexcept  override { eOBJECT_STATE state_old = this->m_state_object.exchange(_state); if(state_old != _state) this->process_state_changed(_state, state_old); return state_old; }
-	virtual	bool				set_object_state_if(eOBJECT_STATE _state_compare, eOBJECT_STATE _state) noexcept override { bool is_changed = this->m_state_object.compare_exchange_weak(_state_compare, _state); if(is_changed) this->process_state_changed(_state, _state_compare); return is_changed; }
+	virtual	bool				set_object_state_if(eOBJECT_STATE _state_compare, eOBJECT_STATE _state) noexcept override { bool is_changed = this->m_state_object.compare_exchange_strong(_state_compare, _state); if(is_changed) this->process_state_changed(_state, _state_compare); return is_changed; }
 
 protected:
 	virtual	void				process_state_changed(eOBJECT_STATE /*_state_new*/, eOBJECT_STATE /*_state_old*/) {}

@@ -18,7 +18,6 @@
 
 // option) Windows의 경우 Native를 사용할 것인가 oledb혹은 odbc를 사용할 것인가를 결정할 수 있다.
 //         Linux의 경우 기본으로 odbc 밖에 사용할 수 없으므로 이 옵션은 무시된다.
-#define _USE_ODBC
 
 // option) SQL Server에 접속할 것인가? MySQL에 접속할 것인가? 주석처리하면 MySQL용 설정이된다.
 #define _SQL_SERVER
@@ -70,7 +69,7 @@ int main()
 	// A. querier 객체의 초기화
 	//    1) querier는 provider, dsn, uid, pwd, catalog,option 등 6개의 
 	//       파라미터로 각각 전달하여 초기화할 수도 있다.
-	//    2) 초기화 문자열을 통채로 전달해 줄수도 있다.
+	//    2) 초기화 문자열을 통째로 전달해 줄 수도 있다.
 	//    3) context를 사용해 초기화할 수도 있다.
 	//   
 	//    여기서는 1)번 방법으로 초기화하는 예제를 보여 준다.
@@ -81,12 +80,12 @@ int main()
 
 	// @2) querier 시작 - 파레미터를 넘겨서 초기화
 	//
-	//     - 첫번째 파라미터 => eDB_PROVIDER::SQL_SERVER, eDB_PROVIDER::MYSQL 등등...
-	//     - 두번째 파라미터 => 접속할 DB의 주소 혹은 DSN
-	//     - 세번째 파라미터 => user id 
-	//     - 네번째 파라미터 => password
-	//     - 다섯번째 파라미터 => initial_catalog 혹은 database
-	//     - 여섯번째 파라미터 => options
+	//     - 첫 번째 파라미터 => eDB_PROVIDER::SQL_SERVER, eDB_PROVIDER::MYSQL 등등...
+	//     - 두 번째 파라미터 => 접속할 DB의 주소 혹은 DSN
+	//     - 세 번째 파라미터 => user id 
+	//     - 네 번째 파라미터 => password
+	//     - 다섯 번째 파라미터 => initial_catalog 혹은 database
+	//     - 여섯 번째 파라미터 => options
 	//
 	try
 	{
@@ -98,7 +97,7 @@ int main()
 	}
 	catch (throwable::failure_ex& _e)
 	{
-		// 실패시 exception이 발생하며 절달되는 throwable::failure_ex에 오류 정보가 들어 있다.
+		// 실패 시 exception이 발생하며 전달되는 throwable::failure_ex에 오류 정보가 들어 있다.
 
 		// @ stream으로 출력시키려고 할 경우 - stream 객체로 >> 해준다.
 		_e >> std::cout;
@@ -115,7 +114,7 @@ int main()
 	//
 	// B. 기본적 쿼리
 	//
-	//    - 요청한 쿼리가 완료될 때까지 블록킹된다.
+	//    - 요청한 쿼리가 완료될 때까지 블로킹된다.
 	//    - execute_query 함수를 사용해 요청할 수 있다.
 	//
 	// ------------------------------------------------------------------
@@ -151,8 +150,8 @@ int main()
 			std::cout << "value_05 "sv << value_05 << '\n';
 			std::cout << "value_06 "sv << value_06 << '\n';
 			std::cout << "value_07 "sv << value_07 << '\n';
-			std::cout << "value_08 "sv << to_string<char>(value_08) << '\n';
-			std::cout << "value_09 "sv << to_string<char>(value_09) << '\n';
+			std::cout << "value_08 "sv << to_string(value_08) << '\n';
+			std::cout << "value_09 "sv << to_string(value_09) << '\n';
 
 			// - 다음 row로...
 			result = pquery->move_next();

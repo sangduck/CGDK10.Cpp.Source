@@ -78,7 +78,7 @@ protected:
 			CButton				m_buttonDisconnectAll;
 
 			object_ptr<net::io::connective::Iacceptor>	m_pAcceptor;
-			lockable<>			m_csAcceptor;
+	mutable	lock_object			m_csAcceptor;
 			eSOCKET_STATE		m_statusPre;
 
 			BOOL				m_bEnableControl;

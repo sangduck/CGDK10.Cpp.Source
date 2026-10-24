@@ -17,6 +17,8 @@
 //*****************************************************************************
 
 #pragma once
+
+#include "cgdk/sdk10/lib_path.h"
 //----------------------------------------------------------------------------
 // definitions
 //----------------------------------------------------------------------------
@@ -29,7 +31,7 @@ namespace CGDK
 		class service_handle;
 		class server_status_handle;
 
-		class manager_perfornamce_query;
+		class manager_performance_query;
 		class performance_counter;
 		class process_info;
 	}
@@ -39,9 +41,9 @@ namespace CGDK
 		class Nstatic_service_logger;
 		class Iservice;
 		class Nservice;
-		class service;
-		class service_ex;
+		class Xservice;
 		class Nservice_application;
+		class Iservice_component;
 		template<class> class service_application;
 		template<class> class service_ex_application;
 
@@ -51,15 +53,38 @@ namespace CGDK
 			class time_event;
 			class binder;
 		}
+
 	}
 
-	namespace server_admin
+	namespace server_system
 	{
-		struct sINSTANCE;
-		struct sINSTANCE_HOST;
-		struct sINSTANCE_SERVICE;
-		class Isocket;
-		class socket_to_admin;
+		struct sHOST;
+		struct sSERVER_CERTIFICATION_INFO;
+		struct sSERVICE;
+
+		namespace socket
+		{
+			class client;
+		}
+
+		namespace service
+		{
+			class instance;
+			class Ninstance;
+			class instance_local;
+			class manager;
+		}
+
+		namespace host
+		{
+			class instance;
+			class Ninstance;
+			class instance_local;
+			class manager;
+
+			class group_socket;
+			class socket;
+		}
 	}
 
 	namespace time_event
@@ -84,13 +109,12 @@ namespace CGDK
 
 
 //----------------------------------------------------------------------------
-// head Fileµé
+// head File
 //----------------------------------------------------------------------------
 // 1) 
-#include "cgdk/sdk10/system.object.h"
-#include "cgdk/sdk10/net.socket.h"
 #include "cgdk/sdk10/server.log.h"
 #include "cgdk/sdk10/server.time_event.h"
+#include "cgdk/sdk10/server.group.list.h"
 
 namespace CGDK
 {
@@ -115,22 +139,30 @@ namespace CGDK
 // 3) api
 #include "cgdk/sdk10/server.system/service/api.service.h"
 #include "cgdk/sdk10/server.system/service/api.service_handle.h"
-#include "cgdk/sdk10/server.system/service/api.manager_perfornamce_query.h"
+#include "cgdk/sdk10/server.system/service/api.manager_performance_query.h"
 #include "cgdk/sdk10/server.system/service/api.server_status_handle.h"
 #include "cgdk/sdk10/server.system/service/api.performance_counter.h"
 #include "cgdk/sdk10/server.system/service/api.process_info.h"
 
-// 4) 
+// 4)
 #include "cgdk/sdk10/server.system/service/server.admin_info.time_event.h"
 #include "cgdk/sdk10/server.system/service/server.admin_info.connective.h"
-#include "cgdk/sdk10/server.system/service/server.admin_Info.binder.h"
+#include "cgdk/sdk10/server.system/service/server.admin_info.binder.h"
 #include "cgdk/sdk10/server.system/service/server.admin_info.factory.h"
 
 // 5) sockets
-#include "cgdk/sdk10/server.system/service/server_admin.service_instance.h"
+#include "cgdk/sdk10/server.system/service/server_admin.host_Ninstance.h"
 #include "cgdk/sdk10/server.system/service/server_admin.host_instance.h"
-#include "cgdk/sdk10/server.system/service/server.Isocket.h"
-#include "cgdk/sdk10/server.system/service/server.admin.socket.to_admin.h"
+#include "cgdk/sdk10/server.system/service/server_admin.host_instance_local.h"
+#include "cgdk/sdk10/server.system/service/server_admin.host_instance_manager.h"
+#include "cgdk/sdk10/server.system/service/server_admin.service_Ninstance.h"
+#include "cgdk/sdk10/server.system/service/server_admin.service_instance.h"
+#include "cgdk/sdk10/server.system/service/server_admin.service_instance_local.h"
+#include "cgdk/sdk10/server.system/service/server_admin.service_instance_manager.h"
+
+#include "cgdk/sdk10/server.system/service/server_admin.socket.client.h"
+#include "cgdk/sdk10/server.system/service/server_admin.socket.server.h"
+#include "cgdk/sdk10/server.system/service/server_admin.group_socket.h"
 
 // 6) service
 #include "cgdk/sdk10/server.system/service/server.Nstatic_service_logger.h"
@@ -138,8 +170,8 @@ namespace CGDK
 #include "cgdk/sdk10/server.system/service/server.Nservice.h"
 #include "cgdk/sdk10/server.system/service/server.Nservice_application.h"
 #include "cgdk/sdk10/server.system/service/server.service.h"
-#include "cgdk/sdk10/server.system/service/server.service_ex.h"
-#include "cgdk/sdk10/server.system/service/server.service_appilcation.h"
+#include "cgdk/sdk10/server.system/service/server.Iservice_component.h"
+#include "cgdk/sdk10/server.system/service/server.service_application.h"
 
 // 7) time_event
 #include "cgdk/sdk10/server.system/service/server.time_event.object.service_init.h"
@@ -204,15 +236,13 @@ namespace CGDK
 		// WinSDK 10
 		#if WDK_NTDDI_VERSION >= NTDDI_WIN10
 			#ifdef NDEBUG
-				#pragma message("[CGDK10] 'CGDK10.server.service_Windows10.0_x64_Release.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.server.service_Windows10.0_x64_Release.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.server.service_Windows10.0_x64_Release.lib")
 			#else
-				#pragma message("[CGDK10] 'CGDK10.server.service_Windows10.0_x64_Debug.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.server.service_Windows10.0_x64_Debug.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.server.service_Windows10.0_x64_Debug.lib")
 			#endif
 		// Error - No supported
 		#else
-			#error "[CGDK10] Not supported Windonws SDK version (Need Windows SDK 10.0 or higher)"
+			#error "[CGDK10] Not supported Windows SDK version (Need Windows SDK 10.0 or higher)"
 		#endif
 
 	#else

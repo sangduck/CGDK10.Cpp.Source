@@ -7,7 +7,7 @@ result_code object::Ninitializable::initialize(context& _context)
 {
 	// 1) Nameable 객체 포인터를 얻고 현재의 Context를 저장해 놓는다.
 	auto* pnameable = dynamic_cast<object::Inameable*>(this);
-	auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : ""sv;
+	auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : ""s;
 
 	// 2) get now context
 	auto* pcontext_now = &_context;
@@ -18,12 +18,10 @@ result_code object::Ninitializable::initialize(context& _context)
 		auto& context_find = _context[pname];
 
 		if (context_find.is_valid())
-		{
 			pcontext_now = &context_find;
-		}
 	}
 
-	// 4) reset applied initializion string
+	// 4) reset applied initialization string
 	_process_reset_applied_initialization_param();
 
 	// 5) initialize parameters
@@ -32,8 +30,8 @@ result_code object::Ninitializable::initialize(context& _context)
 		if (std::string str_find = pcontext_now->find("ignore_exception_on_initialize"sv, "ignore failure on initialize"sv); str_find.empty() == false)
 		{
 			// - true면 재접속을 활성화한다.
-			if (__stricmp(str_find, "true"sv) == 0
-				|| __stricmp(str_find, "enable"sv) == 0)
+			if (CGDK::__stricmp(str_find, "true") == 0
+				|| CGDK::__stricmp(str_find, "enable") == 0)
 			{
 				// -  block_util_completed을 enable한다.
 				this->enable_ignore_exception_on_initialize();
@@ -42,8 +40,8 @@ result_code object::Ninitializable::initialize(context& _context)
 				LOG_INFO << "  + parameter['ignore_exception_on_initialize']: 'enable'"sv;
 			}
 			// - false면 재접속을 비활성화한다.
-			else if (__stricmp(str_find, "false"sv) == 0
-				|| __stricmp(str_find, "disable"sv) == 0)
+			else if (CGDK::__stricmp(str_find, "false") == 0
+				|| CGDK::__stricmp(str_find, "disable") == 0)
 			{
 				this->disable_ignore_exception_on_initialize();
 
@@ -51,7 +49,7 @@ result_code object::Ninitializable::initialize(context& _context)
 				LOG_INFO << "  + parameter['ignore_exception_on_initialize']: 'disable'"sv;
 			}
 			// - default면 기본 값을 사용한다. (기본값은 false이다.)
-			else if (__stricmp(str_find, "default"sv) == 0)
+			else if (CGDK::__stricmp(str_find, "default") == 0)
 			{
 				this->disable_ignore_exception_on_initialize();
 
@@ -68,8 +66,8 @@ result_code object::Ninitializable::initialize(context& _context)
 		if (std::string str_find = pcontext_now->find("ignore_exception_in_child_on_initialize", "ignore child failure on initialize"); str_find.empty() == false)
 		{
 			// - true면 재접속을 활성화한다.
-			if (__stricmp(str_find, "true"sv) == 0
-				|| __stricmp(str_find, "enable"sv) == 0)
+			if (CGDK::__stricmp(str_find, "true") == 0
+				|| CGDK::__stricmp(str_find, "enable") == 0)
 			{
 				// -  block_util_completed을 enable한다.
 				this->enable_ignore_exception_in_child_on_initialize();
@@ -78,8 +76,8 @@ result_code object::Ninitializable::initialize(context& _context)
 				LOG_INFO << "  + parameter['ignore_exception_in_child_on_initialize']: 'enable'"sv;
 			}
 			// - false면 재접속을 비활성화한다.
-			else if (__stricmp(str_find, "false"sv) == 0
-				|| __stricmp(str_find, "disable"sv) == 0)
+			else if (CGDK::__stricmp(str_find, "false") == 0
+				|| CGDK::__stricmp(str_find, "disable") == 0)
 			{
 				this->disable_ignore_exception_in_child_on_initialize();
 
@@ -87,7 +85,7 @@ result_code object::Ninitializable::initialize(context& _context)
 				LOG_INFO << "  + parameter['ignore_exception_in_child_on_initialize']: 'disable'"sv;
 			}
 			// - default면 기본 값을 사용한다. (기본값은 false이다.)
-			else if (__stricmp(str_find, "default"sv) == 0)
+			else if (CGDK::__stricmp(str_find, "default") == 0)
 			{
 				this->disable_ignore_exception_in_child_on_initialize();
 
@@ -129,8 +127,8 @@ result_code object::Ninitializable::initialize(context& _context)
 
 		// log) 
 		LOG_WARNING << "(warn) exception IGNORED '_process_initializing' ['"sv << pname << "']"sv << log_endl
-					<< "       - descriotion: ["sv << to_string<char>(_exception.reason<eRESULT>()) << "("sv << _exception.reason<uint64_t>() << ")] "sv << _exception.description();
-
+					<< "       - descriotion: ["sv << to_string(_exception.reason<eRESULT>()) << "("sv << _exception.reason<uint64_t>() << ")] "sv << _exception.description();
+		
 		// - set result
 		result = _exception.reason();
 	}
@@ -211,11 +209,11 @@ result_code object::Ninitializable::process_initialize(context& _context)
 
 		// - get name
 		auto* pnameable = dynamic_cast<object::Inameable*>(this);
-		auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string_view();
+		auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string();
 
 		// log) 
-		LOG_FATAL << "(excp) exception occure on '_process_initializing' ['"sv << pname << "']"sv << log_endl
-		  		  << "       - descriotion: ["sv << to_string<char>(_exception.reason<eRESULT>()) << "("sv << _exception.reason<uint64_t>() << ")] "sv << _exception.description();
+		LOG_FATAL << "(excp) exception occurred on '_process_initializing' ['"sv << pname << "']"sv << log_endl
+		  		  << "       - descriotion: ["sv << to_string(_exception.reason<eRESULT>()) << "("sv << _exception.reason<uint64_t>() << ")] "sv << _exception.description();
 
 		// reraise)
 		throw;
@@ -227,10 +225,10 @@ result_code object::Ninitializable::process_initialize(context& _context)
 
 		// - get name
 		auto* pnameable = dynamic_cast<object::Inameable*>(this);
-		auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string_view();
+		auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string();
 
 		// log) 
-		LOG_FATAL << "(excp) exception occure on '_process_initializing' ['"sv << pname << "']"sv << log_endl
+		LOG_FATAL << "(excp) exception occurred on '_process_initializing' ['"sv << pname << "']"sv << log_endl
 				  << "       - descriotion: [std::excetion] "sv << std::string_view(_exception.what());
 
 		// reraise)
@@ -240,10 +238,10 @@ result_code object::Ninitializable::process_initialize(context& _context)
 	{
 		// - get name
 		auto* pnameable = dynamic_cast<object::Inameable*>(this);
-		auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string_view();
+		auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string();
 
 		// log) 
-		LOG_FATAL << "(excp) exception occure on '_process_initializing' ['"sv << pname << "']"sv;
+		LOG_FATAL << "(excp) exception occurred on '_process_initializing' ['"sv << pname << "']"sv;
 
 		// reraise)
 		throw;
@@ -258,13 +256,20 @@ result_code object::Ninitializable::_process_initializing_child(context& _contex
 	// declare)
 	bool pended = false;
 
-	// declare) 
-	auto iter = this->m_container.begin();
-	auto iter_end = this->m_container.end();
+	// declare)
+	circular_list<object_ptr<Istate>> vector_child;
+
+	// 1) 자식 객체들을 copy
+	for (auto& pchild : this->m_container)
+		vector_child.push_back(pchild);
+
+	// 2) get iterator
+	auto iter = vector_child.begin();
+	auto iter_end = vector_child.end();
 
 	try
 	{
-		// 4) 모든 자식 객체를 initialize한다.
+		// 3) 모든 자식 객체를 initialize한다.
 		for (; iter != iter_end; ++iter)
 		{
 			// - push wait info
@@ -276,24 +281,28 @@ result_code object::Ninitializable::_process_initializing_child(context& _contex
 				result_code completed_nested = object::initialize(*iter, _context);
 
 				// check)
-				if (completed_nested == eRESULT::PENDED)
+				if (completed_nested != eRESULT::PENDED)
 				{
 					if (this->m_queue_pended.empty() == false && this->m_queue_pended.back().pobject == *iter)
-					{
 						this->m_queue_pended.pop_back();
-					}
-
+				}
+				else
+				{
 					pended = true;
 				}
 			}
 			catch (...)
 			{
+				// - remove wait info for the failed child
+				if (this->m_queue_pended.empty() == false && this->m_queue_pended.back().pobject == *iter)
+					this->m_queue_pended.pop_back();
+
 				// - get name
 				auto* pnameable = dynamic_cast<object::Inameable*>(this);
-				auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string_view();
+				auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string();
 
 				// log) 
-				LOG_FATAL << "(excp) exception occure on '_process_initialize' ['"sv << pname << "']"sv;
+				LOG_FATAL << "(excp) exception occurred on '_process_initialize' ['"sv << pname << "']"sv;
 
 				// reraise)
 				if (this->ignore_exception_in_child_on_initialize() == false)
@@ -307,10 +316,11 @@ result_code object::Ninitializable::_process_initializing_child(context& _contex
 	catch (...)
 	{
 		// - initialize했던 자식 객체를 Roll-back한다.
-		for (auto iter_rollback = this->m_container.begin(); iter_rollback != iter; ++iter_rollback)
-		{
-			object::destroy(*iter_rollback);
-		}
+		for (; iter != vector_child.begin();)
+			object::destroy(*(--iter));
+
+		// - clear pended queue
+		this->m_queue_pended.clear();
 
 		// - on_destroy 함수를 호출한다.(on_initialize()함수와 짝함수이므로 호출된다.)
 		this->_process_destroying();
@@ -321,7 +331,7 @@ result_code object::Ninitializable::_process_initializing_child(context& _contex
 
 		// - get name
 		auto* pnameable = dynamic_cast<object::Inameable*>(this);
-		auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string_view();
+		auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string();
 
 		// log) 
 		LOG_WARNING << "(warn) exception IGNORED '_process_initialize' ['"sv << pname << "']"sv;
@@ -336,14 +346,14 @@ result_code object::Ninitializable::_process_initializing_child(context& _contex
 
 result_code object::Ninitializable::_process_initializing_child_complete(context& _context)
 {
-	// 1) eOBJECT_STATE::STOPPED 상태로 변경한다.
-	this->set_object_state(eOBJECT_STATE::STOPPED);
-
-	// 2) _process_initialize 함수를 호출한다. (내부적으로 on_initialize()함수가 호출된다.)
+	// 1) _process_initialize 함수를 호출한다. (내부적으로 on_initialize()함수가 호출된다.)
 	auto result = this->_process_initialize(_context);
 
 	// check)
 	RETURN_IF(result != eRESULT::SUCCESS, result);
+
+	// 2) eOBJECT_STATE::STOPPED 상태로 변경한다.
+	this->set_object_state(eOBJECT_STATE::STOPPED);
 
 	// 3) call 
 	this->_process_initialize_complete(_context);
@@ -375,23 +385,33 @@ result_code object::Ninitializable::_process_destroying_child() noexcept
 	// declare) 
 	bool pended = false;
 
-	// 1) destroy child objects
+	// declare) 
+	std::vector<object_ptr<Istate>> vector_child;
+
+	// 1) 자식 객체들을 stop한다.
+	vector_child.reserve(this->m_container.size());
+
+	// 2) copy pended info
 	for (auto riter = this->m_container.rbegin(); riter != this->m_container.rend(); ++riter)
+		vector_child.push_back(*riter);
+
+	// 3) destroy child objects
+	for (auto& pened : vector_child)
 	{
 		// - push wait info
-		this->m_queue_pended.emplace_back(object::Istate::WAIT_INFO{ *riter, eRESULT::PENDED });
+		this->m_queue_pended.emplace_back(object::Istate::WAIT_INFO{ pened, eRESULT::PENDED });
 
 		// - call child 
-		result_code completed_nested = object::destroy(*riter);
+		result_code completed_nested = object::destroy(pened);
 
 		// check)
-		if (completed_nested == eRESULT::PENDED)
+		if (completed_nested != eRESULT::PENDED)
 		{
-			if (this->m_queue_pended.empty() == false && this->m_queue_pended.back().pobject == *riter)
-			{
+			if (this->m_queue_pended.empty() == false && this->m_queue_pended.back().pobject == pened)
 				this->m_queue_pended.pop_back();
-			}
-
+		}
+		else
+		{
 			pended = true;
 		}
 	}
@@ -426,27 +446,23 @@ void object::Ninitializable::_process_destroy_complete() noexcept
 
 void object::Ninitializable::_process_add_applied_initialization_param(const std::string& _key, const std::string_view _value)
 {
-	scoped_lock(m_cs_map_applied_initialization_param)
-	{
-		auto iter_find = m_map_applied_initialization_param.find(_key);
+	// lock)
+	std::lock_guard lock(this->m_lockable_map_applied_initialization_param);
 
-		if (iter_find != m_map_applied_initialization_param.end())
-		{
-			iter_find->second = _value;
-		}
-		else
-		{
-			m_map_applied_initialization_param.emplace(_key, std::string(_value));
-		}
-	}
+	auto iter_find = this->m_map_applied_initialization_param.find(_key);
+
+	if (iter_find != this->m_map_applied_initialization_param.end())
+		iter_find->second = _value;
+	else
+		this->m_map_applied_initialization_param.emplace(_key, std::string(_value));
 }
 
 void object::Ninitializable::_process_reset_applied_initialization_param() noexcept
 {
-	scoped_lock(m_cs_map_applied_initialization_param)
-	{
-		m_map_applied_initialization_param.clear();
-	}
+	// lock)
+	std::lock_guard lock(this->m_lockable_map_applied_initialization_param);
+
+	this->m_map_applied_initialization_param.clear();
 }
 
 

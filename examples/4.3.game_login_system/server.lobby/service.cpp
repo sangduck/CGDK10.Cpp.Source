@@ -9,22 +9,22 @@ CService::CService()
 	SetName(_CGTEXT("CGCII Sample Lobby Server"));
 
 	// 2) Log file
-	m_pLogFile.NEW(_CGTEXT("logfile"));
+	m_pLogFile.make_object(_CGTEXT("logfile"));
 	NCGAttachable<ICGObjectState>::ProcessAttach(m_pLogFile);
 	g_pLog->RegisterMessageable(m_pLogFile);
 
 	// 4) User
-	m_pgroupUser.NEW(_CGTEXT("groupUser"));
+	m_pgroupUser.make_object(_CGTEXT("groupUser"));
 	NCGAttachable<ICGObjectState>::ProcessAttach(m_pgroupUser);
 
-	m_pgroupUserImmigration.NEW(_CGTEXT("groupImmigrationUser"));
+	m_pgroupUserImmigration.make_object(_CGTEXT("groupImmigrationUser"));
 	NCGAttachable<ICGObjectState>::ProcessAttach(m_pgroupUserImmigration);
 
-	m_pacceptorUser.NEW("acceptorUser");
+	m_pacceptorUser.make_object("acceptorUser");
 	NCGAttachable<ICGObjectState>::ProcessAttach(m_pacceptorUser);
 
 	// 5) Server Login
-	m_psocketServerLogin.NEW(_CGTEXT("socketServerLobby"));
+	m_psocketServerLogin.make_object(_CGTEXT("socketServerLobby"));
 	NCGAttachable<ICGObjectState>::ProcessAttach(m_psocketServerLogin);
 	m_psocketServerLogin->SetReconnectInterval(tick::seconds(5));
 }
@@ -35,12 +35,12 @@ CService::~CService()
 	g_pLog->UnregisterMessageable(m_pLogFile);
 }
 
-void CService::UpdatePlayerCount()
+void CService::update_player_count()
 {
 	// check)
 	RETURN_IF(m_pacceptorUser.empty());
 
-	scoped_lock(m_ServerInfo)
+	SCOPED_LOCK(m_ServerInfo)
 	{
 		m_ServerInfo.nServer_Player_Count = m_pacceptorUser->GetCount();
 	}
@@ -129,7 +129,7 @@ CCGBuffer CService::Message_REQUEST_CERTIFICATION()
 	// 2) 메시지를 작성한다.
 	bufTemp.append<uint32_t>();
 	bufTemp.append<uint32_t>(CGMESSAGE::REQUEST_CERTIFICATION);
-	scoped_lock(m_ServerInfo)
+	SCOPED_LOCK(m_ServerInfo)
 	{
 		bufTemp.append<SERVER_INFO>(m_ServerInfo);
 	}
@@ -149,7 +149,7 @@ CCGBuffer CService::Message_SEND_LOBBYSERVER_STATUS()
 	// 2) 메시지를 작성한다.
 	bufTemp.append<uint32_t>();
 	bufTemp.append<uint32_t>(CGMESSAGE::SEND_LOBBYSERVER_STATUS);
-	scoped_lock(m_ServerInfo)
+	SCOPED_LOCK(m_ServerInfo)
 	{
 		bufTemp.append<SERVER_INFO>(m_ServerInfo);
 	}

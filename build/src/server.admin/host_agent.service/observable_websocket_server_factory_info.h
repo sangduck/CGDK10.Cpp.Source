@@ -27,7 +27,7 @@ class observable_websocket_peer_factory_info :
 	public						Iobservable_websocket
 {
 protected:
-	explicit observable_websocket_peer_factory_info(const std::string_view _name);
+			observable_websocket_peer_factory_info();
 	virtual ~observable_websocket_peer_factory_info();
 
 public:
@@ -44,5 +44,5 @@ private:
 	virtual result_code			on_message(sMESSAGE_NETWORK& _msg);
 
 public:
-			server_admin::instance_Iservice* m_pservice_entity = nullptr;
+			server_system::instance_service* m_pservice_entity = nullptr;
 };

@@ -35,9 +35,6 @@ class net::socket::udp :
 	public						net::io::packetable::Ndatagram,
 	public						net::io::messageable::Nbase
 {
-public:
-			udp() {}
-			udp(std::string_view _name) : net::io::binder::Nudp{ _name } {}
 };
 
 

@@ -1,10 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClCompile Include="admin_server.cpp" />
+    <ClCompile Include="admin_server.policy.cpp" />
+    <ClCompile Include="admin_server.control.cpp" />
     <ClCompile Include="CGDK10.server_admin.admin_server.console.cpp" />
     <ClCompile Include="pch.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="admin_server.h" />
+    <ClInclude Include="admin_server.policy.h" />
+    <ClInclude Include="admin_server.control.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="svn_version.h" />
@@ -15,7 +21,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\..\execute\CGDK10.server_admin.admin_server.console\configure\admin_server_setting.json">
+    <None Include="..\..\..\..\execute\CGDK10.server_admin.admin_server.console\config\admin_server.setting.json">
       <Filter>configure</Filter>
     </None>
   </ItemGroup>

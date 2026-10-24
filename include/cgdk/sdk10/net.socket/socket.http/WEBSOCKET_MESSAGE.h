@@ -43,7 +43,6 @@ public:
 	void			add_text(std::string_view _string) noexcept;
 	void			add_text(std::u8string_view _string) noexcept;
 
-	buffer_view		process_prepend(buffer& _buffer) const;
 	buffer_view		process_append(buffer& _buffer) const;
 	void			process_extract(buffer_view& _buffer) const;
 	void			process_front(buffer_view& _buffer, int& _offset) const;
@@ -57,12 +56,6 @@ public:
 	std::vector<shared_buffer> messages;
 };
 
-template<class B>
-class serializer_prepend<B, sWEBSOCKET_MESSAGE, void>
-{
-	public: using type = buffer_view;
-	template<class S> static type _do_prepend(S& _s, const sWEBSOCKET_MESSAGE& _data) { return _data.process_prepend(_s); }
-};
 template<class B>
 class serializer_append<B, sWEBSOCKET_MESSAGE, void>
 {

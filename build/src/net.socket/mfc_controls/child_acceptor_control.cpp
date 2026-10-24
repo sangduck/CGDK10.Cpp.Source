@@ -41,7 +41,7 @@ END_MESSAGE_MAP()
 
 object_ptr<net::io::connective::Iacceptor>	CChild_acceptor_control::GetAcceptor()
 {
-	scoped_lock(m_csAcceptor)
+	SCOPED_LOCK(m_csAcceptor)
 	{
 		return m_pAcceptor;
 	}
@@ -50,14 +50,11 @@ object_ptr<net::io::connective::Iacceptor>	CChild_acceptor_control::GetAcceptor(
 
 BOOL CChild_acceptor_control::CreateChild(net::io::connective::Iacceptor* p_pAcceptor, CWnd* _pwnd)
 {
-	// declare) 
-	BOOL	result;
-
 	// 1) Acceptor를 설정한다.
 	SetAcceptor(p_pAcceptor);
 
 	// 2) 윈도우를 생성한다.
-	result	 = Create(IDD_DIALOG_ACCEPTOR_CONTROL, _pwnd);
+	auto result = Create(IDD_DIALOG_ACCEPTOR_CONTROL, _pwnd);
 
 	// check) 생성에 실패했으면 false를 Return한다.
 	RETURN_IF(result==FALSE, FALSE);
@@ -66,7 +63,7 @@ BOOL CChild_acceptor_control::CreateChild(net::io::connective::Iacceptor* p_pAcc
 	ShowWindow(SW_SHOW);
 
 	// return) 
-	return	TRUE;
+	return TRUE;
 }
 
 // CChild_acceptor_control message handlers
@@ -125,7 +122,7 @@ void CChild_acceptor_control::SetConnective(net::io::Iconnective* _pconnective)
 
 void CChild_acceptor_control::SetAcceptor(net::io::connective::Iacceptor* p_pAcceptor)
 {
-	scoped_lock(m_csAcceptor)
+	SCOPED_LOCK(m_csAcceptor)
 	{
 		// check) 
 		RETURN_IF(m_pAcceptor==p_pAcceptor);
@@ -275,9 +272,9 @@ BOOL CChild_acceptor_control::OnInitDialog()
 		auto psockAddr = new net::sockaddr(api::socket::instance().get_local_address(i));
 
 		TCHAR temp_string[256];
-		psockAddr->to_string<TCHAR>(temp_string, 256);
+		wsprintf(temp_string, TEXT("%hs"), psockAddr->to_string().c_str());
 
-		int index = m_comboBindAddress.AddString(temp_string);
+		int index = this->m_comboBindAddress.AddString(temp_string);
 		m_comboBindAddress.SetItemData(index, reinterpret_cast<DWORD_PTR>(psockAddr));
 	}
 
@@ -442,7 +439,7 @@ void CChild_acceptor_control::OnEnable(BOOL is_enable)
 void CChild_acceptor_control::OnDestroy()
 {
 	// 1) Acceptor를 Reset한다.
-	scoped_lock(m_csAcceptor)
+	SCOPED_LOCK(m_csAcceptor)
 	{
 		m_pAcceptor.reset();
 	}
@@ -464,10 +461,10 @@ void CChild_acceptor_control::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// 1) Acceptor를 얻는다.

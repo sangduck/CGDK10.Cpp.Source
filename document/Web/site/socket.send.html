@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>send 최적화 · CGDK10 기술 문서</title>
+<meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - TCP/UDP 송신 경로에 적용된 최적화 기법 (IOCP, epoll, io_uring, UDS)">
+<link rel="icon" href="assets/CGCII_logo.PNG">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
+  <div class="ver">Game Server Engine</div>
+  <ul>
+    <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
+    <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
+    <li class="sub"><a href="pool.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Pool system</a></li>
+    <li class="sub"><a href="object.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l6 3v7l-6 3-6-3v-7z"/><path d="M2 4.5l6 3 6-3M8 7.5v7"/></svg>Object system</a></li>
+    <li class="sub"><a href="log.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h6l3 3v10H4z"/><path d="M6.5 8h4M6.5 10.5h4M6.5 5.5h2"/></svg>Log system</a></li>
+    <li class="sub"><a href="socket.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1.5v3.5M10 1.5v3.5"/><path d="M3.5 5h9v3.5a4.5 4.5 0 0 1-9 0z"/><path d="M8 13v1.5"/></svg>Socket system</a></li>
+    <li class="sub"><a href="socket.io_uring.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 1.5L3.5 9h4.5l-1 5.5L12.5 7H8z"/></svg>io_uring</a></li>
+    <li class="sub"><a href="socket.uds.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.6-1.6a2.8 2.8 0 0 1 4 4L11 8.5"/><path d="M9 11.5l-1.6 1.6a2.8 2.8 0 0 1-4-4L5 7.5"/></svg>UDS (같은 host 접속)</a></li>
+    <li class="sub"><a href="socket.send.html" class="cur"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 1.5L7 9"/><path d="M14.5 1.5l-4.5 13-2.2-5.3L2.5 6z"/></svg>send 최적화</a></li>
+    <li class="sub"><a href="socket.recv.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9.5v4h12v-4"/><path d="M8 2v8M5 7.5l3 3 3-3"/></svg>Receive 최적화</a></li>
+    <li class="sub"><a href="p2p.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="8" cy="12" r="2"/><path d="M5.6 5.2l1.6 5.2M10.4 5.2l-1.6 5.2M6 4h4"/></svg>P2P system</a></li>
+    <li class="sub"><a href="update.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5V5.2h-2.7"/></svg>Update system</a></li>
+    <li class="sub"><a href="server.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="4.5" rx="1"/><rect x="2" y="9.5" width="12" height="4.5" rx="1"/><path d="M4.5 4.25h.01M4.5 11.75h.01"/></svg>Server system</a></li>
+    <li class="sub"><a href="group.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 2.8a2.3 2.3 0 0 1 0 4.4M13.5 14c0-1.8-1-3.1-2.5-3.6"/></svg>Group system</a></li>
+    <li class="sub"><a href="query.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Query system</a></li>
+    <li class="head"><a href="build.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-3.8 3.8L2.8 12.2a1.4 1.4 0 0 0 2 2l5.9-3.9a3 3 0 0 0 3.8-3.8l-2 2-2-2z"/></svg>빌드 · 플랫폼</a></li>
+    <li class="head"><a href="tests.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5.5 8.2l2 2 3.2-4"/></svg>단위 테스트 · CI</a></li>
+    <li class="head"><a href="benchmarks.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V9M8 13.5V4M13 13.5V7"/><path d="M1.5 13.5h13"/></svg>벤치마크</a></li>
+    <li class="sub"><a href="benchmarks.push.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4 3 3 6-6"/><path d="M10.5 5.5h4v4"/></svg>큰 묶음 push 처리량</a></li>
+    <li class="sub"><a href="benchmarks.cork.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h8M2 11.5h5"/><path d="M12 9.5l2 2-2 2"/></svg>send cork · 서버 push</a></li>
+    <li class="head"><a href="samples.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4"/></svg>예제 · 튜토리얼</a></li>
+    <li class="head"><a href="releases.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h5.5l6.5 6.5-5.5 5.5L2 8z"/><circle cx="5.2" cy="5.2" r=".9"/></svg>릴리즈 노트</a></li>
+    <li class="head"><a href="status.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3M8 11.5h.01"/></svg>미구현 · 알려진 문제</a></li>
+  </ul>
+</aside>
+<main>
+<h1 id="send">send 최적화 <small>net.io.sendable.*, net.io.Isendable.h, system/object/send_defer.h, net.definitions.socket.h</small></h1>
+<p>송신 경로에 들어간 최적화 기법을 플랫폼과 단계별로 정리한다. 목표는 세 가지다.</p>
+<ul>
+  <li>메시지 수가 많아도 syscall 수를 늘리지 않는다(모아 보내기).</li>
+  <li>보내는 쪽 thread 를 기다리게 하지 않는다(비동기, 락 최소화).</li>
+  <li>느린 수신자 하나가 서버 메모리를 다 쓰지 않게 한다(큐 한도).</li>
+</ul>
+
+<h4 class="sec">sendable 종류</h4>
+<p>socket 템플릿의 sendable 인자로 고른다. 기본은 <code>Ntcp_async_gather</code> 다.</p>
+<table class="bench wrap">
+<tr><th>클래스</th><th class="lbl">방식</th><th class="lbl">맞는 용도</th></tr>
+<tr><td><code>Ntcp_sync</code>, <code>Ntcp_sync_buffered</code></td><td class="lbl">호출 thread 가 바로 보낸다. 큐·상태 관리 없음</td><td class="lbl">가끔 조금씩 보내는 소켓</td></tr>
+<tr><td><code>Ntcp_async</code></td><td class="lbl">버퍼 하나씩 비동기 송신</td><td class="lbl">단순한 비동기</td></tr>
+<tr><td><b><code>Ntcp_async_gather</code></b> (기본)</td><td class="lbl">보내는 중이면 큐에 쌓고, 완료 때 큐 전체를 한 번에 보낸다</td><td class="lbl">일반 서버. 메시지가 많을수록 유리</td></tr>
+<tr><td><code>Ntcp_async_gather_buffered</code></td><td class="lbl">gather + 작은 메시지를 연속 버퍼에 복사해 합친다</td><td class="lbl">아주 작은 메시지를 대량으로 보낼 때</td></tr>
+<tr><td><code>Nudp</code></td><td class="lbl">데이터그램. Linux 는 <code>sendmmsg</code> 배치</td><td class="lbl">UDP</td></tr>
+</table>
+<p>Windows 에는 RIO(Registered I/O) 판(<code>*.rio.cpp</code>)과 raw 판(<code>*_raw</code>)도 있다.</p>
+
+<h4 class="sec">모아 보내기 (gather)</h4>
+<p><b>보내는 thread 모델</b> (<code>Ntcp_async_gather</code>, 모든 플랫폼)</p>
+<ul>
+  <li>소켓마다 "보내는 thread" 가 하나뿐이다(<code>m_flag_sending</code>).</li>
+  <li>아무도 보내지 않으면 send 를 부른 thread 가 바로 보낸다. 큐를 거치지 않는다.</li>
+  <li>누가 보내는 중이면 큐(<code>m_queue_pending</code>)에 넣고 바로 돌아간다. 호출자는 기다리지 않는다.</li>
+  <li>보내는 thread 는 끝나면 그 사이 쌓인 큐 전체를 가져와(<code>m_queue_pending</code> ↔ <code>m_queue_sending</code> swap) 한 번에 보낸다. 큐가 빌 때까지 반복한 뒤 내려놓는다.</li>
+  <li>두 큐는 <code>std::vector</code> 를 swap 하므로 용량이 재사용된다. 송신마다 할당하지 않는다.</li>
+</ul>
+<p><b>한 번의 syscall 로 여러 버퍼</b></p>
+<ul>
+  <li>Windows : 큐의 버퍼를 WSABUF 배열로 <code>WSASend</code> 1회. 소켓당 진행 중인 WSASend 는 하나다.</li>
+  <li>Linux : iovec 배열로 <code>sendmsg</code> 1회(최대 <code>IOV_MAX</code>, 보통 1024). <code>MSG_DONTWAIT</code>.</li>
+  <li>연속 메모리 합치기 : 새 버퍼가 바로 앞 버퍼에 이어진 메모리이고 owner 가 같으면 항목을 늘리기만 한다(<code>QUEUE_SEND::push_back</code>). 한 메모리 블록에 직렬화한 메시지들이 iovec 하나가 된다.</li>
+</ul>
+<p><b>작은 메시지 복사 합치기</b> (<code>Ntcp_async_gather_buffered</code>)</p>
+<ul>
+  <li><code>BYTES_SEND_GATHER_BUFFER_MIN</code>(1 KB)보다 작은 메시지는 연속 gather 버퍼에 복사한다. 버퍼는 1 KB 부터 <code>BYTES_SEND_GATHER_BUFFER_MAX</code>(64 KB)까지 자란다.</li>
+  <li>큰 메시지는 복사하지 않고 버퍼째 붙인다.</li>
+  <li>수천 개의 8 B 메시지가 iovec 몇 개로 줄어든다. 복사 비용과 iovec 처리 비용을 맞바꾼다.</li>
+</ul>
+
+<h4 class="sec">송신 지연 (send_defer · send_cork)</h4>
+<p>여러 send 를 잠시 모았다가 한 번에 보내 syscall 과 패킷 수를 줄인다.</p>
+<ul>
+  <li><b>그룹 락 안의 send</b> (<code>send_defer</code>, r11352) : 그룹·멤버 락(<code>group_lock_object</code>) 안에서 보낸 send 는 thread_local 목록에 쌓이고, 가장 바깥 락이 풀릴 때 순서대로 flush 된다. 브로드캐스트처럼 락 안에서 많은 소켓에 보내는 코드가 락을 짧게 잡는다.</li>
+  <li><b>수신 처리 중의 send</b> (<code>send_cork</code>, epoll) : 받은 메시지들을 처리하면서 같은 소켓에 보내는 응답을 모았다가 처리가 끝나면 한 번의 <code>sendmsg</code> 로 보낸다. recv 한 번마다 flush 하므로 응답이 다음 recv 를 기다리지 않는다. 측정은 <a href="benchmarks.cork.html">send cork · 서버 push</a>.</li>
+  <li>조기 flush : 1024 개, 64 KB, 큐 한도의 절반 중 하나를 넘으면 범위가 끝나기 전에 보낸다. send cork 는 가장 오래 모은 send 가 200 µs(<code>SEND_CORK_DURATION</code>)를 넘어도 다음 send 때 보낸다. 그 나이는 send 마다가 아니라 송신 속도에 맞춰 1 ~ 32 send 마다 읽는다(r11471, <a href="benchmarks.push.html">큰 묶음 push 처리량</a>).</li>
+  <li>순서 : 모으는 동안 다른 thread 가 보낸 것은 그 뒤에 쌓여 순서가 지켜진다.</li>
+  <li>close : 소켓을 닫기 전에 어느 thread 가 모은 것이든 먼저 보낸다(<code>process_flush_deferred_send_on_close</code>).</li>
+  <li>교착 방지 : <code>scoped_thread_block</code> 은 들어갈 때 flush 하고 지연을 멈춘다. 락 안에서 동기 쿼리 응답을 기다려도 멈추지 않는다.</li>
+  <li><code>Ntcp_async_gather(_buffered)</code> 와 <code>Nudp</code> 가 지연을 구현한다. Windows 에서 WSASend 진행 중인 소켓은 지연 대신 pending 큐로 간다.</li>
+</ul>
+
+<h4 class="sec">송신 큐 한도</h4>
+<ul>
+  <li>메시지 수 <code>maximum_depth_of_send_buffer()</code> 4096, 바이트 <code>maximum_depth_of_send_buffer_bytes()</code> 8 MB(accept 된 소켓 4 MB).</li>
+  <li>넘으면 <code>process_on_send_overflow</code> 로 실패 처리한다. 느린 수신자 하나가 서버 메모리를 다 쓰지 않는다.</li>
+  <li>보내는 thread 가 이미 가져간 묶음(Windows 의 진행 중 WSASend, Linux 의 EPOLLOUT 대기 잔량)은 한도에 세지 않는다(r11361). 두 플랫폼이 같은 규칙이다.</li>
+  <li>큰 묶음을 한 번에 보내는 패턴에서 한도가 먼저 걸리지 않게 하려는 결정이다. 소켓은 "보내는 중인 묶음 + 한도" 만큼 담는다.</li>
+</ul>
+
+<h4 class="sec">Windows (IOCP)</h4>
+<ul>
+  <li>Overlapped <code>WSASend</code> + gather. 완료 통지가 다음 묶음을 이어 보낸다.</li>
+  <li>송신 버퍼 <code>SO_SNDBUF</code> 를 명시 설정한다(최대 8 MB). 커널이 사용자 버퍼를 덜 기다리게 한다.</li>
+  <li>loopback 접속에 <code>SIO_LOOPBACK_FAST_PATH</code> 를 건다(acceptor listen 소켓, connect 소켓). 같은 host TCP 의 지연을 줄인다.</li>
+  <li>핸들은 송신 락 안에서 읽고 send 까지 락 안에서 한다. close 가 같은 락 안에서 핸들을 무효로 바꾸므로, 닫힌 뒤 같은 값으로 재사용된 남의 소켓에 보내지 않는다.</li>
+</ul>
+
+<h4 class="sec">Linux (epoll)</h4>
+<ul>
+  <li>Proactor 처럼 쓴다. 호출 thread 가 바로 <code>sendmsg</code> 하고, 다 보냈으면 큐를 이어서 보낸다. <b>EPOLLOUT 은 소켓 송신 버퍼가 찼을 때(EAGAIN, 부분 송신)만</b> 건다.</li>
+  <li>남은 바이트는 큐 앞에 되돌리고 EPOLLOUT 이 오면 <code>process_recover_sendable</code> 이 이어 보낸다.</li>
+  <li>소켓 버퍼는 기본 미설정(커널 autotuning). <code>net::io::socket::Ntcp::enable_explicit_socket_buffer_size(true)</code> 면 명시 설정(r11393~).</li>
+  <li><code>SOCK_NONBLOCK</code> 으로 생성·accept 해 접속당 fcntl 2회를 없앴다.</li>
+  <li>TCP socket option(r11394) : <code>TCP_NODELAY</code>(기본 on), <code>TCP_NOTSENT_LOWAT</code>(커널 송신 버퍼의 미전송 양을 제한해 지연을 줄임), TCP Fast Open(첫 send 가 SYN 에 실린다).</li>
+  <li>UDP : 다른 thread 의 송신·지연분·버퍼 가득 대기분을 <code>sendmmsg</code> 로 최대 64 개씩 보낸다. EWOULDBLOCK 이면 EPOLLOUT 을 기다려 이어 보낸다(이전엔 버림).</li>
+</ul>
+
+<h4 class="sec">Linux (io_uring)</h4>
+<p>백엔드 구조와 벤치는 <a href="socket.io_uring.html">io_uring 백엔드</a> 문서에 있다. 송신에 해당하는 것만 적는다.</p>
+<ul>
+  <li><b>MSG_ZEROCOPY</b> : io_uring io_context 의 소켓만. 16 KB(<code>zerocopy_threshold()</code>) 이상의 단일 버퍼는 페이지를 고정해 복사 없이 보낸다. owner 는 커널 통지까지 붙든다. epoll 에서는 통지 처리 syscall 이 더 들어 손해라 쓰지 않는다. loopback 에서는 커널이 복사하므로 이득이 없다.</li>
+  <li><b>completion 모드</b>(<code>CGDK_IO_URING=completion</code>) : 직접 send 는 그대로다. 소켓 버퍼가 차면 EPOLLOUT 대신 남은 바이트로 SENDMSG op 를 내고, 그 완료가 이어서 보낸다. 큰 단일 버퍼는 SEND_ZC op.</li>
+  <li><b>ring 소유 worker 의 송신 op</b>(r11457) : 그 소켓의 ring 을 가진 worker 는 send 대신 SENDMSG op 를 자기 ring 에 쓰고 다음 enter 로 제출한다(send syscall 없음). 창 16 패턴에서 -8% 라 <b>기본 off</b>(<code>CGDK_IO_URING_SEND_OP=1</code> 또는 <code>enable_send_on_owner_ring(true)</code>).</li>
+</ul>
+
+<h4 class="sec">UDS</h4>
+<ul>
+  <li>송신 코드는 TCP 와 같다. sendable 이 AF_UNIX 를 구분하지 않는다.</li>
+  <li>TCP socket option(<code>TCP_NODELAY</code> 등)과 MSG_ZEROCOPY 는 적용하지 않는다.</li>
+  <li>같은 host 서버끼리 pipeline +26%, 64 KB +17%. 자세한 것은 <a href="socket.uds.html">UDS 문서</a>.</li>
+</ul>
+
+<h4 class="sec">측정과 교훈</h4>
+<table class="bench wrap">
+<tr><th>항목</th><th>값</th><th class="lbl">비고</th></tr>
+<tr><td>큰 묶음 push 처리량, Windows</td><td>약 8,000만 msg/s</td><td class="lbl">100 소켓, 8 B 메시지, 회당 80만 개. Release HEAD r11463, 24 코어 데스크톱, 2회 7,992만 · 8,002만. 회당 120만 개는 0.88 ~ 1.03억으로 흔들림</td></tr>
+<tr><td>큰 묶음 push 처리량, Linux</td><td>3.2억 msg/s</td><td class="lbl">같은 조건, 회당 320만 개, 클라이언트 송신 큐 32 MB, 실패 0. Release r11471, 32 코어 서버(서버 CPU 0-15 · 클라이언트 16-31, SMT 형제). r11344 와 같은 수준</td></tr>
+<tr><td>owner ring 송신 op (io_uring)</td><td>-8%</td><td class="lbl">창 16 echo. 기본 off 의 근거</td></tr>
+<tr><td>MSG_ZEROCOPY (loopback)</td><td>0%</td><td class="lbl">커널이 복사. 실 NIC 64 KB 이상에서 재야 함</td></tr>
+</table>
+<ul>
+  <li>송신 큐 한도와 처리 능력은 따로 봐야 한다. 큰 묶음(8 MB/회 이상)에서는 한도가 먼저 걸린다.</li>
+  <li>r11345 뒤 Linux 큰 묶음 push 는 같은 처리량에 메시지당 CPU 가 서버 2배 · 클라이언트 9배였고 회당 240만 개부터 끊겼다. 원인은 둘이다. 수신 버퍼가 1 KB 에서 안 커진 것(r11371 에서 수정), send cork 가 send 마다 시각을 읽고 20 µs 마다 3.4 KB 씩 보낸 것(r11471 에서 수정). 분석은 <a href="benchmarks.push.html">큰 묶음 push 처리량</a>.</li>
+  <li>syscall 을 줄이는 기법(op 제출, zerocopy)도 통지·완료 처리 비용이 더 크면 손해다. 기본값은 측정으로 정했다.</li>
+</ul>
+
+<h4 class="sec">이력</h4>
+<table class="bench wrap">
+<tr><th>리비전</th><th class="lbl">내용</th></tr>
+<tr><td>r11345</td><td class="lbl">epoll send cork, 부분 송신이면 EPOLLOUT 대기</td></tr>
+<tr><td>r11352</td><td class="lbl">send_defer : 그룹·멤버 락 안의 send 지연</td></tr>
+<tr><td>r11358 · r11362</td><td class="lbl">buffered 판도 send_defer 로, 옛 단일 슬롯 cork API 삭제</td></tr>
+<tr><td>r11361</td><td class="lbl">송신 큐 한도에서 보내는 중인 묶음 제외(IOCP 와 통일)</td></tr>
+<tr><td>r11393 ~ r11398</td><td class="lbl">SOCK_NONBLOCK, 소켓 버퍼 autotuning, UDP sendmmsg, MSG_ZEROCOPY</td></tr>
+<tr><td>r11394</td><td class="lbl">TCP socket option (NODELAY, NOTSENT_LOWAT, TFO 등)</td></tr>
+<tr><td>r11441 ~ r11457</td><td class="lbl">io_uring completion 송신 op, SEND_ZC, owner ring 송신 op</td></tr>
+<tr><td>r11471</td><td class="lbl">send cork 나이 확인을 1 ~ 32 send 마다(적응형), <code>SEND_CORK_DURATION</code> 20 µs → 200 µs</td></tr>
+</table>
+
+<footer>CGDK10 · 소스 기준 정리 (r11462, 2026-10-23) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+</main>
+</div>
+</body>
+</html>

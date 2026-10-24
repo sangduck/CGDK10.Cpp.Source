@@ -19,18 +19,21 @@
 #-----------------------------------------------------------------------------
 # setting
 #-----------------------------------------------------------------------------
-# 1) project name
-PROJECT ( "CGDK10" )
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY( VERSION 3.20 )
 
-# 2) project version
+# 2) project name
+PROJECT ( "CGDK10.build.src" )
+
+# 3) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
+# 4) common build rules
+INCLUDE ( ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/cgdk.cmake )
 
 
 #-----------------------------------------------------------------------------
@@ -65,3 +68,9 @@ ADD_SUBDIRECTORY (server.web)
 
 # 10) server admin
 ADD_SUBDIRECTORY (server.admin)
+
+# 11) link order of the DLLs (mfc_controls)
+CGDK_FINALIZE ()
+
+# 12) build alias for convenience
+CGDK_ADD_ALIAS ( core system net.socket net.update net.p2p server.system server.query http_api service server.web admin )

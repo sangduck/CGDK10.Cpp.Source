@@ -1,0 +1,11 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/windows/" Id="b1f20e7e-a09a-48bb-a739-a04a59da76b3">
+    <Project Path="admin_server\admin_server.console\CGDK10.server_admin.admin_server.console.vs18.vcxproj" Id="6573082d-dec4-40a9-8f27-388c2dc30a13" />
+  </Folder>
+  <Folder Name="/windows/unit_test/" Id="3c8e1a52-9d47-4b6e-a1f3-7e2b5c9d0f14">
+    <Project Path="unit_test\unit_test.server_admin.admin_server\unit_test.server_admin.admin_server.vs18.vcxproj" Id="5b2f0c1e-7a4d-4e9b-8c3f-2a6d1e9b4c70" />
+  </Folder>
+</Solution>

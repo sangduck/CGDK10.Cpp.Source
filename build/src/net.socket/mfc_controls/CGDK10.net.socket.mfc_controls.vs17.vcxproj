@@ -1,20 +1,20 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug_Dynamic.NDI|x64">
-      <Configuration>Debug_Dynamic.NDI</Configuration>
+    <ProjectConfiguration Include="Debug.NDI|x64">
+      <Configuration>Debug.NDI</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release_Dynamic.NDI|x64">
-      <Configuration>Release_Dynamic.NDI</Configuration>
+    <ProjectConfiguration Include="Release.NDI|x64">
+      <Configuration>Release.NDI</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug_Dynamic|x64">
-      <Configuration>Debug_Dynamic</Configuration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release_Dynamic|x64">
-      <Configuration>Release_Dynamic</Configuration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
@@ -22,12 +22,12 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{FD1C1343-18CC-4E0F-A817-724509415453}</ProjectGuid>
     <Keyword>MFCDLLProj</Keyword>
-    <RootNamespace>CGDKnetworksocketcontrolsMFCvs16</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <RootNamespace>CGDKnetworksocketcontrolsMFC</RootNamespace>
     <ProjectName>CGDK10.net.socket.mfc_controls</ProjectName>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Dynamic|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
@@ -35,7 +35,7 @@
     <UseOfMfc>Dynamic</UseOfMfc>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Dynamic.NDI|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug.NDI|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
@@ -43,7 +43,7 @@
     <UseOfMfc>Dynamic</UseOfMfc>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Dynamic|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
@@ -52,7 +52,7 @@
     <UseOfMfc>Dynamic</UseOfMfc>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Dynamic.NDI|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release.NDI|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
@@ -67,51 +67,52 @@
   <ImportGroup Label="Shared">
     <Import Project="CGDK10.net.socket.mfc_controls.shared.vcxitems" Label="Shared" />
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug_Dynamic|x64'">
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Dynamic.NDI|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug.NDI|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release_Dynamic|x64'">
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_Dynamic.NDI|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release.NDI|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Dynamic|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>../../../../dll/</OutDir>
     <IntDir>../../../output/$(ProjectName)/$(TargetPlatformIdentifier)_$(PlatformTarget)_$(PlatformToolset)_$(Configuration)/</IntDir>
     <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_$(Configuration)</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Dynamic.NDI|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug.NDI|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>../../../../dll.NDI/</OutDir>
     <IntDir>../../../output/$(ProjectName)/$(TargetPlatformIdentifier)_$(PlatformTarget)_$(PlatformToolset)_$(Configuration)/</IntDir>
-    <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_Debug_Dynamic</TargetName>
+    <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_Debug</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Dynamic|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>../../../../dll/</OutDir>
     <IntDir>../../../output/$(ProjectName)/$(TargetPlatformIdentifier)_$(PlatformTarget)_$(PlatformToolset)_$(Configuration)/</IntDir>
     <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_$(Configuration)</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Dynamic.NDI|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release.NDI|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>../../../../dll.NDI/</OutDir>
     <IntDir>../../../output/$(ProjectName)/$(TargetPlatformIdentifier)_$(PlatformTarget)_$(PlatformToolset)_$(Configuration)/</IntDir>
-    <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_Release_Dynamic</TargetName>
+    <TargetName>$(ProjectName)_$(SDKIdentifier)$(WindowsTargetPlatformVersion)_$(PlatformTarget)_Release</TargetName>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
     <VcpkgEnableManifest>true</VcpkgEnableManifest>
+    <VcpkgEnabled>true</VcpkgEnabled>
   </PropertyGroup>
-  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug_Dynamic|x64'" />
-  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug_Dynamic.NDI|x64'" />
-  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release_Dynamic|x64'" />
-  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release_Dynamic.NDI|x64'" />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Dynamic|x64'">
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug.NDI|x64'" />
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release.NDI|x64'" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
@@ -123,14 +124,14 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TranslateIncludes>true</TranslateIncludes>
-      <DisableSpecificWarnings>4302;4311</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4302;4311;4819</DisableSpecificWarnings>
       <OmitDefaultLibName>true</OmitDefaultLibName>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <ModuleDefinitionFile>.\CGDK10.net.socket.mfc_controls.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>../../../../lib</AdditionalLibraryDirectories>
-      <ImportLibrary>../../../../lib/cgdk/sdk10/windows/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../../../lib/cgdk/sdk10/windows/$(PlatformToolset)/$(TargetName).lib</ImportLibrary>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -146,7 +147,7 @@
 Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Dynamic.NDI|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug.NDI|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
@@ -159,14 +160,14 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DebugInformationFormat>None</DebugInformationFormat>
       <TranslateIncludes>true</TranslateIncludes>
-      <DisableSpecificWarnings>4302;4311</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4302;4311;4819</DisableSpecificWarnings>
       <OmitDefaultLibName>true</OmitDefaultLibName>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <ModuleDefinitionFile>.\CGDK10.net.socket.mfc_controls.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>../../../../lib.NDI</AdditionalLibraryDirectories>
-      <ImportLibrary>../../../../lib.NDI/cgdk/sdk10/windows/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../../../lib.NDI/cgdk/sdk10/windows/$(PlatformToolset)/$(TargetName).lib</ImportLibrary>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -182,7 +183,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
 Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_Dynamic|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
@@ -199,7 +200,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ExceptionHandling>Async</ExceptionHandling>
       <TranslateIncludes>true</TranslateIncludes>
-      <DisableSpecificWarnings>4302;4311</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4302;4311;4819</DisableSpecificWarnings>
       <OmitDefaultLibName>true</OmitDefaultLibName>
     </ClCompile>
     <Link>
@@ -208,7 +209,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>.\CGDK10.net.socket.mfc_controls.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>../../../../lib</AdditionalLibraryDirectories>
-      <ImportLibrary>../../../../lib/cgdk/sdk10/windows/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../../../lib/cgdk/sdk10/windows/$(PlatformToolset)/$(TargetName).lib</ImportLibrary>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -224,7 +225,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
 Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_Dynamic.NDI|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release.NDI|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
@@ -242,7 +243,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
       <ExceptionHandling>Async</ExceptionHandling>
       <DebugInformationFormat>None</DebugInformationFormat>
       <TranslateIncludes>true</TranslateIncludes>
-      <DisableSpecificWarnings>4302;4311</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4302;4311;4819</DisableSpecificWarnings>
       <OmitDefaultLibName>true</OmitDefaultLibName>
     </ClCompile>
     <Link>
@@ -251,7 +252,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>.\CGDK10.net.socket.mfc_controls.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>../../../../lib.NDI</AdditionalLibraryDirectories>
-      <ImportLibrary>../../../../lib.NDI/cgdk/sdk10/windows/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../../../lib.NDI/cgdk/sdk10/windows/$(PlatformToolset)/$(TargetName).lib</ImportLibrary>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -269,10 +270,10 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Dynamic|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Dynamic.NDI|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Dynamic|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Dynamic.NDI|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug.NDI|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release.NDI|x64'">Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -282,6 +283,23 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CGDK10.net.socket.mfc_controls.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\system\mfc_controls\CGDK10.system.mfc_controls.vs17.vcxproj">
+      <Project>{3810221C-D6CE-4EFD-A05F-97FB15D8CE61}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\socket\CGDK10.net.socket.vs17.vcxproj">
+      <Project>{9C12A1D3-598E-4B1A-B7C7-67C838D14B14}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\socket.crypt\CGDK10.net.socket.crypt.vs17.vcxproj">
+      <Project>{38F4B200-0C3B-47BD-998F-FB6D1DE9F39F}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\socket.http\CGDK10.net.socket.http.vs17.vcxproj">
+      <Project>{7DEF9F6A-99B1-4971-AD9B-1B716ABBECA0}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\socket.mail\CGDK10.net.socket.mail.vs17.vcxproj">
+      <Project>{882F894A-4166-444A-A5CE-A0E5E7D14A5D}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

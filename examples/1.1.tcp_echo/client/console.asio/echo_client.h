@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "asio/asio.h"
 #include <future>
@@ -52,7 +52,7 @@ public:
 			void				request_disconnect_socket(int64_t _count);
 			void				request_disconnect_socket_all();
 			void				request_send();
-			void				request_send_immidiately(int64_t _count);
+			void				request_send_immediately(int64_t _count);
 			void				request_send_error_message_zero();
 
 public:

@@ -25,7 +25,7 @@ namespace CGDK
 // logger_hub_archive
 //
 // 1. logger_hub_archive은~
-//    남겨진 Log를 사용후 제거하지 않고 저장해 놓는 LogHub 객체다.
+//    남겨진 Log를 사용 후 제거하지 않고 저장해 놓는 LogHub 객체다.
 //    저장된 Log 객체는 'get_stored_log()'함수를 사용해 얻어 올 수 있다.
 //
 //    남겨진 log는 일련번호가 부여되며 일련번호는 영구적이다.
@@ -46,7 +46,6 @@ public:
 
 public:
 			logger_hub_archive();
-			logger_hub_archive(const std::string_view _name);
 	virtual ~logger_hub_archive() noexcept;
 
 public:
@@ -55,17 +54,25 @@ public:
 			result_code			initialize(const INITIALIZE_PARAMETER& ) { return this->initialize(); }
 
 protected:
-	virtual	void				process_log(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record) override;
+	virtual	void				process_log(object_ptr<LOG_RECORD>&& _plog_record) override;
 
 			void				_process_wait_complete();
+			void				_process_post();
+			size_t				_process_take_queued();
+			void				_process_drop_queued();
 	virtual result_code			_process_initializing(context& _context) override;
 	virtual result_code			_process_destroying() noexcept override;
 	virtual result_code			_process_destroy() noexcept override;
 	virtual	intptr_t			process_execute(intptr_t _return, size_t _param) override;
 
-			std::vector<object_ptr<LOG_RECORD>> m_array_log_queue;
+	// - lock-free queue (multi producer, single consumer)
+	//   1) a producer increases m_count_queued and pushes the record to the stack (m_phead_queued)
+	//   2) the producer which increased it from 0 posts the execution : only one execution runs at a time
+	//   3) the execution takes the whole stack (FIFO reversed) and decreases m_count_queued by the records taken
+	//      it posts the next execution itself if the count isn't 0
+			std::atomic<LOG_RECORD*> m_phead_queued{ nullptr };
+			std::atomic<size_t>	m_count_queued{ 0 };
 			std::vector<object_ptr<LOG_RECORD>> m_array_log_process;
-			bool				m_is_processing;
 
 			object_ptr<Iexecutor> m_pexecutor;
 };

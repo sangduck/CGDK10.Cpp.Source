@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "platform.h"
 
 
 #if defined(__ANDROID__) || defined(__linux__)
@@ -20,7 +21,7 @@ api::io_context_rio::~io_context_rio() noexcept
 
 bool api::io_context_rio::create() noexcept
 {
-	// check) aleady exist?
+	// check) already exist?
 	RETURN_IF(handle() != INVALID_CGHANDLE_VALUE, false);
 
 	// 1) create iocp
@@ -89,7 +90,7 @@ bool api::io_context_rio::attach(CGHANDLE _handle) noexcept
 	// check) 제대로 연결되었는지 확인한다.
 	RETURN_IF(result == INVALID_CGHANDLE_VALUE, false);
 
-	// 3) attach갯수를 증가시킴.
+	// 3) attach개수를 증가시킴.
 	++this->m_count_attached;
 
 	// return)
@@ -107,7 +108,7 @@ bool api::io_context_rio::detach(CGHANDLE _handle) noexcept
 	// check) 제대로 연결되었는지 확인한다.
 	RETURN_IF(result == INVALID_CGHANDLE_VALUE, false);
 
-	// 2) attach갯수를 감소시킴.
+	// 2) attach개수를 감소시킴.
 	--this->m_count_attached;
 
 	// return) 성공!!!
@@ -129,7 +130,7 @@ bool api::io_context_rio::post_executable(uint32_t _bytes_transferred, uintptr_t
 	// check) handle()이 INVALID_CGHANDLE_VALUE이어서는 안된다.
 	RETURN_IF(this->handle() == INVALID_CGHANDLE_VALUE, false);
 
-	// check) _pexecutable이 nullptr이면 안됀다.
+	// check) _pexecutable이 nullptr이면 안 된다.
 	RETURN_IF(_pexecutable == nullptr, false);
 
 	try
@@ -142,9 +143,11 @@ bool api::io_context_rio::post_executable(uint32_t _bytes_transferred, uintptr_t
 		result.bytes_transfered = _bytes_transferred;
 
 		// 2) Post한다.
-		scoped_lock(m_lock_complete)
 		{
-			// - queuning한다.
+			// lock)
+			std::lock_guard lock(this->m_lockable_complete);
+
+			// - queueing한다.
 			this->m_queue_executable.push_back(result);
 
 			// - add_ref한다.
@@ -169,7 +172,7 @@ bool api::io_context_rio::post_executable(uint32_t _bytes_transferred, uintptr_t
 	// check) m_handle_epoll가 INVALID_CGHANDLE_VALUE이어서는 안된다.
 	RETURN_IF(this->handle() == INVALID_CGHANDLE_VALUE, false);
 
-	// check) _pexecutable이 nullptr이면 안됀다.
+	// check) _pexecutable이 nullptr이면 안 된다.
 	RETURN_IF(_pexecutable.empty(), false);
 
 	try
@@ -182,9 +185,11 @@ bool api::io_context_rio::post_executable(uint32_t _bytes_transferred, uintptr_t
 		result.bytes_transfered = _bytes_transferred;
 
 		// 2) push 한다.
-		scoped_lock(m_lock_complete)
 		{
-			// - ㅂueuning한다.
+			// lock)
+			std::lock_guard lock(this->m_lockable_complete);
+
+			// - ㅂqueueing한다.
 			this->m_queue_executable.push_back(result);
 
 			// - add_ref한다.
@@ -206,9 +211,9 @@ bool api::io_context_rio::post_executable(uint32_t _bytes_transferred, uintptr_t
 
 void api::io_context_rio::pop_queued_executable(RESULT& _result, chrono::tick::duration _ticks_wait) noexcept
 {
-	conditional_lock(this->m_lock_complete, lock_wait)
+	CONDITIONAL_LOCK(this->m_lockable_complete, lock_wait)
 	{
-		// 1) 갯수가 0개면 wait...
+		// 1) 개수가 0개면 wait...
 		if (this->m_queue_executable.size() == 0 && _ticks_wait != chrono::tick::duration::zero())
 		{
 			// - 
@@ -277,12 +282,14 @@ void api::io_context_rio::_process_popup_iocp_event()
 		// check) 
 		CONTINUE_IF(count <= 0);
 
-		// declar)
+		// declare)
 		int count_signal = 0;
 
-		// 5) post eexecutable
-		scoped_lock(this->m_lock_complete)
+		// 5) post executable
 		{
+			// lock)
+			std::lock_guard lock(this->m_lockable_complete);
+
 			// - reserve
 			this->m_queue_executable.reserve(this->m_queue_executable.size() + count);
 

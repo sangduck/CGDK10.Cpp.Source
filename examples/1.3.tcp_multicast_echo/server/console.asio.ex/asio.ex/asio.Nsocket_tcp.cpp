@@ -1,4 +1,4 @@
-ï»¿#include "asio.h"
+#include "asio.h"
 
 
 asio::Nsocket_tcp::Nsocket_tcp()	
@@ -105,10 +105,10 @@ bool asio::Nsocket_tcp::process_send_sync(SEND_NODE&& _send_node)
 	// statistics)
 	this->m_time_last_send = std::chrono::system_clock::now();
 
-	// 1) bufferë¥¼ ì„¤ì •
+	// 1) buffer¸¦ ¼³Á¤
 	boost::asio::const_buffer buffer_transfer { _send_node.buf_send.data(), _send_node.buf_send.size()};
 
-	// 2) ì „ì†¡ì„ í•œë‹¤.
+	// 2) Àü¼ÛÀ» ÇÑ´Ù.
 	while (buffer_transfer.size() != 0)
 	{
 		// declare)
@@ -138,11 +138,11 @@ void asio::Nsocket_tcp::process_receive_async()
 	static const size_t MAX_MESSAGE_SIZE = 1024 * 1024;
 	static const size_t MIN_MESSAGE_BUFFER_ROOM = 256;
 
-	// 1) hold self (ë¹„ë™ê¸° receive ì²˜ë¦¬ê°€ ì™„ë£Œ ë  ë•Œê¹Œì§€ ê°ì²´ì˜ ì†Œë©¸ì„ ë§‰ê¸° ìœ„í•´ hold)
+	// 1) hold self (ºñµ¿±â receive Ã³¸®°¡ ¿Ï·á µÉ ¶§±îÁö °´Ã¼ÀÇ ¼Ò¸êÀ» ¸·±â À§ÇØ hold)
 	if(!this->m_hold_async)
 		this->m_hold_async = this->shared_from_this();
 
-	// 2) hold receiving buffer(ë¹„ë™ê¸° receive ì²˜ê¸°ê°€ ì™„ë£Œ ë  ë•Œê¹Œì§€ bufferê°€ í• ë‹¹í•´ì œ ë˜ì§€ ì•Šë„ë¡ í•˜ê¸° ìœ„í•´ hold)
+	// 2) hold receiving buffer(ºñµ¿±â receive Ã³±â°¡ ¿Ï·á µÉ ¶§±îÁö buffer°¡ ÇÒ´çÇØÁ¦ µÇÁö ¾Êµµ·Ï ÇÏ±â À§ÇØ hold)
 	this->m_hold_receiving = this->m_received_msg.get_source();
 
 	// 3) send async
@@ -156,9 +156,9 @@ void asio::Nsocket_tcp::process_receive_async()
 			if (_error_code.failed())
 			{
 				// ----------------------------------------------------------------------------
-				// ì„¤ëª…) errorëŠ” ...
-				//  'boost::asio::error::eof' -> ì •ìƒì ‘ì† ì¢…ë£Œ(graceful close)
-				//  'boost::asio::error::connection_reset' -> ë¹„ì •ìƒ ì ‘ì† ì¢…ë£Œ(abortive close)
+				// ¼³¸í) error´Â ...
+				//  'boost::asio::error::eof' -> Á¤»óÁ¢¼Ó Á¾·á(graceful close)
+				//  'boost::asio::error::connection_reset' -> ºñÁ¤»ó Á¢¼Ó Á¾·á(abortive close)
 				// ----------------------------------------------------------------------------
 				// - complete closesocket
 				this->process_closesocket(_error_code);
@@ -173,10 +173,10 @@ void asio::Nsocket_tcp::process_receive_async()
 			// statistics)
 			this->m_time_last_receives = std::chrono::system_clock::now();
 
-			// - ìž„ì‹œë¡œ ë³µì‚¬
+			// - ÀÓ½Ã·Î º¹»ç
 			auto temp_received = this->m_received_msg;
 
-			// - ë°›ì€ ë§Œí¼ ê¸¸ì´ë¥¼ ë”í•´ì¤€ë‹¤.
+			// - ¹ÞÀº ¸¸Å­ ±æÀÌ¸¦ ´õÇØÁØ´Ù.
 			temp_received.add_size(_length);
 
 			// declare)
@@ -187,7 +187,7 @@ void asio::Nsocket_tcp::process_receive_async()
 
 			try
 			{
-				// loop) remained_sizeê°€ head_sizeë³´ë‹¤ ìž‘ìœ¼ë©´ ëëƒ„.
+				// loop) remained_size°¡ head_sizeº¸´Ù ÀÛÀ¸¸é ³¡³¿.
 				while (temp_received.size() >= 4)
 				{
 					// - get message size
@@ -211,7 +211,7 @@ void asio::Nsocket_tcp::process_receive_async()
 						break;
 					}
 
-					// - make message ( ë°˜ë“œì‹œ ë³µì‚¬í•´ì•¼ í•œë‹¤. on_message ì²˜ë¦¬ ì¤‘ ê°’ì„ ë³€í™”ì‹œí‚¬ ìˆ˜ ìžˆìœ¼ë¯€ë¡œ...)
+					// - make message ( ¹Ýµå½Ã º¹»çÇØ¾ß ÇÑ´Ù. on_message Ã³¸® Áß °ªÀ» º¯È­½ÃÅ³ ¼ö ÀÖÀ¸¹Ç·Î...)
 					temp_buffer = temp_received ^ message_size;
 
 					// - on message
@@ -220,7 +220,7 @@ void asio::Nsocket_tcp::process_receive_async()
 					// statistics)
 					++count_messages;
 
-					// - ì²˜ë¦¬í•œ ë§Œí¼ bufferë¥¼ ì¤„ì¸ë‹¤.
+					// - Ã³¸®ÇÑ ¸¸Å­ buffer¸¦ ÁÙÀÎ´Ù.
 					temp_received += offset(message_size);
 				}
 
@@ -234,21 +234,21 @@ void asio::Nsocket_tcp::process_receive_async()
 
 				if (this->m_receiving_msg.size() < MIN_MESSAGE_BUFFER_ROOM || this->m_receiving_msg.size() < temp_buffer.size())
 				{
-					// - ê¸°ë³¸ ë©”ì‹œì§€ bufferì˜ í¬ê¸°
+					// - ±âº» ¸Þ½ÃÁö bufferÀÇ Å©±â
 					auto size_new = RECEIVE_BUFFER_SIZE;
 
-					// - ë§Œì•½ ë‹¤ìŒ ë©”ì‹œì§€ì˜ í¬ê¸°ê°€ ê¸°ë³¸ ë©”ì‹œì§€ bufferì˜ í¬ê¸°ë³´ë‹¤ í¬ë©´ ë©”ì‹œì§€ ë§Œí¼ì„ ë”í•œë‹¤.
+					// - ¸¸¾à ´ÙÀ½ ¸Þ½ÃÁöÀÇ Å©±â°¡ ±âº» ¸Þ½ÃÁö bufferÀÇ Å©±âº¸´Ù Å©¸é ¸Þ½ÃÁö ¸¸Å­À» ´õÇÑ´Ù.
 					if (temp_buffer.size() > RECEIVE_BUFFER_SIZE)
 						size_new += temp_buffer.size();
 
-					// - ìƒˆë¡œìš´ bufferë¥¼ í• ë‹¹ë°›ëŠ”ë‹¤.
+					// - »õ·Î¿î buffer¸¦ ÇÒ´ç¹Þ´Â´Ù.
 					auto buf_new = alloc_shared_buffer(size_new);
 
-					// - ë‚¨ì•„ ìžˆëŠ” ë°ì´í„°ê°€ ìžˆìœ¼ë©´ ë³µì‚¬í•œë‹¤.
+					// - ³²¾Æ ÀÖ´Â µ¥ÀÌÅÍ°¡ ÀÖÀ¸¸é º¹»çÇÑ´Ù.
 					if(temp_received.size() != 0)
 						memcpy(buf_new.data(), temp_received.data(), temp_received.size());
 
-					// - ìƒˆë¡œìš´ bufferë¥¼ ì„¤ì •í•œë‹¤.
+					// - »õ·Î¿î buffer¸¦ ¼³Á¤ÇÑ´Ù.
 					this->m_received_msg = buf_new + offset(temp_received.size());
 					this->m_receiving_msg = boost::asio::mutable_buffer{ buf_new.data() + temp_received.size(), size_new - temp_received.size() };
 				}

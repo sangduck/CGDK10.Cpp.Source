@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -16,11 +16,10 @@
 //*                                                                           *
 //*****************************************************************************
 
-// option) Windowsì˜ ê²½ìš° Nativeë¥¼ ì‚¬ìš©í•  ê²ƒì¸ê°€ í˜¹ì€ ODBCë¥¼ ì‚¬ìš©í•  ê²ƒì¸ê°€ë¥¼ ê²°ì •í•  ìˆ˜ ìˆë‹¤.
-//         Linuxì˜ ê²½ìš° ê¸°ë³¸ìœ¼ë¡œ ODBCë¥¼ ì‚¬ìš©í•˜ë¯€ë¡œ ì´ ì˜µì…˜ì€ ë¬´ì‹œëœë‹¤.
-#define _USE_ODBC
+// option) WindowsÀÇ °æ¿ì Native¸¦ »ç¿ëÇÒ °ÍÀÎ°¡ È¤Àº ODBC¸¦ »ç¿ëÇÒ °ÍÀÎ°¡¸¦ °áÁ¤ÇÒ ¼ö ÀÖ´Ù.
+//         LinuxÀÇ °æ¿ì ±âº»À¸·Î ODBC¸¦ »ç¿ëÇÏ¹Ç·Î ÀÌ ¿É¼ÇÀº ¹«½ÃµÈ´Ù.
 
-// option) SQL Serverì— ì ‘ì†í•  ê²ƒì¸ê°€? MySQLì— ì ‘ì†í•  ê²ƒì¸ê°€?
+// option) SQL Server¿¡ Á¢¼ÓÇÒ °ÍÀÎ°¡? MySQL¿¡ Á¢¼ÓÇÒ °ÍÀÎ°¡?
 //#define _SQL_SERVER
 
 #include <iostream>
@@ -48,7 +47,7 @@ int main()
 	}
 	catch (throwable::failure_ex& _e)
 	{
-		// - error stringì„ ì¶œë ¥í•œë‹¤.
+		// - error stringÀ» Ãâ·ÂÇÑ´Ù.
 		_e >> std::cout;
 
 		// return) 
@@ -58,59 +57,59 @@ int main()
 
 	// ------------------------------------------------------------------
 	//
-	// ì„¤ëª… parameter 
+	// ¼³¸í parameter 
 	//
-	//  1. BIND SQLë¬¸ì„ ì‚¬ìš©í•œ query
-	//    query ë¬¸ì¥ì„ ì§ì ‘ ì‘ì„±í•˜ëŠ” ê²ƒë³´ë‹¤ ?ë¡œ ê°’ì„ BINDí•˜ì—¬ ì „ë‹¬í•˜ëŠ” ë°©ì‹ì˜
-	//    ì¿¼ë¦¬ì…ë‹ˆë‹¤.
+	//  1. BIND SQL¹®À» »ç¿ëÇÑ query
+	//    query ¹®ÀåÀ» Á÷Á¢ ÀÛ¼ºÇÏ´Â °Íº¸´Ù ?·Î °ªÀ» BINDÇÏ¿© Àü´ŞÇÏ´Â ¹æ½ÄÀÇ
+	//    Äõ¸®ÀÔ´Ï´Ù.
 	// 
-	//    - ë¹ˆë²ˆíˆ ì‚¬ìš©ë˜ëŠ” ì¿¼ë¦¬ì˜ ê²½ìš° ë§¤ë²ˆ êµ¬ì¡°ì ìœ¼ë¡œëŠ”ë™ì¼í•˜ë©° ì¼ë¶€
-	//      íŒŒë¼ë¯¸í„°ì— í•´ë‹¹í•˜ëŠ” ê°’ë§Œ ë‹¤ë¥¸ ì¿¼ë¦¬ë¼ë„ Literal SQLë¬¸ìœ¼ë¡œ
-	//      ì‘ì„±í•  ê²½ìš° ì„±ëŠ¥ì— ë§ì€ ì†ì‹¤ì„ ê°€ì ¸ì˜¬ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
-	//      soft parsingì˜ ì´ìµì˜ ì–»ì–´ ì„±ëŠ¥ì˜ ìµœì í™”ë¥¼ ìœ„í•´ì„œëŠ” SQL ì›ë¬¸ì´ 
-	//      ë¬¸ìì ìœ¼ë¡œ ë™ì¼í•´ì•¼ í•©ë‹ˆë‹¤.
-	//      ë”°ë¼ì„œ SQLë¬¸ì„ ë§¤ë²ˆ ì§ì ‘ ì‘ì„±í•˜ëŠ” liberal SQLë°©ì‹ì€ soft parsingì„
-	//      ì ìš© ë°›ì„ ê°€ëŠ¥ì„±ì´ ë‚®ì•„ì§‘ë‹ˆë‹¤.
-	//      ë¹ˆë²ˆí•œ ì¿¼ë¦¬ëŠ” ì§ì ‘ SQLë¬¸ì„ ë„£ëŠ” ê²ƒë³´ë‹¤ BIND SQLë°©ì‹ì˜ queryê°€
-	//      í›¨ì”¬ ì¢‹ì€ íš¨ìœ¨ì„ ë‚¼ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
-	//      íŠ¹íˆ ì‘ê³  ë¹ˆë²ˆí•œ SQLì˜ ê²½ìš° BIND SQL ë°©ì‹ì€ ë”ìš± íš¨ìœ¨ì ì¼ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+	//    - ºó¹øÈ÷ »ç¿ëµÇ´Â Äõ¸®ÀÇ °æ¿ì ¸Å¹ø ±¸Á¶ÀûÀ¸·Î´Âµ¿ÀÏÇÏ¸ç ÀÏºÎ
+	//      ÆÄ¶ó¹ÌÅÍ¿¡ ÇØ´çÇÏ´Â °ª¸¸ ´Ù¸¥ Äõ¸®¶óµµ Literal SQL¹®À¸·Î
+	//      ÀÛ¼ºÇÒ °æ¿ì ¼º´É¿¡ ¸¹Àº ¼Õ½ÇÀ» °¡Á®¿Ã ¼ö ÀÖ½À´Ï´Ù.
+	//      soft parsingÀÇ ÀÌÀÍÀÇ ¾ò¾î ¼º´ÉÀÇ ÃÖÀûÈ­¸¦ À§ÇØ¼­´Â SQL ¿ø¹®ÀÌ 
+	//      ¹®ÀÚÀûÀ¸·Î µ¿ÀÏÇØ¾ß ÇÕ´Ï´Ù.
+	//      µû¶ó¼­ SQL¹®À» ¸Å¹ø Á÷Á¢ ÀÛ¼ºÇÏ´Â liberal SQL¹æ½ÄÀº soft parsingÀ»
+	//      Àû¿ë ¹ŞÀ» °¡´É¼ºÀÌ ³·¾ÆÁı´Ï´Ù.
+	//      ºó¹øÇÑ Äõ¸®´Â Á÷Á¢ SQL¹®À» ³Ö´Â °Íº¸´Ù BIND SQL¹æ½ÄÀÇ query°¡
+	//      ÈÎ¾À ÁÁÀº È¿À²À» ³¾ ¼ö ÀÖ½À´Ï´Ù.
+	//      Æ¯È÷ ÀÛ°í ºó¹øÇÑ SQLÀÇ °æ¿ì BIND SQL ¹æ½ÄÀº ´õ¿í È¿À²ÀûÀÏ ¼ö ÀÖ½À´Ï´Ù.
 	//
-	//  2. BIND SQL ë°©ë²•
-	//     - ë³¸ì¿¼ë¦¬ë¥¼ í•˜ê¸°ì „ì— ì¼ë°˜ queryë¬¸ì„ ë¨¼ì € prepare_query()ë¡œ ì¤€ë¹„ìš”ì²­í•©ë‹ˆë‹¤.
-	//     - prepare_query()ê°€ ì„±ê³µí•˜ë©´ set_param()í•¨ìˆ˜ë¡œ ì¸ìì™€ ê°’ì„ BINDí•´ì¤ë‹ˆë‹¤.
-	//     - queryë¬¸ ì¥ ì¤‘ì— ?ì˜ ë§Œí¼ set_paramí•¨ìˆ˜ë¥¼ í˜¸ì¶œí•´ ê°’ì„ ì„¤ì •í•´ì¤ë‹ˆë‹¤.
-	//     - ì¸ìì˜ ì„¤ì •ì´ ëë‚˜ë©´ execute()í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•´ ì¿¼ë¦¬ë¥¼ ì‹¤í–‰í•©ë‹ˆë‹¤.
-	//     - queryê°€ ì„±ê³µì ìœ¼ë¡œ ì™„ë£Œë˜ì—ˆë‹¤ë©´ output ì¸ìëŠ” get_paramí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´
-	//       ê°’ì„ ì–»ì–´ì˜¬ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+	//  2. BIND SQL ¹æ¹ı
+	//     - º»Äõ¸®¸¦ ÇÏ±âÀü¿¡ ÀÏ¹İ query¹®À» ¸ÕÀú prepare_query()·Î ÁØºñ¿äÃ»ÇÕ´Ï´Ù.
+	//     - prepare_query()°¡ ¼º°øÇÏ¸é set_param()ÇÔ¼ö·Î ÀÎÀÚ¿Í °ªÀ» BINDÇØÁİ´Ï´Ù.
+	//     - query¹® Àå Áß¿¡ ?ÀÇ ¸¸Å­ set_paramÇÔ¼ö¸¦ È£ÃâÇØ °ªÀ» ¼³Á¤ÇØÁİ´Ï´Ù.
+	//     - ÀÎÀÚÀÇ ¼³Á¤ÀÌ ³¡³ª¸é execute()ÇÔ¼ö¸¦ È£ÃâÇØ Äõ¸®¸¦ ½ÇÇàÇÕ´Ï´Ù.
+	//     - query°¡ ¼º°øÀûÀ¸·Î ¿Ï·áµÇ¾ú´Ù¸é output ÀÎÀÚ´Â get_paramÇÔ¼ö¸¦ »ç¿ëÇØ
+	//       °ªÀ» ¾ò¾î¿Ã ¼ö ÀÖ½À´Ï´Ù.
 	//   
 	// ------------------------------------------------------------------
 
 	// ------------------------------------------------------------------
 	//
-	// A. ë™ê¸°ì‹ ì¿¼ë¦¬
+	// A. µ¿±â½Ä Äõ¸®
 	//
-	//    - ìš”ì²­í•œ ì¿¼ë¦¬ê°€ ì™„ë£Œë  ë•Œê¹Œì§€ ë¸”ë¡í‚¹ëœë‹¤.
-	//    - execute_query í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ìš”ì²­í•  ìˆ˜ ìˆë‹¤.
+	//    - ¿äÃ»ÇÑ Äõ¸®°¡ ¿Ï·áµÉ ¶§±îÁö ºí·ÎÅ·µÈ´Ù.
+	//    - execute_query ÇÔ¼ö¸¦ »ç¿ëÇØ ¿äÃ»ÇÒ ¼ö ÀÖ´Ù.
 	//
 	// ------------------------------------------------------------------
 	try
 	{
-		// @1) ë¨¼ì € queryë¥¼ repareí•œë‹¤.
+		// @1) ¸ÕÀú query¸¦ repareÇÑ´Ù.
 	#if defined(_SQL_SERVER)
-		auto pquery = pquerier->prepare_query<query::rdb::query_param_t>("{CALL test_procedure (?,?,?)}"sv); // SQL serverì˜ ê²½ìš°: procedure callì„ ìœ„í•´ {}ë¥¼ í•´ì¤˜ì•¼ í•œë‹¤.
+		auto pquery = pquerier->prepare_query<query::rdb::query_param_t>("{CALL test_procedure (?,?,?)}"sv); // SQL serverÀÇ °æ¿ì: procedure callÀ» À§ÇØ {}¸¦ ÇØÁà¾ß ÇÑ´Ù.
 	#else
-		auto pquery = pquerier->prepare_query<query::rdb::query_param_t>("CALL test_procedure (?,?,?)"sv); // MySQLì˜ ê²½ìš°: procedure callì— {}ê°€ ìˆìœ¼ë©´ ì•ˆë€ë‹¤.
+		auto pquery = pquerier->prepare_query<query::rdb::query_param_t>("CALL test_procedure (?,?,?)"sv); // MySQLÀÇ °æ¿ì: procedure call¿¡ {}°¡ ÀÖÀ¸¸é ¾È µÈ´Ù.
 	#endif
 
-		// @2) parameterë¥¼ ì„¤ì •í•œë‹¤.
-		pquery->set_param<int>				(1, 40);		// ì²«ë²ˆì§¸ parameter
-		pquery->set_param<std::string_view>	(2, "apple"sv);	// ë‘ë²ˆì§¸ parameter
-		pquery->set_param<float>			(3, 0.10f);		// ì„¸ë²ˆì§¸ parameter
+		// @2) parameter¸¦ ¼³Á¤ÇÑ´Ù.
+		pquery->set_param<int>				(1, 40);		// Ã¹ ¹øÂ° parameter
+		pquery->set_param<std::string_view>	(2, "apple"sv);	// µÎ ¹øÂ° parameter
+		pquery->set_param<float>			(3, 0.10f);		// ¼¼ ¹øÂ° parameter
 
-		// @3) queryë¥¼ ì–»ëŠ”ë‹¤.
+		// @3) query¸¦ ¾ò´Â´Ù.
 		pquery->execute_query();
 
-		// @4) ì™„ë£Œë  ë•Œê¹Œì§€ ë°˜ë³µí•œë‹¤.
+		// @4) ¿Ï·áµÉ ¶§±îÁö ¹İº¹ÇÑ´Ù.
 		for (auto iter : *pquery)
 		{
 			auto value_01 = iter.get_value<bool>(1);
@@ -126,18 +125,18 @@ int main()
 			// - print~
 			std::cout << "value_01 "sv << value_01 << '\n';
 			std::cout << "value_02 "sv << value_02 << '\n';
-			std::wcout << L"value_03 "sv << value_03 << L'\n'; // linuxì—ì„œëŠ” std::coutì™€ std::wcoutì„ ì©ì–´ ì‚¬ìš©í•˜ë©´ í•œê¸€ì´ ì œëŒ€ë¡œ ì¶œë ¥ ì•ˆë¨.
+			std::wcout << L"value_03 "sv << value_03 << L'\n'; // linux¿¡¼­´Â std::cout¿Í std::wcoutÀ» ½â¾î »ç¿ëÇÏ¸é ÇÑ±ÛÀÌ Á¦´ë·Î Ãâ·Â ¾ÈµÊ.
 			std::cout << "value_04 "sv << value_04 << '\n';
 			std::cout << "value_05 "sv << value_05 << '\n';
 			std::cout << "value_06 "sv << value_06 << '\n';
 			std::cout << "value_07 "sv << value_07 << '\n';
-			std::cout << "value_08 "sv << to_string<char>(value_08) << '\n';
-			std::cout << "value_09 "sv << to_string<char>(value_09) << '\n';
+			std::cout << "value_08 "sv << to_string(value_08) << '\n';
+			std::cout << "value_09 "sv << to_string(value_09) << '\n';
 		}
 	}
 	catch (throwable::failure_ex& _e)
 	{
-		// - error stringì„ ì¶œë ¥í•œë‹¤.
+		// - error stringÀ» Ãâ·ÂÇÑ´Ù.
 		_e >> std::cout;
 
 		// return) 
@@ -147,41 +146,41 @@ int main()
 
 	// ------------------------------------------------------------------
 	//
-	// B. ë¹„ë™ê¸°ì‹ ì¿¼ë¦¬
+	// B. ºñµ¿±â½Ä Äõ¸®
 	//
-	//    - ì¿¼ë¦¬ë¥¼ ìš”ì³¥í•˜ë©´ ë¹„ë™ê¸°ì ìœ¼ë¡œ ì¿¼ë¦¬ë¥¼ í•œ í›„ ê²°ê³¼ëŠ” ë¹„ë™ê¸°ì ìœ¼ë¡œ
-	//      ì²˜ë¦¬ëœë‹¤.
+	//    - Äõ¸®¸¦ ¿ä«ŠÇÏ¸é ºñµ¿±âÀûÀ¸·Î Äõ¸®¸¦ ÇÑ ÈÄ °á°ú´Â ºñµ¿±âÀûÀ¸·Î
+	//      Ã³¸®µÈ´Ù.
 	//
-	//    - ì¿¼ë¦¬ê°€ ì™„ë£Œëœ í›„ íŒŒë¼ë¯¸í„°ë¡œ ì „ë‹¬í•œ í˜¸ì¶œë  ëŒë‹¤ í•¨ìˆ˜ë¥¼ ì„¤ì •í•œë‹¤.
+	//    - Äõ¸®°¡ ¿Ï·áµÈ ÈÄ ÆÄ¶ó¹ÌÅÍ·Î Àü´ŞÇÑ È£ÃâµÉ ¶÷´Ù ÇÔ¼ö¸¦ ¼³Á¤ÇÑ´Ù.
 	//    
 	// ------------------------------------------------------------------
-	// @1) ë¨¼ì € queryë¥¼ í• ë‹¹ ë°›ëŠ”ë‹¤.
+	// @1) ¸ÕÀú query¸¦ ÇÒ´ç ¹Ş´Â´Ù.
 	pquerier->post_alloc_session([=](query::rdb::session_t* _psession)
 	{
 		// check)
 		RETURN_IF(_psession == nullptr,);
 
-		// 1) query ê°ì²´ë¥¼ í• ë‹¹ ë°›ëŠ”ë‹¤.
+		// 1) query °´Ã¼¸¦ ÇÒ´ç ¹Ş´Â´Ù.
 		auto pquery = _psession->alloc_query<query::rdb::query_param_t>();
 
 		try
 		{
-			// @2) ë¨¼ì € queryë¥¼ repareí•œë‹¤.
+			// @2) ¸ÕÀú query¸¦ repareÇÑ´Ù.
 		#if defined(_SQL_SERVER)
 			pquery->prepare_query("{CALL test_procedure (?,?,?) }"sv);
 		#else
 			pquery->prepare_query("CALL test_procedure (?,?,?) "sv);
 		#endif
 
-			// @3) parameterë¥¼ ì„¤ì •í•œë‹¤.
-			pquery->set_param<int> (1, 50);						// ì²«ë²ˆì§¸ parameter
-			pquery->set_param<std::string_view> (2, "apple"sv);	// ë‘ë²ˆì§¸ parameter
-			pquery->set_param<float> (3, 0.1f);					// ì„¸ë²ˆì§¸ parameter
+			// @3) parameter¸¦ ¼³Á¤ÇÑ´Ù.
+			pquery->set_param<int> (1, 50);						// Ã¹ ¹øÂ° parameter
+			pquery->set_param<std::string_view> (2, "apple"sv);	// µÎ ¹øÂ° parameter
+			pquery->set_param<float> (3, 0.1f);					// ¼¼ ¹øÂ° parameter
 
-			// @4) queryë¥¼ ì–»ëŠ”ë‹¤.
+			// @4) query¸¦ ¾ò´Â´Ù.
 			pquery->execute_query();
 
-			// @5) ê²°ê³¼ë¥¼ ì½ì–´ë“¤ì¸ë‹¤.
+			// @5) °á°ú¸¦ ÀĞ¾îµéÀÎ´Ù.
 			for (auto iter : *pquery)
 			{
 				auto value_01 = iter.get_value<bool>(1);
@@ -197,18 +196,18 @@ int main()
 				// - print~
 				std::cout << "value_01 "sv << value_01 << '\n';
 				std::cout << "value_02 "sv << value_02 << '\n';
-				std::wcout << L"value_03 "sv << value_03 << L'\n'; // linuxì—ì„œëŠ” std::coutì™€ std::wcoutì„ ì©ì–´ ì‚¬ìš©í•˜ë©´ í•œê¸€ì´ ì œëŒ€ë¡œ ì¶œë ¥ ì•ˆë¨.
+				std::wcout << L"value_03 "sv << value_03 << L'\n'; // linux¿¡¼­´Â std::cout¿Í std::wcoutÀ» ½â¾î »ç¿ëÇÏ¸é ÇÑ±ÛÀÌ Á¦´ë·Î Ãâ·Â ¾ÈµÊ.
 				std::cout << "value_04 "sv << value_04 << '\n';
 				std::cout << "value_05 "sv << value_05 << '\n';
 				std::cout << "value_06 "sv << value_06 << '\n';
 				std::cout << "value_07 "sv << value_07 << '\n';
-				std::cout << "value_08 "sv << to_string<char>(value_08) << '\n';
-				std::cout << "value_09 "sv << to_string<char>(value_09) << '\n';
+				std::cout << "value_08 "sv << to_string(value_08) << '\n';
+				std::cout << "value_09 "sv << to_string(value_09) << '\n';
 			}
 		}
 		catch (throwable::failure_ex& _e)
 		{
-			// - error stringì„ ì¶œë ¥í•œë‹¤.
+			// - error stringÀ» Ãâ·ÂÇÑ´Ù.
 			_e >> std::cout;
 		}
 	});

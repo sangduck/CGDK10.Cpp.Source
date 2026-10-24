@@ -38,8 +38,8 @@ inline shared_buffer message_web_error(uint32_t _error_code, std::string_view _s
 	auto temp_buffer = alloc_shared_buffer(4096);
 
 	// 2) append http header
-	temp_buffer.append_text("HTTP/1.1 {} {}\r\n", _strErrorMessage.data(), _error_code);	// Protocol 버전 및 응답코드
-	temp_buffer.append_text("Server: CGCII/9.0.0\r\n");		// Web Server Bannder 정보
+	temp_buffer.append_text(CGDK::stream_string("HTTP/1.1 ", _strErrorMessage.data(), " ", _error_code, "\r\n"));	// Protocol 버전 및 응답코드
+	temp_buffer.append_text("Server: CGCII/9.0.0\r\n");		// Web Server Banner 정보
 	temp_buffer.append_text("Content-type:text/html\r\n");	// MIME 타입
 	temp_buffer.append_text("Content-length:0\r\n");		// http body 크기
 	temp_buffer.append_text("\r\n");						// html 끝

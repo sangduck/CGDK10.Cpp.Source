@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 class socket_udp : public net::socket::udp
 {
@@ -18,17 +18,17 @@ public:
 				// check)
 				RETURN_IF(mgap == 0, { 0.0f, 0.0f, false });
 
-				auto now_sended = this->statistics_get_sended_message();
+				auto now_sent = this->statistics_get_sent_message();
 				auto now_received = this->statistics_get_received_message();
 
-				auto f_mps_sended = (mgap != 0) ? static_cast<float>(now_sended - this->m_statistics_send) / mgap : 0;
+				auto f_mps_sent = (mgap != 0) ? static_cast<float>(now_sent - this->m_statistics_send) / mgap : 0;
 				auto f_mps_received = (mgap != 0) ? static_cast<float>(now_received - this->m_statistics_recv) / mgap : 0;
 
-				this->m_statistics_send = now_sended;
+				this->m_statistics_send = now_sent;
 				this->m_statistics_recv = now_received;
 				this->m_statistics_time = _now;
 
-				return { f_mps_sended, f_mps_received, true };
+				return { f_mps_sent, f_mps_received, true };
 			}
 };
 
@@ -54,7 +54,7 @@ public:
 			void				request_closesocket(socket_udp* _psocket_udp);
 			void				request_closesocket_all();
 			void				request_send();
-			void				request_send_immidiately(int64_t _count);
+			void				request_send_immediately(int64_t _count);
 
 public:
 	// 1) send test
@@ -80,6 +80,6 @@ public:
 			void				process_send_message(shared_buffer _buffer);
 			void				process_ready_send_test_message(std::size_t _index);
 
-			lockable<>			m_cs_set_sockets;
+			lock_object			m_cs_set_sockets;
 			std::set<object_ptr<socket_udp>> m_set_sockets;
 };

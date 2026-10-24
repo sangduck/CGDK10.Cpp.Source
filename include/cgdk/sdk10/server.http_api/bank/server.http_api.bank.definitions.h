@@ -33,9 +33,9 @@ enum class eOAUTH_SCOPE
 	INQUIRY_				 = 2,
 	TRANSFER_				 = 3,
 	LOGIN_INQUIRY_			 = 4,
-	LOGIN_TRNASFER_			 = 5,
-	INQUIRY_TRNASFER_		 = 6,
-	LOGIN_INQUIRY_TRNASFER_	 = 7,
+	LOGIN_TRANSFER_			 = 5,
+	INQUIRY_TRANSFER_		 = 6,
+	LOGIN_INQUIRY_TRANSFER_	 = 7,
 	OOB_					 = 8
 };
 
@@ -104,7 +104,7 @@ enum class eOAUTH_BANK_STATUS
 	OPEN_					 = 'Y',		// 거래가능
 	DISORDER_				 = 'D',		// 장애
 	LAUNCH_					 = 'L',		// 개시이전
-	END						 = 'E'		// 종료처리중
+	END						 = 'E'		// 종료처리 중
 };
 
 enum class eOAUTH_GENDER

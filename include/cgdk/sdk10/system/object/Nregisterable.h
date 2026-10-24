@@ -62,16 +62,16 @@ public:
 template <typename TTYPE, typename TCON>
 bool Nregisterable<TTYPE, TCON>::process_register(TTYPE* _psource)
 {
-	// check) nullptr이면 안됀다.
+	// check) nullptr이면 안 된다.
 	CGASSERT_ERROR(_psource != nullptr);
 
 	// check) 
 	RETURN_IF(_psource == nullptr, false);
 
-	// check) 자기 자신이면 안됀다!
+	// check) 자기 자신이면 안 된다!
 	CGASSERT_ERROR(_psource != static_cast<TTYPE*>(this));
 
-	// check) 자기 자신이면 안됀다!
+	// check) 자기 자신이면 안 된다!
 	RETURN_IF(_psource == static_cast<TTYPE*>(this), false);
 
 	// 1) 이미 존재하는지 찾는다.
@@ -93,16 +93,16 @@ bool Nregisterable<TTYPE, TCON>::process_register(TTYPE* _psource)
 template <typename TTYPE, typename TCON>
 bool Nregisterable<TTYPE, TCON>::process_unregister(TTYPE* _psource) noexcept
 {
-	// check) nullptr이면 안됀다.
+	// check) nullptr이면 안 된다.
 	CGASSERT_ERROR(_psource != nullptr);
 
 	// check) 
 	RETURN_IF(_psource == nullptr, false);
 
-	// check) 자기 자신이면 안됀다!
+	// check) 자기 자신이면 안 된다!
 	CGASSERT_ERROR(_psource != static_cast<TTYPE*>(this));
 
-	// check) 자기 자신이면 안됀다!
+	// check) 자기 자신이면 안 된다!
 	RETURN_IF(_psource == static_cast<TTYPE*>(this), false);
 
 	// 1) 이미 존재하는지 확인한다.
@@ -150,7 +150,7 @@ int Nregisterable<TTYPE, TCON>::clear() noexcept
 	// 1) m_container에 복사
 	vec_temp.assign(this->m_container.begin(), this->m_container.end());
 
-	// 2) 갯수를 구한다.
+	// 2) 개수를 구한다.
 	int	count = vec_temp.size();
 
 	// 3) 모두 detach

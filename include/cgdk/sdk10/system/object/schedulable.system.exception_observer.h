@@ -40,7 +40,8 @@ private:
 	virtual	void				process_on_unregister() override;
 	virtual	bool				process_schedule() override;
 
-			lockable<object_ptr<dump_manager>>	m_pmanager_dump;
+			lock_object			m_lockable_pmanager_dump;
+			object_ptr<dump_manager> m_pmanager_dump;
 };
 
 

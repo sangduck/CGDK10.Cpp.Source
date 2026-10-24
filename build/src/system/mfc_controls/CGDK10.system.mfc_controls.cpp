@@ -9,7 +9,7 @@ namespace CGDK
 
 CGMFCCONTROL_EXT_API CStatic_graph* WINAPI CGCreateControlStaticGraph(int _data_length, int _GridUnit)
 {
-	// Retrun) 积己等 扩档快 府畔~
+	// Return) 积己等 扩档快 府畔~
 	return new CStatic_graph(_data_length, _GridUnit);
 }
 

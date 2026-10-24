@@ -74,14 +74,15 @@ public:
 
 // implementation) 
 protected:
-			lockable<object_ptr<factory::manager>> m_pmanager;
+	mutable	lock_object			m_lockable_pmanager;
+			object_ptr<factory::manager> m_pmanager;
 
 			std::array<bool, 16> m_bVisiableTypeStatus {};
 
 			CListCtrl			m_listctrl_object_factory;
 			CImageList			m_imagelist_object_factory;
 			CComboBox			m_combo_update_interval;
-	static	int					m_update_inverval;
+	static	int					m_update_interval;
 			CProgressCtrl		m_progressMemoryUsage;
 
 

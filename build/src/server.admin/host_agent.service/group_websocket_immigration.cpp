@@ -7,7 +7,7 @@ void group_websocket_immigration::on_initialize(context& /*_context*/)
 	LOG_INFO << " - create GROUP_WEBSOCKET_IMMIGRATION Server"sv;
 
 	// 1) Register Mediator한다.
-	this->register_messageable(service::instance());
+	this->register_messageable(::service::instance());
 }
 
 void group_websocket_immigration::on_destroy()
@@ -16,7 +16,7 @@ void group_websocket_immigration::on_destroy()
 	LOG_INFO << " - destroy GROUP_WEBSOCKET_IMMIGRATION Server"sv;
 
 	// 1) Messageable을 unregister한다.
-	this->unregister_messageable(service::instance());
+	this->unregister_messageable(::service::instance());
 }
 
 void group_websocket_immigration::on_start(context& /*_context*/)

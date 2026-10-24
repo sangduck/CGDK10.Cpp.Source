@@ -10,7 +10,7 @@ bool net::io::Ibinder::bind(const net::sockaddr& _address)
 
 void net::io::Ibinder::register_binder(net::io::statistics::Nsocket* _pstatistics_socket)
 {
-	scoped_lock(m_lockable_manager_binder)
+	SCOPED_LOCK(m_lockable_manager_binder)
 	{
 		// 1) bind manager를 얻는다.
 		binder::manager* pmanagerBinder	 = net::io::binder::manager::instance();
@@ -25,7 +25,7 @@ void net::io::Ibinder::register_binder(net::io::statistics::Nsocket* _pstatistic
 
 void net::io::Ibinder::unregister_binder() noexcept
 {
-	scoped_lock(m_lockable_manager_binder)
+	SCOPED_LOCK(m_lockable_manager_binder)
 	{
 		// check)
 		RETURN_IF(m_pmanager_binder == nullptr);

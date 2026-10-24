@@ -26,7 +26,6 @@ namespace CGDK
 //
 // ----------------------------------------------------------------------------
 class net::socket::http_client :
-// inherited classes) 
 	public						net::io::Nhttp_client
 {
 };

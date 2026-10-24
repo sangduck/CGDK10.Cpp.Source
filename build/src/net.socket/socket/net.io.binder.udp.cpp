@@ -33,7 +33,7 @@ bool net::io::binder::Nudp::process_request_bind( const net::sockaddr& _socketad
 		if(result_bind != SOCKET_ERROR)
 		{
 			// trace) 
-			LOG_INFO << "(info) CGDK.net.socket: success to binding udp socket (" << to_string<char>(local_endpoint()) << ")";
+			LOG_INFO << "(info) CGDK.net.socket: success to binding udp socket (" << to_string(local_endpoint()) << ")";
 
 			// 5) socket reset(ProcessResetSocket()함수를 호출한다.)
 			this->prepare_receive();

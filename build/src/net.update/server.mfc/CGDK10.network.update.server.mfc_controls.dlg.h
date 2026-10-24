@@ -1,31 +1,31 @@
-ï»¿
-// CGDK.network.update.server.MFC.vs16Dlg.h: í—¤ë” íŒŒì¼
+
+// CGDK10.network.update.server.mfc_controls.dlg.h: Çì´õ ÆÄÀÏ
 //
 
 #pragma once
 
 
-// CCGUpdateServerDlg ëŒ€í™” ìƒì
+// CCGUpdateServerDlg ´ëÈ­ »óÀÚ
 class CCGUpdateServerDlg : public CDialogEx
 {
-// ìƒì„±ì…ë‹ˆë‹¤.
+// »ı¼ºÀÔ´Ï´Ù.
 public:
-	CCGUpdateServerDlg(CWnd* pParent = nullptr);	// í‘œì¤€ ìƒì„±ìì…ë‹ˆë‹¤.
+	CCGUpdateServerDlg(CWnd* pParent = nullptr);	// Ç¥ÁØ »ı¼ºÀÚÀÔ´Ï´Ù.
 
-// ëŒ€í™” ìƒì ë°ì´í„°ì…ë‹ˆë‹¤.
+// ´ëÈ­ »óÀÚ µ¥ÀÌÅÍÀÔ´Ï´Ù.
 #ifdef AFX_DESIGN_TIME
-	enum { IDD = IDD_CGDKNETWORKUPDATESERVERMFCVS16_DIALOG };
+	enum { IDD = IDD_CGDKNETWORKUPDATESERVERMFC_DIALOG };
 #endif
 
 	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV ì§€ì›ì…ë‹ˆë‹¤.
+	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV Áö¿øÀÔ´Ï´Ù.
 
 
-// êµ¬í˜„ì…ë‹ˆë‹¤.
+// ±¸ÇöÀÔ´Ï´Ù.
 protected:
 	HICON m_hIcon;
 
-	// ìƒì„±ëœ ë©”ì‹œì§€ ë§µ í•¨ìˆ˜
+	// »ı¼ºµÈ ¸Ş½ÃÁö ¸Ê ÇÔ¼ö
 	virtual BOOL OnInitDialog();
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();

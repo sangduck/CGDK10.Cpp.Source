@@ -2,7 +2,7 @@
 
 int main(int _argc, char* _ppargv[])
 {
-	// 1) CGCII initilaization (thread count = 4)
+	// 1) CGCII initialization (thread count = 4)
 	system_executor::initialize_instance(2);
 
 	// 2) run

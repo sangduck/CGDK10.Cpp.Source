@@ -46,7 +46,7 @@ bool api::performance_counter::create(std::string_view _query)
 	RETURN_IF(m_hCounter != NULL, false);
 
 	// 1) Counter를 추가한다.
-	object_ptr<manager_perfornamce_query>	pmanager = manager_perfornamce_query::instance();
+	object_ptr<manager_performance_query>	pmanager = manager_performance_query::instance();
 
 	// check) 
 	CGASSERT_ERROR(pmanager.exist());
@@ -73,7 +73,7 @@ bool api::performance_counter::create(std::wstring_view _query)
 	RETURN_IF(m_hCounter != NULL, false);
 
 	// 1) Counter를 추가한다.
-	object_ptr<manager_perfornamce_query>	pmanager	 = manager_perfornamce_query::instance();
+	object_ptr<manager_performance_query>	pmanager	 = manager_performance_query::instance();
 
 	// check) 
 	CGASSERT_ERROR(pmanager.exist());

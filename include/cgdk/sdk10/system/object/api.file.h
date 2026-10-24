@@ -17,6 +17,7 @@
 //*****************************************************************************
 
 #pragma once
+#include <filesystem>
 
 namespace CGDK
 {
@@ -101,6 +102,7 @@ enum class eFILE_OPERATION : uint32_t
 	APPEND_ASYNC	 = 7,
 	MAX
 };
+std::string_view to_string(eFILE_OPERATION _file_operation);
 
 enum class eFILE_ORIGIN : int32_t
 {
@@ -108,6 +110,7 @@ enum class eFILE_ORIGIN : int32_t
 	CURRENT			 = 1,
 	END				 = 2
 };
+std::string_view to_string(eFILE_ORIGIN _file_origin);
 
 enum class eFILE_LOCATION : uint32_t
 {
@@ -124,7 +127,7 @@ enum class eFILE_LOCATION : uint32_t
 [[nodiscard]] inline eFILE_LOCATION operator & (const eFILE_LOCATION& a, uint32_t b)				{ return eFILE_LOCATION(((uint32_t)a) & (uint32_t)b); }
 [[nodiscard]] inline eFILE_LOCATION operator | (const eFILE_LOCATION& a, const eFILE_LOCATION& b)	{ return eFILE_LOCATION(((uint32_t)a) | (uint32_t)b); }
 [[nodiscard]] inline eFILE_LOCATION operator | (const eFILE_LOCATION& a, uint32_t b)				{ return eFILE_LOCATION(((uint32_t)a) | (uint32_t)b); }
-
+std::string_view to_string(eFILE_LOCATION _file_location);
 
 namespace api
 {
@@ -133,7 +136,9 @@ namespace file
 	[[nodiscard]] FILE_HANDLE	open (const std::filesystem::path&, eFILE_OPERATION _operation, eFILE_LOCATION _file_location=eFILE_LOCATION::NOW) noexcept;
 	void						close (FILE_HANDLE _handle_file) noexcept;
 	size_t						read (FILE_HANDLE _handle_file, size_t _size, void* _data) noexcept;
+	shared_buffer				read_file(const std::string_view _filename, [[maybe_unused]] eFILE_LOCATION _file_location=eFILE_LOCATION::NOW);
 	size_t						write (FILE_HANDLE _handle_file, size_t _size, const void* _data) noexcept;
+	void						write_file(buffer_view _data, const std::string_view _filename, eFILE_LOCATION _file_location=eFILE_LOCATION::NOW);
 	size_t						seek (FILE_HANDLE _handle_file, size_t _offset, eFILE_ORIGIN _origin = eFILE_ORIGIN::BEGIN) noexcept;
 	[[nodiscard]] size_t		get_length (FILE_HANDLE _handle_file) noexcept;
 	[[nodiscard]] size_t		get_length(const std::filesystem::path& _filename) noexcept;

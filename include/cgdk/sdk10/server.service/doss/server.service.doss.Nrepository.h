@@ -41,6 +41,9 @@ protected:
 	//! @brief 개체를 얻는다. @return 생성한 계정 객체의 포인터
 	[[nodiscard]] virtual object_ptr<Ientity> process_entity_get (sENTITY_ID _entity_id) override;
 	[[nodiscard]] virtual object_ptr<Ientity> process_entity_find (sENTITY_ID _entity_id) const noexcept override;
+	virtual bool				process_entity_remove (Ientity* _pentity) noexcept override;
+	//! @brief removes all entities and breaks the references between them, transactions and sessions (on destroy)
+			void				clear_entities() noexcept;
 
 	//! @brief 계정 객체를 생성한다. @return 생성한 계정 객체의 포인터
 	[[nodiscard]] virtual object_ptr<TENTITY>	process_alloc_entity (sENTITY_ID _entity_id);
@@ -53,7 +56,7 @@ public:
 template<class TENTITY>
 void doss::Nrepository<TENTITY>::checkout_all() noexcept
 {
-	scoped_lock(m_lockable_map_entity)
+	SCOPED_LOCK(m_lockable_map_entity)
 	{
 		for (const auto& iter : m_map_entity_by_eid)
 		{
@@ -72,7 +75,7 @@ object_ptr<doss::Ientity> doss::Nrepository<TENTITY>::process_entity_get(sENTITY
 	RETURN_IF(get_object_state() < eOBJECT_STATE::STOPPED, pentity);
 
 	// 1) get entity object
-	scoped_lock(m_lockable_map_entity)
+	SCOPED_LOCK(m_lockable_map_entity)
 	{
 		// 1) find entity object 
 		auto iter_find = m_map_entity_by_eid.find(_entity_id);
@@ -115,7 +118,7 @@ object_ptr<doss::Ientity> doss::Nrepository<TENTITY>::process_entity_find(sENTIT
 	object_ptr<TENTITY>	pentity;
 
 	// 1) get entity object
-	scoped_lock(m_lockable_map_entity)
+	SCOPED_LOCK(m_lockable_map_entity)
 	{
 		// 1) find entity object 
 		auto iter_find = m_map_entity_by_eid.find(_entity_id);
@@ -133,6 +136,45 @@ object_ptr<doss::Ientity> doss::Nrepository<TENTITY>::process_entity_find(sENTIT
 
 	// return)
 	return pentity;
+}
+
+template<class TENTITY>
+void doss::Nrepository<TENTITY>::clear_entities() noexcept
+{
+	// 1) detach all entities
+	std::map<sENTITY_ID, object_ptr<TENTITY>> map_entity;
+	SCOPED_LOCK(m_lockable_map_entity)
+	{
+		map_entity.swap(m_map_entity_by_eid);
+	}
+
+	// 2) break the references (repository <-> entity <-> transaction / session)
+	for (auto& iter : map_entity)
+	{
+		iter.second->clear_references();
+	}
+}
+
+template<class TENTITY>
+bool doss::Nrepository<TENTITY>::process_entity_remove(Ientity* _pentity) noexcept
+{
+	// check)
+	RETURN_IF(_pentity == nullptr, false);
+
+	SCOPED_LOCK(m_lockable_map_entity)
+	{
+		// 1) find entity object
+		auto iter_find = m_map_entity_by_eid.find(_pentity->m_eid);
+
+		// check) not exist or another entity object with the same id
+		RETURN_IF(iter_find == m_map_entity_by_eid.end() || iter_find->second.get() != _pentity, false);
+
+		// 2) remove
+		m_map_entity_by_eid.erase(iter_find);
+	}
+
+	// return)
+	return true;
 }
 
 template<class TENTITY>

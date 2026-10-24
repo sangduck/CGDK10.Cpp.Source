@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 
 CGDK::update::Nsender::Nsender()
@@ -9,13 +9,47 @@ CGDK::update::Nsender::~Nsender() noexcept
 {
 }
 
+CGDK::update::Nsender::Nreferenceable_send_completor::Nreferenceable_send_completor(object_ptr<Imemory>&& _buf_original, object_ptr<Nsender>&& _psender, object_ptr<resource::Iupdatable>&& _pupdatable, uint64_t _generation) noexcept :
+	Imemory(*_buf_original.get()),
+	m_buf_original(std::move(_buf_original)),
+	m_psender(std::move(_psender)),
+	m_pupdatable(std::move(_pupdatable)),
+	m_generation(_generation)
+{
+}
+
+void CGDK::update::Nsender::Nreferenceable_send_completor::on_final_release() noexcept
+{
+	// 1) the socket layer is done with the block: release its memory first
+	this->m_buf_original.reset();
+
+	// 2) take what the continuation needs (this object is deleted right after this call returns)
+	object_ptr<Nsender> psender = std::move(this->m_psender);
+	object_ptr<resource::Iupdatable> pupdatable = std::move(this->m_pupdatable);
+	const auto generation = this->m_generation;
+
+	// check)
+	RETURN_IF(psender.empty() || pupdatable.empty());
+
+	// 3) continue with the next block on the system executor
+	try
+	{
+		system_executor::post(make_executable([psender, pupdatable, generation]() { psender->process_updatable_sent(pupdatable, generation); }));
+	}
+	catch (...)
+	{
+		// log)
+		LOG_ERROR << "@ (excp) fail to post 'process_updatable_next' UPDATE_SENDER "sv << __CGFUNCTION__;
+	}
+}
+
 void CGDK::update::Nsender::generate_and_set_sender_id() noexcept
 {
 	// static)
-	static uint64_t s_receiver_id = 1;
+	static std::atomic<uint64_t> s_sender_id{ 1 };
 
 	// 1) generate and set
-	m_receiver_id = s_receiver_id++;
+	m_sender_id = s_sender_id.fetch_add(1, std::memory_order_relaxed);
 }
 
 bool CGDK::update::Nsender::add(const object_ptr<resource::Iupdatable>& _resource_updatable)
@@ -35,7 +69,7 @@ bool CGDK::update::Nsender::add(const object_ptr<resource::Iupdatable>& _resourc
 		std::vector<object_ptr<resource::Iupdatable>> vector_updatable_process;
 
 		// - copy
-		scoped_lock(presource_updatable_folder->m_cs_info)
+		SCOPED_LOCK(presource_updatable_folder->m_lockable_info)
 		{
 			vector_updatable_process = presource_updatable_folder->m_vector_updatable_process;
 		}
@@ -48,7 +82,7 @@ bool CGDK::update::Nsender::add(const object_ptr<resource::Iupdatable>& _resourc
 	else
 	{
 		// - 추가한다.
-		scoped_lock(this->m_cs_vector_updatable)
+		SCOPED_LOCK(this->m_lockable_vector_updatable)
 		{
 			process_add_updatable(object_ptr<resource::Iupdatable>(_resource_updatable));
 		}
@@ -75,7 +109,7 @@ bool CGDK::update::Nsender::add(object_ptr<resource::Iupdatable>&& _resource_upd
 		std::vector<object_ptr<resource::Iupdatable>> vector_updatable_process;
 
 		// - copy
-		scoped_lock(presource_updatable_folder->m_cs_info)
+		SCOPED_LOCK(presource_updatable_folder->m_lockable_info)
 		{
 			vector_updatable_process = presource_updatable_folder->m_vector_updatable_process;
 		}
@@ -91,7 +125,7 @@ bool CGDK::update::Nsender::add(object_ptr<resource::Iupdatable>&& _resource_upd
 	else
 	{
 		// - 추가한다.
-		scoped_lock(this->m_cs_vector_updatable)
+		SCOPED_LOCK(this->m_lockable_vector_updatable)
 		{
 			process_add_updatable(std::move(_resource_updatable));
 		}
@@ -103,7 +137,7 @@ bool CGDK::update::Nsender::add(object_ptr<resource::Iupdatable>&& _resource_upd
 
 void CGDK::update::Nsender::clear() noexcept
 {
-	scoped_lock(this->m_cs_vector_updatable)
+	SCOPED_LOCK(this->m_lockable_vector_updatable)
 	{
 		this->m_list_updatable_process.clear();
 	}
@@ -123,10 +157,10 @@ CGDK::result_code CGDK::update::Nsender::_process_starting(context& _context)
 		sUPDATE_REQUEST_INFO temp_update_request_info;
 
 		// 2) get first resource
-		scoped_lock(this->m_cs_vector_updatable)
+		SCOPED_LOCK(this->m_lockable_vector_updatable)
 		{
 			// check)
-			THROW_IF(this->m_list_updatable_process.empty(), throwable::failure(eRESULT::ALEADY_DONE, 0, "updatable file is empty!!"sv));
+			THROW_IF(this->m_list_updatable_process.empty(), throwable::failure(eRESULT::ALREADY_DONE, 0, "updatable file is empty!!"sv));
 
 			// 3) calculate totals 
 			for (auto& iter : this->m_list_updatable_process)
@@ -139,11 +173,12 @@ CGDK::result_code CGDK::update::Nsender::_process_starting(context& _context)
 
 			// 4) reset
 			this->m_bytes_now = 0;
-			this->m_referenceable_send_completor.psender = this;
+			this->m_count_try = 0;
+			this->m_is_updating = true;
 
 			// statistics)
-			this->m_total_required_bytes = 0;
-			this->m_total_required_files = 0;
+			this->m_total_required_bytes = temp_update_request_info.total_bytes;
+			this->m_total_required_files = temp_update_request_info.total_count;
 			this->m_total_processed_bytes = 0;
 			this->m_total_processed_files = 0;
 			this->m_total_transfered_bytes = 0;
@@ -152,7 +187,8 @@ CGDK::result_code CGDK::update::Nsender::_process_starting(context& _context)
 
 			this->m_period_transfered_bytes = 0;
 			this->m_period_transfered_bytes_per_sec = 0.0f;
-			this->m_period_tick_last = chrono::time::utc::now();
+			this->m_period_tick_last_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+				chrono::time::utc::now().time_since_epoch()).count();
 		}
 
 		// 5) ...
@@ -184,8 +220,12 @@ CGDK::result_code CGDK::update::Nsender::_process_stopping() noexcept
 		// 1) on_stopping 함수를 호출한다.
 		this->on_stopping();
 
-		// 2) clear infos
-		this->m_referenceable_send_completor.psender.reset();
+		// 2) drop pending send-completion continuations
+		SCOPED_LOCK(this->m_lockable_transfer)
+		{
+			++this->m_generation;
+		}
+		this->m_is_updating = false;
 	}
 	catch (...)
 	{
@@ -199,7 +239,7 @@ CGDK::result_code CGDK::update::Nsender::_process_stopping() noexcept
 
 void CGDK::update::Nsender::process_add_updatable(object_ptr<resource::Iupdatable>&& _updatable)
 {
-	scoped_lock(this->m_cs_vector_updatable)
+	SCOPED_LOCK(this->m_lockable_vector_updatable)
 	{
 		// 1) 이미 등록되어 있는지 확인한다.
 		auto iter_find = std::find(this->m_list_updatable_process.begin(), m_list_updatable_process.end(), _updatable);
@@ -217,7 +257,7 @@ void CGDK::update::Nsender::process_updatable_prepare()
 	// ------------------------------------------
 	// 설명) prepare upgradable 
 	//       - 처리할 upgradable이 존재하는지 확인해 본다.
-	//       - 처리할 upgradable이 존재하면 해당 upgradable의 UPDATABLE_PREPARE 메세지를 클라이언트에 전송한다.
+	//       - 처리할 upgradable이 존재하면 해당 upgradable의 UPDATABLE_PREPARE 메시지를 클라이언트에 전송한다.
 	//       - 처리할 upgradable이 없는 경우 전체 upgrade process를 종료한다.
 	// ------------------------------------------
 	try
@@ -226,7 +266,7 @@ void CGDK::update::Nsender::process_updatable_prepare()
 		object_ptr<resource::Iupdatable> pupdatable;
 
 		// 1) get first updatable
-		scoped_lock(this->m_cs_vector_updatable)
+		SCOPED_LOCK(this->m_lockable_vector_updatable)
 		{
 			if (this->m_list_updatable_process.empty() == false)
 			{
@@ -271,19 +311,19 @@ void CGDK::update::Nsender::process_updatable_begin(resource::Iupdatable* _pupda
 	// ------------------------------------------
 	// 설명) start upgradable 
 	//       - upgradable의 전송 시작할 위치를 _pos_begin으로 전달 받아 설졍한다.
-	//       - 첫번째 전송일 경우 'on_updatable_begin'를 호출한 후 UPDATABLE_BEGIN를 전송한다.
-	//       - 재전송일 경우 'on_updatable_begin'를 호출하지 않으며 flag에 RECREATE 옵션을 붙혀 UPDATABLE_BEGIN 메시지를 전송한다.
+	//       - 첫 번째 전송일 경우 'on_updatable_begin'를 호출한 후 UPDATABLE_BEGIN를 전송한다.
+	//       - 재전송일 경우 'on_updatable_begin'를 호출하지 않으며 flag에 RECREATE 옵션을 붙여 UPDATABLE_BEGIN 메시지를 전송한다.
 	// ------------------------------------------
 	// check)
-	CGASSERT_ERROR(_pupdatable != nullptr);
+	CGASSERT_FATAL(_pupdatable != nullptr);
 
-	// 1) set pos_begin
-	this->m_bytes_now = _pos_begin;
-
-	// 2) get meta info
+	// 1) get meta info
 	auto meta_info = _pupdatable->_get_meta_info();
 
-	// 3) first-try or re-try?
+	// declare)
+	resource::eFILE_FLAG file_flag = resource::eFILE_FLAG::NONE;
+
+	// 2) first-try or re-try?
 	if (m_count_try == 0)
 	{
 		// - call 'on_updatable_begin'()'
@@ -291,94 +331,163 @@ void CGDK::update::Nsender::process_updatable_begin(resource::Iupdatable* _pupda
 	}
 	else
 	{
-		// - set option
-		meta_info.flag = meta_info.flag | resource::eFILE_FLAG::RECREATE;
+		// - a retry rewrites the file from scratch on the receiver side
+		file_flag = resource::eFILE_FLAG::RECREATE;
 	}
 
-	// 4) set updatable
-	this->m_referenceable_send_completor.pupdatable = _pupdatable;
+	// declare)
+	uint64_t generation = 0;
 
-	// 5) send updatable begin message
-	auto is_result = this->send(_message_UPDATE_UPDATABLE_BEGIN(this->m_receiver_id, this->m_sender_id, _updatable_id, _pos_begin));
+	// 3) set pos_begin, empty the send window and start a new transfer generation (drops continuations of the previous transfer)
+	SCOPED_LOCK(this->m_lockable_transfer)
+	{
+		this->m_bytes_now = _pos_begin;
+		this->m_count_inflight = 0;
+		generation = ++this->m_generation;
+	}
 
-	// check) 
+	// 4) send updatable begin message
+	auto is_result = this->send(_message_UPDATE_UPDATABLE_BEGIN(this->m_receiver_id, this->m_sender_id, _updatable_id, _pos_begin, file_flag));
+
+	// check)
 	THROW_IF(is_result == false, throwable::failure(eRESULT::NOT_READY, 0, ""sv));
 
-	// 6) send block first
-	process_updatable_next(_pupdatable);
+	// 5) fill the send window on the system executor (block reads stay off the network thread)
+	object_ptr<Nsender> psender(this);
+	object_ptr<resource::Iupdatable> pupdatable(_pupdatable);
+	auto is_posted = system_executor::post(make_executable([psender, pupdatable, generation]() { psender->process_updatable_next(pupdatable, generation); }));
+
+	// check) 
+	THROW_IF(is_posted == false, throwable::failure(eRESULT::NOT_READY, 0, "fail to post 'process_updatable_next'"sv));
 }
 
-void CGDK::update::Nsender::process_updatable_next(resource::Iupdatable* _pupdatable)
+void CGDK::update::Nsender::process_updatable_next(resource::Iupdatable* _pupdatable, uint64_t _generation)
 {
 	// ------------------------------------------
-	// 설명) process upgradable 
-	//       - upgradable의 다음 fle block을 전송한다.
-	//       - 전송한 만큼 m_bytes_now 값을 증가시킨다.
-	//       - 전송에 따른 통계처리를 한다.
-	//       - 더 이상 전송할 fle block이 존재하지 않는 경우 그냥 리턴한다.
-	//       - buf_block[0]에는 메시지 헤더 정보를 넣는다.
-	//       - buf_block[1]에는 file block을 넣는다.
-	//       - 전송에 실패하면 updata_end를 효출하며 처리를 종료한다.
+	// fill the send window
+	//   - reads file blocks ahead of the socket and sends them until m_window_size blocks are in flight
+	//     or the end of file is reached (the receiver's UPDATABLE_END follows the last block)
+	//   - m_bytes_now always points at the next block to read; the statistics are updated per block
+	//   - buf_blocks[0] holds the message header, buf_blocks[1] the file block
+	//   - each block's memory is owned by a per-block completor; when the socket layer releases it,
+	//     process_updatable_sent() frees the window slot and refills the window
+	//   - a call whose generation no longer matches belongs to a finished or restarted transfer and is dropped
+	//   - a failed send ends the whole update
 	// ------------------------------------------
-	// check)
-	CGASSERT_ERROR(this->m_bytes_now <= _pupdatable->_get_meta_info().size);
-
-	// check)
-	THROW_IF(this->m_bytes_now > _pupdatable->_get_meta_info().size, throwable::failure(eRESULT::INVALID_REQUEST, 0, ""sv));
-
-	// 1) get next block
-	auto buf_next = _pupdatable->get_block(this->m_bytes_now);
-
-	// check) return of end of file
-	RETURN_IF(buf_next.empty());
-
-	// check) 
-	CGASSERT_ERROR(buf_next.exist());
-
-	// check) return of end of file
-	THROW_IF(buf_next.empty(), throwable::failure(eRESULT::RUNTIME_ERROR, 0, ""sv));
-
-	// declare) 
-	shared_buffer buf_blocks[2];
-
-	// 2) make message head and context
-	buf_blocks[0] = _message_UPDATE_UPDATABLE_BLOCK(this->m_receiver_id, this->m_sender_id, buf_next.size<uint32_t>());
-	buf_blocks[1] = std::move(buf_next);
-	m_referenceable_send_completor.buf_original = buf_blocks[1].move_out_source();
-	buf_blocks[1].set_source(&m_referenceable_send_completor);
-
-	// 3) get metadata
-	const auto& meta_file_block = buf_blocks[1].front<resource::sMETA_FILE_BLOCK>();
-
-	// 4) get meta size
-	this->m_bytes_now += meta_file_block.size;
-
-	// statistics)
-	this->m_total_processed_bytes += meta_file_block.size;
-	this->m_total_transfered_bytes += meta_file_block.size;
-	this->m_period_transfered_bytes += meta_file_block.size;
-
-	// statistics) 
-	auto tick_now = chrono::time::utc::now();
-	auto f_duration = static_cast<float>(std::chrono::duration_cast<chrono::milliseconds>(tick_now - this->m_period_tick_last).count());
-	if (f_duration > 1000.0f)
+	try
 	{
-		this->m_period_transfered_bytes_per_sec = (f_duration != 0.0f) ? (static_cast<float>(this->m_period_transfered_bytes) / f_duration) * 1000.0f : 0.0f;
-		this->m_period_transfered_bytes = 0;
-		this->m_period_tick_last = tick_now;
+		SCOPED_LOCK(this->m_lockable_transfer)
+		{
+			// check) stale continuation?
+			RETURN_IF(_generation != this->m_generation.load(std::memory_order_relaxed));
+
+			// declare)
+			const auto size_file = _pupdatable->_get_meta_info().size;
+
+			// check)
+			CGASSERT_ERROR(this->m_bytes_now <= size_file);
+
+			// check)
+			THROW_IF(this->m_bytes_now > size_file, throwable::failure(eRESULT::INVALID_REQUEST, 0, ""sv));
+
+			// 1) read ahead and send until the window is full or the file is exhausted
+			while (this->m_count_inflight < this->m_window_size.load(std::memory_order_relaxed) && this->m_bytes_now < size_file)
+			{
+				// - get next block
+				auto buf_next = _pupdatable->get_block(this->m_bytes_now);
+
+				// check) nothing more to send
+				RETURN_IF(buf_next.empty());
+
+				// declare)
+				shared_buffer buf_blocks[2];
+
+				// - make message head and context
+				buf_blocks[0] = _message_UPDATE_UPDATABLE_BLOCK(this->m_receiver_id, this->m_sender_id, buf_next.size<uint32_t>());
+				buf_blocks[1] = std::move(buf_next);
+
+				// - hand the block memory to a completor that frees the window slot once the send has finished with it
+				auto pcompletor = make_object<Nreferenceable_send_completor>(buf_blocks[1].move_out_source(), object_ptr<Nsender>(this), object_ptr<resource::Iupdatable>(_pupdatable), _generation);
+				buf_blocks[1].set_source(pcompletor.get());
+
+				// - get metadata
+				const auto& meta_file_block = buf_blocks[1].front<resource::sMETA_FILE_BLOCK>();
+
+				// - advance position (to the end of the block actually handed out)
+				this->m_bytes_now = meta_file_block.pos + meta_file_block.size;
+
+				// statistics)
+				this->m_total_processed_bytes += meta_file_block.size;
+				this->m_total_transfered_bytes += meta_file_block.size;
+				this->m_period_transfered_bytes += meta_file_block.size;
+
+				// statistics) - update throughput every 1 second
+				auto tick_now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+					chrono::time::utc::now().time_since_epoch()).count();
+				auto last_tick_ms = this->m_period_tick_last_ms.load(std::memory_order_relaxed);
+				auto f_duration = static_cast<float>(tick_now_ms - last_tick_ms);
+				if (f_duration > 1000.0f)
+				{
+					auto bytes = this->m_period_transfered_bytes.load(std::memory_order_relaxed);
+					this->m_period_transfered_bytes_per_sec.store(
+						(f_duration != 0.0f) ? (static_cast<float>(bytes) / f_duration) * 1000.0f : 0.0f,
+						std::memory_order_relaxed);
+					this->m_period_transfered_bytes.store(0, std::memory_order_relaxed);
+					this->m_period_tick_last_ms.store(tick_now_ms, std::memory_order_relaxed);
+				}
+
+				// - on_updatable_process
+				this->on_updatable_process(_pupdatable, meta_file_block);
+
+				// - send block
+				auto result = this->send(buf_blocks);
+
+				// check) a failed send ends the update; the generation bump drops the completors' continuations
+				if (result == false)
+				{
+					++this->m_generation;
+					throw throwable::failure(eRESULT::NOT_READY, 0, "fail to send file block"sv);
+				}
+
+				// - one more block in flight
+				++this->m_count_inflight;
+			}
+		}
+	}
+	catch (throwable::failure& _e)
+	{
+		this->process_update_end(_e.reason());
+	}
+	catch (...)
+	{
+		this->process_update_end(eRESULT::EXCEPTION);
+	}
+}
+
+void CGDK::update::Nsender::process_updatable_sent(resource::Iupdatable* _pupdatable, uint64_t _generation)
+{
+	// ------------------------------------------
+	// a block's send has completed (the socket layer released its memory)
+	//   - frees one window slot and refills the window
+	//   - a stale completion (older transfer) is ignored
+	// ------------------------------------------
+	SCOPED_LOCK(this->m_lockable_transfer)
+	{
+		// check) stale completion?
+		RETURN_IF(_generation != this->m_generation.load(std::memory_order_relaxed));
+
+		// check)
+		CGASSERT_ERROR(this->m_count_inflight > 0);
+
+		// 1) free the window slot
+		if (this->m_count_inflight > 0)
+		{
+			--this->m_count_inflight;
+		}
 	}
 
-	// 5) on_updatable_process
-	this->on_updatable_process(_pupdatable, meta_file_block);
-
-	// 6) send block
-	auto result = this->send(buf_blocks);
-
-	// check) 
-	if (result == false)
-	{
-		//throw throwable::failure(eRESULT::NOT_READY, 0, ""sv));
-	}
+	// 2) refill the window
+	this->process_updatable_next(_pupdatable, _generation);
 }
 
 void CGDK::update::Nsender::process_updatable_end(resource::Iupdatable* _pupdatable, CGDK::update::UPDATABLE_ID _updatable_id, eRESULT _result)
@@ -405,7 +514,7 @@ void CGDK::update::Nsender::process_updatable_end(resource::Iupdatable* _pupdata
 		++this->m_total_processed_files;
 
 		// - remove ended updatable
-		scoped_lock(this->m_cs_vector_updatable)
+		SCOPED_LOCK(this->m_lockable_vector_updatable)
 		{
 			this->m_list_updatable_process.pop_front();
 		}
@@ -417,19 +526,19 @@ void CGDK::update::Nsender::process_updatable_end(resource::Iupdatable* _pupdata
 		this->process_updatable_prepare();
 	}
 	// 1-2) bypass
-	else if (_result == eRESULT::ALEADY_DONE)
+	else if (_result == eRESULT::ALREADY_DONE)
 	{
 		// statistics) 
 		++this->m_total_processed_files;
 
 		// - remove ended updatable
-		scoped_lock(this->m_cs_vector_updatable)
+		SCOPED_LOCK(this->m_lockable_vector_updatable)
 		{
 			this->m_list_updatable_process.pop_front();
 		}
 
 		// - send end message
-		this->send(_message_UPDATE_UPDATABLE_END(this->m_receiver_id, this->m_sender_id, _updatable_id, eRESULT::ALEADY_DONE));
+		this->send(_message_UPDATE_UPDATABLE_END(this->m_receiver_id, this->m_sender_id, _updatable_id, eRESULT::ALREADY_DONE));
 
 		// - begin next updatable
 		this->process_updatable_prepare();
@@ -443,10 +552,25 @@ void CGDK::update::Nsender::process_updatable_end(resource::Iupdatable* _pupdata
 		if (this->m_count_try > 3)
 		{
 			// - end now updatable
-			this->on_updatable_end(_pupdatable, _result);
+			this->on_updatable_end(_pupdatable, eRESULT::RETRY_OUT);
+
+			// statistics) 
+			++this->m_total_processed_files;
+
+			// - remove ended updatable
+			SCOPED_LOCK(this->m_lockable_vector_updatable)
+			{
+				this->m_list_updatable_process.pop_front();
+			}
 
 			// - send end message
 			this->send(_message_UPDATE_UPDATABLE_END(this->m_receiver_id, this->m_sender_id, _updatable_id, eRESULT::RETRY_OUT));
+
+			// - the update as a whole has failed
+			this->process_update_end(eRESULT::RETRY_OUT);
+
+			// return)
+			return;
 		}
 
 		// - retry now updatable
@@ -462,17 +586,34 @@ void CGDK::update::Nsender::process_updatable_end(resource::Iupdatable* _pupdata
 
 void CGDK::update::Nsender::process_update_end(eRESULT _result) noexcept
 {
+	// check) already ended? (a late message after the end must not fire the callbacks twice)
+	RETURN_IF(this->m_is_updating.exchange(false) == false);
+
 	// 1) get end time
 	this->m_total_tick_end = chrono::time::utc::now();
 
-	// 2) ...
-	this->on_update_end(_result);
+	// 2) drop pending send-completion continuations
+	SCOPED_LOCK(this->m_lockable_transfer)
+	{
+		++this->m_generation;
+	}
 
-	// 3) cancel all updatable
-	this->process_cancel_all_updatable();
+	try
+	{
+		// 3) ...
+		this->on_update_end(_result);
 
-	// 4) send complete message
-	this->send(_message_UPDATE_END(this->m_receiver_id, this->m_sender_id, _result));
+		// 4) cancel all updatable
+		this->process_cancel_all_updatable();
+
+		// 5) send complete message
+		this->send(_message_UPDATE_END(this->m_receiver_id, this->m_sender_id, _result));
+	}
+	catch (...)
+	{
+		// log)
+		LOG_ERROR << "@ (excp) exception on 'process_update_end' UPDATE_SENDER "sv << __CGFUNCTION__;
+	}
 }
 
 void CGDK::update::Nsender::process_cancel_all_updatable() noexcept
@@ -481,7 +622,7 @@ void CGDK::update::Nsender::process_cancel_all_updatable() noexcept
 	std::list<object_ptr<resource::Iupdatable>> list_updatable_process;;
 
 	// 1) move all updatable
-	scoped_lock(this->m_cs_vector_updatable)
+	SCOPED_LOCK(this->m_lockable_vector_updatable)
 	{
 		list_updatable_process = std::move(this->m_list_updatable_process);
 	}
@@ -506,15 +647,15 @@ CGDK::object_ptr<CGDK::resource::Iupdatable> CGDK::update::Nsender::_process_get
 {
 	// ------------------------------------------
 	// 설명) get first updatable
-	//       - m_list_updatable_process에 있는 첫번째 updatable을 얻어낸다.
-	//       - 첫번째 updatable은 updatable_id가 일치해야 한다.
-	//         일치 하지 않을 경우 excpetion을 던진다.
+	//       - m_list_updatable_process에 있는 첫 번째 updatable을 얻어낸다.
+	//       - 첫 번째 updatable은 updatable_id가 일치해야 한다.
+	//         일치 하지 않을 경우 exception을 던진다.
 	//       - updatable이 하나도 없는 경우 잘못된 것이므로 exception을 던진다.
 	// ------------------------------------------
 	// declare) 
 	object_ptr<resource::Iupdatable> pupdatable;
 
-	// check) 현재 진행중인 것을 종료하는 처리이므로 updatable 객체가 하나도 없을 수는 없다.
+	// check) 현재 진행 중인 것을 종료하는 처리이므로 updatable 객체가 하나도 없을 수는 없다.
 	CGASSERT_ERROR(this->m_list_updatable_process.empty() == false);
 
 	// check) updatable이 하나도 없으면 예외를 던진다.
@@ -523,10 +664,10 @@ CGDK::object_ptr<CGDK::resource::Iupdatable> CGDK::update::Nsender::_process_get
 	// - get now updatable 
 	pupdatable = this->m_list_updatable_process.front();
 
-	// check) 현재 진행중인 것인지 확인한다.
+	// check) 현재 진행 중인 것인지 확인한다.
 	CGASSERT_ERROR(_updatable_id == pupdatable->_get_meta_info().id);
 
-	// check) 현재 진행중인 id와 다르면 예외를 던진다.
+	// check) 현재 진행 중인 id와 다르면 예외를 던진다.
 	THROW_IF(_updatable_id != pupdatable->_get_meta_info().id, throwable::failure(eRESULT::INVALID_STATE, 0, ""sv));
 
 	// return)
@@ -535,7 +676,7 @@ CGDK::object_ptr<CGDK::resource::Iupdatable> CGDK::update::Nsender::_process_get
 
 CGDK::result_code CGDK::update::Nsender::on_message(sMESSAGE_NETWORK& _msg)
 {
-	// 1) execute messge
+	// 1) execute message
 	BEGIN_NESTED_CGMESSAGE_MAP
 		CGMESSAGE_TYPE_SUB(eMESSAGE::SYSTEM::NETWORK, ((sMESSAGE_BUFFER&)_msg).buf_message.front<uint32_t>(4))
 			ON_CGMESSAGE(CGDK::eMESSAGE::UPDATE::BEGIN_RESPONSE,		on_message_UPDATE_BEGIN_RESPONSE,		sMESSAGE_NETWORK);
@@ -551,7 +692,7 @@ CGDK::result_code CGDK::update::Nsender::on_message(sMESSAGE_NETWORK& _msg)
 CGDK::result_code CGDK::update::Nsender::on_message_UPDATE_BEGIN_RESPONSE(sMESSAGE_NETWORK& _msg)
 {
 	// ------------------------------------------
-	// 설명) update begining
+	// 설명) update beginning
 	//       - CGDK::eMESSAGE::UPDATE::BEGIN_REQUEST의 응답 메시지
 	//       - 전체 updata 시작 요청에 응답하는 메시지이다.
 	//       - 이때 sender_id가 같아야 한다. (아닐 경우 다른 Nsender에 전달하려는 메시지로 간주 무시한다.)
@@ -593,7 +734,7 @@ CGDK::result_code CGDK::update::Nsender::on_message_UPDATE_BEGIN_RESPONSE(sMESSA
 CGDK::result_code CGDK::update::Nsender::on_message_UPDATE_UPDATABLE_RESPONSE(sMESSAGE_NETWORK& _msg)
 {
 	// ------------------------------------------
-	// 설명) updatable begining
+	// 설명) updatable beginning
 	//       - CGDK::eMESSAGE::UPDATE::UPDATABLE_REQUEST의 응답 메시지
 	//       - 개별 updatable의 시작 응답 메시지이다.
 	//       - 현재 파일의 크기를 받아서 전송을 시작한다.
@@ -622,7 +763,10 @@ CGDK::result_code CGDK::update::Nsender::on_message_UPDATE_UPDATABLE_RESPONSE(sM
 	try
 	{
 		// 5) get updtable
-		pupdatable = this->_process_get_first_updatable(updatable_id);
+		SCOPED_LOCK(this->m_lockable_vector_updatable)
+		{
+			pupdatable = this->_process_get_first_updatable(updatable_id);
+		}
 
 		// 7) get pos begin
 		auto updatable_prepare_info = buf.extract<sUPDATABLE_PREPARE_INFO>();
@@ -634,7 +778,7 @@ CGDK::result_code CGDK::update::Nsender::on_message_UPDATE_UPDATABLE_RESPONSE(sM
 		switch(updatable_prepare_info.result)
 		{
 		case	eRESULT::DONE: // cache hit - cache file info 
-		case	eRESULT::ALEADY_EXIST: // no cache hit - file exist
+		case	eRESULT::ALREADY_EXIST: // no cache hit - file exist
 				{
 					// 9) compare md5 if file size is same
 					if (updatable_prepare_info.size == pupdatable->_get_meta_info().size)
@@ -643,7 +787,7 @@ CGDK::result_code CGDK::update::Nsender::on_message_UPDATE_UPDATABLE_RESPONSE(sM
 						if (updatable_prepare_info.check_code == updatable_file_completion_info.check_code)
 						{
 							// - process updatable end
-							this->process_updatable_end(pupdatable, updatable_id, eRESULT::ALEADY_DONE);
+							this->process_updatable_end(pupdatable, updatable_id, eRESULT::ALREADY_DONE);
 						}
 						else
 						{
@@ -660,7 +804,9 @@ CGDK::result_code CGDK::update::Nsender::on_message_UPDATE_UPDATABLE_RESPONSE(sM
 						THROW_IF(updatable_prepare_info.check_code == updatable_file_completion_info.check_code, throwable::failure(eRESULT::INVALID_STATE, 0, ""sv));
 
 						// - pos는 이미 전송 완료가 된 파일일 경우 0부터 아니면 이어서 전송한다.
-						auto pos_begin = (updatable_prepare_info.result != eRESULT::NOT_EXIST) ? 0 : updatable_prepare_info.size;
+						//   (rounded down to a block boundary: blocks are cut at block_size multiples)
+						const auto& meta_info = pupdatable->_get_meta_info();
+						auto pos_begin = (updatable_prepare_info.size < meta_info.size) ? (updatable_prepare_info.size / meta_info.block_size) * meta_info.block_size : 0;
 
 						// - process updatable next
 						this->process_updatable_begin(pupdatable, updatable_id, pos_begin);
@@ -748,7 +894,7 @@ CGDK::result_code CGDK::update::Nsender::on_message_UPDATE_UPDATABLE_END(sMESSAG
 		object_ptr<resource::Iupdatable> pupdatable;
 
 		// 7) get resource_updatable
-		scoped_lock(this->m_cs_vector_updatable)
+		SCOPED_LOCK(this->m_lockable_vector_updatable)
 		{
 			// 8) get first updtable
 			pupdatable = this->_process_get_first_updatable(updatable_id);

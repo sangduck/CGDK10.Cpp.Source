@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                                Redis Classes                              *
+//*                            server.query.redis                             *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -27,13 +27,11 @@ namespace CGDK
 //
 //-----------------------------------------------------------------------------
 class net::io::packetable::Nresp :
-// inherited classes)
 	virtual public				net::io::Ipacketable,
-	virtual protected			Imessageable,
+	virtual protected			CGDK::Imessageable,
 	virtual protected			net::io::statistics::Nsocket,
 	virtual public				net::io::Isender
 {
-// implementation)
 protected:
 	virtual	void				process_pre_message(sMESSAGE_RESP& /*_msg*/) {}
 	virtual	std::size_t			process_packet( shared_buffer& _buffer, const net::sockaddr& _address) override;

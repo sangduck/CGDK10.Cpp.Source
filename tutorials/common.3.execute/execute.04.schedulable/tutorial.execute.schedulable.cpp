@@ -1,9 +1,9 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
 //*                                                                           *
-//*                   tutorials common - scheduled execute                    *
+//*                   tutorials execute - scheduled execute                   *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -62,103 +62,103 @@ int main()
 {
 	// ------------------------------------------------------------------
 	// 1. schedulable::executable_function - lambda function
-	//    - lambda í•¨ìˆ˜ë¥¼ ì„¤ì •í•œ ì‹œê°„ ë§ˆë‹¤ í•œë²ˆì”© í˜¸ì¶œí•œë‹¤.
+	//    - lambda ÇÔ¼ö¸¦ ¼³Á¤ÇÑ ½Ã°£ ¸¶´Ù ÇÑ¹ø¾¿ È£ÃâÇÑ´Ù.
 	//
 	// ------------------------------------------------------------------
 	{
 		std::cout << "1. schedulable::executable_function - lambda function"sv << '\n';
 
-		// 1) schedulableë¥¼ ìƒì„±í•œë‹¤.
+		// 1) schedulable¸¦ »ı¼ºÇÑ´Ù.
 		auto pschedulable = make_own<schedulable::executable_function<>>();
 
-		// 2) lambda í•¨ìˆ˜ë¥¼ ì„¤ì •í•œë‹¤.
+		// 2) lambda ÇÔ¼ö¸¦ ¼³Á¤ÇÑ´Ù.
 		pschedulable->start({ [=]()
 			{
 				std::cout << "lambda function executed"sv << '\n';
 			},
 			500ms });
 
-		// 3) ESC í‚¤ë¥¼ ì…ë ¥í•  ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
+		// 3) ESC Å°¸¦ ÀÔ·ÂÇÒ ¶§±îÁö ±â´Ù¸°´Ù.
 		while (_getch() != 27);
 
-		// !) pscheedualbeì€ own_ptr<T> ë¯€ë¡œ ë¸”ë¡ì´ ëë‚˜ë©´ ìë™ì ìœ¼ë¡œ
-		//    destroy()ê°€ í˜¸ì¶œëœë‹¤. ë§Œì•½ own_ptr<T>ê°€ ì•„ë‹ˆë¼ë©´ ì§ì ‘
-		//    destroy()ë¥¼ í˜¸ì¶œí•´ì¤˜ì•¼ í•œë‹¤.
+		// !) pscheedualbeÀº own_ptr<T> ¹Ç·Î ºí·ÏÀÌ ³¡³ª¸é ÀÚµ¿ÀûÀ¸·Î
+		//    destroy()°¡ È£ÃâµÈ´Ù. ¸¸¾à own_ptr<T>°¡ ¾Æ´Ï¶ó¸é Á÷Á¢
+		//    destroy()¸¦ È£ÃâÇØÁà¾ß ÇÑ´Ù.
 	}
 
 	// ------------------------------------------------------------------
 	// 2. schedulable::executable_function - static function
-	//    - ì¼ë°˜ í•¨ìˆ˜ë¥¼ ì„¤ì •í•œ ì‹œê°„ ë§ˆë‹¤ í•œë²ˆì”© í˜¸ì¶œí•œë‹¤.
+	//    - ÀÏ¹İ ÇÔ¼ö¸¦ ¼³Á¤ÇÑ ½Ã°£ ¸¶´Ù ÇÑ¹ø¾¿ È£ÃâÇÑ´Ù.
 	//
 	// ------------------------------------------------------------------
 	{
 		std::cout << "2. schedulable::executable_function - static function"sv << '\n';
 
-		// 1) schedulableë¥¼ ìƒì„±í•œë‹¤.
+		// 1) schedulable¸¦ »ı¼ºÇÑ´Ù.
 		auto pschedulable = make_own<schedulable::executable_function<>>();
 
-		// 2) ì¼ë°˜ í•¨ìˆ˜ë¥¼ ì„¤ì •í•œë‹¤.
+		// 2) ÀÏ¹İ ÇÔ¼ö¸¦ ¼³Á¤ÇÑ´Ù.
 		pschedulable->start({ process_function, 500ms });
 
-		// 3) ESC í‚¤ë¥¼ ì…ë ¥í•  ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
+		// 3) ESC Å°¸¦ ÀÔ·ÂÇÒ ¶§±îÁö ±â´Ù¸°´Ù.
 		while (_getch() != 27);
 
-		// !) pscheedualbeì€ own_ptr<T> ë¯€ë¡œ ë¸”ë¡ì´ ëë‚˜ë©´ ìë™ì ìœ¼ë¡œ
-		//    destroy()ê°€ í˜¸ì¶œëœë‹¤. ë§Œì•½ own_ptr<T>ê°€ ì•„ë‹ˆë¼ë©´ ì§ì ‘
-		//    destroy()ë¥¼ í˜¸ì¶œí•´ì¤˜ì•¼ í•œë‹¤.
+		// !) pscheedualbeÀº own_ptr<T> ¹Ç·Î ºí·ÏÀÌ ³¡³ª¸é ÀÚµ¿ÀûÀ¸·Î
+		//    destroy()°¡ È£ÃâµÈ´Ù. ¸¸¾à own_ptr<T>°¡ ¾Æ´Ï¶ó¸é Á÷Á¢
+		//    destroy()¸¦ È£ÃâÇØÁà¾ß ÇÑ´Ù.
 	}
 
 	// ------------------------------------------------------------------
 	// 3. schedulable::executable_function - member function
-	// 	  - std::bindë¥¼ ì‚¬ìš©í•œë‹¤.
-	//    - ë©¤ë²„ í•¨ìˆ˜ë¥¼ ì„¤ì •í•œ ì‹œê°„ ë§ˆë‹¤ í•œë²ˆì”© í˜¸ì¶œí•œë‹¤.
+	// 	  - std::bind¸¦ »ç¿ëÇÑ´Ù.
+	//    - ¸â¹ö ÇÔ¼ö¸¦ ¼³Á¤ÇÑ ½Ã°£ ¸¶´Ù ÇÑ¹ø¾¿ È£ÃâÇÑ´Ù.
 	//
 	// ------------------------------------------------------------------
 	{
 		std::cout << "3. schedulable::executable_function - member function"sv << '\n';
 
-		// 1) schedulableë¥¼ ìƒì„±í•œë‹¤.
+		// 1) schedulable¸¦ »ı¼ºÇÑ´Ù.
 		auto pschedulable = make_own<schedulable::executable_function<>>();
 
-		// 2) buk ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 2) buk °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pobject = make_object<buk>();
 
-		// 3) ë©¤ë²„ í•¨ìˆ˜ë¡œ ì‹¤í–‰í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤. (std::bindë¥¼ ì‚¬ìš©)
+		// 3) ¸â¹ö ÇÔ¼ö·Î ½ÇÇàÇÒ ¼ö ÀÖ½À´Ï´Ù. (std::bind¸¦ »ç¿ë)
 		pschedulable->start({ std::bind(&buk::process_function, pobject), 500ms });
 
-		// 4) ESC í‚¤ë¥¼ ì…ë ¥í•  ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
+		// 4) ESC Å°¸¦ ÀÔ·ÂÇÒ ¶§±îÁö ±â´Ù¸°´Ù.
 		while (_getch() != 27);
 
-		// !) pscheedualbeì€ own_ptr<T> ë¯€ë¡œ ë¸”ë¡ì´ ëë‚˜ë©´ ìë™ì ìœ¼ë¡œ
-		//    destroy()ê°€ í˜¸ì¶œëœë‹¤. ë§Œì•½ own_ptr<T>ê°€ ì•„ë‹ˆë¼ë©´ ì§ì ‘
-		//    destroy()ë¥¼ í˜¸ì¶œí•´ì¤˜ì•¼ í•œë‹¤.
+		// !) pscheedualbeÀº own_ptr<T> ¹Ç·Î ºí·ÏÀÌ ³¡³ª¸é ÀÚµ¿ÀûÀ¸·Î
+		//    destroy()°¡ È£ÃâµÈ´Ù. ¸¸¾à own_ptr<T>°¡ ¾Æ´Ï¶ó¸é Á÷Á¢
+		//    destroy()¸¦ È£ÃâÇØÁà¾ß ÇÑ´Ù.
 	}
 
 	// ------------------------------------------------------------------
 	// 4. schedulable::Nexecutable
-	//    - schedulable::Nexecutableì„ ìƒì†ë°›ì•„ êµ¬í˜„í•œë‹¤.
-	//    - ê°€ìƒí•¨ìˆ˜ on_execute() í•¨ìˆ˜ë¥¼ ì¬ì •ì˜í•˜ì—¬ ì‚¬ìš©í•œë‹¤.
-	// 	  - start()í•¨ìˆ˜ê°€ ì•„ë‹ˆë¼ executorì— registerí•¨ìœ¼ë¡œì„œ ì‹œì‘í•œë‹¤.
+	//    - schedulable::NexecutableÀ» »ó¼Ó¹Ş¾Æ ±¸ÇöÇÑ´Ù.
+	//    - °¡»óÇÔ¼ö on_execute() ÇÔ¼ö¸¦ ÀçÁ¤ÀÇÇÏ¿© »ç¿ëÇÑ´Ù.
+	// 	  - start()ÇÔ¼ö°¡ ¾Æ´Ï¶ó executor¿¡ registerÇÔÀ¸·Î¼­ ½ÃÀÛÇÑ´Ù.
 	// 	    
 	//
 	// ------------------------------------------------------------------
 	{
 		std::cout << "4. schedulable::Nexecutable"sv << '\n';
 
-		// 1) bar ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 1) bar °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pschedulable = make_object<bar>();
 
-		// 2) 1ì´ˆì— 2ë²ˆ(500ms) on_executeê°€ ì‹¤í–‰ë˜ë„ë¡ ì„¤ì •í•œë‹¤.
+		// 2) 1ÃÊ¿¡ 2¹ø(500ms) on_execute°¡ ½ÇÇàµÇµµ·Ï ¼³Á¤ÇÑ´Ù.
 		pschedulable->execute_interval(500ms);
 
-		// 3) system_executorì— ë“±ë¡í•œë‹¤.
+		// 3) system_executor¿¡ µî·ÏÇÑ´Ù.
 		system_executor::register_schedulable(pschedulable);
 
-		// 4) ESC í‚¤ë¥¼ ì…ë ¥í•  ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
+		// 4) ESC Å°¸¦ ÀÔ·ÂÇÒ ¶§±îÁö ±â´Ù¸°´Ù.
 		while (_getch() != 27);
 
-		// 5) schedulableê°ì²´ë“¤ì„ unregisterí•œë‹¤.
-		//    - ì´ ìˆœê°„ë¶€í„° ë”ì´ìƒ í˜¸ì¶œë˜ì§€ ì•ŠëŠ”ë‹¤.
+		// 5) schedulable°´Ã¼µéÀ» unregisterÇÑ´Ù.
+		//    - ÀÌ ¼ø°£ºÎÅÍ ´õ ÀÌ»ó È£ÃâµÇÁö ¾Ê´Â´Ù.
 		system_executor::unregister_schedulable(pschedulable);
 	}
 
@@ -169,10 +169,10 @@ int main()
 	{
 		std::cout << "5. all together"sv << '\n';
 
-		// 1.1) schedulableë¥¼ ìƒì„±í•œë‹¤.
+		// 1.1) schedulable¸¦ »ı¼ºÇÑ´Ù.
 		auto pschedulable_a = make_own<schedulable::executable_function<>>();
 
-		// 1.2) 500msë§ˆë‹¤ í•œë²ˆì”©
+		// 1.2) 500ms¸¶´Ù ÇÑ¹ø¾¿
 		pschedulable_a->start({ [=]()
 			{
 				std::cout << "lambda function executed"sv << '\n';
@@ -180,44 +180,44 @@ int main()
 			500ms });
 
 
-		// 2.1) schedulableë¥¼ ìƒì„±í•œë‹¤.
+		// 2.1) schedulable¸¦ »ı¼ºÇÑ´Ù.
 		auto pschedulable_b = make_own<schedulable::executable_function<>>();
 
-		// 2.2) 1ì´ˆë§ˆë‹¤ í•œë²ˆì”©
+		// 2.2) 1ÃÊ¸¶´Ù ÇÑ¹ø¾¿
 		pschedulable_b->start({ process_function, 1s });
 
 
-		// 3,1) schedulableë¥¼ ìƒì„±í•œë‹¤.
+		// 3,1) schedulable¸¦ »ı¼ºÇÑ´Ù.
 		auto pschedulable_c = make_own<schedulable::executable_function<>>();
 
-		// 3.2) buk ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 3.2) buk °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pobject = make_object<buk>();
 
-		// 3.3) 2ì´ˆë§ˆë‹¤ í•œë²ˆì”©
+		// 3.3) 2ÃÊ¸¶´Ù ÇÑ¹ø¾¿
 		pschedulable_c->start({ std::bind(&buk::process_function, pobject), 2s });
 
 
-		// 4.1) bar ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 4.1) bar °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pschedulable_d = make_object<bar>();
 
-		// 4.2) 5ì´ˆë§ˆë‹¤ 1ë²ˆì”©
+		// 4.2) 5ÃÊ¸¶´Ù 1¹ø¾¿
 		pschedulable_c->execute_interval(5s);
 
-		// 4.3) system_executorì— ë“±ë¡í•œë‹¤.
+		// 4.3) system_executor¿¡ µî·ÏÇÑ´Ù.
 		system_executor::register_schedulable(pschedulable_d);
 
 
-		// 5) ESC í‚¤ë¥¼ ì…ë ¥í•  ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
+		// 5) ESC Å°¸¦ ÀÔ·ÂÇÒ ¶§±îÁö ±â´Ù¸°´Ù.
 		while (_getch() != 27);
 
-		// 6) schedulableê°ì²´ë“¤ì„ unregisterí•œë‹¤.
+		// 6) schedulable°´Ã¼µéÀ» unregisterÇÑ´Ù.
 		//    - pschedulable_a
 		//      pschedulable_b
-		//      pschedulable_cëŠ” 
-		//      ìë™ì ìœ¼ë¡œ destroy()í•¨ìˆ˜ê°€ í˜¸ì¶œëœë‹¤.;
+		//      pschedulable_c´Â 
+		//      ÀÚµ¿ÀûÀ¸·Î destroy()ÇÔ¼ö°¡ È£ÃâµÈ´Ù.;
 		//
-		//    - pschedulableëŠ” ì§ì ‘ unregisterí•´ì¤˜ì•¼ í•œë‹¤.
-		//    - ì´ ìˆœê°„ë¶€í„° ë”ì´ìƒ í˜¸ì¶œë˜ì§€ ì•ŠëŠ”ë‹¤.
+		//    - pschedulable´Â Á÷Á¢ unregisterÇØÁà¾ß ÇÑ´Ù.
+		//    - ÀÌ ¼ø°£ºÎÅÍ ´õ ÀÌ»ó È£ÃâµÇÁö ¾Ê´Â´Ù.
 		system_executor::unregister_schedulable(pschedulable_d);
 	}
 

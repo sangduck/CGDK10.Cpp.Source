@@ -19,18 +19,21 @@
 #-----------------------------------------------------------------------------
 # setting
 #-----------------------------------------------------------------------------
-# 1) project name
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY( VERSION 3.20 )
+
+# 2) project name
 PROJECT ( "CGDK10.server.system" )
 
-# 2) project version
+# 3) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
+# 4) common build rules
+INCLUDE ( ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/cgdk.cmake )
 
 
 #-----------------------------------------------------------------------------
@@ -40,3 +43,13 @@ CMAKE_POLICY( VERSION 3.20 )
 ADD_SUBDIRECTORY (./log)
 ADD_SUBDIRECTORY (./time_event)
 ADD_SUBDIRECTORY (./service)
+# unit test (only when GoogleTest is found)
+ADD_SUBDIRECTORY (./unit_test)
+
+# windows only
+IF (WIN32)
+	ADD_SUBDIRECTORY (./mfc_controls)
+ENDIF ()
+
+# Build alias for convenience
+CGDK_ADD_ALIAS ( server.system CGDK10.server.log CGDK10.server.time_event CGDK10.server.service CGDK10.server.mfc_controls )

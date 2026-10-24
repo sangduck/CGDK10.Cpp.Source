@@ -111,7 +111,7 @@ public:
 																		  
 			void				SetHorizontalExtent(int _cx);
 
-	virtual	void				process_log(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record) override;
+	virtual	void				process_log(object_ptr<LOG_RECORD>&& _plog_record) override;
 
 protected:
 			CTabCtrl			m_tabLog;
@@ -127,12 +127,13 @@ protected:
 				ITEM_LOG(LOG_RECORD* _plog_record, CListBox_log::ITEM_LOG* _pitem) : plog_record(_plog_record), pitem(_pitem)	{}
 			};
 
-			lockable<>			m_lockable_queue_string;
-			circular_list<object_ptr<LOG_RECORD>> m_pqueue_log_record_queuing;
-			circular_list<object_ptr<LOG_RECORD>> m_pqueue_log_record_process;
+	mutable	lock_object			m_lockable_queue_string;
+			circular_list<object_ptr<LOG_RECORD>> m_queue_log_record_queuing;
+			circular_list<object_ptr<LOG_RECORD>> m_queue_log_record_process;
+			std::atomic<int>	m_count_post_message = 0;
 			size_t				m_capacity;
 
-			lockable<>			m_lockable_log_info;
+	mutable	lock_object			m_lockable_log_info;
 			std::vector<LOGLIST_INFO> m_vector_log_list;
 
 			int					m_count_log[static_cast<int>(log_type_t::max_)];

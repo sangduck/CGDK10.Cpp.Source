@@ -27,22 +27,22 @@
 //-----------------------------------------------------------------
 // 2. definitions
 //-----------------------------------------------------------------
+namespace server
+{
+	class socket;
+	class group_immigration;
+	class group_channel;
+}
+
 namespace channel
 {
 	class manager;
-
-	namespace server
-	{
-		class group;
-		class group_immigration;
-		class socket:
-	}
 }
-
 
 namespace user
 {
 	class manager;
+	class account;
 
 	class group_immigration;
 	class socket;
@@ -51,7 +51,7 @@ namespace user
 
 
 //-----------------------------------------------------------------
-// 2. Header files - Engine
+// 3. Header files - Engine
 //-----------------------------------------------------------------
 // 1) Engine 
 #include "cgdk/sdk10/net.socket.h"
@@ -63,34 +63,28 @@ namespace user
 using namespace CGDK;
 
 //-----------------------------------------------------------------
-// 3. 
-//-----------------------------------------------------------------
-const uint32_t	CGNOTIFY_SERVER_UPDATE		 = (eMESSAGE::USER | 1);
-const uint32_t	CGNOTIFY_CHANNEL_ADD		 = (eMESSAGE::USER | 2);
-const uint32_t	CGNOTIFY_CHANNEL_REMOVE		 = (eMESSAGE::USER | 3);
-const uint32_t	CGNOTIFY_CHANNEL_UPDATE		 = (eMESSAGE::USER | 4);
-
-//-----------------------------------------------------------------
 // 4. 
 //-----------------------------------------------------------------
-// 1) definitions
+// 1) common
 #include "../../common/definitions.h"
 #include "../../common/definition_message.h"
 #include "../../common/Igroup_list.h"
 
-// 2) user
+// 2) definitions
+#include "server.channel_manager.definition.h"
+
+// 3) user
 #include "user.socket.h"
 #include "user.group_immigration.h"
 #include "user.manager.h"
 
-// 3) channels
-#include "server_channel.socket.h"
-#include "server_channel.group.h"
-#include "server_channel_group_waiting.h"
-#include "server_channel_group_chatting.h"
+// 4) channels
+#include "server.socket.h"
+#include "server.group_immigration.h"
+#include "server.group_channel.h"
 
-// 4) service
+// 5) service
 #include "service.h"
 
-// 5) service object
+// 6) service entity
 extern own_ptr<service> g_pservice;

@@ -41,29 +41,6 @@ public:
 			object_ptr<Iconnective>	m_pconnective;
 			char				m_buffer_connectable[256]{};
 };
-#elif defined(_SYS_EPOLL_H)
-class net::io::connective::acceptor::Ntcp::executable_accept :
-	// inherited classes)
-	public						Iexecutable,
-	public						Npoolable<executable_accept>,
-	public						factory::_traits_system
-{
-	// constructor)
-public:
-	
-	virtual ~executable_accept() noexcept {}
-
-	// Define Pool Name)
-	DEFAULT_FACTORY_NAME(net::io::connective::acceptor::Ntcp::executable_accept)
-
-		// implementations) 
-private:
-	// 1) I/O가 성공적으로 완료 되었을 때 불려지는 함수.
-	virtual	intptr_t			process_execute(intptr_t _result, std::size_t /*_param*/) override { this->m_pconnective->process_connective_accept(_result); return intptr_t(0); }
-
-public:
-			net::io::connective::acceptor::Ntcp* m_pconnective = nullptr;
-};
 #endif
 
 net::io::connective::Iacceptor::end_point_type net::io::connective::acceptor::Ntcp::get_accept_endpoint() const noexcept
@@ -123,646 +100,6 @@ void net::io::connective::acceptor::Ntcp::process_set_parameters(context& /*_con
 {
 }
 
-#if defined(_SYS_EPOLL_H)
-object_ptr<net::io::socket::Ntcp> net::io::connective::acceptor::Ntcp::_process_starting_uds(const START_PARAMETER& /*_parameter*/)
-{
-	//// 1) create socket object for UDS
-	//auto psocket_uds = make_object<net::io::socket::Ntcp>();
-
-	//// 2) prepare UDS socket
-	//psocket_uds->process_prepare_socket(PF_FILE);
-
-	//// 3) get UDS socket handle
-	//CGSOCKET socket_UDS_handle_listen = psocket_uds->native_handle();
-
-	//// 4) generate path for UDS bind
-	//std::string path_uds = "uds_stream_20000";
-
-	//// declare) 
-	//sockaddr_in addr_uds;
-	//__zero_memory(&addr_uds, sizeof(addr_uds));
-	//addr_uds.sun_family = AF_UNIX;
-	//strcpy(addr_uds.sun_path, path_uds.c_str());
-
-	//// 5) bind
-	//auto result = api::socket::bind(socket_UDS_handle_listen, (::sockaddr*)&addr_uds, sizeof(addr_uds));
-
-	//// check)
-	//ERROR_RETURN_IF(result == SOCKET_ERROR, object_ptr<net::io::socket::Ntcp>(), LOG_ERROR << "@ (err ) ACCEPTOR['"sv << name() << "'] fail to binding socket for listen. error:"sv << api::get_last_error_string() << ", "sv << api::get_last_error() <<" " __CGFUNCTION__ ""sv);
-
-	//// trace)
-	//EXECUTE_IF(this->m_enable_progress_log,LOG_INFO << "  > UDS socket binded on "sv << path_uds);
-
-	//// 6) start listening
-	//result = api::socket::listen(socket_UDS_handle_listen);
-
-	//// check) 
-	//ERROR_RETURN_IF(result == false, , LOG_ERROR << "@ (error) ACCEPTOR['"sv << name() << "'] fail to listen for UDS socket. error_code:"sv << api::get_last_error() << " " __CGFUNCTION__ ""sv);
-
-	//// trace)
-	//EXECUTE_IF(this->m_enable_progress_log,LOG_INFO << fmt::format("  > listen on " << path_uds); 
-
-	return object_ptr<net::io::socket::Ntcp>();
-}
-#endif
-
-result_code net::io::connective::acceptor::Ntcp::_process_starting(context& _context)
-{
-	// check) socket 상태가 CLOSED여야지만 한다.
-	CGASSERT_ERROR(this->socket_state() == eSOCKET_STATE::CLOSED);
-
-	// declare) 
-	START_PARAMETER parameter;
-
-	// 1) set default values
-	parameter.enable_progress_log = this->m_enable_progress_log;
-
-	if (_context.type() == eCONTEXT_VALUE_TYPE::BUFFER_)
-	{
-		// - get parameter (use 'enable_progress_log' only)
-		parameter = _context.v.value_buffer.front<START_PARAMETER>();
-	}
-	else
-	{
-		// - 'enable progress_log
-		if (std::string str_find = _context.find("progress_log"sv, "progress log"sv, "enable_progress_log"sv, "enable progress log"sv); str_find.empty() == false)
-		{
-			if (__stricmp(str_find, "true") == 0
-				|| __stricmp(str_find, "enable") == 0)
-			{
-				parameter.enable_progress_log = true;
-			}
-			else if (__stricmp(str_find, "false") == 0
-				|| __stricmp(str_find, "disable") == 0)
-			{
-				parameter.enable_progress_log = false;
-			}
-		}
-	}
-
-	// 2) set...
-	this->m_enable_progress_log = parameter.enable_progress_log;
-
-	// trace)
-	EXECUTE_IF(parameter.enable_progress_log, LOG_PROGRESS << "@ <BEGIN> start ACCEPTOR['"sv << name() << "']"sv);
-
-
-
-	//-----------------------------------------------------------------
-	// 1. call 'on_starting'
-	//-----------------------------------------------------------------
-	// 1) on_initializing 함수를 호출한다.
-	this->on_starting(_context);
-
-
-	//-----------------------------------------------------------------
-	// 2. read parameter
-	//-----------------------------------------------------------------
-	if (_context.type() == eCONTEXT_VALUE_TYPE::BUFFER_)
-	{
-		// - get parameter (reload)
-		parameter = _context.v.value_buffer.front<START_PARAMETER>();
-
-		// - casting to int64_t
-		int64_t prepare_on_start = static_cast<int64_t>(parameter.prepare_on_start);
-		int64_t must_prepare = static_cast<int64_t>(parameter.must_prepare);
-
-		// trace)
-		if(parameter.enable_progress_log)
-		{
-			if(prepare_on_start > 0)
-				LOG_INFO << "  + parameter['prepare on start']: "sv << prepare_on_start;
-			else if (prepare_on_start < 0)
-				LOG_INFO << "  + parameter['prepare on start']: 'core' x "sv << prepare_on_start;
-			else
-				LOG_INFO << "  + parameter['prepare on start']: default"sv;
-
-			// trace)
-			if(must_prepare > 0)
-				LOG_INFO << "  + parameter['must prepare']: "sv << must_prepare;
-			else if (must_prepare < 0)
-				LOG_INFO << "  + parameter['must prepare']: 'core' x "sv << must_prepare;
-			else
-				LOG_INFO << "  + parameter['must prepare']: default"sv;
-		}
-	}
-	else
-	{
-
-		// 1) local address
-		if (auto context_find = _context.find("local_endpoint"sv, "local endpoint"sv); context_find.is_valid())
-		{
-			// declare) 
-			net::ip::tcp::resolver::results_type resolve_result;
-
-			// - get endpoint
-			auto listen_endpoint = get_parameter_endpoint(context_find, true);
-
-			// - set local endpoint
-			resolve_result = net::ip::tcp::resolver().resolve(
-				listen_endpoint.str_address,
-				listen_endpoint.str_service,
-				listen_endpoint.flag
-			);
-
-			// check) 
-			if (resolve_result.empty())
-			{
-				// log)
-				LOG_ERROR << " error) invalid address or port for bind (address:"sv << listen_endpoint.str_address << ", service:"sv << listen_endpoint.str_service << ")"sv;
-
-				// trhwo) 
-				throw throwable::failure(eRESULT::INVALID_ARGUMENT);
-			}
-
-			// - get one
-			parameter.local_endpoint = *resolve_result.begin();
-
-			// - set bind_any if str_address is nullptr 
-			if (listen_endpoint.str_address.empty())
-			{
-				parameter.local_endpoint = net::ip::tcp::endpoint{ net::ip::address_v6().any(), parameter.local_endpoint.port() };
-			}
-		}
-
-		// 2) accept address
-		if (auto context_find = _context.find("accept_endpoint"sv, "accept endpoint"sv); context_find.is_valid())
-		{
-			// declare) 
-			net::ip::tcp::resolver::results_type resolve_result;
-
-			// - get endpoint
-			auto accept_endpoint = get_parameter_endpoint(context_find, true);
-
-			// - set accept endpoint
-			resolve_result = net::ip::tcp::resolver().resolve(
-				accept_endpoint.str_address,
-				accept_endpoint.str_service,
-				accept_endpoint.flag
-			);
-
-			// check) 
-			if (resolve_result.empty())
-			{
-				// log)
-				LOG_ERROR << " error) invalid address or port for bind (address:"sv << accept_endpoint.str_address << ", service:"sv << accept_endpoint.str_service << ")"sv;
-
-				// throw) 
-				throw throwable::failure(eRESULT::INVALID_ARGUMENT);
-			}
-
-			// - get first one
-			parameter.accept_endpoint = *resolve_result.begin();
-
-			// - if str_address is nullptr, set address as public ip in host
-			if (parameter.accept_endpoint.address().is_loopback())
-			{
-				parameter.accept_endpoint.address(get_accept_endpoint().address());
-			}
-
-			// - if port is zero, set port as listen port
-			if (parameter.accept_endpoint.port() == 0)
-			{
-				parameter.accept_endpoint.port(parameter.local_endpoint.port());
-			}
-
-			// trace)
-			EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << "  + parameter['acceptable endpoint']: "sv << to_string<char>(parameter.accept_endpoint) << ":" << parameter.accept_endpoint.port());
-		}
-
-		// 4) [Optional] <prepare on start>값 읽기 (default = 0)
-		if (std::string str_find = (std::string)_context.find("prepare_on_start", "prepare on start"); str_find.empty() == false)
-		{
-			// - "default"면 default값으로 설정
-			if (__stricmp(str_find, "default") == 0)
-			{
-				parameter.prepare_on_start = 0;
-
-				// trace)
-				EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << "  + parameter['prepare on start']: 'default'"sv);
-			}
-			// - 문자열을 integer로 변경해 넣는다.
-			else if(str_find.size() != 0 && (str_find[0] == 'x' || str_find[0] == 'X' || str_find[0] == '*'))
-			{
-				// - get multiply value
-				int64_t prepare_on_start = __from_string<int64_t>(str_find.substr(1));
-
-				// - set value
-				parameter.prepare_on_start = static_cast<std::size_t>(-prepare_on_start);
-
-				// trace)
-				EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << "  + parameter['prepare on start']: 'core' x "sv << prepare_on_start);
-			}
-			// - 문자열을 integer로 변경해 넣는다.
-			else
-			{
-				// - get value
-				auto prepare_on_start = __from_string<std::int64_t>(str_find);
-
-				// - 
-				if (prepare_on_start > 65536)
-				{
-					// trace)
-					LOG_WARNING << "(warn) 'prepare on start' value exceeded 65536.(" << prepare_on_start << ")";
-				}
-
-				// set value
-				parameter.prepare_on_start = static_cast<std::size_t>(prepare_on_start);
-
-				// trace)
-				EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << "  + parameter['prepare on start']: "sv << parameter.prepare_on_start);
-			}
-		}
-
-		// 5) [Optional] <must prepare>값 읽기 (Default=0)
-		if (std::string str_find = (std::string)_context.find("must_prepare", "must prepare"); str_find.empty() == false)
-		{
-			// - to lower case
-			auto value = __to_lower(std::string_view(str_find));
-
-			// - "default"면 default값으로 설정
-			if (value == "default")
-			{
-				parameter.must_prepare = 0;
-
-				// trace)
-				EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << "  + parameter['must prepare']: 'default'"sv);
-			}
-			// - 문자열을 integer로 변경해 넣는다.
-			else if(str_find.size() != 0 && (str_find[0] == 'x' || str_find[0] == 'X' || str_find[0] == '*'))
-			{
-				// - get multiply value
-				int64_t must_prepare = __from_string<int64_t>(str_find.substr(1));
-
-				// - set value
-				parameter.must_prepare = static_cast<std::size_t>(-must_prepare);
-
-				// trace)
-				EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << "  + parameter['must prepare']: 'core' x "sv << must_prepare);
-			}
-			// - 문자열을 integer로 변경해 넣는다.
-			else
-			{
-				// - get value
-				auto must_prepare = __from_string<std::int64_t>(str_find);
-
-				// - 
-				if (must_prepare > 65536)
-				{
-					// trace)
-					LOG_WARNING << "(warn) 'must prepare' value exceeded 65536.("sv << must_prepare << ")"sv;
-				}
-
-				// set value
-				parameter.must_prepare = static_cast<std::size_t>(must_prepare);
-
-				// trace)
-				EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << "  + parameter['must prepare']: "sv << parameter.must_prepare);
-			}
-		}
-	}
-
-	// 6) listen이 empty일 경우 default로 설정된다.
-	if (parameter.local_endpoint.empty())
-	{
-		parameter.local_endpoint = end_point_type{ net::ip::address_v6::any(), this->process_get_default_port() };
-	}
-	// 7) listen이 empty일 경우 default로 설정된다.
-	else if (parameter.local_endpoint.port() == 0)
-	{
-		// - get default port
-		auto default_port = this->process_get_default_port();
-
-		// - set default port
-		parameter.local_endpoint.port(default_port);
-
-		// log) 
-		EXECUTE_IF(parameter.enable_progress_log, LOG_WARNING << "  ! 'listen port' set as default port (loopback, port:"sv << default_port << ")  "sv);
-	}
-
-	// check) 
-	if (parameter.local_endpoint.port() == 0)
-	{
-		// log) 
-		LOG_ERROR << NFMT::format("   (err ) invalid listen port (port number is '0')");
-
-		// raise)
-		throw throwable::failure(eRESULT::INVALID_ARGUMENT, 0, "invalid listen port (port number is '0')"sv);
-	}
-
-	// 8) ProcessSetParameter
-	this->process_set_parameters(_context);
-
-
-	//-----------------------------------------------------------------
-	// 3. prepare accept
-	//-----------------------------------------------------------------
-	// 1) Address Family를 설정한다.
-	this->m_address_family = static_cast<ADDRESS_FAMILY>(parameter.local_endpoint.data().family());
-
-	// 2) accept Address를 설정한다.
-	if (parameter.accept_endpoint.exist())
-	{
-		set_accept_endpoint(parameter.accept_endpoint);
-	}
-
-	// 3) socket을 준비한다.
-	this->process_prepare_socket(parameter.local_endpoint.data().family());
-
-	// 4) 현재 <socket Handle>을 얻는다.
-	CGSOCKET socket_handle_listen = this->native_handle();
-
-	// 5) <Address Family>가 AF_INET6일 경우 IPv6 옵션을 설정한다.
-	if(parameter.local_endpoint.is_v6())
-	{
-		api::socket::set_sock_opt(socket_handle_listen, IPPROTO_IPV6, IPV6_V6ONLY, &this->m_is_ip6_only, sizeof(this->m_is_ip6_only));
-	}
-
-	// 6) set socket option
-	{
-		// - enable 'address reuse'
-		auto result = api::socket::set_reuse_address(socket_handle_listen, true);
-
-		// trace)
-		EXECUTE_IF(result == true, LOG_INFO << "  - enabled 'SOCKET_REUSEADDRESS'"sv);
-
-	#if defined(_WINSOCK2API_)
-		// - enable 'fast loopback'
-		result = api::socket::set_loopback_fast_path(socket_handle_listen, true);
-
-		// trace)
-		EXECUTE_IF(result == true, LOG_INFO << "  - enabled 'LOOPBACK_FASTPATH'"sv);
-	#endif
-	}
-
-	// 7) start accept
-	{
-		// - bind한다.
-		auto result = api::socket::bind(socket_handle_listen, (::sockaddr*)&parameter.local_endpoint, parameter.local_endpoint.size<int>());
-
-		// check) result가 false이면 bind 실패다!!!
-		if (result == SOCKET_ERROR)
-		{
-			// - set last error
-			this->m_last_socket_error = api::get_last_error();
-
-			// log) 
-			LOG_ERROR << "@ (err ) ACCEPTOR['"sv << name() << "'] fail to binding socket for listen. error:"sv << api::get_last_error_string() << ", error_codee:"sv << api::get_last_error() << " " __CGFUNCTION__ ""sv;
-
-			// raise) 
-			throw throwable::failure(eRESULT::API_FAILURE, 0, "fail to binding socket for listen"sv);
-		}
-
-		// trace)
-		EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << NFMT::format("  > binded on {}:{} [requestd:{}]",
-					(local_endpoint().is_bind_any() == false) ? parameter.local_endpoint.address().to_string<char>().c_str() : "bind_any",
-					parameter.local_endpoint.port(),
-					to_string<char>(parameter.local_endpoint).c_str()));
-
-		// - listen
-		result = api::socket::listen(socket_handle_listen);
-
-		// check) 
-		if (result == false)
-		{
-			// -get last error
-			this->m_last_socket_error = api::get_last_error();
-
-			// log)
-			LOG_ERROR << "@ (error) ACCEPTOR['"sv << name() << "'] fail to listen for accepting error_code:"sv << api::get_last_error() << " " __CGFUNCTION__ ""sv;
-
-			// return)
-			return true;
-		}
-
-		// trace)
-		EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << NFMT::format("  > listen on {}:{}",
-			(local_endpoint().is_bind_any() == false) ? to_string<char>(local_endpoint()).c_str() : "any",
-			parameter.local_endpoint.port()));
-	}
-
-	#if defined(_SYS_EPOLL_H)
-	// 8) prepare UDS accept
-	//if(m_flag & ENABLE_UDS)
-	{
-		this->m_psocket_uds = this->_process_starting_uds(parameter);
-	}
-	#endif
-
-	// 9) set socket state
-	this->socket_state(eSOCKET_STATE::LISTEN);
-
-	// check) 만약 parameter.prepare_on_start가 -1이면 start_accept를 수행하지 않고 그냥 0를 return한다.
-	ERROR_RETURN_IF(parameter.prepare_on_start == static_cast<std::size_t>(NO_START_ACCEPT), eRESULT::SUCCESS , LOG_INFO << "  - accepting is not ready because parameter.prepare_on_start is 'NO_START_ACCEPT' [address="sv << to_string<char>(local_endpoint()) << "]"sv);
-
-
-	//-----------------------------------------------------------------
-	// 4. prepare accept
-	//-----------------------------------------------------------------
-#if defined(_WINSOCK2API_)
-	// declare) 
-	int64_t prepare_on_start = static_cast<int64_t>(parameter.prepare_on_start);
-	int64_t must_prepare = static_cast<int64_t>(parameter.must_prepare);
-
-	// 1A) <parameter.prepare_on_start>이 0이라면 default
-	if(prepare_on_start == 0)
-	{
-		// - core갯수 x 8 개만큼을 준비한다.
-		parameter.prepare_on_start = api::get_core_count() * 8;
-	}
-	// 1B) 양수이라면 값을 그대로 넣는다.
-	else if (prepare_on_start > 0)
-	{
-		parameter.prepare_on_start = prepare_on_start;
-	}
-	// 1C) 음수값라면 prepare_on_start값은 배수다.
-	else
-	{
-		// - core갯수 x (-prepare_on_start)로 설정한다.
-		parameter.prepare_on_start = api::get_core_count() * (-prepare_on_start);
-	}
-
-	// check) parameter.prepare_on_start가 혹시 0개이면 끝낸다.(prepare이 하나도 없으면 accept가 되지를 않는다.)
-	CGASSERT_ERROR(parameter.prepare_on_start != 0);
-
-	// 2A) <parameter.must_prepare>이 0이라면 default
-	if(must_prepare == 0)
-	{
-		// - core갯수 x 4 개만큼을 준비한다.
-		parameter.must_prepare = api::get_core_count() * 4;
-	}
-	// 2B) 양수이라면 값을 그대로 넣는다.
-	else if (must_prepare > 0)
-	{
-		parameter.must_prepare = must_prepare;
-	}
-	// 2C) 음수값라면 must_prepare는 배수다.
-	else
-	{
-		// - core갯수 x (-must_prepare)로 설정한다.
-		parameter.must_prepare = api::get_core_count() * (-must_prepare);
-	}
-
-	// 3) 최하 1개는 되어야 한다.
-	SATURATE_MIN(parameter.must_prepare, 1);
-	SATURATE_MIN(parameter.prepare_on_start, 1);
-
-	// check) must_prepare이 prepare_on_start보다 클수는 없다.
-	if (parameter.prepare_on_start < parameter.must_prepare)
-	{
-		LOG_WARNING << "(warn) 'must_prepare' is greather than 'prepare_on_start'"sv;
-	}
-
-	// 4) <parameter.prepare_on_start>값을 설정한다.
-	//    prepare_on_start값이 must_prepare볻다 작을 경우에는 must_prepare값으로 설정된다.
-	parameter.prepare_on_start = __select_max(parameter.prepare_on_start, parameter.must_prepare);
-
-	// trace)
-	EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << "  - prepare on start="sv << parameter.prepare_on_start << ", must prepare="sv << parameter.must_prepare);
-#endif
-
-	if (this->m_max_allocate > g_max_accept_socket)
-	{
-		// trace) 
-		LOG_WARNING << "  !) max concurrent session is "sv << g_max_accept_socket << " (free release or license expired)"sv;
-
-		// - set max _allcate
-		this->m_max_allocate = g_max_accept_socket;
-	}
-
-	// trace) 
-	if (parameter.enable_progress_log)
-	{
-		if (static_cast<int64_t>(this->m_max_allocate) < 0)
-		{
-			LOG_INFO << "  - 'max concurrent session' : unlimited"sv;
-		}
-		else
-		{
-			LOG_INFO << "  - 'max concurrent session' : "sv << this->m_max_allocate;
-		}
-	}
-
-
-	//-----------------------------------------------------------------
-	// 6. 준비하기
-	//-----------------------------------------------------------------
-	// 1) acceptor를 일단 enable시킨다.
-	this->enable();
-
-
-	//-----------------------------------------------------------------
-	// 7. accept를 준비한다.
-	//-----------------------------------------------------------------
-#if defined(_WINSOCK2API_)
-	{
-		// declare) 
-		std::size_t accepted = 0;
-
-		// 1) Accept 시도 횟수를 계산한다.
-		parameter.prepare_on_start -= this->m_socket_count_prepared_to_accept;
-
-		try
-		{
-			// 2) _count_accept_prepare_on_start만큼 accept를 건다.
-			for(std::size_t i = parameter.prepare_on_start; i > 0; --i, ++accepted)
-			{
-				// - Accept를 수행한다.
-				this->request_accept(this->m_address_family);
-			}
-
-			// trace) 걸어놓은 accpet갯수를 출력한다.
-			EXECUTE_IF(parameter.enable_progress_log, LOG_INFO << "  > ACCEPTOR["sv << name() << "] started ["sv << accepted << " sockets are ready for accepting]"sv);
-		}
-		catch (throwable::failure& _e)
-		{
-			// log) 
-			LOG_DEBUG << "@ (excp) '" << _e.m_reason << "' exception complete ACCEPTOR['"sv << name() << "'] socket:"sv << static_cast<int64_t>(this->native_handle()) << ") ("sv << _e.description() << " " __CGFUNCTION__ ""sv;
-
-			// - call 'exception handler'
-			if (throwable::execute_exception_handler(this, _e, __FUNCTION__) == false)
-			{
-				// - close acceptor
-				this->process_close_socket(DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE);
-
-				// reraise) 
-				throw;
-			}
-		}
-		catch(std::exception& _e)
-		{
-			// log) 
-			LOG_DEBUG << "@ (excp) eeception complete ACCEPTOR['"sv << name() << "'] socket:"sv << static_cast<int64_t>(this->native_handle()) << "" __CGFUNCTION__ ""sv;
-
-			// - call 'exception handler'
-			if(throwable::execute_exception_handler(this, _e, __FUNCTION__) == false)
-			{
-				// - close acceptor
-				this->process_close_socket(DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE);
-
-				// reraise) 
-				throw;
-			}
-		}
-		catch (...)
-		{
-			// log) 
-			LOG_DEBUG << "@ (excp) exception complete ACCEPTOR['"sv << name() << "'] sSocket:"sv << static_cast<int64_t>(this->native_handle()) << " " __CGFUNCTION__ ""sv;
-
-			// declare)
-			throwable::failure e(eRESULT::EXCEPTION);
-
-			// - call 'exception handler'
-			if(throwable::execute_exception_handler(this, e, __FUNCTION__) == false)
-			{
-				// - close acceptor
-				this->process_close_socket(DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE);
-
-				// reraise) 
-				throw;
-			}
-		}
-
-		// 3) 값을 설정한다.
-		this->m_accept_count_must_prepare = parameter.must_prepare;
-		this->m_listen_endpoint = parameter.local_endpoint;
-	}
-#else
-	{
-		// 1) executable accept 할당받기.
-		auto pexecutable_accept = make_object<executable_accept>();
-
-		// check) 
-		CGASSERT_ERROR(pexecutable_accept->reference_count() == 1);
-
-		// 2) acceptor를 this로 설정한다.
-		pexecutable_accept->m_pconnective = this;
-
-		// 4) Ready
-		auto pio_context = io_context();
-
-		// check) io_context가 없으면 잘못된 것이다.
-		CGASSERT_ERROR(pio_context.exist());
-
-		// 5) event를 설정한다.
-		auto result = pio_context->attach(this->native_handle(), pexecutable_accept, EPOLLEXCLUSIVE | EPOLLIN | EPOLLOUT | EPOLLERR);
-
-		// check) 
-		THROW_IF(result == false, throwable::failure(eRESULT::API_FAILURE));
-
-		// 6) ...
-		this->m_accept_count_must_prepare = 0;
-		this->m_listen_endpoint = parameter.local_endpoint;
-
-		// 7) create executable_accept
-		this->m_pexecutable_accept = std::move(pexecutable_accept);
-	}
-#endif
-
-	// return)
-	return eRESULT::SUCCESS;
-}
-
 result_code net::io::connective::acceptor::Ntcp::_process_start(context& _context)
 {
 	// 1) starting 호출
@@ -802,7 +139,7 @@ result_code net::io::connective::acceptor::Ntcp::_process_stopping() noexcept
 	// 4) socket을 닫는다.
 	this->process_close_socket(DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE);
 
-	// trace) 걸어놓은 Accpet갯수를 출력한다.
+	// trace) 걸어놓은 Accept개수를 출력한다.
 	EXECUTE_IF(this->m_enable_progress_log, LOG_INFO << "  < ACCEPTOR["sv << name() << "] closed"sv);
 
 	// return)
@@ -857,12 +194,13 @@ bool net::io::connective::acceptor::Ntcp::process_set_enable(bool _is_state)
 	// 1) disable로 상태를 바꾼다.
 	pre_state = this->m_is_enable.exchange((_is_state) ? 1 : 0);
 
-	// check) 이전 상태가 Disable된 상태라면 그냥 끝낸다.
-	RETURN_IF(pre_state != 0, false);
+	// check) 상태가 바뀌지 않았으면 그냥 끝낸다. (Nenable과 같다 : 바뀌었을 때만 알린다)
+	//        (이전 : 'pre_state != 0'이라 enable->disable은 알리지 않고, 이미 disable인 것을 disable하면 알렸다.)
+	RETURN_IF(pre_state == ((_is_state) ? 1 : 0), false);
 
 	if (_is_state == true)
 	{
-		// trace) 성공한 Accpet갯수를 출력한다.
+		// trace) 성공한 Accept개수를 출력한다.
 		EXECUTE_IF(this->m_enable_progress_log, LOG_INFO << "  (info) ACCEPTOR['" << name() << "'] enabled (hSocket:"sv << static_cast<int64_t>(this->native_handle()) << ") "sv);
 
 		// notify) notify to observer
@@ -873,7 +211,7 @@ bool net::io::connective::acceptor::Ntcp::process_set_enable(bool _is_state)
 	}
 	else
 	{
-		// trace) 성공한 Accpet갯수를 출력한다.
+		// trace) 성공한 Accept개수를 출력한다.
 		EXECUTE_IF(this->m_enable_progress_log, LOG_INFO << "  (info) ACCEPTOR['" << name() << "'] disabled (hSocket:"sv << static_cast<int64_t>(this->native_handle()) << ")"sv);
 
 		// notify) message 날리기..
@@ -901,19 +239,16 @@ bool net::io::connective::acceptor::Ntcp::process_get_enable() const
 	return this->m_is_enable != 0;;
 }
 
-const char* SAFE_GET_NAME(Ireferenceable* _poject)
+std::string SAFE_GET_NAME(Ireferenceable* _pobject)
 {
 	// 1) Inameable Interface를  얻는다.
-	auto pnameable = dynamic_cast<object::Inameable*>(_poject);
+	auto pnameable = dynamic_cast<object::Inameable*>(_pobject);
 
 	// check) pnameable이 nullptr이면 그냥 ""를 리턴한다.
-	RETURN_IF(pnameable == nullptr, "");
+	RETURN_IF(pnameable == nullptr, std::string());
 
-	// 2) Name을 얻는다.
-	auto pname = pnameable->name();
-
-	// 3) pname이 nullptr이 아니면 해당 Name을 아니면 ""를 리턴한다.
-	return (pname.empty() == false) ? pname.data() : "";
+	// 2) Name을 얻어 리턴한다.
+	return pnameable->name();
 }
 
 void net::io::connective::acceptor::Ntcp::process_create_socket(ADDRESS_FAMILY _address_family)
@@ -948,8 +283,6 @@ void net::io::connective::acceptor::Ntcp::process_create_socket(ADDRESS_FAMILY _
 		throw throwable::failure(eRESULT::API_FAILURE, api::get_last_error(), "fail to creating socket handle for acceptor"sv);
 	}
 
-	// 4) set as non-block socket
-	api::socket::set_nonblock(handle_socket_new);
 #endif
 
 	// 2) set new socket handle
@@ -973,8 +306,10 @@ void net::io::connective::acceptor::Ntcp::process_create_socket(ADDRESS_FAMILY _
 	// 4) set address family
 	address_family(_address_family);
 
-	// 5) set socket option
+	// 5) set socket option (linux : nonblocking already. create_socket() uses SOCK_NONBLOCK)
+#if defined(_WINSOCK2API_)
 	api::socket::set_nonblock(handle_socket_new, true);
+#endif
 
 	// 6) get io_context
 	auto pio_context = io_context();
@@ -1046,6 +381,17 @@ bool net::io::connective::acceptor::Ntcp::process_close_socket(uint64_t _disconn
 	// 3) on_closesocket함수를 호출한다.
 	this->on_closesocket(this->m_disconnect_reason);
 
+#if defined(_SYS_EPOLL_H)
+	// - the accepts in process first (process_connective_accept() of an event taken before the state was CLOSED). the listen sockets
+	//   are closed after them. (a socket accepted after the wait for the sockets below (count() == 0) was left in the list : its
+	//   disconnect called the acceptor destroyed by then => "pure virtual method called". or the accept went to another socket
+	//   given the closed fd number)
+	this->_process_wait_accepting();
+
+	// - close the UDS listen socket
+	this->_process_close_uds();
+#endif
+
 	// 4) listen socket을 닫는다.
 	auto socket_handle = this->native_handle(INVALID_SOCKET);
 
@@ -1061,22 +407,77 @@ bool net::io::connective::acceptor::Ntcp::process_close_socket(uint64_t _disconn
 	CGASSERT_ERROR(this->io_context().exist());
 
 #if defined(_SYS_EPOLL_H)
-	// 6) detach socket from epoll
+	// 6) detach socket from epoll (io_uring completion : the multishot accept op is cancelled : it ends with -ECANCELED, the executable releases this acceptor)
 	pio_context->detach((CGHANDLE)socket_handle);
+
+	//    (the op holds the file of the listen socket : the cancel in the kernel and the delivery of the -ECANCELED completion are
+	//     waited for. the kernel releases the request and its file reference in the task work of the owner of the ring, before the
+	//     owner takes the CQE : a close() after only the cancel (the request out of the cancel table) left the port listening a
+	//     moment (uds.listen_name_and_release : a connect right after stop() was accepted). the delivery runs no lock of the acceptor
+	//     (process_connective_accept_cq) : no dead lock. called by the owner itself : the delivery is not waited for)
+	if (this->_is_io_completion_accept())
+		pio_context->wait_cancelled_fd((CGHANDLE)socket_handle, chrono::seconds(1), true);
 #endif
 
 	// 7) socket을 Delete한다.
 	api::socket::closesocket(socket_handle);
 
-	// 8) io_context를 돌려 IOCP의 I/O를 처리한다. (최대 MAX_LOOP만큼만 돈다.)
-#ifndef NDEBUG
-	// definitions) 
-	const int MAX_LOOP = 10000;
+	// 8) io_context를 돌려 IOCP의 I/O를 처리한다. (accept 대기 socket과 접속 socket이 모두 정리될 때까지. 단, 최대 MAX_WAIT까지만 기다린다.)
+	//    - 좀비 socket(이미 CLOSED이고 진행 중인 I/O가 없고 disconnect 처리까지 끝난(m_pconnectable_notify == nullptr) socket)은
+	//      close_connectable_all()로는 지워지지 않는다(이미 닫혀 있어 closesocket()이 바로 리턴한다). 이런 socket이 하나라도 남으면
+	//      count()가 0이 되지 않아 stop이 끝나지 않으므로 여기서 직접 목록에서 뺀다.
+	//    - MAX_WAIT을 넘기면 오류 로그를 남기고 루프를 빠져나간다. (남은 socket은 아래의 로그로 확인한다.)
+	// definitions)
+	constexpr auto MAX_WAIT = 30s;
 
-	for(int retry = MAX_LOOP; retry > 0 && (this->m_socket_count_prepared_to_accept != 0 || count() != 0); --retry)
-#else
-	while(this->m_socket_count_prepared_to_accept != 0 || count()!=0)
-#endif
+	// - 좀비 socket을 목록에서 빼는 함수 (지운 수를 돌려준다)
+	auto remove_zombie_connectable = [this]() noexcept -> std::size_t
+	{
+		// declare)
+		std::vector<object_ptr<Iconnectable>> vector_zombie;
+
+		try
+		{
+			// 1) 좀비를 모은다. (iterator가 살아 있는 동안 목록 lock이 잡힌다. 여기서는 모으기만 한다.)
+			{
+				auto piterator = this->alloc_iterator();
+
+				for (auto pconnectable = piterator->get_next(); pconnectable != nullptr; pconnectable = piterator->get_next())
+				{
+					// check) CLOSED이고 진행 중인 I/O가 없고 disconnect 처리가 끝난 socket만
+					CONTINUE_IF(pconnectable->socket_state() != eSOCKET_STATE::CLOSED);
+					CONTINUE_IF(pconnectable->statistics_get_now_async_io() != 0);
+					CONTINUE_IF(pconnectable->m_pconnectable_notify != nullptr);
+
+					// - push
+					vector_zombie.push_back(object_ptr<Iconnectable>(pconnectable));
+				}
+			}
+
+			// 2) 목록에서 뺀다. (lock을 놓은 뒤에)
+			for (auto& iter : vector_zombie)
+			{
+				// log)
+				LOG_WARNING << "(warn) ACCEPTOR['"sv << name() << "']: zombie socket removed from list on stop (closed, no pending I/O, already disconnected)"sv;
+
+				// - remove
+				this->remove_connectable(iter);
+			}
+		}
+		catch (...)
+		{
+			// log)
+			LOG_ERROR << "(error) ACCEPTOR['"sv << name() << "']: exception while removing zombie sockets"sv;
+		}
+
+		// return)
+		return vector_zombie.size();
+	};
+
+	// declare)
+	auto tick_wait_begin = chrono::tick::now();
+
+	while (this->m_socket_count_prepared_to_accept != 0 || count() != 0)
 	{
 		// - 모든 accepted된 socket을 종료한다.
 		this->close_connectable_all();
@@ -1084,13 +485,24 @@ bool net::io::connective::acceptor::Ntcp::process_close_socket(uint64_t _disconn
 		// - execute를 실행한다.
 		pio_context->execute_all();
 
+		// - 좀비 socket을 목록에서 뺀다.
+		remove_zombie_connectable();
+
+		// check) 너무 오래 기다렸으면 오류 로그를 남기고 빠져나간다.
+		if ((chrono::tick::now() - tick_wait_begin) > MAX_WAIT)
+		{
+			// log)
+			LOG_ERROR << log_level_t::important() << "@ (excp) ACCEPTOR['"sv << name() << "']: give up waiting for sockets to close (waited "sv << std::chrono::duration_cast<std::chrono::seconds>(MAX_WAIT).count() << "s, prepared:"sv << this->m_socket_count_prepared_to_accept << ", connected:"sv << static_cast<int64_t>(count()) << ")"sv;
+			break;
+		}
+
 		// - Sleep하기.
 		api::sleep_for(1ms);
 	}
 
 #if defined(_WINSOCK2API_)
 	// check) 아직 Accept중인 socket이 남이 있을 겨우!
-	EXECUTE_IF(this->m_socket_count_prepared_to_accept != 0, LOG_ERROR << log_level_t::important() << "@ (excp) listen soocket is exist yet[prepared:"sv << this->m_socket_count_prepared_to_accept << "]"sv);
+	EXECUTE_IF(this->m_socket_count_prepared_to_accept != 0, LOG_ERROR << log_level_t::important() << "@ (excp) listen socket is exist yet[prepared:"sv << this->m_socket_count_prepared_to_accept << "]"sv);
 
 	// check) 아직 접속 종료되지 않았을 경우!
 	EXECUTE_IF(count()!=0, LOG_ERROR << log_level_t::important() << "@ (excp) connected socket is exist yet[connected:"sv << static_cast<int64_t>(count()) << "]"sv);
@@ -1132,11 +544,28 @@ void net::io::connective::acceptor::Ntcp::request_accept(ADDRESS_FAMILY _address
 	RETURN_IF(pio_context.empty());
 
 	// 2) socket을 reset한다.
-	pconnectable->io_context(pio_context);
+	//    (hook : process_get_connectable_io_context() may give the socket its own io_context. default : the one of the acceptor)
+	if (auto pio_context_connectable = this->process_get_connectable_io_context(pconnectable.get()); pio_context_connectable.exist())
+	{
+		pconnectable->io_context(std::move(pio_context_connectable));
+	}
+	else
+	{
+		pconnectable->io_context(pio_context);
+	}
 
 	// 3) socket option을 설정한다.
 	pconnectable->maximum_send_buffer_size(net::io::socket::Ntcp::default_maximum_send_buffer_size());
 	pconnectable->maximum_receive_buffer_size(net::io::socket::Ntcp::default_maximum_receive_buffer_size());
+
+	// - 받은 접속(client)의 송신 queue 최대 크기 (기본 4MB, 연결 수가 많으므로 낮게 둔다.)
+	//   (socket이 따로 설정하지 않아 전역 기본값인 경우에만 적용한다.)
+	if (auto pgather = dynamic_cast<net::io::sendable::Itcp_gather*>(pconnectable.get()); pgather != nullptr && pgather->maximum_depth_of_send_buffer_bytes() == net::io::sendable::Itcp_gather::default_maximum_queued_bytes())
+		pgather->maximum_depth_of_send_buffer_bytes(net::io::sendable::Itcp_gather::default_maximum_queued_bytes_accepted());
+
+	// - 암호화 socket(Icryptable)이면 acceptor에 설정된 cryption type을 적용한다.
+	if (auto pcryptable = dynamic_cast<Icryptable*>(pconnectable.get()); pcryptable != nullptr)
+		pcryptable->process_set_cryption_type(this->m_cryption_type);
 
 	// check) _address_family가 AF_UNSPEC이어서는 안된다.
 	CGASSERT_ERROR(_address_family != AF_UNSPEC);
@@ -1166,7 +595,7 @@ void net::io::connective::acceptor::Ntcp::request_accept(ADDRESS_FAMILY _address
 	// 2. socket Option설정하기.
 	//-----------------------------------------------------------------
 	{
-		// 1) port를 reuse하도록 한다.(중요:diconnect_ex로 socket을 재활용하므로 port를 재활용(Reuse)하지 않으면 error를 발생시킬수 있다.)
+		// 1) port를 reuse하도록 한다.(중요:diconnect_ex로 socket을 재활용하므로 port를 재활용(Reuse)하지 않으면 error를 발생시킬 수 있다.)
 		api::socket::set_reuse_address(pconnectable->native_handle(), true);
 
 		// 2) fast Loopback 활성화
@@ -1208,6 +637,10 @@ void net::io::connective::acceptor::Ntcp::request_accept(ADDRESS_FAMILY _address
 	//-----------------------------------------------------------------
 	// 5. process_request_connect
 	//-----------------------------------------------------------------
+	// - the socket option back to the defaults (a socket from the pool kept the option of its last acceptor or connection).
+	//   on_request_accept() may set it per socket, the acceptor's socket_option() (when given) replaces it right before on_accept()
+	pconnectable->socket_option(sSOCKET_OPTION_TCP{});
+
 	// 1) on_request_accept
 	this->on_request_accept(pconnectable);
 
@@ -1240,7 +673,7 @@ void net::io::connective::acceptor::Ntcp::request_accept(ADDRESS_FAMILY _address
 		pconnectable->process_close_socket(DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE | DISCONNECT_REASON_FAIL_TO_SOCKET_ACCEPT);
 
 		// statistics) 
-		this->statistics_on_decrese_async();
+		this->statistics_on_decrease_async();
 
 		// - release reference count
 		pexecutable_connective->release();
@@ -1288,7 +721,7 @@ intptr_t net::io::connective::acceptor::Ntcp::executable_retry_request_accept::p
 
 void net::io::connective::acceptor::Ntcp::process_request_retry_accept()
 {
-	scoped_lock(this->m_lockable_retry_accept_now)
+	SCOPED_LOCK(this->m_lockable_retry_accept_now)
 	{
 		// check)
 		RETURN_IF(this->m_retry_accept_now);
@@ -1325,7 +758,7 @@ void net::io::connective::acceptor::Ntcp::process_retry_accept()
 	// check)
 	CGASSERT_ERROR(this->m_retry_accept_now == true);
 
-	scoped_lock(this->m_lockable_retry_accept_now)
+	SCOPED_LOCK(this->m_lockable_retry_accept_now)
 	{
 		// check)
 		if (is_disable())
@@ -1345,7 +778,7 @@ void net::io::connective::acceptor::Ntcp::process_retry_accept()
 	// check) 
 	if (accept_count_must_prepare <= prepared_now)
 	{
-		scoped_lock(this->m_lockable_retry_accept_now)
+		SCOPED_LOCK(this->m_lockable_retry_accept_now)
 		{
 			this->m_retry_accept_now = false;
 		}
@@ -1354,13 +787,13 @@ void net::io::connective::acceptor::Ntcp::process_retry_accept()
 		return;
 	}
 
-	// 2) accept걸어야할 수를 계산한다.
-	auto count_request_accpet = accept_count_must_prepare - prepared_now;
+	// 2) accept걸어야 할 수를 계산한다.
+	auto count_request_accept = accept_count_must_prepare - prepared_now;
 
 	try
 	{
 		// 4) _count_accept_prepare_on_start만큼 accept를 건다.
-		for (count_request_accpet; count_request_accpet > 0; --count_request_accpet)
+		for (count_request_accept; count_request_accept > 0; --count_request_accept)
 		{
 			// - Accept를 수행한다.
 			this->request_accept(this->m_address_family);
@@ -1371,9 +804,9 @@ void net::io::connective::acceptor::Ntcp::process_retry_accept()
 	}
 
 	// 3) retry if prepared_socket is 0
-	scoped_lock(this->m_lockable_retry_accept_now)
+	SCOPED_LOCK(this->m_lockable_retry_accept_now)
 	{
-		if (count_request_accpet == 0)
+		if (count_request_accept == 0)
 		{
 			this->m_retry_accept_now = false;
 		}
@@ -1394,7 +827,7 @@ void net::io::connective::acceptor::Ntcp::process_retry_accept()
 void net::io::connective::acceptor::Ntcp::process_connective_connect( Iconnectable* _pconnectable, uintptr_t _result)
 {
 	//-----------------------------------------------------------------
-	// ProcessCompleteAccept()함수는 크게 두 부분으로 나눌수 있다.
+	// ProcessCompleteAccept()함수는 크게 두 부분으로 나눌 수 있다.
 	//
 	// * 첫째는 Accept받은 socket의 접속처리 부분.
 	// * 둘째는 새로운 Accept를 거는 부분
@@ -1404,7 +837,7 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect( Iconnectab
 	// 처리를 수행한다.
 	//-----------------------------------------------------------------
 	// check) _pconnectable이 nullptr이 되면 안된다.
-	CGASSERT_ERROR(_pconnectable != nullptr);
+	CGASSERT_FATAL(_pconnectable != nullptr);
 
 
 	//-----------------------------------------------------------------
@@ -1469,6 +902,12 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect( Iconnectab
 			}
 
 			// 2) call 'process_on_accept'
+			// - the tcp socket option of the acceptor ("socket_option" / socket_option()) : set to the socket here, right before on_accept()
+			//   (on_accept() may change it per socket. applied to the handle in process_complete_connect. not given : the socket keeps its own.
+			//    not at the alloc : on windows the accept sockets are posted in advance (prepare_on_start) and a socket_option() set to the acceptor after start() would wait for them)
+			if (this->m_flag_socket_option)
+				_pconnectable->socket_option(this->m_socket_option);
+
 			this->process_on_accept(_pconnectable);
 
 			// 3) set variable
@@ -1476,7 +915,7 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect( Iconnectab
 			//          process_complete_connect 처리 과정 중에 this->m_pconnectable_notify 값을 on_connect() 호출에서 인자로 넘긴다.
 			_pconnectable->m_pconnectable_notify = this;
 
-			// 주의) statistics_on_success_connect() 함수는 '_pconnectable->process_complete_connect(...)'의 처리중 실패시 statistics상 disconnect로 처리되므로
+			// 주의) statistics_on_success_connect() 함수는 '_pconnectable->process_complete_connect(...)'의 처리 중 실패 시 statistics상 disconnect로 처리되므로
 			// //    반드시 여기서 호출되어야 한다.
 			//       이 처리과정은 '접속 성공' 루틴이므로 '_pconnectable->process_complete_connect(...)'에서 on_fail_connect(...)루틴을 타지는 않는다!
 
@@ -1487,13 +926,13 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect( Iconnectab
 			if (_pconnectable->process_complete_connect(_result) == true)
 			{
 				// 설명) process_complete_connect가 성공했으므로 이후 실패는 접속종료로 처리된다.
-				//       - 일단 on_connect()호출이 끝난 이후므로 이후에 실패시 on_disconnect()가 호출되어야 한다.
+				//       - 일단 on_connect()호출이 끝난 이후므로 이후에 실패 시 on_disconnect()가 호출되어야 한다.
 				//         따라서 이후 실패처리는 접속 종료 처리로 진행된다.
-				//       - 처리 실패시 exception이 던져지고 catch에서 접속 종료 처리가 진행된다.
+				//       - 처리 실패 시 exception이 던져지고 catch에서 접속 종료 처리가 진행된다.
 
 				// - call 'add_connectable'
 				//   주의) add_connectable(_pconnectable)은 반드시 process_complete_connect(...)의 호출 이후에 한다.
-				//         그렇지 않으면 on_connect()처리 도중에 acceptor의 connectable_list에 등록되므로 여기서 socket이 참조되어 처리가 될수 있기 때문에 문제가 될수 있다.
+				//         그렇지 않으면 on_connect()처리 도중에 acceptor의 connectable_list에 등록되므로 여기서 socket이 참조되어 처리가 될 수 있기 때문에 문제가 될 수 있다.
 				//         즉 on_connect() 도중에 다른 처리가 진행될 수 있다.
 				//         특히 epoll의 경우 100% 문제가 발생하므로 반드시 주의해야 한다.
 				auto result = this->add_connectable(_pconnectable);
@@ -1503,10 +942,25 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect( Iconnectab
 
 				// check)
 				THROW_IF(result == false, throwable::failure(eRESULT::FAIL));
+
+				// check) add_connectable() 전에 이미 disconnect 처리가 끝난 socket인가?
+				//        - process_complete_connect()가 receive를 걸고 돌아오므로, 접속 직후 끊긴 socket은 receive 실패가 다른 thread에서
+				//          add_connectable()보다 먼저 process_connective_disconnect()를 실행할 수 있다. 그때 remove_connectable()은
+				//          목록에 없어 아무것도 지우지 못하고 m_pconnectable_notify만 nullptr가 되고 m_socket_count_allocated만 줄어든다.
+				//        - 그대로 두면 닫힌 socket이 목록에 영원히 남아(좀비) count()가 0이 되지 않고 stop 시 process_close_socket()이
+				//          끝나지 않는다. (disconnect 처리는 이미 끝났으므로 여기서 목록에서 빼는 것 외에 더 할 일은 없다.)
+				if (_pconnectable->m_pconnectable_notify == nullptr)
+				{
+					// log)
+					LOG_WARNING << "(warn) ACCEPTOR['"sv << name() << "']: socket disconnected before add_connectable(). removed from list (socket:"sv << static_cast<int64_t>(_pconnectable->native_handle()) << ")"sv;
+
+					// - remove from list
+					this->remove_connectable(_pconnectable);
+				}
 			}
 			else
 			{
-				// - rollbaack
+				// - rollback
 				_pconnectable->m_pconnectable_notify = nullptr;
 			}
 		}
@@ -1536,7 +990,7 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect( Iconnectab
 		LOG_DEBUG << "@ (excp) ACCEPTOR['" << name() << "']: exception complete socket:" << (int64_t)((_pconnectable != nullptr) ? static_cast<int64_t>(_pconnectable->native_handle()) : 0) << " " __CGFUNCTION__ ""sv;
 
 		// - connectable의 socket을 닫는다.
-		_pconnectable->process_close_socket(DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE | DISCONNECT_REASON_EXCEPTION_OCCURED);
+		_pconnectable->process_close_socket(DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE | DISCONNECT_REASON_EXCEPTION_OCCURRED);
 
 		// statistics) 
 		this->statistics_on_fail_connect();
@@ -1593,7 +1047,7 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect( Iconnectab
 	}
 
 	// statistics)
-	this->statistics_on_decrese_async();
+	this->statistics_on_decrease_async();
 }
 #elif defined(_SYS_EPOLL_H)
 bool net::io::connective::acceptor::Ntcp::request_accept(CGSOCKET _handle_socket_new, ADDRESS_FAMILY _address_family)
@@ -1603,6 +1057,10 @@ bool net::io::connective::acceptor::Ntcp::request_accept(CGSOCKET _handle_socket
 	//-----------------------------------------------------------------
 	// 1) 새로운 socket을 할당받는다.
 	auto pconnectable = process_alloc_connectable();
+
+	// - 암호화 socket(Icryptable)이면 acceptor에 설정된 cryption type을 적용한다.
+	if (auto pcryptable = dynamic_cast<Icryptable*>(pconnectable.get()); pcryptable != nullptr)
+		pcryptable->process_set_cryption_type(this->m_cryption_type);
 
 	// 2) get io_context
 	auto pio_context = pconnectable->io_context();
@@ -1628,22 +1086,27 @@ bool net::io::connective::acceptor::Ntcp::request_accept(CGSOCKET _handle_socket
 
 		// check) _address_family가 AF_UNSPEC이어서는 안된다.
 		CGASSERT_ERROR(_address_family != AF_UNSPEC);
-		CGASSERT_ERROR(_address_family == AF_INET || _address_family == AF_INET6);
+		CGASSERT_ERROR(_address_family == AF_INET || _address_family == AF_INET6 || _address_family == AF_UNIX);
 
 		// - set address family
 		pconnectable->address_family(_address_family);
 
-		// - socket을 Nonblock으로 설정한다.
-		api::socket::set_nonblock(_handle_socket_new);
+		// - nonblocking already (accept4 with SOCK_NONBLOCK)
 
-		// - 설정되어 있는 io_context가 없으면 Default io_context로 설정한다.
-		if (pio_context.empty())
-		{
+		// - the io_context of the socket (like windows) : the hook first (process_get_connectable_io_context : an executor per socket,
+		//   cpu affinity), else the one of the acceptor, else the system executor.
+		//   (the io_context the socket had before - a pooled socket - is not used : the socket of an acceptor given an executor ran on
+		//    the system executor here, while the header and the windows path give it the acceptor's)
+		if (auto pio_context_connectable = this->process_get_connectable_io_context(pconnectable.get()); pio_context_connectable.exist())
+			pio_context = std::move(pio_context_connectable);
+		else if (auto pio_context_acceptor = this->io_context(); pio_context_acceptor.exist())
+			pio_context = std::move(pio_context_acceptor);
+		else
 			pio_context = system_executor::executor();
-			pconnectable->io_context(pio_context);
-		}
 
-		// - prepare exeecutable socket
+		pconnectable->io_context(pio_context);
+
+		// - prepare executable socket
 		pconnectable->process_prepare_executable_socket();
 	}
 
@@ -1676,6 +1139,10 @@ bool net::io::connective::acceptor::Ntcp::request_accept(CGSOCKET _handle_socket
 	//-----------------------------------------------------------------
 	// 3. process_request_connect
 	//-----------------------------------------------------------------
+	// - the socket option back to the defaults (a socket from the pool kept the option of its last acceptor or connection).
+	//   on_request_accept() may set it per socket, the acceptor's socket_option() (when given) replaces it right before on_accept()
+	pconnectable->socket_option(sSOCKET_OPTION_TCP{});
+
 	// 1) on_request_accept를 호출한다.
 	this->on_request_accept(pconnectable);
 
@@ -1699,10 +1166,57 @@ bool net::io::connective::acceptor::Ntcp::request_accept(CGSOCKET _handle_socket
 	return true;
 }
 
-void net::io::connective::acceptor::Ntcp::process_connective_accept(uintptr_t _result)
+// - the acceptor whose accept this thread processes (process_close_socket() called in it : not waiting for itself)
+thread_local const void* t_pacceptor_accepting = nullptr;	// - (net.io.connective.acceptor_tcp.uring.cpp uses it too)
+
+void net::io::connective::acceptor::Ntcp::_process_wait_accepting() noexcept
+{
+	// definitions)
+	constexpr auto MAX_WAIT = 30s;
+
+	// - the accept of this thread (stop() in on_accept()/on_connect() ...) is not waited for
+	const int count_self = (t_pacceptor_accepting == this) ? 1 : 0;
+	const auto tick_wait_begin = chrono::tick::now();
+
+	while (this->m_count_accepting.load(std::memory_order_seq_cst) > count_self)
+	{
+		// check)
+		if ((chrono::tick::now() - tick_wait_begin) > MAX_WAIT)
+		{
+			LOG_ERROR << log_level_t::important() << "@ (excp) ACCEPTOR['"sv << name() << "']: give up waiting for the accepts in process (accepting:"sv << this->m_count_accepting.load() << ")"sv;
+			break;
+		}
+
+		std::this_thread::yield();
+	}
+}
+
+void net::io::connective::acceptor::Ntcp::process_connective_accept(uintptr_t _result, CGSOCKET _handle_listen, ADDRESS_FAMILY _address_family)
 {
 	// check) accept가 disable된 상태나 최대 할당 수보다 많은 경우라면 끝낸다.
 	RETURN_IF(is_disable());
+
+	// - in process : process_close_socket() waits for it before it closes the listen sockets. (counted before the state is read :
+	//   process_close_socket() sets the state before it reads the count. one or the other sees it)
+	this->m_count_accepting.fetch_add(1, std::memory_order_seq_cst);
+
+	struct ACCEPTING
+	{
+		Ntcp*			pthis;
+		const void*		pbefore;
+		~ACCEPTING() noexcept { t_pacceptor_accepting = pbefore; pthis->m_count_accepting.fetch_sub(1, std::memory_order_seq_cst); }
+	} accepting{ this, t_pacceptor_accepting };
+
+	t_pacceptor_accepting = this;
+
+	// check) closed (stop) meanwhile, or the event of a UDS listen socket closed meanwhile (taken before the close : the fd number
+	//        may be another socket's by now)
+	RETURN_IF(this->socket_state() == eSOCKET_STATE::CLOSED);
+	RETURN_IF(_handle_listen != INVALID_SOCKET && _handle_listen != this->m_handle_uds_listen.load(std::memory_order_acquire));
+
+	// - the listen socket (the acceptor's TCP socket or the UDS socket)
+	const auto handle_listen = (_handle_listen != INVALID_SOCKET) ? _handle_listen : this->native_handle();
+	const auto address_family = (_address_family != AF_UNSPEC) ? _address_family : this->m_address_family;
 
 	if (_result & EPOLLIN)
 	{
@@ -1716,7 +1230,7 @@ void net::io::connective::acceptor::Ntcp::process_connective_accept(uintptr_t _r
 			this->statistics_on_try();
 
 			// 1) 접속해온 socket handle를 accept 받는다.
-			CGSOCKET handle_socket_new = api::socket::accept(this->native_handle(), reinterpret_cast<::sockaddr*>(&sockaddr_listen), &addr_len);
+			CGSOCKET handle_socket_new = api::socket::accept(handle_listen, reinterpret_cast<::sockaddr*>(&sockaddr_listen), &addr_len);
 
 			// check) break if no more pended accepting socket
 			if (handle_socket_new < 0)
@@ -1757,28 +1271,35 @@ void net::io::connective::acceptor::Ntcp::process_connective_accept(uintptr_t _r
 			}
 
 			// 2) request accept
-			try
-			{
-				this->request_accept(handle_socket_new, this->m_address_family);
-			}
-			catch (...)
-			{
-				// statistics)
-				this->statistics_on_fail_connect();
-			}
+			this->_process_accepted(handle_socket_new, address_family);
 		}
 	}
 
 	if (_result & EPOLLPRI)
 	{
-		this->statistics_on_decrese_async();
+		this->statistics_on_decrease_async();
 	}
 }
 
-void net::io::connective::acceptor::Ntcp::proceoss_closesocket_fail(net::io::Iconnectable* _pconnectable, uint64_t _disconnect_reason) noexcept
+void net::io::connective::acceptor::Ntcp::_process_accepted(CGSOCKET _handle_socket_new, ADDRESS_FAMILY _address_family) noexcept
 {
-	// check) 
-	CGASSERT_ERROR(_pconnectable->native_handle() != INVALID_SOCKET);
+	// - an accepted socket (the accept loop above, a CQE of the multishot accept of a completion io_context)
+	try
+	{
+		this->request_accept(_handle_socket_new, _address_family);
+	}
+	catch (...)
+	{
+		// statistics)
+		this->statistics_on_fail_connect();
+	}
+}
+
+void net::io::connective::acceptor::Ntcp::process_closesocket_fail(net::io::Iconnectable* _pconnectable, disconnect_reason_t _disconnect_reason) noexcept
+{
+	// check) already closed by the connectable (e.g. process_complete_connect() closed the socket itself before failing)
+	if (_pconnectable->native_handle() == INVALID_SOCKET)
+		return;
 
 	// 1) reset native socket handle
 	_pconnectable->native_handle(INVALID_SOCKET);
@@ -1791,18 +1312,28 @@ void net::io::connective::acceptor::Ntcp::proceoss_closesocket_fail(net::io::Ico
 
 	if (pconnectable_tcp != nullptr)
 	{
-		// 4) completee closesocket
+		// 4) complete closesocket
 		pconnectable_tcp->process_complete_closesocket();
-	}
 
-	// 5) reset executable socket (releas _conneective) 
-	pconnectable_tcp->process_reset_executable_socket();
+		// 5) reset executable socket (release _conneective) 
+		pconnectable_tcp->process_reset_executable_socket();
+	}
+}
+
+// - the end of the processing of an accepted socket (see process_connective_connect) : a close is done at once again, not queued
+static void _process_end_processing_accept(net::io::Iconnectable* _pconnectable) noexcept
+{
+	SCOPED_LOCK(_pconnectable->m_epoll_event_cs)
+	{
+		_pconnectable->m_epoll_event_flag_queued = 0;
+		_pconnectable->m_epoll_event_processing_now = false;
+	}
 }
 
 void net::io::connective::acceptor::Ntcp::process_connective_connect(Iconnectable* _pconnectable, uintptr_t _result)
 {
 	// check) _pconnectable이 nullptr이 되면 안된다.
-	CGASSERT_ERROR(_pconnectable != nullptr);
+	CGASSERT_FATAL(_pconnectable != nullptr);
 
 	// check) closesocket if accept is disabled
 	if (this->is_disable() || api::socket::is_socket_count_overflowed())
@@ -1811,7 +1342,7 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect(Iconnectabl
 		auto disconnect_reason = (this->is_disable()) ? (DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ABORTIVE | DISCONNECT_REASON_DISABLED) : (DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ABORTIVE | DISCONNECT_REASON_OPEN_SOCKET_LIMITS);
 
 		// - closesocket
-		proceoss_closesocket_fail(_pconnectable, disconnect_reason);
+		process_closesocket_fail(_pconnectable, disconnect_reason);
 
 		// - decrease socket_count_allocated
 		--this->m_socket_count_allocated;
@@ -1825,6 +1356,12 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect(Iconnectabl
 		try
 		{
 			// 1) call 'process_on_accept'
+			// - the tcp socket option of the acceptor ("socket_option" / socket_option()) : set to the socket here, right before on_accept()
+			//   (on_accept() may change it per socket. applied to the handle in process_complete_connect. not given : the socket keeps its own.
+			//    not at the alloc : on windows the accept sockets are posted in advance (prepare_on_start) and a socket_option() set to the acceptor after start() would wait for them)
+			if (this->m_flag_socket_option)
+				_pconnectable->socket_option(this->m_socket_option);
+
 			this->process_on_accept(_pconnectable);
 
 			// 2) set variable
@@ -1836,7 +1373,7 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect(Iconnectabl
 			this->process_on_fail_accept(_pconnectable);
 
 			// - close socket
-			proceoss_closesocket_fail(_pconnectable, DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ABORTIVE | DISCONNECT_REASON_EXCEPTION_OCCURED);
+			process_closesocket_fail(_pconnectable, DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ABORTIVE | DISCONNECT_REASON_EXCEPTION_OCCURRED);
 
 			// - decrease allocated socket count
 			--this->m_socket_count_allocated;
@@ -1848,14 +1385,26 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect(Iconnectabl
 		// statistics)
 		this->statistics_on_success_connect();
 
+		// - processing (like the connect of connect_requestable::Ntcp) : a close meanwhile (in on_connect, or by another thread till attached) is queued,
+		//   not done : the handle stays open and this socket's till the attach below (closed at once, the fd number may be given to another socket
+		//   before the attach : the attach registered the other socket's fd with this executable). the queued close is completed in 5)
+		SCOPED_LOCK(_pconnectable->m_epoll_event_cs)
+		{
+			_pconnectable->m_epoll_event_flag_queued = 0;
+			_pconnectable->m_epoll_event_processing_now = true;
+		}
+
 		// 3) call 'process_complete_connect'
 		{
 			// - call 'process_complete_connect'
 			auto result = _pconnectable->process_complete_connect(_result);
 
-			// check) 
+			// check)
 			if (result == false)
 			{
+				// - end of processing
+				_process_end_processing_accept(_pconnectable);
+
 				// - reset variable
 				//   주의) _pconnectable->m_pconnectable_notify = this 설정은 반드시 process_complete_connect(...)가 호출되기 전에 설정되어야 한다.
 				//         process_complete_connect 처리 과정 중에 m_pconnectable_notify 값을 on_connect() 호출에서 인자로 넘긴다.
@@ -1865,7 +1414,7 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect(Iconnectabl
 				--this->m_socket_count_allocated;
 
 				// - close socket
-				proceoss_closesocket_fail(_pconnectable, DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ABORTIVE);
+				process_closesocket_fail(_pconnectable, DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ABORTIVE);
 
 				// return)
 				return;
@@ -1873,15 +1422,15 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect(Iconnectabl
 		}
 
 		// 설명) 여기서부터 실패는 접속 종료 처리를 해야한다.
-		//       - 일단 on_connect()호출이 끝난 이후므로 이후에 실패시 on_disconnect()가 호출되어야 한다.
+		//       - 일단 on_connect()호출이 끝난 이후므로 이후에 실패 시 on_disconnect()가 호출되어야 한다.
 		//         따라서 이후 실패처리는 접속 종료 처리로 진행된다.
-		//       - 처리 실패시 exception이 던져지고 catch에서 접속 종료 처리가 진행된다.
+		//       - 처리 실패 시 exception이 던져지고 catch에서 접속 종료 처리가 진행된다.
 
 		try
 		{
 			// 4) add to connected list
 			//   주의) add_connectabl(_pconnectable)은 반드시 process_complete_connect(...)의 호출 이후에 한다.
-			//         그렇지 않으면 on_connect()처리 도중에 acceptor의 connectable_list에 등록되므로 여기서 socket이 참조되어 처리가 될수 있기 때문에 문제가 될수 있다.
+			//         그렇지 않으면 on_connect()처리 도중에 acceptor의 connectable_list에 등록되므로 여기서 socket이 참조되어 처리가 될 수 있기 때문에 문제가 될 수 있다.
 			//         즉, on_connect() 도중에 다른 처리가 진행될 수 있다.
 			//         특히 epoll의 경우 100% 문제가 발생하므로 반드시 주의해야 한다.
 			{
@@ -1893,6 +1442,27 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect(Iconnectabl
 
 				// check)
 				THROW_IF(result == false, throwable::failure(eRESULT::FAIL));
+
+				// check) add_connectable() 전에 이미 disconnect 처리가 끝난 socket인가?
+				//        - process_complete_connect()가 receive를 걸고 돌아오므로, 접속 직후 끊긴 socket은 receive 실패가 다른 thread에서
+				//          add_connectable()보다 먼저 process_connective_disconnect()를 실행할 수 있다. 그때 remove_connectable()은
+				//          목록에 없어 아무것도 지우지 못하고 m_pconnectable_notify만 nullptr가 되고 m_socket_count_allocated만 줄어든다.
+				//        - 그대로 두면 닫힌 socket이 목록에 영원히 남아(좀비) count()가 0이 되지 않고 stop 시 process_close_socket()이
+				//          끝나지 않는다. (disconnect 처리는 이미 끝났으므로 여기서 목록에서 빼는 것 외에 더 할 일은 없다.)
+				if (_pconnectable->m_pconnectable_notify == nullptr)
+				{
+					// log)
+					LOG_WARNING << "(warn) ACCEPTOR['"sv << name() << "']: socket disconnected before add_connectable(). removed from list (socket:"sv << static_cast<int64_t>(_pconnectable->native_handle()) << ")"sv;
+
+					// - end of processing
+					_process_end_processing_accept(_pconnectable);
+
+					// - remove from list
+					this->remove_connectable(_pconnectable);
+
+					// return) attach 하지 않고 끝낸다.
+					return;
+				}
 			}
 
 			// 5) attach to io_context
@@ -1906,13 +1476,43 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect(Iconnectabl
 			//            또 on_disconnect()함수도 호출된다.
 			{
 				// - get io_context
-				auto pio_context = this->io_context();
+				//   (the io_context of the socket : set in request_accept(). the one of the acceptor, or the one given by process_get_connectable_io_context())
+				auto pio_context = _pconnectable->io_context();
+				if (pio_context.empty())
+					pio_context = this->io_context();
 
 				// check)
 				CGASSERT_ERROR(pio_context.exist());
 
-				// 6) do start =>attach to socket eio_context
-				auto result = pio_context->attach((CGHANDLE)_pconnectable->native_handle(), _pconnectable->m_pexecutable_socket, _pconnectable->m_epoll_event_flag);
+				// declare)
+				bool is_closed = false;
+				bool result = true;
+
+				SCOPED_LOCK(_pconnectable->m_epoll_event_cs)
+				{
+					// - closed meanwhile (queued) : not attached. the disconnect is completed below
+					is_closed = (_pconnectable->m_epoll_event_flag_queued & (EPOLLHUP | EPOLLRDHUP | EPOLLERR)) != 0;
+					_pconnectable->m_epoll_event_flag_queued = 0;
+
+					// 6) do start =>attach to socket eio_context
+					//    - the epoll handle : still this socket's (a close is queued while processing). under the lock : an event of another thread waits for the end of processing
+					if (is_closed == false)
+					{
+						result = _pconnectable->process_start_io(pio_context.get(), false);
+
+						// - end of processing (failed : the close in the catch below is done, not queued)
+						_pconnectable->m_epoll_event_processing_now = false;
+					}
+				}
+
+				// - closed meanwhile : completes the disconnect (like process_close_socket() does when no event is processed)
+				if (is_closed)
+				{
+					_pconnectable->process_complete_disconnect();
+
+					// - end of processing
+					_process_end_processing_accept(_pconnectable);
+				}
 
 				// check)
 				THROW_IF(result == false, throwable::failure(eRESULT::FAIL));
@@ -1920,6 +1520,9 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect(Iconnectabl
 		}
 		catch (...)
 		{
+			// - end of processing (a close is done, not queued)
+			_process_end_processing_accept(_pconnectable);
+
 			// - connectable의 socket을 닫는다.
 			_pconnectable->process_close_socket(DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE);
 
@@ -1942,7 +1545,7 @@ void net::io::connective::acceptor::Ntcp::process_connective_connect(Iconnectabl
 		_pconnectable->process_complete_connect(1);
 
 		// - close socket
-		proceoss_closesocket_fail(_pconnectable, DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ABORTIVE);
+		process_closesocket_fail(_pconnectable, DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ABORTIVE);
 
 		// statistics) 접속 실패 횟수
 		this->statistics_on_fail_connect();

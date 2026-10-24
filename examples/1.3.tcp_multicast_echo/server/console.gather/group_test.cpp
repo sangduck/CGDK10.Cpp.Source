@@ -1,9 +1,9 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 
 group_test::group_test()
 {
-	scoped_lock(m_cs_buf_send)
+	SCOPED_LOCK(m_lockable_buf_send)
 	{
 		this->_alloc_buf_queue();
 	}
@@ -11,7 +11,7 @@ group_test::group_test()
 
 void group_test::queuing_message(buffer_view _buf)
 {
-	scoped_lock(this->m_cs_buf_send)
+	SCOPED_LOCK(this->m_lockable_buf_send)
 	{
 		this->m_buf_send.append(_buf.size(), _buf.data());
 		++this->m_queued_messages;
@@ -25,7 +25,7 @@ void group_test::on_execute()
 	uint64_t count_message;
 
 	// 1) get stored message and reallocate buffer
-	scoped_lock(this->m_cs_buf_send)
+	SCOPED_LOCK(this->m_lockable_buf_send)
 	{
 		// check)
 		RETURN_IF(this->m_buf_send.size() == 0);

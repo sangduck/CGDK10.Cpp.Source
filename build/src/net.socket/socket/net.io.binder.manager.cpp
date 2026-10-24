@@ -3,9 +3,9 @@
 using namespace CGDK;
 
 
-net::io::binder::manager::manager() : 
-	object::Nnameable("binder manager")
+net::io::binder::manager::manager()
 {
+	this->name("binder manager"sv);
 }
 
 net::io::binder::manager::~manager() noexcept
@@ -16,33 +16,30 @@ net::io::binder::manager::~manager() noexcept
 
 result_code net::io::binder::manager::destroy() noexcept
 {
-	// declare) 
-	std::vector<net::io::Ibinder*> vector_bind;
+	// declare)
+	std::vector<net::io::Isocket*> vector_socket;
 
-	// 1) 등록된 binder 리스트를 얻는다.
-	scoped_lock(this->m_lockable_list_binder)
+	// 1) 등록된 binder 리스트를 얻는다. (살아 있는 것만 참조를 잡는다 : lock 밖에서 닫는 동안 해제되지 않도록. 참조가 0인 것은 해제 중이다)
+	SCOPED_LOCK(this->m_lockable_list_binder)
 	{
-		// - reservce
-		vector_bind.reserve(this->m_list_binder.size());
+		// - reserve
+		vector_socket.reserve(this->m_list_binder.size());
 
 		// - copy binder
 		for (auto& iter : this->m_list_binder)
 		{
-			vector_bind.push_back(iter);
+			net::io::Isocket* psocket = iter;
+
+			if (psocket->add_ref_if_alive())
+				vector_socket.push_back(psocket);
 		}
 	}
 
 	// 2) 모두 closesocket 처리한다.
-	for(auto& iter: vector_bind)
+	for(auto& iter: vector_socket)
 	{
-		// - socket을 얻는다.
-		auto psocket = dynamic_cast<net::io::Isocket*>(iter);
-
-		// - socket을 닫는다.
-		if(psocket != nullptr)
-		{
-			psocket->process_close_socket(DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE);
-		}
+		iter->process_close_socket(DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE);
+		iter->release();
 	}
 
 	// return)
@@ -51,7 +48,7 @@ result_code net::io::binder::manager::destroy() noexcept
 
 void net::io::binder::manager::join( net::io::Ibinder* _pbinder, net::io::statistics::Nsocket* _pstatistics_socket)
 {
-	scoped_lock(this->m_lockable_list_binder)
+	SCOPED_LOCK(this->m_lockable_list_binder)
 	{
 		// 1) 같은 것이 있는지 먼저 검사한다.
 		auto iter_binder = this->m_list_binder.find(_pbinder);
@@ -72,12 +69,12 @@ void net::io::binder::manager::join( net::io::Ibinder* _pbinder, net::io::statis
 
 void net::io::binder::manager::leave( net::io::Ibinder* _pbinder) noexcept
 {
-	scoped_lock(this->m_lockable_list_binder)
+	SCOPED_LOCK(this->m_lockable_list_binder)
 	{
 		// 1) Pool 관리 List에서 떼낸다.
 		auto iter_binder = this->m_list_binder.find(_pbinder);
 
-		// check) 해당 Connectie가 없으면 제거한다.
+		// check) 해당 Connective가 없으면 제거한다.
 		RETURN_IF(iter_binder == this->m_list_binder.end());
 
 		// 2) 리스트에서 제거한다.
@@ -95,11 +92,11 @@ void net::io::binder::manager::leave( net::io::Ibinder* _pbinder) noexcept
 
 void net::io::binder::manager::initialize_instance()
 {
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		RETURN_IF(m_pinstance.exist());
 		
-		m_pinstance = _make_own_raw<manager>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL);
+		m_pinstance.exchange_release(_make_own_raw<manager>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL));
 	}
 }
 
@@ -108,13 +105,13 @@ void net::io::binder::manager::set_instance(own_ptr<manager>&& _pinstance) noexc
 	// declare)
 	own_ptr<manager> pinstance_pre;
 
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) move old instance
 		pinstance_pre = std::move(m_pinstance);
 
 		// 2) set new instance
-		m_pinstance = std::move(_pinstance);
+		m_pinstance.exchange_release(std::move(_pinstance));
 	}
 
 	// 3) reset old instance
@@ -126,7 +123,7 @@ void net::io::binder::manager::reset_instance() noexcept
 	// declare)
 	own_ptr<manager> pinstance;
 
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) move instance
 		pinstance = std::move(m_pinstance);

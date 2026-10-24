@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CGDK10.network.update.server.MFC.vs16.h">
+    <ClInclude Include="CGDK10.network.update.server.mfc_controls.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="CGDK10.network.update.server.MFC.vs16Dlg.h">
+    <ClInclude Include="CGDK10.network.update.server.mfc_controls.dlg.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="framework.h">
@@ -35,10 +35,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CGDK10.network.update.server.MFC.vs16.cpp">
+    <ClCompile Include="CGDK10.network.update.server.mfc_controls.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="CGDK10.network.update.server.MFC.vs16Dlg.cpp">
+    <ClCompile Include="CGDK10.network.update.server.mfc_controls.dlg.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="pch.cpp">
@@ -46,17 +46,17 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="CGDKnetworkupdateserverMFCvs16.rc">
+    <ResourceCompile Include="CGDK10.network.update.server.mfc_controls.rc">
       <Filter>리소스 파일</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\CGDKnetworkupdateserverMFCvs16.rc2">
+    <None Include="res\CGDK10.network.updateserver.mfc_controls.rc2">
       <Filter>리소스 파일</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\CGDK10.network.update.server.MFC.vs16.ico">
+    <Image Include="res\CGDK10.network.update.server.mfc_controls.ico">
       <Filter>리소스 파일</Filter>
     </Image>
   </ItemGroup>

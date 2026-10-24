@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -38,13 +38,13 @@ enum class eMESSAGE_TYPE : int32_t
 int main()
 {
 	// ------------------------------------------------------------------
-	// 1. ë‹¨ìˆœ êµ¬ì¡°ì²´ë¥¼ ì‚¬ìš©í•œ append/extract
-	//    ê¸°ë³¸ ìë£Œí˜•ì„ êµ¬ì¡°ì²´ë¡œ ë¬¶ì–´ì„œ append<T>ì™€ extract<T>ë¥¼ í•  ìˆ˜ ìˆë‹¤.
-	//    char, int, floatì™€ ê°™ì€ ê¸°ë³¸í˜• ë°ì´í„°ë§Œ êµ¬ì„±ëœ ê²½ìš°ì—ë§Œ ì‚¬ìš©ê°€ëŠ¥í•˜ë‹¤ëŠ” í•œê³„ê°€ ìˆë‹¤.
-	//    ë˜ êµ¬ì¡°ì²´ì˜ ì •ë ¬(allign)ì— ë”°ë¼ ë‹¤ë¥¸ ë™ì‘ì„ í•  ìˆ˜ ìˆë‹¤.
+	// 1. ´Ü¼ø ±¸Á¶Ã¼¸¦ »ç¿ëÇÑ append/extract
+	//    ±âº» ÀÚ·áÇüÀ» ±¸Á¶Ã¼·Î ¹­¾î¼­ append<T>¿Í extract<T>¸¦ ÇÒ ¼ö ÀÖ´Ù.
+	//    char, int, float¿Í °°Àº ±âº»Çü µ¥ÀÌÅÍ¸¸ ±¸¼ºµÈ °æ¿ì¿¡¸¸ »ç¿ë°¡´ÉÇÏ´Ù´Â ÇÑ°è°¡ ÀÖ´Ù.
+	//    ¶Ç ±¸Á¶Ã¼ÀÇ Á¤·Ä(allign)¿¡ µû¶ó ´Ù¸¥ µ¿ÀÛÀ» ÇÒ ¼ö ÀÖ´Ù.
 	// ------------------------------------------------------------------
 	{
-		// - ëª¨ë‘ ê¸°ë³¸ ìë£Œí˜•ìœ¼ë¡œë§Œ êµ¬ì„±ëœ êµ¬ì¡°ì²´
+		// - ¸ğµÎ ±âº» ÀÚ·áÇüÀ¸·Î¸¸ ±¸¼ºµÈ ±¸Á¶Ã¼
 		struct foo
 		{
 			int				a;
@@ -53,28 +53,28 @@ int main()
 			uint64_t		d;
 		};
 
-		// - DATAí˜• ë³€ìˆ˜ s1
+		// - DATAÇü º¯¼ö s1
 		foo s1{ 10, eMESSAGE_TYPE::A, 1.4f, 123 };
 
-		// *1) get_size_of<T>(...)ì§ë ¬í™”ì‹œì˜ ë°ì´í„° í¬ê¸°ë¥¼ ì–»ì„ ìˆ˜ ìˆë‹¤.
+		// *1) get_size_of<T>(...)Á÷·ÄÈ­½ÃÀÇ µ¥ÀÌÅÍ Å©±â¸¦ ¾òÀ» ¼ö ÀÖ´Ù.
 		const auto size = get_size_of(s1);
 
-		// - s1ì˜ ì§ë ¬í™”ì‹œ í¬ê¸°ë¥¼ ì¶œë ¥í•œë‹¤.
+		// - s1ÀÇ Á÷·ÄÈ­½Ã Å©±â¸¦ Ãâ·ÂÇÑ´Ù.
 		std::cout << "size_of s1 is "sv << size << " bytes\n"sv;
 
-		// - sizeë§Œí¼ì˜ ë²„í¼ë¥¼ í• ë‹¹ë°›ëŠ”ë‹¤.
+		// - size¸¸Å­ÀÇ ¹öÆÛ¸¦ ÇÒ´ç¹Ş´Â´Ù.
 		auto bar = alloc_shared_buffer(size);
 
-		// *2) bufì— DATAí˜• ë³€ìˆ˜ s1ì„ appendí•œë‹¤.
+		// *2) buf¿¡ DATAÇü º¯¼ö s1À» appendÇÑ´Ù.
 		bar.append(s1);
 
-		// - barì˜ size_ê°’ì„ ì¶œë ¥í•œë‹¤. 
+		// - barÀÇ size_°ªÀ» Ãâ·ÂÇÑ´Ù. 
 		std::cout << "bar.size_: "sv << bar.size() << " bytes\n"sv;
 
-		// *3) fooí˜•ì„ extractí•´ì„œ ì½ì–´ë‚¸ë‹¤.
+		// *3) fooÇüÀ» extractÇØ¼­ ÀĞ¾î³½´Ù.
 		/*auto v1 =*/ bar.extract<foo>();
 
-		// - fooë¥¼ ì¶œë ¥í•œë‹¤.
+		// - foo¸¦ Ãâ·ÂÇÑ´Ù.
 		std::cout << "a: "sv << s1.a << '\n';
 		std::cout << "b: "sv << static_cast<int32_t>(s1.b) << '\n';
 		std::cout << "c: "sv << s1.c << '\n';
@@ -84,23 +84,23 @@ int main()
 
 
 	// ------------------------------------------------------------------
-	// 2. êµ¬ì¡°ì²´ë¥¼ ì‚¬ìš©í•œ hetrogenous append/extract
+	// 2. ±¸Á¶Ã¼¸¦ »ç¿ëÇÑ hetrogenous append/extract
 	//
-	//    int, float, uint64_tê°™ì€ ê¸°ë³¸ ìë£Œí˜•ì´ ì•„ë‹ˆë¼ std::vector, std:string
-	//    ë‹¤ì¤‘ êµ¬ì¡°ì²´ ë“±ê³¼ ê°™ì€ ë³µí•© ìë£Œí˜•ì„ structë¥¼ ì‚¬ìš©í•´ append/extractí•  ìˆ˜ ìˆë‹¤.
+	//    int, float, uint64_t°°Àº ±âº» ÀÚ·áÇüÀÌ ¾Æ´Ï¶ó std::vector, std:string
+	//    ´ÙÁß ±¸Á¶Ã¼ µî°ú °°Àº º¹ÇÕ ÀÚ·áÇüÀ» struct¸¦ »ç¿ëÇØ append/extractÇÒ ¼ö ÀÖ´Ù.
 	//
-	//    hetrogenous(ë³µí•©) ìë£Œí˜•ë¥¼ ì‚¬ìš©í•˜ê¸° ìœ„í•´ì„œëŠ” 'ENABLE_STRUCT_SERIALIZABLE'ë§Œ ì„ ì–¸í•´ì£¼ë©´ ëœë‹¤.
-	//    ìœ„ì¹˜ëŠ” ì–´ë””ë“  êµ¬ì¡°ì²´ ë‚´ì—ë§Œ 'ENABLE_STRUCT_SERIALIZABLE'ë§Œ ì„ ì–¸ í•´ì£¼ë©´ ëœë‹¤.
-	//    ë˜ ì´ êµ¬ì¡°ì²´ë¥¼ ìƒì†ë°›ì€ ëª¨ë“  êµ¬ì¡°ì²´ëŠ” êµ¬ì¡°ì²´ ì§ë ¬í™”ë¥¼ ìˆ˜í–‰í•œë‹¤.
+	//    hetrogenous(º¹ÇÕ) ÀÚ·áÇü¸¦ »ç¿ëÇÏ±â À§ÇØ¼­´Â 'ENABLE_STRUCT_SERIALIZABLE'¸¸ ¼±¾ğÇØÁÖ¸é µÈ´Ù.
+	//    À§Ä¡´Â ¾îµğµç ±¸Á¶Ã¼ ³»¿¡¸¸ 'ENABLE_STRUCT_SERIALIZABLE'¸¸ ¼±¾ğ ÇØÁÖ¸é µÈ´Ù.
+	//    ¶Ç ÀÌ ±¸Á¶Ã¼¸¦ »ó¼Ó¹ŞÀº ¸ğµç ±¸Á¶Ã¼´Â ±¸Á¶Ã¼ Á÷·ÄÈ­¸¦ ¼öÇàÇÑ´Ù.
 	//	 
-	//    (!ì£¼ì˜) 'ENABLE_STRUCT_SERIALIZABLE'ë¥¼ ì„ ì–¸í•œ êµ¬ì¡°ì²´ëŠ” ìƒì„±ìë¥¼ ì •ì˜í•˜ë©´ ì•ˆë€ë‹¤ëŠ” ê²ƒì´ë‹¤.
-	//    ë°˜ë“œì‹œ ê¸°ë³¸ ìƒì„±ìë¥¼ ìœ ì§€í•´ì•¼ í•œë‹¤.
-	//    ë§Œì•½ Ibuffer_serailzableì„ ìƒì†ë°›ì•˜ë‹¤ë©´ Ibuffer_serializableì´ ìš°ì„ í•œë‹¤.
+	//    (!ÁÖÀÇ) 'ENABLE_STRUCT_SERIALIZABLE'¸¦ ¼±¾ğÇÑ ±¸Á¶Ã¼´Â »ı¼ºÀÚ¸¦ Á¤ÀÇÇÏ¸é ¾È‰Â´Ù´Â °ÍÀÌ´Ù.
+	//    ¹İµå½Ã ±âº» »ı¼ºÀÚ¸¦ À¯ÁöÇØ¾ß ÇÑ´Ù.
+	//    ¸¸¾à Ibuffer_serailzableÀ» »ó¼Ó¹Ş¾Ò´Ù¸é Ibuffer_serializableÀÌ ¿ì¼±ÇÑ´Ù.
 	// ------------------------------------------------------------------
 	{
 		struct goo
 		{
-			ENABLE_STRUCT_SERIALIZABLE	// {!} ì´ê±¸ ë„£ì–´ì¤€ë‹¤! 
+			ENABLE_STRUCT_SERIALIZABLE	// {!} ÀÌ°É ³Ö¾îÁØ´Ù! 
 
 			int					a;
 			eMESSAGE_TYPE		b;
@@ -116,22 +116,22 @@ int main()
 		s1.d = 12;
 		s1.e = { 10,20,30 };
 
-		// (*) get_size_of<T>(...)ë¡œ ì§ë ¬í™”ì‹œ ë°ì´í„° í¬ê¸°ë¥¼ ì–»ëŠ”ë‹¤.
+		// (*) get_size_of<T>(...)·Î Á÷·ÄÈ­½Ã µ¥ÀÌÅÍ Å©±â¸¦ ¾ò´Â´Ù.
 		const auto size = get_size_of(s1);
 
 		std::cout << "sizeof s1:"sv << sizeof(s1) << " bytes  get_size_of s1: "sv << size << " bytes\n"sv;
 
 		auto bar = alloc_shared_buffer(size);
 
-		// (*) bufì— DATAí˜• ë³€ìˆ˜ s1ì„ appendí•œë‹¤.
+		// (*) buf¿¡ DATAÇü º¯¼ö s1À» appendÇÑ´Ù.
 		bar.append<goo>(s1);
 
 		std::cout << "bar.size_: "sv << bar.size() << " bytes\n"sv;
 
-		// (*) gooí˜•ì„ extractí•´ì„œ ì½ì–´ë‚¸ë‹¤.
+		// (*) gooÇüÀ» extractÇØ¼­ ÀĞ¾î³½´Ù.
 		auto v1 = bar.extract<goo>();
 
-		// - gooë¥¼ ì¶œë ¥í•œë‹¤.
+		// - goo¸¦ Ãâ·ÂÇÑ´Ù.
 		std::cout << "a: "sv << v1.a << '\n';
 		std::cout << "b: "sv << static_cast<int32_t>(v1.b) << '\n';
 		std::cout << "c: "sv << v1.c << '\n';
@@ -142,22 +142,22 @@ int main()
 
 
 	// ------------------------------------------------------------------
-	// 3. êµ¬ì¡°ì²´ë¥¼ ì‚¬ìš©í•œ hetrogenous append/extract (2)
+	// 3. ±¸Á¶Ã¼¸¦ »ç¿ëÇÑ hetrogenous append/extract (2)
 	//
 	//    make_shared_buffer<T>(...);
 	//
-	//    'ENABLE_STRUCT_SERIALIZABLE'ë¥¼ ì‚¬ìš©í•˜ë©´ make_shared_bufferë¥¼ ì‚¬ìš©í•´
-	//    í•œë²ˆì— ë²„í¼ë¥¼ í• ë‹¹í•´ ì§ë ¬í™”í•œ ë²„í¼ë¥¼ ë°”ë¡œ ìƒì„±í•  ìˆ˜ ìˆë‹¤.
+	//    'ENABLE_STRUCT_SERIALIZABLE'¸¦ »ç¿ëÇÏ¸é make_shared_buffer¸¦ »ç¿ëÇØ
+	//    ÇÑ¹ø¿¡ ¹öÆÛ¸¦ ÇÒ´çÇØ Á÷·ÄÈ­ÇÑ ¹öÆÛ¸¦ ¹Ù·Î »ı¼ºÇÒ ¼ö ÀÖ´Ù.
 	//
-	//    ì¦‰, get_size_of() + alloc_shared_buffer() + append() ê°€ í•©ì³ì§„
-	//    ê²ƒì´ë‹¤.
+	//    Áï, get_size_of() + alloc_shared_buffer() + append() °¡ ÇÕÃÄÁø
+	//    °ÍÀÌ´Ù.
 	//
 	// ------------------------------------------------------------------
 	{
 		// heterogenouse struct!
 		struct goo
 		{
-			ENABLE_STRUCT_SERIALIZABLE	// {!} ì´ê±¸ ë„£ì–´ì¤€ë‹¤! 
+			ENABLE_STRUCT_SERIALIZABLE	// {!} ÀÌ°É ³Ö¾îÁØ´Ù! 
 
 			int					a;
 			eMESSAGE_TYPE		b;
@@ -166,19 +166,19 @@ int main()
 			std::vector<int>	e;
 		};
 
-		// - gooí˜• ë³€ìˆ˜ s1
+		// - gooÇü º¯¼ö s1
 		goo s1{ 1, eMESSAGE_TYPE::A, "test string", 12, {10,20,30} };
 
-		// *1) make_shared_bufferë¥¼ ì‚¬ìš©í•´ ë°”ë¡œ ì§ë ¬í™”í•œ ë²„í¼ë¥¼ ì–»ëŠ”ë‹¤.
+		// *1) make_shared_buffer¸¦ »ç¿ëÇØ ¹Ù·Î Á÷·ÄÈ­ÇÑ ¹öÆÛ¸¦ ¾ò´Â´Ù.
 		auto bar = make_shared_buffer(s1);
 
-		// - barì˜ size_ê°’ì„ ì¶œë ¥í•œë‹¤. 
+		// - barÀÇ size_°ªÀ» Ãâ·ÂÇÑ´Ù. 
 		std::cout << "bar.size: "sv << bar.size() << " bytes\n"sv;
 
-		// - fooí˜•ì„ extractí•´ì„œ ì½ì–´ë‚¸ë‹¤.
+		// - fooÇüÀ» extractÇØ¼­ ÀĞ¾î³½´Ù.
 		auto v1 = bar.extract<goo>();
 
-		// - fooë¥¼ ì¶œë ¥í•œë‹¤.
+		// - foo¸¦ Ãâ·ÂÇÑ´Ù.
 		std::cout << "a: "sv << v1.a << '\n';
 		std::cout << "b: "sv << static_cast<int32_t>(v1.b) << '\n';
 		std::cout << "c: "sv << v1.c << '\n';

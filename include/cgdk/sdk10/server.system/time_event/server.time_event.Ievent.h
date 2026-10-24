@@ -45,7 +45,7 @@ public:
 	virtual	result_code			process_event(chrono::time::utc::time_point _time_now);
 
 	[[nodiscard]] virtual bool	process_is_this(std::string_view _name) const noexcept { return this->m_event_setting.name == _name; }
-	[[nodiscard]] virtual std::string_view process_get_name() const noexcept { return this->m_event_setting.name; }
+	[[nodiscard]] virtual std::string process_get_name() const noexcept { return std::string(this->m_event_setting.name); }
 	virtual	void				process_set_name(std::string_view _name) {this->m_event_setting.name = _name; }
 
 public:

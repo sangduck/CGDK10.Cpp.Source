@@ -1,33 +1,39 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 
 //own_ptr<group_socket> g_pgroup_socket;
 
 int main()
 {
-	// 1) [ì½˜ì†” ë¡œê±°] ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) [ÄÜ¼Ö ·Î°Å] °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto plogger_console = make_own<logger_console>();
 
-	// 2) [ì½˜ì†” ë¡œê±°] ê°ì²´ë¥¼ ì´ˆê¸°í™”í•œë‹¤.
+	// 2) [ÄÜ¼Ö ·Î°Å] °´Ã¼¸¦ ÃÊ±âÈ­ÇÑ´Ù.
 	plogger_console->initialize();
 
-	// 3) [ì½˜ì†” ë¡œê±°] ê°ì²´ë¥¼ ë“±ë¡í•œë‹¤.
+	// 3) [ÄÜ¼Ö ·Î°Å] °´Ã¼¸¦ µî·ÏÇÑ´Ù.
 	service::get_logger()->register_log_targetable(plogger_console);
 
 	try
 	{
-		// 4) [ì„œë¹„ìŠ¤] ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 4) [¼­ºñ½º] °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		g_pservice = make_own<service>();
 
-		// 5) [ì„œë¹„ìŠ¤]ë¥¼ 'ì¤€ë¹„'í•œë‹¤.('ì‹œì‘' ìš”ì²­ì€ [ì½˜íŠ¸ë¡¤ ì„œë²„]ì—ì„œ í•œë‹¤.)
-		g_pservice->initialize();
+		// declare)
+		context context_initialize;
 
-		// ì„ì‹œ)
-		g_pservice->start();
+		// 5) load json file for setting
+		context_initialize.from_json(api::file::read_file(CONFIGURE_FILE));
 
-		// 6) ì¢…ë£Œ ë ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤. (1ì´ˆ ë‹¨ìœ„ë¡œ ctrl-Xí‚¤ì˜ ì…ë ¥ì„ í™•ì¸í•œë‹¤.)
+		// 6) [¼­ºñ½º]¸¦ 'ÁØºñ'ÇÑ´Ù.('½ÃÀÛ' ¿äÃ»Àº [ÄÁÆ®·Ñ ¼­¹ö]¿¡¼­ ÇÑ´Ù.)
+		g_pservice->initialize(context_initialize);
+
+		// ÀÓ½Ã)
+		g_pservice->start(context_initialize);
+
+		// 6) Á¾·á µÉ¶§±îÁö ´ë±âÇÑ´Ù. (1ÃÊ ´ÜÀ§·Î ctrl-XÅ°ÀÇ ÀÔ·ÂÀ» È®ÀÎÇÑ´Ù.)
 		while (g_pservice->wait_destroy(1s) == false)
 		{
-			// check) ctrl-Xë¥¼ ì…ë ¥í•˜ë©´ ì¢…ë£Œí•œë‹¤.
+			// check) ctrl-X¸¦ ÀÔ·ÂÇÏ¸é Á¾·áÇÑ´Ù.
 			if (_kbhit())
 			{
 				auto ch = _getch();
@@ -58,7 +64,7 @@ int main()
 	{
 	}
 
-	// 7) [ì„œë¹„ìŠ¤] ê°ì²´ë¥¼ ì¢…ë£Œí•œë‹¤.
+	// 7) [¼­ºñ½º] °´Ã¼¸¦ Á¾·áÇÑ´Ù.
 	g_pservice.destroy();
 
 	// return) 

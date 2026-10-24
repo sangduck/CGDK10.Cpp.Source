@@ -21,7 +21,7 @@ CTimeEventInfoDlg::~CTimeEventInfoDlg()
 
 void CTimeEventInfoDlg::SetEventInfo(time_event::Ientity* _pentity)
 {
-	m_pevent_entity = _pentity;
+	this->m_pevent_entity = _pentity;
 
 	if(m_hWnd != NULL)
 	{
@@ -35,25 +35,25 @@ void CTimeEventInfoDlg::UpdateEntityInfo()
 	// declare) 
 	object_ptr<time_event::Ientity>	pentity;
 
-	scoped_lock(m_pevent_entity)
+	SCOPED_LOCK(this->m_lockable_pevent_entity)
 	{
-		pentity = m_pevent_entity;
+		pentity = this->m_pevent_entity;
 	}
 
 	// check)
 	if(pentity.exist())
 	{
-		EnableEventContorls(true);
+		EnableEventControls(true);
 
 		auto& entity_setting = pentity->entity_setting();
 		auto& entity_status = pentity->entity_status();
 
 		SetDlgItemTextA(m_hWnd, IDC_EDIT_NAME, entity_setting.name.c_str());
 
-		SetDlgItemInt(IDC_EDIT_EVENT_LEVEL, entity_setting.level);
-		m_comboEventType.SetCurSel((int)entity_setting.type);
-		SetDlgItemText(IDC_STATIC_STATE, to_string<TCHAR>(entity_status.state).data());
-		m_comboEventSetter.SetCurSel((int)entity_setting.setter);
+		this->SetDlgItemInt(IDC_EDIT_EVENT_LEVEL, entity_setting.level);
+		this->m_comboEventType.SetCurSel((int)entity_setting.type);
+		SetDlgItemTextA(m_hWnd, IDC_STATIC_STATE, to_string(entity_status.state).data());
+		this->m_comboEventSetter.SetCurSel((int)entity_setting.setter);
 
 		UpdateAsEntity(pentity);
 
@@ -146,18 +146,16 @@ void CTimeEventInfoDlg::UpdateEntityInfo()
 			m_datatime_LastFailed_YMD.EnableWindow(false);
 			m_datatime_LastFailed_MHS.EnableWindow(false);
 		}
-
-		TCHAR temp_string[256] = { NULL, };
-		SetDlgItemText(IDC_STATIC_LASTTRY_COUNT,	to_string_scaled_byte(temp_string, 256, (int64_t)entity_status.count_try).data());
-		SetDlgItemText(IDC_STATIC_LASTSUCCEDED,		to_string_scaled_byte(temp_string, 256, (int64_t)entity_status.count_succeeded).data());
-		SetDlgItemText(IDC_STATIC_EVENT_LASTFAILED,	to_string_scaled_byte(temp_string, 256, (int64_t)entity_status.count_failed).data());
+		SetDlgItemText(IDC_STATIC_LASTTRY_COUNT,	CString(to_string_scaled_byte(static_cast<int64_t>(entity_status.count_try)).c_str()));
+		SetDlgItemText(IDC_STATIC_LASTSUCCEDED,		CString(to_string_scaled_byte(static_cast<int64_t>(entity_status.count_succeeded)).c_str()));
+		SetDlgItemText(IDC_STATIC_EVENT_LASTFAILED,	CString(to_string_scaled_byte(static_cast<int64_t>(entity_status.count_failed)).c_str()));
 
 		// Event Log를 표시한다.
 		UpdateEntityLog(pentity);
 	}
 	else
 	{
-		EnableEventContorls(false);
+		EnableEventControls(false);
 	}
 }
 
@@ -166,11 +164,11 @@ void CTimeEventInfoDlg::UpdateAsEntity(time_event::Ientity* /*_pentity*/)
 	//// 1) Disable Redraw
 	//m_listctrl_event_info.SetRedraw(FALSE);
 
-	//// 2) 먼저 Colume을 모두 지운다.
+	//// 2) 먼저 Column을 모두 지운다.
 	//m_listctrl_event_info.DeleteAllItems();
 	//while(m_listctrl_event_info.DeleteColumn(0)==TRUE);
 
-	//// 3) Colume을 설정한다.
+	//// 3) Column을 설정한다.
 	//m_listctrl_event_info.InsertColumn(0,  TEXT("Event"),		LVCFMT_LEFT,	120, 0);
 	//m_listctrl_event_info.InsertColumn(1,  TEXT("Time"),		LVCFMT_LEFT,	120, 1);
 	//m_listctrl_event_info.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER | LVS_EX_UNDERLINEHOT);
@@ -217,11 +215,11 @@ void CTimeEventInfoDlg::UpdateAsEntity(time_event::Ientity* /*_pentity*/)
 //	// 1) Disable Redraw
 //	m_listctrl_event_info.SetRedraw(FALSE);
 //
-//	// 2) 먼저 Colume을 모두 지운다.
+//	// 2) 먼저 Column을 모두 지운다.
 //	m_listctrl_event_info.DeleteAllItems();
 //	while(m_listctrl_event_info.DeleteColumn(0)==TRUE);
 //
-//	// 3) Colume을 설정한다.
+//	// 3) Column을 설정한다.
 //	m_listctrl_event_info.InsertColumn(0,  TEXT("Event"),		LVCFMT_LEFT,	120, 0);
 //	m_listctrl_event_info.InsertColumn(1,  TEXT("Time"),		LVCFMT_LEFT,	120, 1);
 //	m_listctrl_event_info.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER | LVS_EX_UNDERLINEHOT);
@@ -287,11 +285,11 @@ void CTimeEventInfoDlg::UpdateAsEntity(time_event::Ientity* /*_pentity*/)
 //	// 1) Disable Redraw
 //	m_listctrl_event_info.SetRedraw(FALSE);
 //
-//	// 2) 먼저 Colume을 모두 지운다.
+//	// 2) 먼저 Column을 모두 지운다.
 //	m_listctrl_event_info.DeleteAllItems();
 //	while(m_listctrl_event_info.DeleteColumn(0)==TRUE);
 //
-//	// 3) Colume을 설정한다.
+//	// 3) Column을 설정한다.
 //	m_listctrl_event_info.InsertColumn(0,  TEXT("Event"),		LVCFMT_LEFT,	120, 0);
 //	m_listctrl_event_info.InsertColumn(1,  TEXT("Time"),		LVCFMT_LEFT,	120, 1);
 //	m_listctrl_event_info.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER | LVS_EX_UNDERLINEHOT);
@@ -363,11 +361,11 @@ void CTimeEventInfoDlg::UpdateAsEntity(time_event::Ientity* /*_pentity*/)
 //	// 1) Disable Redraw
 //	m_listctrl_event_info.SetRedraw(FALSE);
 //
-//	// 2) 먼저 Colume을 모두 지운다.
+//	// 2) 먼저 Column을 모두 지운다.
 //	m_listctrl_event_info.DeleteAllItems();
 //	while(m_listctrl_event_info.DeleteColumn(0)==TRUE);
 //
-//	// 3) Colume을 설정한다.
+//	// 3) Column을 설정한다.
 //	m_listctrl_event_info.InsertColumn(0,  TEXT("Event"),		LVCFMT_LEFT,	120, 0);
 //	m_listctrl_event_info.InsertColumn(1,  TEXT("Time"),		LVCFMT_LEFT,	120, 1);
 //	m_listctrl_event_info.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER | LVS_EX_UNDERLINEHOT);
@@ -484,11 +482,11 @@ void CTimeEventInfoDlg::UpdateAsEntity(time_event::Ientity* /*_pentity*/)
 //	// 1) Disable Redraw
 //	m_listctrl_event_info.SetRedraw(FALSE);
 //
-//	// 2) 먼저 Colume을 모두 지운다.
+//	// 2) 먼저 Column을 모두 지운다.
 //	m_listctrl_event_info.DeleteAllItems();
 //	while (m_listctrl_event_info.DeleteColumn(0) == TRUE);
 //
-//	// 3) Colume을 설정한다.
+//	// 3) Column을 설정한다.
 //	m_listctrl_event_info.InsertColumn(0, TEXT("Next Time"), LVCFMT_LEFT, 150, 0);
 //	m_listctrl_event_info.InsertColumn(1, TEXT("Interval"), LVCFMT_RIGHT, 150, 1);
 //	m_listctrl_event_info.InsertColumn(2, TEXT("Remained"), LVCFMT_RIGHT, 100, 2);
@@ -496,7 +494,7 @@ void CTimeEventInfoDlg::UpdateAsEntity(time_event::Ientity* /*_pentity*/)
 //	m_listctrl_event_info.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER | LVS_EX_UNDERLINEHOT);
 //
 //	// 4) 
-//	scoped_lock(_pentity->m_queue_event)
+//	SCOPED_LOCK(_pentity->m_lockable_queue_event)
 //	{
 //		// declare) 
 //		TCHAR		text[256];
@@ -555,11 +553,11 @@ void CTimeEventInfoDlg::UpdateAsEntity(time_event::Ientity* /*_pentity*/)
 //	// 1) Disable Redraw
 //	m_listctrl_event_info.SetRedraw(FALSE);
 //
-//	// 2) 먼저 Colume을 모두 지운다.
+//	// 2) 먼저 Column을 모두 지운다.
 //	m_listctrl_event_info.DeleteAllItems();
 //	while (m_listctrl_event_info.DeleteColumn(0) == TRUE);
 //
-//	// 3) Colume을 설정한다.
+//	// 3) Column을 설정한다.
 //	m_listctrl_event_info.InsertColumn(0, TEXT("Next Time"), LVCFMT_LEFT, 150, 0);
 //	m_listctrl_event_info.InsertColumn(1, TEXT("Interval"), LVCFMT_RIGHT, 150, 1);
 //	m_listctrl_event_info.InsertColumn(2, TEXT("Remained"), LVCFMT_RIGHT, 100, 2);
@@ -567,7 +565,7 @@ void CTimeEventInfoDlg::UpdateAsEntity(time_event::Ientity* /*_pentity*/)
 //	m_listctrl_event_info.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER | LVS_EX_UNDERLINEHOT);
 //
 //	// 4) 
-//	scoped_lock(_pentity->m_queue_event)
+//	SCOPED_LOCK(_pentity->m_lockable_queue_event)
 //	{
 //		// declare) 
 //		TCHAR		text[256];
@@ -626,7 +624,7 @@ void CTimeEventInfoDlg::UpdateAsEntity(time_event::Ientity* /*_pentity*/)
 //	// 1) Disable Redraw
 //	m_listctrl_event_info.SetRedraw(FALSE);
 //
-//	// 2) 먼저 Colume을 모두 지운다.
+//	// 2) 먼저 Column을 모두 지운다.
 //	m_listctrl_event_info.DeleteAllItems();
 //	while(m_listctrl_event_info.DeleteColumn(0)==TRUE);
 //
@@ -638,7 +636,7 @@ void CTimeEventInfoDlg::UpdateAsEntity(time_event::Ientity* /*_pentity*/)
 //}
 
 
-void CTimeEventInfoDlg::EnableEventContorls(bool _bEnable)
+void CTimeEventInfoDlg::EnableEventControls(bool _bEnable)
 {
 	// 1) Name
 	GetDlgItem(IDC_STATIC_TAG_NAME)->EnableWindow(_bEnable);
@@ -674,7 +672,7 @@ void CTimeEventInfoDlg::EnableEventContorls(bool _bEnable)
 	m_datatime_LastTry_MHS.EnableWindow(_bEnable);
 	GetDlgItem(IDC_STATIC_LASTTRY_COUNT)->EnableWindow(_bEnable);
 
-	GetDlgItem(IDC_STATIC_TAG_LAST_SUCCEDED)->EnableWindow(_bEnable);
+	GetDlgItem(IDC_STATIC_TAG_LAST_SUCCEEDED)->EnableWindow(_bEnable);
 	m_datatime_LastSucceeded_YMD.EnableWindow(_bEnable);
 	m_datatime_LastSucceeded_MHS.EnableWindow(_bEnable);
 	GetDlgItem(IDC_STATIC_LASTSUCCEDED)->EnableWindow(_bEnable);
@@ -759,10 +757,10 @@ void CTimeEventInfoDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent==0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// 1) 상태를 Update한다.
@@ -780,8 +778,6 @@ void CTimeEventInfoDlg::UpdateEntityLog(time_event::Ientity* _pentity)
 
 	m_listctrl_event_log.SetRedraw(FALSE);
 
-	auto& list_event_result_log = _pentity->entity_result_log();
-
 #ifdef _UNICODE
 	#if defined(_USE_CHAR_STRING)
 		TCHAR* text = reinterpret_cast<TCHAR*>(malloc(MAX_STRING_LENGTH * sizeof(TCHAR)));
@@ -792,33 +788,35 @@ void CTimeEventInfoDlg::UpdateEntityLog(time_event::Ientity* _pentity)
 	#endif
 #endif
 
-	scoped_lock(list_event_result_log)
+	SCOPED_LOCK(_pentity->lockable_entity_result_log())
 	{
+		auto& list_event_result_log = _pentity->entity_result_log();
+
 		int iIndex = 0;
 
-		for(auto& iter: list_event_result_log->sub_plog)
+		for(auto& iter: list_event_result_log->sub_plog())
 		{
 		#ifdef _UNICODE
 			#if defined(_USE_CHAR_STRING)
 				encode_string(text, iter->buf_message.data<const char>(sizeof(COUNT_T)), MAX_STRING_LENGTH);
-				m_listctrl_event_log.UpdateString(iIndex++, iter->time_occure, text, RGB(0,0,0), true);
+				m_listctrl_event_log.UpdateString(iIndex++, iter->time_occurred, text, RGB(0,0,0), true);
 			#elif defined(_USE_WCHAR_STRING)
-				m_listctrl_event_log.UpdateString(iIndex++, iter->time_occure, iter->buf_message.data_ + sizeof(COUNT_T), RGB(0,0,0), true);
+				m_listctrl_event_log.UpdateString(iIndex++, iter->time_occurred, iter->buf_message.data_ + sizeof(COUNT_T), RGB(0,0,0), true);
 			#else
 				#error
 			#endif
 		#else
 			#if defined(_USE_CHAR_STRING)
-				m_listctrl_event_log.UpdateString(iIndex++, iter->time_occure, iter->buf_message.data_ + sizeof(COUNT_T), RGB(0,0,0), true);
+				m_listctrl_event_log.UpdateString(iIndex++, iter->time_occurred, iter->buf_message.data_ + sizeof(COUNT_T), RGB(0,0,0), true);
 			#elif defined(_USE_WCHAR_STRING)
 				encode_string(text, iter->buf_message.data<const wchar_t>(sizeof(COUNT_T)), MAX_STRING_LENGTH);
-				m_listctrl_event_log.UpdateString(iIndex++, iter->time_occure, text, RGB(0,0,0), true);
+				m_listctrl_event_log.UpdateString(iIndex++, iter->time_occurred, text, RGB(0,0,0), true);
 			#else
 				#error
 			#endif
 		#endif
 
-			for(auto& iterMessage:iter->sub_plog)
+			for(auto& iterMessage:iter->sub_plog())
 			{
 				COLORREF	color_text;
 				bool		is_bold	 = iterMessage->level>=log_level_t::higher();

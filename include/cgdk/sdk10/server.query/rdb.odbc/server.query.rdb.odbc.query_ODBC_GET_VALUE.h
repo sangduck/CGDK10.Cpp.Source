@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                         Server Query odbc Classes                         *
+//*                          server.query.rdb.odbc                            *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -33,30 +33,6 @@ class _ODBC_DEFAULT_PARAM
 public:
 	using type = T;
 };
-
-// 2) for wchar_t
-#if defined(__linux__)
-template <>
-class _ODBC_DEFAULT_PARAM<std::wstring, std::enable_if_t<sizeof(wchar_t) != sizeof(char16_t)>>
-{
-public:
-	using type = char16_t*;
-};
-
-template <>
-class _ODBC_DEFAULT_PARAM<std::wstring_view, std::enable_if_t<sizeof(wchar_t) != sizeof(char16_t)>>
-{
-public:
-	using type = char16_t*;
-};
-
-template <>
-class _ODBC_DEFAULT_PARAM<wchar_t*, std::enable_if_t<sizeof(wchar_t) != sizeof(char16_t)>>
-{
-public:
-	using type = char16_t*;
-};
-#endif
 
 // 3) 
 template <class T>
@@ -98,7 +74,7 @@ public:
 	_get(SQLHSTMT _handle_stmt, SQLUSMALLINT _ordinal) 
 	{
 		// declare) 
-		TRETURN value = TRETURN(0);
+		TRETURN value{};
 		SQLLEN indicator = 0;
 
 		// 1) SQLGetData
@@ -113,7 +89,7 @@ public:
 	_get(SQLHSTMT _handle_stmt, SQLUSMALLINT _ordinal) 
 	{
 		// declare) 
-		TRETURN value = TRETURN(0);
+		TRETURN value{};
 		SQLLEN indicator = 0;
 
 		// 1) SQLGetData
@@ -366,10 +342,10 @@ public:
 	static TRETURN get(SQLHSTMT _handle_stmt, SQLUSMALLINT _ordinal)
 	{
 		// check)
-		static_assert(!std::is_polymorphic<T>::value, "'struct_serializable' class must not be polymorphic (no virtual fuction)");
+		static_assert(!std::is_polymorphic<T>::value, "'struct_serializable' class must not be polymorphic (no virtual function)");
 
 		// check)
-		static_assert(std::is_default_constructible<T>::value, "'struct_serializable' class must have default constructor (remove construtor)");
+		static_assert(std::is_default_constructible<T>::value, "'struct_serializable' class must have default constructor (remove constructor)");
 
 		return get_value_member_impl<T>(_handle_stmt, _ordinal, std::make_index_sequence<constexpr_field_count<T>>());
 	}

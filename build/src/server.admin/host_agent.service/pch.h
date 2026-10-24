@@ -81,14 +81,14 @@
 class socket_peer;
 class socket_websocket;
 class group_peer_immigration;
-class group_server;
+class group_peer_server;
 
 namespace CGDK
 {
-	namespace server_admin
+	namespace server_system
 	{
 		class Iinstance;
-		class instance_Iservice;
+		class instance_service;
 		class instance_service_local;
 		class instance_service_remote;
 		class instance_host;
@@ -125,20 +125,7 @@ using namespace CGDK;
 // license info
 //----------------------------------------------------------------------------
 // 1) svn version file
-#if defined(_MSC_VER)
-	#include "svn_version.h"
-#else
-	#ifndef _SVN_VERSION_H_
-	#define _SVN_VERSION_H_
-
-	#define SVN_LOCAL_MODIFICATIONS       0						// 1 if there are modifications to the local working copy, 0 otherwise
-	#define SVN_COMMIT_REVISION           2310					// Highest committed revision number in the working copy
-	#define SVN_COMMIT_REVISION_STRING    "2310"				// Highest committed revision number in the working copy
-	#define SVN_UPDATE_REVISION_STRING    "2310"				// Highest committed revision number in the working copy
-	#define SVN_TIME_NOW_STRING           "2018/07/13 08:54:17"	// Current system date &amp; time
-
-	#endif
-#endif
+#include "svn_version.h"
 
 // 2) license files
 #include "../../common/version.h"
@@ -180,7 +167,7 @@ using namespace CGDK;
 
 // 3) server entity
 #include "server_admin.Iinstance.h"
-#include "server_admin.instance_Iservice.h"
+#include "server_admin.instance_service.h"
 #include "server_admin.instance_service_local.h"
 #include "server_admin.instance_service_remote.h"
 #include "server_admin.instance_host.h"
@@ -194,8 +181,8 @@ using namespace CGDK;
 #include "socket_peer.h"
 #include "group_peer_immigration.h"
 #include "Igroup.h"
-#include "group_server.h"
-#include "group_client.h"
+#include "group_peer_server.h"
+#include "group_peer_client.h"
 
 // 6) service
 #include "service.h"

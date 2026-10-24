@@ -1,4 +1,4 @@
-Ôªø// dllmain.cpp : DLLÏùò Ï¥àÍ∏∞Ìôî Î£®Ìã¥ÏùÑ Ï†ïÏùòÌï©ÎãàÎã§.
+// dllmain.cpp : DLL¿« √ ±‚»≠ ∑Á∆æ¿ª ¡§¿««’¥œ¥Ÿ.
 //
 
 #include "pch.h"
@@ -10,7 +10,7 @@
 	#define new DEBUG_NEW
 #endif
 
-static AFX_EXTENSION_MODULE CGDKservercontrolsMFCvs16DLL = { false, nullptr };
+static AFX_EXTENSION_MODULE CGDKservercontrolsMFCDLL = { false, nullptr };
 
 namespace CGDK
 {
@@ -26,16 +26,16 @@ DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
 
 	if (dwReason == DLL_PROCESS_ATTACH)
 	{
-		if (!AfxInitExtensionModule(CGDKservercontrolsMFCvs16DLL, hInstance))
+		if (!AfxInitExtensionModule(CGDKservercontrolsMFCDLL, hInstance))
 			return 0;
 
 		AfxInitRichEdit2();
 
-		new CDynLinkLibrary(CGDKservercontrolsMFCvs16DLL);
+		new CDynLinkLibrary(CGDKservercontrolsMFCDLL);
 	}
 	else if (dwReason == DLL_PROCESS_DETACH)
 	{
-		AfxTermExtensionModule(CGDKservercontrolsMFCvs16DLL);
+		AfxTermExtensionModule(CGDKservercontrolsMFCDLL);
 	}
 	return 1;
 }

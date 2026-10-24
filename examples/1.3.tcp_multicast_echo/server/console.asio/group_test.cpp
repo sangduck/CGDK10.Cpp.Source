@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 
 void group_test::add_member(const std::shared_ptr<asio::Isocket_tcp>& _member)

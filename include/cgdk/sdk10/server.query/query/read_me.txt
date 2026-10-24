@@ -3,7 +3,7 @@
                         Cho sanghyun's Game Classes II                       
                          Ver 9.0 / Release 2017.01.03                         
                                                                              
-                          Server oledb System Classes                             
+                          server oledb system classes                             
                                                                              
                                                                              
                                                                              

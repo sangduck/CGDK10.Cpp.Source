@@ -13,7 +13,7 @@ net::io::connectable::manager_disconnect::manager_disconnect ()
 	this->m_statistics_schedulable.type = eSCHEDULABLE_TYPE::SYSTEM;
 
 	// 3) set name
-	this->set_name("socket disconnecting manager");
+	this->name("socket disconnecting manager");
 }
 
 net::io::connectable::manager_disconnect::~manager_disconnect () noexcept
@@ -22,13 +22,13 @@ net::io::connectable::manager_disconnect::~manager_disconnect () noexcept
 
 void net::io::connectable::manager_disconnect::initialize_instance()
 {
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// check) 
 		RETURN_IF(m_pinstance.exist());
 		
 		// 1) create instance
-		m_pinstance = _make_own_raw<manager_disconnect>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL);
+		m_pinstance.exchange_release(_make_own_raw<manager_disconnect>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL));
 	}
 }
 
@@ -37,13 +37,13 @@ void net::io::connectable::manager_disconnect::set_instance(own_ptr<manager_disc
 	// declare)
 	own_ptr<manager_disconnect> pentity_manager_pre;
 
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) move old instance
 		pentity_manager_pre = std::move(m_pinstance);
 
 		// 2) set new instance
-		m_pinstance = std::move(_pinstance);
+		m_pinstance.exchange_release(std::move(_pinstance));
 	}
 
 	// 3) reset old instance
@@ -55,7 +55,7 @@ void net::io::connectable::manager_disconnect::reset_instance() noexcept
 	// declare)
 	own_ptr<manager_disconnect> pinstance;
 
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) move instance
 		pinstance = std::move(m_pinstance);
@@ -80,13 +80,26 @@ void net::io::connectable::manager_disconnect::reset_instance() noexcept
 
 result_code net::io::connectable::manager_disconnect::destroy () noexcept
 {
-	scoped_lock(m_list_connectable)
+	// declare)
+	std::vector<net::io::Iconnectable*> vector_connectable;
+
+	// 1) 살아 있는 connectable만 참조를 잡아 모은다. (참조가 0인 것은 해제 중이다)
+	SCOPED_LOCK(m_lockable_list_connectable)
 	{
-		// - close all sockets
+		vector_connectable.reserve(m_list_connectable.size());
+
 		for(auto& iter: m_list_connectable)
 		{
-			iter->closesocket();
+			if (iter->add_ref_if_alive())
+				vector_connectable.push_back(iter);
 		}
+	}
+
+	// 2) close all sockets (lock 밖 : close가 목록에서 떼어낼(leave) 수 있다)
+	for (auto& iter : vector_connectable)
+	{
+		iter->closesocket();
+		iter->release();
 	}
 
 	// return)
@@ -101,9 +114,9 @@ void net::io::connectable::manager_disconnect::join (net::io::Iconnectable* _pco
 	// 1) add reference
 	add_ref();
 
-	scoped_lock(this->m_list_connectable)
+	SCOPED_LOCK(this->m_lockable_list_connectable)
 	{
-		// 2) is aleady existing?
+		// 2) is already existing?
 		auto iter = std::find(this->m_list_connectable.begin(), this->m_list_connectable.end(), _pconnectable);
 
 		// check)
@@ -132,7 +145,7 @@ void net::io::connectable::manager_disconnect::join (net::io::Iconnectable* _pco
 
 void net::io::connectable::manager_disconnect::leave (net::io::Iconnectable* _pconnectable) noexcept
 {
-	scoped_lock(this->m_list_connectable)
+	SCOPED_LOCK(this->m_lockable_list_connectable)
 	{
 		// 1) remove from list
 		this->m_list_connectable.erase(_pconnectable->m_iter_connectable);
@@ -157,10 +170,17 @@ void net::io::connectable::manager_disconnect::leave (net::io::Iconnectable* _pc
 
 intptr_t net::io::connectable::manager_disconnect::process_execute (intptr_t /*_result*/, std::size_t /*_param*/)
 {
+	// - 닫을 것을 lock 안에서 참조를 잡아 모으고, lock 밖에서 닫는다.
+	//   (이전 : lock을 잡은 채 raw pointer를 돌며 closesocket()을 불렀다. 같은 thread에서 마지막 참조가 풀리면
+	//    leave()가 순회 중인 목록에서 노드를 지웠다(recursive lock). 참조가 0인 connectable은 해제 중이므로 건너뛴다)
+
 	// 1) get now tick
 	auto tick_now = chrono::tick::now();
 
-	scoped_lock(this->m_list_connectable)
+	// declare)
+	std::vector<net::io::Iconnectable*> vector_connectable;
+
+	SCOPED_LOCK(this->m_lockable_list_connectable)
 	{
 		for(auto& iter: this->m_list_connectable)
 		{
@@ -170,9 +190,17 @@ intptr_t net::io::connectable::manager_disconnect::process_execute (intptr_t /*_
 			// check) skip if duration < 10s
 			BREAK_IF((tick_now < tick_disconnect) || (tick_now - tick_disconnect) < chrono::seconds(10));
 
-			// - closesocket
-			iter->closesocket();
+			// - 닫을 것 (참조를 잡는다)
+			if (iter->add_ref_if_alive())
+				vector_connectable.push_back(iter);
 		}
+	}
+
+	// 2) closesocket (lock 밖)
+	for (auto& iter : vector_connectable)
+	{
+		iter->closesocket();
+		iter->release();
 	}
 
 	// return) success

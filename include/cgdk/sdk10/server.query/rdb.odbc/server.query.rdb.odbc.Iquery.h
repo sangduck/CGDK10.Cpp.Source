@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                         Server Query odbc Classes                         *
+//*                          server.query.rdb.odbc                            *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -106,7 +106,7 @@ public:
 	virtual	void				on_final_release() noexcept override { this->process_reset_session(); this->Iserver_query::m_prequestor.reset();}
 
 			void				_process_notify_to_requestor() noexcept;
-			void				_process_regenerate_session();
+			void				_process_regen_session();
 };
 
 

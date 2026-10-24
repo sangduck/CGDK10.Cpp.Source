@@ -20,7 +20,7 @@ CGPTR<CCGLogHub> g_pTraceEvent;
 
 
 CGPTR<CGNet::CConnector<ServerLogin::CSocket>> CSampleSocketClientTCPEchoDlg::m_pconnectorServerLogin;
-CGPTR<CGNet::CConnector<ServerLobby::CSocket>> CSampleSocketClientTCPEchoDlg::m_pconnectorSerbverLobby;
+CGPTR<CGNet::CConnector<ServerLobby::CSocket>> CSampleSocketClientTCPEchoDlg::m_pconnectorServerLobby;
 ATOMIC<int>							g_countRequestEnterUser;
 
 CGPTR<ServerLogin::CGroupImmigrationSocket>	g_pgroupServerLoginImmigrationSocket;
@@ -107,7 +107,7 @@ BOOL CSampleSocketClientTCPEchoDlg::OnInitDialog()
 	CGNet::IO::Socket::NTCP::SetDefaultSendBufferSize(4096);		// 기본값은 65536Byte이다.
 	CGNet::IO::Socket::NTCP::SetDefaultReceiveBufferSize(4096);	// 기본값은 65536Byte이다.
 
-	// 1) 최대 Send Gather Buffer의 갯수
+	// 1) 최대 Send Gather Buffer의 개수
 	//CGNet::IO::Receivable::NStreamQueue::SetDefaultMaxReceivedBytesQueued(1024*1024*32);
 	//CGNet::IO::Receivable::SetDefaultMessageBufferMaxSize(65536*4);
 
@@ -123,8 +123,8 @@ BOOL CSampleSocketClientTCPEchoDlg::OnInitDialog()
 	m_pconnectorServerLogin->Start(msgContext);
 
 	// 2) Connector [Game]
-	m_pconnectorSerbverLobby = make_object<CGNet::CConnector<ServerLobby::CSocket>>();
-	m_pconnectorSerbverLobby->Start(msgContext);
+	m_pconnectorServerLobby = make_object<CGNet::CConnector<ServerLobby::CSocket>>();
+	m_pconnectorServerLobby->Start(msgContext);
 
 	// 3) Groups
 	g_pgroupServerLoginImmigrationSocket	 = make_object<ServerLogin::CGroupImmigrationSocket>();
@@ -143,7 +143,7 @@ BOOL CSampleSocketClientTCPEchoDlg::OnInitDialog()
 	m_childConnectiveLogin.SetUpdateInterval(1);
 	
 	// 2) Connective
-	m_childConnectiveGame.CreateChild(m_pconnectorSerbverLobby->Statistics_GetConnectionInfo(), this);
+	m_childConnectiveGame.CreateChild(m_pconnectorServerLobby->Statistics_GetConnectionInfo(), this);
 	m_childConnectiveGame.MoveToCenter(GetDlgItem(IDC_STATIC_FRAME_CONNECTION_GAME), 0, -35);
 	m_childConnectiveGame.ShowWindow(SW_SHOW);
 	m_childConnectiveGame.SetUpdateInterval(1);
@@ -210,7 +210,7 @@ BOOL CSampleSocketClientTCPEchoDlg::OnInitDialog()
 
 	// 2) 기본 Log에 Filter를 생성하여 설정한다.
 	//{
-	//	CGPTR<CCGLogFilterDefault>	pLogFilter	 = NEW<CCGLogFilterDefault>();
+	//	CGPTR<CCGLogFilterDefault>	pLogFilter	 = make_object<CCGLogFilterDefault>();
 	//	pLogFilter->EnableLog(LOG_TYPE_INFO);		pLogFilter->EnableLevelRange(LOG_TYPE_INFO,		true);	pLogFilter->SetLevelRange(LOG_TYPE_INFO,		LOG_LEVEL_NORMAL,		LOG_LEVEL_HIGHEST);
 	//	pLogFilter->EnableLog(LOG_TYPE_PROGRESS);	pLogFilter->EnableLevelRange(LOG_TYPE_PROGRESS,	true);	pLogFilter->SetLevelRange(LOG_TYPE_PROGRESS,	LOG_LEVEL_NORMAL,		LOG_LEVEL_HIGHEST);
 	//	pLogFilter->EnableLog(LOG_TYPE_DEBUG);	pLogFilter->EnableLevelRange(LOG_TYPE_DEBUG,		false);	pLogFilter->SetLevelRange(LOG_TYPE_DEBUG,		LOG_LEVEL_NORMAL,		LOG_LEVEL_HIGHEST);
@@ -447,7 +447,7 @@ void CSampleSocketClientTCPEchoDlg::OnBnClickedButtonGameserverDisconnect()
 
 void CSampleSocketClientTCPEchoDlg::OnBnClickedButtonGameserverDisconnectAll()
 {
-	m_pconnectorSerbverLobby->DisconnectAllConnectable();
+	m_pconnectorServerLobby->DisconnectAllConnectable();
 }
 
 //void CSampleSocketClientTCPEchoDlg::OnBnClickedButtonReset()
@@ -481,7 +481,7 @@ void CSampleSocketClientTCPEchoDlg::ConnectTest()
 	//-----------------------------------------------------------------
 	int		disconnected = 0;
 
-	scoped_lock(*m_pconnectorServerLogin)
+	SCOPED_LOCK(*m_pconnectorServerLogin)
 	{
 		long	countSocket	 = m_pconnectorServerLogin->GetCount();
 
@@ -507,9 +507,9 @@ void CSampleSocketClientTCPEchoDlg::ConnectTest()
 	}
 
 
-	scoped_lock(*m_pconnectorSerbverLobby)
+	SCOPED_LOCK(*m_pconnectorServerLobby)
 	{
-		long	countSocket	 = m_pconnectorSerbverLobby->GetCount();
+		long	countSocket	 = m_pconnectorServerLobby->GetCount();
 
 		if(countSocket > m_iTestMinConnect)
 		{
@@ -517,8 +517,8 @@ void CSampleSocketClientTCPEchoDlg::ConnectTest()
 			Range			 = MIN(Range, m_iTestConnectPerInterval);
 			int	disconnect	 = (Range) ? rand()%Range : 0;
 
-			auto	iter	 = m_pconnectorSerbverLobby->begin();
-			auto	iterEnd	 = m_pconnectorSerbverLobby->end();
+			auto	iter	 = m_pconnectorServerLobby->begin();
+			auto	iterEnd	 = m_pconnectorServerLobby->end();
 
 			for( ; iter!=iterEnd; ++iter)
 			{
@@ -542,7 +542,7 @@ void CSampleSocketClientTCPEchoDlg::ConnectTest()
 		int	nConnect;
 
 		// 1) 현재 Socket 수를 계산한다.
-		long	countSocket	 = m_pconnectorSerbverLobby->GetAllocatedCount()-disconnected;
+		long	countSocket	 = m_pconnectorServerLobby->GetAllocatedCount()-disconnected;
 
 		// 2) 최대접속수와 현재접속수의 차를 구한다
 		nConnect	 = (countSocket < m_iTestMaxConnect) ? (m_iTestMaxConnect-countSocket) : 0;

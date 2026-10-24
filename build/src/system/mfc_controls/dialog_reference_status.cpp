@@ -13,9 +13,9 @@ namespace CGDK
 // CDialog_reference_status dialog
 IMPLEMENT_DYNAMIC(CDialog_reference_status, CDialogEx)
 
-CDialog_reference_status::CDialog_reference_status(Ireferenceable* _prefernece /*=nullptr*/, CWnd* pnode_parent /*=NULL*/)
+CDialog_reference_status::CDialog_reference_status(Ireferenceable* _preference /*=nullptr*/, CWnd* pnode_parent /*=NULL*/)
 	: CDialogEx(IDD_DIALOG_REFERENCE_STATUS, pnode_parent),
-	m_pobject(_prefernece)
+	m_pobject(_preference)
 {
 
 }
@@ -24,10 +24,10 @@ CDialog_reference_status::~CDialog_reference_status()
 {
 	try
 	{
-		scoped_lock(m_pobject)
-		{
-			CGASSERT_ERROR(m_pobject.empty());
-		}
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pobject);
+
+		CGASSERT_ERROR(m_pobject.empty());
 	}
 	catch(...)
 	{
@@ -39,7 +39,6 @@ void CDialog_reference_status::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_COMBO_UPDATE_INTERVAL, m_combo_update_interval);
 }
-
 
 BEGIN_MESSAGE_MAP(CDialog_reference_status, CDialogEx)
 	ON_BN_CLICKED(IDOK, &CDialog_reference_status::OnBnClickedOk)
@@ -54,13 +53,15 @@ END_MESSAGE_MAP()
 
 
 // CDialog_reference_status message handlers
-int	CDialog_reference_status::m_update_inverval	 = 2;
+int	CDialog_reference_status::m_update_interval	 = 2;
 
-BOOL CDialog_reference_status::CreateModaless(Ireferenceable* _prefernece, CWnd* _pparent)
+BOOL CDialog_reference_status::CreateModaless(Ireferenceable* _preference, CWnd* _pparent)
 {
-	scoped_lock(m_pobject)
 	{
-		m_pobject	 = _prefernece;
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pobject);
+
+		m_pobject = _preference;
 	}
 
 	return Create(IDD_DIALOG_REFERENCE_STATUS, _pparent);
@@ -69,7 +70,7 @@ BOOL CDialog_reference_status::CreateModaless(Ireferenceable* _prefernece, CWnd*
 void CDialog_reference_status::EnableControl(BOOL _is_enable)
 {
 	// 1) control의 상태를 설정한다.
-	m_child_refernece_list.EnableControl(_is_enable);
+	m_child_reference_list.EnableControl(_is_enable);
 }
 
 
@@ -81,11 +82,11 @@ BOOL CDialog_reference_status::OnInitDialog()
 	// 1. control 초기화.
 	//-----------------------------------------------------------------
 	// 1) Connectable Manager를 생성한다.
-	m_child_refernece_list.CreateChild(m_pobject, this);
-	m_child_refernece_list.Move(30, 70);
+	m_child_reference_list.CreateChild(m_pobject, this);
+	m_child_reference_list.Move(30, 70);
 
 	// 2) Window를 Show한다.
-	m_child_refernece_list.ShowWindow(SW_SHOW);
+	m_child_reference_list.ShowWindow(SW_SHOW);
 
 
 	//-----------------------------------------------------------------
@@ -99,10 +100,10 @@ BOOL CDialog_reference_status::OnInitDialog()
 	// 3. start
 	//-----------------------------------------------------------------
 	// 1) Update Combo의 값을 설정하고 타이머를 설정한다.
-	m_combo_update_interval.SetCurSel(m_update_inverval);
+	m_combo_update_interval.SetCurSel(m_update_interval);
 
 	// 2) Timer를 설정한다.
-	SetUpdateInterval(m_update_inverval);
+	SetUpdateInterval(m_update_interval);
 
 
 	// return) 
@@ -112,7 +113,7 @@ BOOL CDialog_reference_status::OnInitDialog()
 void CDialog_reference_status::OnBnClickedOk()
 {
 	// 1) Connective List를 Release 한다.
-	m_child_refernece_list.ClearReferenceList();
+	m_child_reference_list.ClearReferenceList();
 
 	// 2) 타이머를 끈다.
 	KillTimer(0);
@@ -124,7 +125,7 @@ void CDialog_reference_status::OnBnClickedOk()
 void CDialog_reference_status::OnBnClickedCancel()
 {
 	// 1) Connective List를 Release 한다.
-	m_child_refernece_list.ClearReferenceList();
+	m_child_reference_list.ClearReferenceList();
 
 	// 2) 타이머를 끈다.
 	KillTimer(0);
@@ -133,16 +134,18 @@ void CDialog_reference_status::OnBnClickedCancel()
 	OnCancel();
 }
 
-void CDialog_reference_status::set_object(Ireferenceable* _prefernece)
+void CDialog_reference_status::set_object(Ireferenceable* _preference)
 {
 	// 1) 설정한다.
-	scoped_lock(m_pobject)
 	{
-		m_pobject	 = _prefernece;
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pobject);
+
+		m_pobject = _preference;
 	}
 
 	// 2) Connectable Manager를 설정한다.
-	m_child_refernece_list.set_object(_prefernece);
+	m_child_reference_list.set_object(_preference);
 
 	// 3) Update한다.
 	if(m_hWnd!=nullptr)
@@ -154,7 +157,7 @@ void CDialog_reference_status::set_object(Ireferenceable* _prefernece)
 void CDialog_reference_status::UpdateThreadStatus()
 {
 	// 1) Reference List를 갱신한다.
-	m_child_refernece_list.UpdateReferenceList();
+	m_child_reference_list.UpdateReferenceList();
 }
 
 void CDialog_reference_status::OnCbnSelchangeComboUpdateInterval()
@@ -175,10 +178,10 @@ void CDialog_reference_status::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// - 상태를 Update한다.
@@ -191,10 +194,10 @@ void CDialog_reference_status::OnTimer(UINT_PTR nIDEvent)
 void CDialog_reference_status::SetUpdateInterval(int _interval)
 {
 	// 1) Interval 값을 저장한다.
-	m_update_inverval	 = _interval;
+	m_update_interval	 = _interval;
 
 	// 2) Interval에 따라 Timer를 설정한다.
-	switch(m_update_inverval)
+	switch(m_update_interval)
 	{
 	// No Update
 	case	0:
@@ -273,13 +276,15 @@ void CDialog_reference_status::OnActivate(UINT nState, CWnd* pwnd_other, BOOL bM
 	// 1. Connective를 새로 설정한다.
 	//-----------------------------------------------------------------
 	// 1) Connective를 List에 다시 추가한다.
-	scoped_lock(m_pobject)
 	{
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pobject);
+
 		set_object(m_pobject);
 	}
 
 	// 2) Timer를 설정한다.
-	SetUpdateInterval(m_update_inverval);
+	SetUpdateInterval(m_update_interval);
 
 
 	//-----------------------------------------------------------------
@@ -291,11 +296,13 @@ void CDialog_reference_status::OnActivate(UINT nState, CWnd* pwnd_other, BOOL bM
 void CDialog_reference_status::OnDestroy()
 {
 	// 1) 제거한다.
-	m_child_refernece_list.ClearReferenceList();
+	m_child_reference_list.ClearReferenceList();
 
 	// 2) Reference Manager를 reset한다.
-	scoped_lock(m_pobject)
 	{
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pobject);
+
 		m_pobject.reset();
 	}
 

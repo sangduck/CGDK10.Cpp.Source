@@ -8,25 +8,29 @@ using namespace CGDK;
 bool net::io::sendable::Ntcp_sync::process_sendable(const buffer_view _buffer, object_ptr<Ireferenceable>&& /*_powner*/, std::size_t _count_message, const net::sockaddr& /*_paddress*/)
 {
 	// check) _buffer.size()이 0이 아닌가?
-	CGASSERT(_buffer.size() != 0, false);
+	CGASSERT_FATAL(_buffer.size() != 0);
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	RETURN_IF(_buffer.size() == 0, false);
+	if(_buffer.size() == 0)
+		return false;
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	CGASSERT(_buffer.data() != nullptr, false);
+	CGASSERT_ERROR(_buffer.data() != nullptr);
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	THROW_IF(_buffer.data() == nullptr, throwable::failure(eRESULT::INVALID_MESSAGE_BUFFER_IS_NULL, 0, "buffer.data is null ('net::io::sendable::Ntcp_sync::process_sendable')"sv));
+	if(_buffer.data() == nullptr)
+		return false;
 
 	// check) if socket is not connected, return false 
-	RETURN_IF(this->socket_state() < eSOCKET_STATE::ESTABLISHED, false);
+	if(this->socket_state() < eSOCKET_STATE::ESTABLISHED)
+		return false;
 
 	// 1) get socket native handle
 	auto handle_socket = this->native_handle();
 
 	// check) if invalid socket, return false 
-	RETURN_IF(handle_socket == INVALID_SOCKET, false);
+	if(handle_socket == INVALID_SOCKET)
+		return false;
 
 	// - temporary buffer
 	auto buf_now = _buffer;
@@ -38,10 +42,10 @@ bool net::io::sendable::Ntcp_sync::process_sendable(const buffer_view _buffer, o
 	for(;;)
 	{
 		// - request send
-		auto bytes_sended = ::send(handle_socket, buf_now.data(), buf_now.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
+		auto bytes_sent = ::send(handle_socket, buf_now.data(), buf_now.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
 
 		// case) send completed~
-		if (bytes_sended == buf_now.size<int>())
+		if (bytes_sent == buf_now.size<int>())
 		{
 			// - call 'process_complete_sendable'
 			this->process_complete_sendable(1, bytes_requested, _count_message);
@@ -50,13 +54,13 @@ bool net::io::sendable::Ntcp_sync::process_sendable(const buffer_view _buffer, o
 			break;
 		}
 		// case) send partial - retry
-		else if (bytes_sended >= 0)
+		else if (bytes_sent >= 0)
 		{
 			// check)
-			CGASSERT_ERROR(static_cast<std::size_t>(bytes_sended) < buf_now.size());
+			CGASSERT_ERROR(static_cast<std::size_t>(bytes_sent) < buf_now.size());
 
 			// - 전송한 만큼 이동시킨다.
-			buf_now += offset(bytes_sended);
+			buf_now += offset(bytes_sent);
 
 			// - retry
 			continue;
@@ -65,8 +69,8 @@ bool net::io::sendable::Ntcp_sync::process_sendable(const buffer_view _buffer, o
 		{
 			auto error_code = api::get_last_error();
 
-			// case) bytes_sended < 0 && error ==  EWOULDBLOCK (wait for EPOLLOUT)
-			if (error_code == EWOULDBLOCK)
+			// case) bytes_sent < 0 && error ==  EWOULDBLOCK (wait for EPOLLOUT)
+			if (error_code == EWOULDBLOCK || error_code == EINPROGRESS)	// - EINPROGRESS : a TCP Fast Open connect (TCP_FASTOPEN_CONNECT) without a cookie. the SYN is sent, the data waits for EPOLLOUT
 			{
 				// statistics) 
 				this->statistics_on_error_send();

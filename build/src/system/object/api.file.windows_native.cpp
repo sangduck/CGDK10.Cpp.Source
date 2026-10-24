@@ -10,7 +10,7 @@ FILE_HANDLE api::file::open(const std::filesystem::path& _filename, eFILE_OPERAT
 	// check)
 	CGASSERT_ERROR(_filename.empty() == false);
 
-	// check) _filename이 nullptr이면 안됀다.
+	// check) _filename이 nullptr이면 안 된다.
 	RETURN_IF(_filename.empty(), INVALID_FILE_HANDLE);
 
 	// declare) 
@@ -100,7 +100,8 @@ FILE_HANDLE api::file::open(const std::filesystem::path& _filename, eFILE_OPERAT
 			&& parent_path.string() != "/"
 			)
 		{
-			std::filesystem::create_directories(parent_path);
+			std::error_code error_code;
+			std::filesystem::create_directories(parent_path, error_code);
 		}
 	}
 
@@ -119,12 +120,12 @@ FILE_HANDLE api::file::open(const std::filesystem::path& _filename, eFILE_OPERAT
 #endif
 	}
 
-	// 4) 파일 열기에 실패한 경우 eFILE_LOCATION::INTERNAL 플래그가 설정되어 있다면 INTERNAL 디렉토리에서 열기를 시도한다.
+	// 4) 파일 열기에 실패한 경우 eFILE_LOCATION::INTERNAL 플래그가 설정되어 있다면 INTERNAL 디렉터리에서 열기를 시도한다.
 	if (handle_file == INVALID_FILE_HANDLE && (_file_location & eFILE_LOCATION::INTERNAL) != eFILE_LOCATION::NONE)
 	{
 	}
 
-	// 5) 파일 열기에 실패한 경우 eFILE_LOCATION::EXTERNAL 플래그가 설정되어 있다면 EXTERNAL 디렉토리에서 열기를 시도한다.
+	// 5) 파일 열기에 실패한 경우 eFILE_LOCATION::EXTERNAL 플래그가 설정되어 있다면 EXTERNAL 디렉터리에서 열기를 시도한다.
 	if (handle_file == INVALID_FILE_HANDLE && (_file_location & eFILE_LOCATION::EXTERNAL) != eFILE_LOCATION::NONE)
 	{
 	}
@@ -134,14 +135,11 @@ FILE_HANDLE api::file::open(const std::filesystem::path& _filename, eFILE_OPERAT
 	{
 		for(auto& iter: *resource::manager::instance())
 		{
-			// declare) 
-			char temp_string[MAX_STRING_LENGTH] {0};
-
-			// - String을 만든다.
-			__sprintf(temp_string, "%s/%s", iter.c_str(), _filename.c_str());
+			// - Resource path를 기준으로 파일 경로를 만든다.
+			auto temp_path = std::filesystem::path(iter) / _filename;
 
 			// - 읽어들인다.
-			handle_file = CreateFileA(temp_string, dwDesiredAccess, dwShareMode, nullptr, dwCreationDisposition, dwFlagsAndAttributes, 0);
+			handle_file = CreateFileW(temp_path.c_str(), dwDesiredAccess, dwShareMode, nullptr, dwCreationDisposition, dwFlagsAndAttributes, 0);
 
 			// check) 파일을 찾아서 열었다면 여기서 중단!
 			BREAK_IF(handle_file !=INVALID_FILE_HANDLE);
@@ -159,7 +157,7 @@ FILE_HANDLE api::file::open(const std::filesystem::path& _filename, eFILE_OPERAT
 				// - executor를 얻는다.
 				auto pexecutor = system_executor::executor();
 
-				// check) pexecutor가 nullptr이면 안됀다.
+				// check) pexecutor가 nullptr이면 안 된다.
 				THROW_IF(pexecutor.empty(), throwable::failure(eRESULT::FAIL, 0, "executor is nullptr"sv));
 
 				// - executor에 붙인다.(생성하면 기본 Executor로 설정한다.)
@@ -186,7 +184,7 @@ FILE_HANDLE api::file::open(const std::filesystem::path& _filename, eFILE_OPERAT
 
 void api::file::close(FILE_HANDLE _handle_file) noexcept
 {
-	// check) FileHandle이 INVALID_FILE_HANDLE이면 안됀다.
+	// check) FileHandle이 INVALID_FILE_HANDLE이면 안 된다.
 	RETURN_IF(_handle_file == INVALID_FILE_HANDLE);
 
 	// 1) close한다.

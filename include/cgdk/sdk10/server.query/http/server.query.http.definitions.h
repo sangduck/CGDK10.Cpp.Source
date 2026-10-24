@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                                Web Classes                                *
+//*                             server.query.http                             *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -17,6 +17,7 @@
 //*****************************************************************************
 
 #pragma once
+#include <charconv>
 
 namespace CGDK
 {
@@ -38,7 +39,7 @@ enum class eRESPONSE_CODE : uint32_t
 {
 //  CODE			HASH code
 	A0000_		 = ('A' <<16) +   0,	// 처리성공
-	A0001_		 = ('A' <<16) +   1,	// 처리중(처리결과조회 요망, 이체시)
+	A0001_		 = ('A' <<16) +   1,	// 처리 중(처리결과조회 요망, 이체 시)
 	A0002_		 = ('A' <<16) +   2,	// 참가기관 에러
 	A0003_		 = ('A' <<16) +   3,	// 내부 처리 에러
 	A0004_		 = ('A' <<16) +   4,	// 요청전문 포맷 에러
@@ -94,7 +95,7 @@ enum class eRESPONSE_CODE : uint32_t
 	O0010_		 = ('O' <<16) +  10,	// 허용되지 않은 http method 입니다.
 
 
-	SUCCEESS_	 = A0000_,				// 처리성공
+	SUCCESS_	 = A0000_,				// 처리성공
 	FAIL_		 = ('X' <<16) +   0,	// 처리내부적 오류
 };
 
@@ -114,7 +115,7 @@ enum class eRESPONSE_CODE : uint32_t
 //	  			this client has been requested
 //   3000116	None of the supported response_types	response_type이 유형이 맞지 않을 때
 //	  			were used
-//   3002110	The session has expired or aleady		만료된 session 값을 사용하였을 때
+//   3002110	The session has expired or already		만료된 session 값을 사용하였을 때
 //				been granted. The login process has to
 //				be successful
 //
@@ -122,13 +123,17 @@ template<class TTYPE>
 inline eRESPONSE_CODE get_value_RESPONSE_CODE(const TTYPE* _string)
 {
 	// check)
-	CGASSERT_ERROR(_string != nullptr);
+	CGASSERT_FATAL(_string != nullptr);
 
 	// check)
 	THROW_IF(_string == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT));
 
 	// 1) 계산한다.
-	auto value = static_cast<eRESPONSE_CODE>((((uint32_t)_string[0]) << 16) + __from_string<int>(_string + 1));
+	const std::string_view str_code(_string);
+	int code = 0;
+	if (str_code.size() > 1)
+		std::from_chars(str_code.data() + 1, str_code.data() + str_code.size(), code);
+	auto value = static_cast<eRESPONSE_CODE>((((uint32_t)_string[0]) << 16) + code);
 
 	// return)
 	return	value;

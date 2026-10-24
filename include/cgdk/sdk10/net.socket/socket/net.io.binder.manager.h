@@ -32,23 +32,19 @@ namespace CGDK
 //
 //-----------------------------------------------------------------------------
 class net::io::binder::manager :
-// inherited classes)
 	public						object::Nnameable,
 	virtual public				object::Idestroyable,
-	virtual public				Nmessage_transmitter
+	virtual public				Nmessage_transmitter,
+	private						non_copyable
 {
-// definitions) 
 public:
 			using ITERATOR = circular_list<net::io::Ibinder*>::const_iterator;
 
-// constructor/destructor)
 protected:
 			manager();
 	virtual	~manager() noexcept;
 
-// publics) 
 public:
-	// 1) Iterator¿ë.
 	[[nodiscard]] std::size_t	size() const noexcept { return this->m_list_binder.size();}
 	[[nodiscard]] auto			begin() noexcept { return this->m_list_binder.begin();}
 	[[nodiscard]] auto			begin() const noexcept { return this->m_list_binder.begin();}
@@ -59,32 +55,25 @@ public:
 	[[nodiscard]] 				operator std::shared_mutex&() noexcept	{ return this->m_lockable_list_binder;}
 	[[nodiscard]] 				operator const std::shared_mutex& () const noexcept { return this->m_lockable_list_binder;}
 
-	// 2) Init Instance/run_executor									  
-	static 	auto				instance() { if (m_pinstance.empty()) { initialize_instance(); } return object_ptr<manager>(m_pinstance); }
+	static 	auto				instance() { auto p = m_pinstance.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_pinstance.get_acquire(); } return object_ptr<manager>(p); }
 	static	void				initialize_instance();
 	static	void				set_instance(own_ptr<manager>&& _pinstance) noexcept;
 	static	void				reset_instance() noexcept;
 	static	void				detach_instance() noexcept { m_pinstance.detach(); }
 
-// implementations) 
 private:
-	// 1) Pool List.
 			std::shared_mutex	m_lockable_list_binder;
 			std::set<net::io::Ibinder*> m_list_binder;
 
-	// 2) join/leave
 			void				join(net::io::Ibinder* _pbinder, net::io::statistics::Nsocket* _pstatistics_socket);
 			void				leave(net::io::Ibinder* _pbinder) noexcept;
 
-	// 3) Instance
 	static own_ptr<manager>		m_pinstance;
 	static std::mutex			m_lockable_create;
 
 public:
-	// 4) destroy
 	virtual	result_code			destroy() noexcept override;
 
-	// Friend)
 	friend	class net::io::Ibinder;
 };
 

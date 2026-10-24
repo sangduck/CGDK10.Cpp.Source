@@ -9,29 +9,29 @@ CService::CService()
 	SetName(_CGTEXT("CGCII Sample Login Server"));
 
 	// 2) Log file
-	m_pLogFile.NEW(_CGTEXT("logfile"));	
+	m_pLogFile.make_object(_CGTEXT("logfile"));	
 	NCGAttachable<ICGObjectState>::ProcessAttach(m_pLogFile);
 	g_pLog->RegisterMessageable(m_pLogFile);
 
 	// 3) Account Manager
-	m_pmanagerAccount.NEW(_CGTEXT("AccountManager"));
+	m_pmanagerAccount.make_object(_CGTEXT("AccountManager"));
 	NCGAttachable<ICGObjectState>::ProcessAttach(m_pmanagerAccount);
 
 	// 4) Server Login
-	m_pgroupServerLobby.NEW(_CGTEXT("groupServerLobby"));
+	m_pgroupServerLobby.make_object(_CGTEXT("groupServerLobby"));
 	NCGAttachable<ICGObjectState>::ProcessAttach(m_pgroupServerLobby);
 
-	m_pgroupServerLobbyImmigration.NEW(_CGTEXT("groupImmigrationServerLobby"));
+	m_pgroupServerLobbyImmigration.make_object(_CGTEXT("groupImmigrationServerLobby"));
 	NCGAttachable<ICGObjectState>::ProcessAttach(m_pgroupServerLobbyImmigration);
 
-	m_pacceptorServerLobby.NEW(_CGTEXT("acceptorServerLobby"));
+	m_pacceptorServerLobby.make_object(_CGTEXT("acceptorServerLobby"));
 	NCGAttachable<ICGObjectState>::ProcessAttach(m_pacceptorServerLobby);
 
 	// 5) User
-	m_pgroupUserImmigration.NEW(_CGTEXT("groupImmigrationUser"));
+	m_pgroupUserImmigration.make_object(_CGTEXT("groupImmigrationUser"));
 	NCGAttachable<ICGObjectState>::ProcessAttach(m_pgroupUserImmigration);
 
-	m_pacceptorUser.NEW("acceptorUser");
+	m_pacceptorUser.make_object("acceptorUser");
 	NCGAttachable<ICGObjectState>::ProcessAttach(m_pacceptorUser);
 }
 

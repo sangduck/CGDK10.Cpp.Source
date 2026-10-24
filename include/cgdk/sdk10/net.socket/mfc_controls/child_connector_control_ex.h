@@ -64,7 +64,7 @@ public:
 // implementation) 
 protected:
 			object_ptr<net::io::Iconnect_requestable> m_pconnector;
-			lockable<>			m_csConnector;
+	mutable	lock_object			m_csConnector;
 
 			CComboBox			m_comboBindAddress;
 			uint16_t			m_port_default = 0;

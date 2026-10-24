@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                         Server Query odbc Classes                         *
+//*                          server.query.rdb.odbc                            *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -37,10 +37,16 @@ public:
 			void				prepare_query(const std::string_view _command);
 
 	// 2) QUery open/close
-			void				execute_query(const std::string_view _command);
-			void				execute_query();
+			//    - execute_query()      : without 'co_await' executed as before. with 'co_await' executed on the system_executor. (execute_result)
+			//    - execute_query_sync() : always executed at once
+			execute_result<void> execute_query(const std::string_view _command);
+			execute_result<void> execute_query();
 			template <class TFIRST, class... TARGS>
-			void				execute_query(const std::string_view _command, TFIRST&& _first, TARGS&&... _args);
+			execute_result<void> execute_query(const std::string_view _command, TFIRST&& _first, TARGS&&... _args);
+			void				execute_query_sync(const std::string_view _command);
+			void				execute_query_sync();
+			template <class TFIRST, class... TARGS>
+			void				execute_query_sync(const std::string_view _command, TFIRST&& _first, TARGS&&... _args);
 
 			void				open_query();
 			void				close_query() noexcept;
@@ -89,7 +95,7 @@ public:
 	[[nodiscard]] auto			get_result()
 								{
 									std::vector<typename ODBC_GET_VALUE<typename _ODBC_DEFAULT_PARAM<TDEST>::type, TDEST>::TRETURN> result;
-									this->move_first();
+									if (this->move_first() == eRESULT::SUCCESS)
 									do
 									{
 										result.push_back(ODBC_GET_VALUE<typename _ODBC_DEFAULT_PARAM<TDEST>::type, TDEST>::get(this->m_handle_stmt, static_cast<SQLUSMALLINT>(1)));
@@ -147,7 +153,11 @@ public:
 	// 6) SQL handle STMT and Query String
 			std::string			m_query_string;
 			std::vector<sPARAM>	m_vector_params;
-			std::map<std::string, std::size_t> m_map_column;
+			std::map<std::string, std::size_t, std::less<>> m_map_column;
+
+	// 6-2) prepared statement reuse (soft parsing)
+			std::string			m_prepared_query_string;		// the SQL text prepared on m_handle_stmt (empty: none)
+			std::vector<sPARAM>	m_vector_params_prepared;		// the param infos of the prepared statement
 
 protected:
 	virtual	void				process_execute_query() override;
@@ -175,7 +185,7 @@ inline void query_recursive_set_param(query::rdb::odbc::Nquery* _pquery, const T
 }
 
 template <class TFIRST, class... TARGS>
-void query::rdb::odbc::Nquery::execute_query(const std::string_view _command, TFIRST&& _first, TARGS&&... _args)
+void query::rdb::odbc::Nquery::execute_query_sync(const std::string_view _command, TFIRST&& _first, TARGS&&... _args)
 {
 	// 1) execute query
 	this->prepare_query(_command);	
@@ -184,7 +194,50 @@ void query::rdb::odbc::Nquery::execute_query(const std::string_view _command, TF
 	query_recursive_set_param(this, _first, _args...);
 
 	// 3) execute query
-	this->execute_query();
+	this->execute_query_sync();
+}
+
+inline query::execute_result<void> query::rdb::odbc::Nquery::execute_query(const std::string_view _command)
+{
+	// 1) out of a coroutine: executed at once (same as before)
+	if (!is_deferred_execution())
+	{
+		this->execute_query_sync(_command);
+		return execute_result<void>::executed();
+	}
+
+	// 2) in a coroutine: deferred ('co_await' executes it on the system_executor)
+	return execute_result<void>::deferred([pquery = object_ptr<Nquery>(this), command = std::string(_command)]() { pquery->execute_query_sync(command); });
+}
+
+inline query::execute_result<void> query::rdb::odbc::Nquery::execute_query()
+{
+	// 1) out of a coroutine: executed at once (same as before)
+	if (!is_deferred_execution())
+	{
+		this->execute_query_sync();
+		return execute_result<void>::executed();
+	}
+
+	// 2) in a coroutine: deferred ('co_await' executes it on the system_executor)
+	return execute_result<void>::deferred([pquery = object_ptr<Nquery>(this)]() { pquery->execute_query_sync(); });
+}
+
+template <class TFIRST, class... TARGS>
+query::execute_result<void> query::rdb::odbc::Nquery::execute_query(const std::string_view _command, TFIRST&& _first, TARGS&&... _args)
+{
+	// 1) out of a coroutine: executed at once (same as before)
+	if (!is_deferred_execution())
+	{
+		this->execute_query_sync(_command, _first, std::forward<TARGS>(_args)...);
+		return execute_result<void>::executed();
+	}
+
+	// 2) in a coroutine: deferred ('co_await' executes it on the system_executor. the parameters are copied)
+	return execute_result<void>::deferred([pquery = object_ptr<Nquery>(this), command = std::string(_command), params = query::detail::deferred_params<TFIRST, TARGS...>(_first, _args...)]()
+		{
+			query::detail::apply_deferred_params<TFIRST, TARGS...>([&](const auto&... _params) { pquery->execute_query_sync(command, _params...); }, params);
+		});
 }
 
 

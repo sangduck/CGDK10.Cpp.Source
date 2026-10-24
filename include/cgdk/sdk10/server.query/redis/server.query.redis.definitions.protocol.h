@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                                Redis Classes                              *
+//*                            server.query.redis                             *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -38,7 +38,6 @@ struct sMESSAGE_REDIS_RESPONSE
 {
 public:
 			sMESSAGE_REDIS_RESPONSE() : sMESSAGE(eMESSAGE::SYSTEM::NETWORK_RESP)	{}
-public:
 			object_ptr<query::redis::Iquery>	pquery;
 
 			bool	is_success() const noexcept;

@@ -40,7 +40,8 @@ private:
 	virtual	void				process_on_unregister() override;
 	virtual	bool				process_schedule() override;
 
-			lockable<object_ptr<factory::manager>>	m_pmanager_factory;
+			lock_object			m_lockable_pmanager_factory;
+			object_ptr<factory::manager> m_pmanager_factory;
 };
 
 

@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                               Redis Classes                               *
+//*                            server.query.redis                             *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -17,88 +17,146 @@
 //*****************************************************************************
 
 #pragma once
+#include <format>
 
 namespace CGDK
 {
 //-----------------------------------------------------------------------------
 //
-// net::io::sender::Nredis
+// query::redis::Iquery
 //
 //
 //-----------------------------------------------------------------------------
-class query::redis::Iquery :
-	virtual public				Iserver_query
+class query::redis::Iquery : virtual public Iserver_query
 {
 public:
 	typedef	Iquery					IQUERY;
 	typedef	querier					QUERIER;
 	typedef	sMESSAGE_REDIS_RESPONSE	RESPONSE;
 
-public:
-			Iquery();
 	virtual ~Iquery();
 
-// public)
-public:
-	[[nodiscard]] object_ptr<session> get_session() const noexcept { return this->m_psession;}
+	[[nodiscard]] auto			get_session() const noexcept { return this->m_psession;}
 			void				set_session(session* _psession) { this->process_set_session(_psession);}
 			void				reset_session() noexcept { this->process_reset_session();}
 
-			template <class TLOCK>
-			void				wait(TLOCK& _cs) { m_cv_complete.wait(_cs); }
-			void				wait() { std::unique_lock<std::recursive_mutex> cs(this->m_lockable_wait); this->m_cv_complete.wait(cs); }
-			void				notify() noexcept { std::unique_lock<std::recursive_mutex> cs(this->m_lockable_wait); this->m_cv_complete.notify_one(); }
-			void				execute_query(std::string_view _command);
+			void				wait();
+			//    - execute_query()      : without 'co_await' executed as before. with 'co_await' the coroutine is resumed when the response is received. (execute_result)
+			//    - execute_query_sync() : always executed at once (waits for the response)
+			execute_result<void> execute_query(std::string_view _command);
 			template <class TA, class... TARGS>
-			void				execute_query(const std::string_view _format, TA _first, TARGS... _args);
-
-			void				post_execute_query(std::string_view _command);
-			void				post_execute_query(std::string_view _command, std::function<void()>&& _response);
-
+			execute_result<void> execute_query(const std::string_view _format, TA _first, TARGS... _args);
+			void				execute_query_sync(std::string_view _command);
+			template <class TA, class... TARGS>
+			void				execute_query_sync(const std::string_view _format, TA _first, TARGS... _args);
+			void				post_execute_query(std::string_view _command) { this->post_execute_query(std::string(_command), nullptr); }
+			void				post_execute_query(std::string_view _command, std::function<void()>&& _response) { this->post_execute_query(std::string(_command), std::move(_response)); }
+			void				post_execute_query(std::string&& _command) { this->post_execute_query(std::move(_command), nullptr); }
+			void				post_execute_query(std::string&& _command, std::function<void()>&& _response);
 	virtual	void				close_query() noexcept;
 
-	[[nodiscard]] const resp_data&  result() const noexcept { return this->m_result; }
+		// coroutine) called once after the request is completed (used by 'co_await execute_query()')
+			void				_set_function_on_complete(std::function<void()>&& _function);
+			void				_process_on_complete();
+			execute_result<void> _execute_query_deferred(std::string&& _command);
 
-public:
+	[[nodiscard]] auto&			result() const noexcept { return this->m_result; }
+
+protected:
 	virtual	void				process_response();
 	virtual	void				process_execute_query() override;
 			void				process_set_session(session* _psession);
 	virtual	void				process_reset_session() noexcept override;
-
-public:
-			shared_buffer		m_buffer_query;
-			resp_data			m_result;
-
-public:
-			std::condition_variable_any m_cv_complete;
-			std::recursive_mutex m_lockable_wait;
-
-private:
-			object_ptr<session>	m_psession;
-			std::recursive_mutex m_lockable_state_query;
-			std::vector<std::function<void()>> m_queue_query;
+			void				_process_notify_to_requestor() noexcept;
+			void				_process_execute_query(std::string_view _command);
+			void				_process_post_execute_query(std::string&& _command, std::function<void()>&& _response);
+			template <class TLOCK>
+			void				process_wait(TLOCK& _cs) { this->m_cv_complete.wait(_cs); }
 
 	virtual	void				on_final_release() noexcept override { this->reset_session(); this->m_result.reset(); }
 
-			void				_process_notify_to_requestor() noexcept;
-			void				_process_regenerate_session();
-			void				_process_next_execute_query();
+			shared_buffer		m_buffer_query;
+			resp_data			m_result;
+
+			std::condition_variable_any m_cv_complete;
+			object_ptr<session>	m_psession;
+			std::recursive_mutex m_lockable_state_query;
+			std::function<void()> m_function_on_complete;
+
+			friend class querier;
+			friend class session;
 };
 
 template <class TA, class... TARGS>
-void query::redis::Iquery::execute_query(const std::string_view _format, TA _first, TARGS... _args)
+void query::redis::Iquery::execute_query_sync(const std::string_view _format, TA _first, TARGS... _args)
 {
 	// check) _format shouldn't be nullptr
 	CGASSERT_ERROR(_format.empty() == false);
 
-	// 1) alloc shared_buffer
-	auto buf_query_string = alloc_shared_buffer(65536 * sizeof(char));
+	// 1) generate string
+	auto query_string = std::vformat(_format, std::make_format_args(_first, _args...));
 
-	// 2) generate string
-	auto str_length = __sprintf(buf_query_string.data(), 65536, _format.data(), _first, _args...);
+	// 2) execute query
+	return this->_process_execute_query(query_string);
+}
 
-	// 3) execute query
-	return this->execute_query(std::string_view(buf_query_string.data(), str_length));
+inline query::execute_result<void> query::redis::Iquery::execute_query(std::string_view _command)
+{
+	// 1) out of a coroutine: executed at once (same as before)
+	if (!is_deferred_execution())
+	{
+		this->execute_query_sync(_command);
+		return execute_result<void>::executed();
+	}
+
+	// 2) in a coroutine: deferred
+	return this->_execute_query_deferred(std::string(_command));
+}
+
+template <class TA, class... TARGS>
+query::execute_result<void> query::redis::Iquery::execute_query(const std::string_view _format, TA _first, TARGS... _args)
+{
+	// 1) out of a coroutine: executed at once (same as before)
+	if (!is_deferred_execution())
+	{
+		this->execute_query_sync(_format, _first, _args...);
+		return execute_result<void>::executed();
+	}
+
+	// 2) in a coroutine: deferred
+	return this->_execute_query_deferred(std::vformat(_format, std::make_format_args(_first, _args...)));
+}
+
+inline query::execute_result<void> query::redis::Iquery::_execute_query_deferred(std::string&& _command)
+{
+	// - 'co_await' sends the request and resumes the coroutine when the response is received
+	auto pquery = object_ptr<Iquery>(this);
+	std::string command_sync(_command);
+
+	return execute_result<void>::deferred(
+		[pquery, command = std::move(command_sync)]() { pquery->execute_query_sync(command); },
+		[pquery, command = std::move(_command)](std::function<void()>&& _on_complete) { pquery->_set_function_on_complete(std::move(_on_complete)); pquery->post_execute_query(std::string(command)); });
+}
+
+inline void query::redis::Iquery::_set_function_on_complete(std::function<void()>&& _function)
+{
+	SCOPED_LOCK(this->m_lockable_state_query)
+	{
+		this->m_function_on_complete = std::move(_function);
+	}
+}
+
+inline void query::redis::Iquery::_process_on_complete()
+{
+	std::function<void()> function;
+
+	SCOPED_LOCK(this->m_lockable_state_query)
+	{
+		function = std::exchange(this->m_function_on_complete, nullptr);
+	}
+
+	if (function)
+		function();
 }
 
 

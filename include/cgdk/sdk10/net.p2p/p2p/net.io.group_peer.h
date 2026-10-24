@@ -61,7 +61,7 @@ protected:
 template <class TPEER>
 object_ptr<TPEER>& net::io::group_peer::Narray<TPEER>::peer( int _peer_index)
 {
-	// check) iPeer가 Min과 Max 사이가 아니면 안됀다!
+	// check) iPeer가 Min과 Max 사이가 아니면 안 된다!
 	CGASSERT_ERROR(_peer_index>=0 && _peer_index<static_cast<int>(m_vector_peer.size()));
 
 	//  1) peer 얻어 Return하기.
@@ -116,13 +116,13 @@ object_ptr<TPEER> net::io::group_peer::Narray<TPEER>::detach_peer( int _peer_ind
 	scoped_lock(m_lockable_vector_peer)
 	{
 		// check) iPeer가 Min과 Max 사이여야지만 한다.
-		RETURN_IF(_peer_index<0 && _peer_index>=static_cast<int>(m_vector_peer.size()), object_ptr<TPEER>());
+		RETURN_IF(_peer_index<0 || _peer_index>=static_cast<int>(m_vector_peer.size()), object_ptr<TPEER>());
 
 		// 1) peer를 얻는다.
 		pPeer	 = m_vector_peer.at(_peer_index);
 
-		// check) 
-		RETURN_IF(pPeer.exist(), pPeer);
+		// check) 붙어 있는 peer가 없으면 할 일이 없다.
+		RETURN_IF(pPeer.empty(), pPeer);
 
 		// 2) on_peer_detach함수를 호출한다.
 		on_peer_detach(_peer_index, pPeer);
@@ -141,10 +141,11 @@ object_ptr<TPEER> net::io::group_peer::Narray<TPEER>::detach_peer( int _peer_ind
 template <class TPEER>
 bool net::io::group_peer::Narray<TPEER>::detach_peer( TPEER* _pPeer) noexcept
 {
-	detach_peer(_pPeer->get_peer_index());
+	// check)
+	RETURN_IF(_pPeer == nullptr, false);
 
 	// return)
-	return true;
+	return detach_peer(_pPeer->get_peer_index()).exist();
 }
 
 

@@ -25,14 +25,14 @@ namespace CGDK
 // logger_hub
 //
 // 1. logger_hub은~
-//    하나의 Log로 여러 곳에 Log를 남기기 위한 Log용 Hub 객체라고 할수 있다.
+//    하나의 Log로 여러 곳에 Log를 남기기 위한 Log용 Hub 객체라고 할 수 있다.
 //    다양한 형태와 종류의 Log객체를 logger_hub 객체에 register_messageable()
 //    함수로 등록해 놓으면 logger_hub 객체에 Log가 전달되었을 시 모든 등록된
 //    Log 객체들에게 메시지를 전파한다.
 //
 // 2. Log의 내용
 //		0) Date/Time	Log가 남은 시간이다.(자동기록)
-//		1) type			Log의 종류이다. Errror, Progress, Warning, Info, ...
+//		1) type			Log의 종류이다. Error, Progress, Warning, Info, ...
 //	    2) Level		Log의 중요도이다.
 //		3) Message		남길 Log Message를 의미한다.
 //
@@ -47,7 +47,6 @@ public:
 			};
 
 			logger_hub() noexcept;
-			logger_hub(const std::string_view _name);
 	virtual ~logger_hub() noexcept;
 
 			result_code			initialize() { return object::Ninitializable::initialize(); }
@@ -61,7 +60,8 @@ public:
 			int					clear() noexcept;
 
 protected:
-	virtual	void				process_log(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record) override;
+	virtual	void				process_log(object_ptr<LOG_RECORD>&& _plog_record) override;
+			void				_process_forward(object_ptr<LOG_RECORD>&& _plog_record);	// - filtering, statistics and passing to the children (no state check)
 
 	virtual bool				process_attach(object_ptr<Ilogger>&& _pchild) override;
 	virtual bool				process_detach(Ilogger* _pchild) noexcept override;
@@ -72,9 +72,21 @@ protected:
 			bool				_process_attach(object_ptr<Ilogger>&& _pchild);
 			bool				_process_detach(Ilogger* _pchild) noexcept;
 			int					_process_detach_all() noexcept;
+			void				_update_snapshot() noexcept;
 
 			std::mutex			m_lockable_log;
 			std::vector<object_ptr<Ilogger>> m_container;
+			std::vector<own_ptr<Nlogger>> m_vector_child_owned;	// - the children created by the setting ("child")
+
+	// - snapshot of m_container : process_log reads it without lock (rebuilt on attach/detach)
+	//   the readers load a raw pointer (lock-free, no refcount) : std::atomic<shared_ptr>::load
+	//   took a global spinlock and was the bottleneck under many logging threads.
+	//   the old snapshots are kept alive in m_snapshot_keepalive until the hub is destroyed
+	//   (updated only under m_lockable_log, on attach/detach : not a hot path), so a reader
+	//   holding an old pointer never dangles.
+			using snapshot_t = std::vector<object_ptr<Ilogger>>;
+			std::atomic<const snapshot_t*> m_psnapshot{ nullptr };
+			std::vector<std::shared_ptr<const snapshot_t>> m_snapshot_keepalive;
 };
 
 

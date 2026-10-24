@@ -107,76 +107,149 @@ NUMERIC NUMERIC::_operate_multiply(const NUMERIC& _lhs, const NUMERIC& _rhs) noe
 	return	tempValue;
 }
 
+//-----------------------------------------------------------------------------
+// unsigned 128 bit integer : for the exact division of NUMERIC ((lhs x 10^8) / rhs)
+//-----------------------------------------------------------------------------
+namespace
+{
+	struct _uint128
+	{
+		uint64_t hi = 0;
+		uint64_t lo = 0;
+	};
+
+	// - 64 bit x 64 bit => 128 bit
+	_uint128 _mul_64(uint64_t _a, uint64_t _b) noexcept
+	{
+		const uint64_t a_lo = _a & 0xffffffffu;
+		const uint64_t a_hi = _a >> 32;
+		const uint64_t b_lo = _b & 0xffffffffu;
+		const uint64_t b_hi = _b >> 32;
+
+		const uint64_t p0 = a_lo * b_lo;
+		const uint64_t p1 = a_lo * b_hi;
+		const uint64_t p2 = a_hi * b_lo;
+		const uint64_t p3 = a_hi * b_hi;
+		const uint64_t mid = (p0 >> 32) + (p1 & 0xffffffffu) + (p2 & 0xffffffffu);
+
+		return _uint128{ p3 + (p1 >> 32) + (p2 >> 32) + (mid >> 32), (mid << 32) | (p0 & 0xffffffffu) };
+	}
+
+	// - 128 bit x 64 bit (the result must be less than 2^128)
+	_uint128 _mul(const _uint128& _a, uint64_t _b) noexcept
+	{
+		auto result = _mul_64(_a.lo, _b);
+		result.hi += _a.hi * _b;
+		return result;
+	}
+
+	_uint128 _add(const _uint128& _a, uint64_t _b) noexcept
+	{
+		_uint128 result{ _a.hi, _a.lo + _b };
+		if (result.lo < _a.lo)
+			++result.hi;
+		return result;
+	}
+
+	_uint128 _sub(const _uint128& _a, const _uint128& _b) noexcept
+	{
+		return _uint128{ _a.hi - _b.hi - ((_a.lo < _b.lo) ? 1u : 0u), _a.lo - _b.lo };
+	}
+
+	bool _is_less(const _uint128& _a, const _uint128& _b) noexcept
+	{
+		return (_a.hi < _b.hi) || (_a.hi == _b.hi && _a.lo < _b.lo);
+	}
+
+	// - _n / _d (bit by bit long division : _d must be less than 2^127)
+	_uint128 _div(const _uint128& _n, const _uint128& _d) noexcept
+	{
+		_uint128 quotient;
+		_uint128 remainder;
+
+		for (int i = 127; i >= 0; --i)
+		{
+			// - remainder = (remainder << 1) | (bit i of _n)
+			const uint64_t bit = (i >= 64) ? ((_n.hi >> (i - 64)) & 1u) : ((_n.lo >> i) & 1u);
+			remainder.hi = (remainder.hi << 1) | (remainder.lo >> 63);
+			remainder.lo = (remainder.lo << 1) | bit;
+
+			// - subtract
+			if (_is_less(remainder, _d) == false)
+			{
+				remainder = _sub(remainder, _d);
+
+				if (i >= 64)
+					quotient.hi |= (uint64_t(1) << (i - 64));
+				else
+					quotient.lo |= (uint64_t(1) << i);
+			}
+		}
+
+		return quotient;
+	}
+
+	// - |value x 10^8 + fraction| and its sign
+	_uint128 _get_scaled_magnitude(const NUMERIC& _numeric, bool& _is_negative) noexcept
+	{
+		_is_negative = (_numeric.value < 0) || (_numeric.value == 0 && _numeric.fraction < 0);
+
+		const uint64_t magnitude_value = (_numeric.value < 0) ? (0 - static_cast<uint64_t>(_numeric.value)) : static_cast<uint64_t>(_numeric.value);
+		const uint64_t magnitude_fraction = (_numeric.fraction < 0) ? (0 - static_cast<uint64_t>(_numeric.fraction)) : static_cast<uint64_t>(_numeric.fraction);
+
+		auto scaled = _mul_64(magnitude_value, static_cast<uint64_t>(_FRACTION_MAX));
+
+		// - fraction with the same sign is added (with the other sign : subtracted)
+		if (_numeric.value == 0 || _numeric.fraction == 0 || ((_numeric.value < 0) == (_numeric.fraction < 0)))
+			return _add(scaled, magnitude_fraction);
+		else
+			return _sub(scaled, _uint128{ 0, magnitude_fraction });
+	}
+}
+
 NUMERIC NUMERIC::_operate_divide(const NUMERIC& _lhs, const NUMERIC& _rhs)
 {
 	// check)
-	CGASSERT_ERROR(_lhs.fraction < _FRACTION_MAX);
-	CGASSERT_ERROR(_rhs.fraction < _FRACTION_MAX);
+	CGASSERT_ERROR(_lhs.fraction > -_FRACTION_MAX && _lhs.fraction < _FRACTION_MAX);
+	CGASSERT_ERROR(_rhs.fraction > -_FRACTION_MAX && _rhs.fraction < _FRACTION_MAX);
+
+	// check) divide by zero
+	THROW_IF(_rhs.value == 0 && _rhs.fraction == 0, throwable::failure(eRESULT::INVALID_ARGUMENT));
+
+	// 1) magnitudes scaled by 10^8
+	bool is_negative_lhs = false;
+	bool is_negative_rhs = false;
+	const auto scaled_lhs = _get_scaled_magnitude(_lhs, is_negative_lhs);
+	const auto scaled_rhs = _get_scaled_magnitude(_rhs, is_negative_rhs);
+
+	// 2) quotient scaled by 10^8 : (lhs x 10^8) / rhs (truncated toward zero)
+	const auto quotient = _div(_mul(scaled_lhs, static_cast<uint64_t>(_FRACTION_MAX)), scaled_rhs);
+
+	// 3) split into the value part and the fraction part
+	const auto quotient_value = _div(quotient, _uint128{ 0, static_cast<uint64_t>(_FRACTION_MAX) });
+	const auto quotient_fraction = _sub(quotient, _mul(quotient_value, static_cast<uint64_t>(_FRACTION_MAX)));
+
+	// check) overflow
+	CGASSERT_ERROR(quotient_value.hi == 0 && quotient_value.lo <= static_cast<uint64_t>(INT64_MAX));
 
 	// declare)
-	NUMERIC	tempValue;
+	NUMERIC	tempValue(static_cast<int64_t>(quotient_value.lo), static_cast<int64_t>(quotient_fraction.lo));
 
-	if (_rhs.fraction == 0)
+	// 4) sign
+	if (is_negative_lhs != is_negative_rhs)
 	{
-		tempValue.value		 = _lhs.value / _rhs.value;
-		tempValue.fraction	 = ((_lhs.value - (tempValue.value * _rhs.value)) * _FRACTION_MAX + _lhs.fraction) / _rhs.value;
-	}
-	else if(_rhs.value == 0)
-	{
-		auto	a			 = _lhs.value / _rhs.fraction;
-		auto	a_1			 = _lhs.value - (a * _rhs.fraction);
-
-		// check) 
-		CGASSERT_ERROR(a_1 <= (INT64_MAX / _FRACTION_MAX));
-
-		auto	b			 = (a_1 * _FRACTION_MAX +_lhs.fraction) / _rhs.fraction;
-		auto	c			 = b / _FRACTION_MAX;
-
-		tempValue.value		 = a * _FRACTION_MAX + c;
-		tempValue.fraction	 = b - (c * _FRACTION_MAX);
-	}
-	else
-	{
-		// - 몫을 먼저 구한다.
-		int64_t	temp_div1	 = _lhs.value/(_rhs.value+1);
-
-		// - 나머지의 value파트를 구한다.
-		auto	temp		 = _lhs - (_rhs * NUMERIC(temp_div1, 0));
-
-		// - 중간처리...
-		if(temp.value >= _FRACTION_MAX)
-		{
-			// - Scale로 _FRACTION_MAX보다 높은 자리만 몫을 먼저 구한다.
-			int64_t	temp_div2	 = (temp.value / _FRACTION_MAX)/(_rhs.value+1) * _FRACTION_MAX;
-
-			// - 나머지의 value파트를 구한다.
-			temp			-= (_rhs * NUMERIC(temp_div2, 0));
-
-			// - 몫은 더해 줌.
-			temp_div1		+= temp_div2;
-		}
-
-		// check) 
-		CGASSERT_ERROR(temp.value <= (INT64_MAX / _FRACTION_MAX));
-
-		// - 너머지를 추가한다.
-		auto	a			 = temp.value * _FRACTION_MAX + temp.fraction;
-		auto	b			 = a / _FRACTION_MAX;
-		auto	c			 = a - b * _FRACTION_MAX;
-
-		// - 최종값을 계산한다.
-		tempValue.value		 = b + temp_div1;
-		tempValue.fraction	 = c;
+		tempValue.value		 = -tempValue.value;
+		tempValue.fraction	 = -tempValue.fraction;
 	}
 
 	// check)
 	CGASSERT_ERROR(tempValue.fraction > -_FRACTION_MAX && tempValue.fraction < _FRACTION_MAX)
 
-	// return) 
+	// return)
 	return	tempValue;
 }
 
-NUMERIC NUMERIC::_operate_modurate(const NUMERIC& _lhs, const NUMERIC& _rhs) noexcept
+NUMERIC NUMERIC::_operate_modulo(const NUMERIC& _lhs, const NUMERIC& _rhs) noexcept
 {
 	// check)
 	CGASSERT_ERROR(_lhs.fraction < _FRACTION_MAX);
@@ -192,7 +265,8 @@ NUMERIC NUMERIC::_operate_modurate(const NUMERIC& _lhs, const NUMERIC& _rhs) noe
 	}
 	else
 	{
-		tempValue	 = _lhs - (_lhs / _rhs) * _rhs;
+		// - lhs - (integer part of lhs / rhs) x rhs
+		tempValue	 = _lhs - NUMERIC((_lhs / _rhs).value, 0) * _rhs;
 	}
 
 	// check)
@@ -280,8 +354,12 @@ NUMERIC NUMERIC::_operate_divide(const NUMERIC& _lhs, int64_t _rhs) noexcept
 	// declare)
 	NUMERIC	tempValue;
 
-	tempValue.value		 = _lhs.value % _rhs;
-	tempValue.fraction	 = _lhs.fraction;
+	// check)
+	CGASSERT_ERROR(_rhs != 0);
+
+	// 1) integer part / fraction part (the remainder of the integer part is carried to the fraction)
+	tempValue.value		 = _lhs.value / _rhs;
+	tempValue.fraction	 = ((_lhs.value - tempValue.value * _rhs) * _FRACTION_MAX + _lhs.fraction) / _rhs;
 
 	// check)
 	CGASSERT_ERROR(tempValue.fraction > -_FRACTION_MAX && tempValue.fraction < _FRACTION_MAX)
@@ -290,7 +368,7 @@ NUMERIC NUMERIC::_operate_divide(const NUMERIC& _lhs, int64_t _rhs) noexcept
 	return	tempValue;
 }
 
-NUMERIC NUMERIC::_operate_modurate([[maybe_unused]] const NUMERIC& _lhs, [[maybe_unused]]  int64_t _rhs) noexcept
+NUMERIC NUMERIC::_operate_modulo([[maybe_unused]] const NUMERIC& _lhs, [[maybe_unused]]  int64_t _rhs) noexcept
 {
 	// check)
 	CGASSERT_ERROR(_lhs.fraction > -_FRACTION_MAX && _lhs.fraction < _FRACTION_MAX);
@@ -326,7 +404,8 @@ void NUMERIC::_operate_normalize(NUMERIC& _InOut) noexcept
 char* NUMERIC::to_string(char* _Out, std::size_t _sizeBuffer) const
 {
 	// 1) integer part를 출력한다.
-	int pos = __sprintf(_Out, _sizeBuffer, "%I64d", value);
+	//    (value is 0 and fraction is negative : "-0" - the sign is in the fraction part only)
+	int pos = (value == 0 && fraction < 0) ? std::snprintf(_Out, _sizeBuffer, "-0") : std::snprintf(_Out, _sizeBuffer, "%lld", static_cast<long long>(value));
 
 	// 2) fraction part가 있을 경우에만 출력한다.
 	if (fraction != 0)
@@ -358,7 +437,8 @@ char* NUMERIC::to_string(char* _Out, std::size_t _sizeBuffer) const
 wchar_t* NUMERIC::to_string(wchar_t* _Out, std::size_t _sizeBuffer) const
 {
 	// 1) integer part를 출력한다.
-	int pos = __sprintf(_Out, _sizeBuffer, L"%I64d", value);
+	//    (value is 0 and fraction is negative : L"-0" - the sign is in the fraction part only)
+	int pos = (value == 0 && fraction < 0) ? std::swprintf(_Out, _sizeBuffer, L"-0") : std::swprintf(_Out, _sizeBuffer, L"%lld", static_cast<long long>(value));
 
 	// 2) fraction part가 있을 경우에만 출력한다.
 	if (fraction != 0)
@@ -395,50 +475,47 @@ void NUMERIC::from_string(const char* _string)
 	// check)
 	THROW_IF(_string == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) Parsing할 string
-	auto* ch = _string;
-
 	// check) 바로 0이면 리턴한다.
-	RETURN_IF((*ch) == 0);
+	RETURN_IF((*_string) == 0);
 
 	// declare) 
 	bool	bNeg		 = false;
 	int64_t	tempValue	 = 0;
 	int64_t	tempFraction = 0;
 
-	if((*ch)=='-')
+	if((*_string)=='-')
 	{
 		bNeg = true;
-		++ch;
+		++_string;
 	}
-	else if ((*ch) == '+')
+	else if ((*_string) == '+')
 	{
-		++ch;
+		++_string;
 	}
 
 	// 2) 정수부를 추출한다.
-	while((*ch)!= 0 && (*ch)!='.')
+	while((*_string)!= 0 && (*_string)!='.')
 	{
 		tempValue *= 10;
-		tempValue += (*ch)-'0';
-		++ch;
+		tempValue += (*_string)-'0';
+		++_string;
 	}
 
 	// 3) 소수부를 추출한다.
-	if((*ch)!=0)
+	if((*_string)!=0)
 	{
 		// - 소수점 제거...
-		++ch;
+		++_string;
 
 		// - 최대 Scale만큼만 읽어들이기 위해...
 		int	i = _FRACTION_SCALE;
 
 		// - 소수점을 읽어들인다.
-		while((*ch)!=0 && i!=0)
+		while((*_string)!=0 && i!=0)
 		{
 			tempFraction *= 10;
-			tempFraction += (*ch)-'0';
-			++ch;
+			tempFraction += (*_string)-'0';
+			++_string;
 			--i;
 		}
 
@@ -473,50 +550,47 @@ void NUMERIC::from_string(const wchar_t* _string)
 	// check)
 	THROW_IF(_string == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) Parsing할 string
-	auto* ch = _string;
-
 	// check) 바로 0이면 리턴한다.
-	RETURN_IF((*ch) == 0);
+	RETURN_IF((*_string) == 0);
 
 	// declare) 
 	bool	bNeg		 = false;
 	int64_t	tempValue	 = 0;
 	int64_t	tempFraction = 0;
 
-	if((*ch)==L'-')
+	if((*_string)==L'-')
 	{
 		bNeg = true;
-		++ch;
+		++_string;
 	}
-	else if ((*ch) == L'+')
+	else if ((*_string) == L'+')
 	{
-		++ch;
+		++_string;
 	}
 
 	// 2) 정수부를 추출한다.
-	while((*ch)!= 0 && (*ch)!=L'.')
+	while((*_string)!= 0 && (*_string)!=L'.')
 	{
 		tempValue *= 10;
-		tempValue += (*ch)-L'0';
-		++ch;
+		tempValue += (*_string)-L'0';
+		++_string;
 	}
 
 	// 3) 소수부를 추출한다.
-	if((*ch)!= 0)
+	if((*_string)!= 0)
 	{
 		// - 소수점 제거...
-		++ch;
+		++_string;
 
 		// - 최대 Scale만큼만 읽어들이기 위해...
 		int	i = _FRACTION_SCALE;
 
 		// - 소수점을 읽어들인다.
-		while((*ch)!= 0 && i!=0)
+		while((*_string)!= 0 && i!=0)
 		{
 			tempFraction *= 10;
-			tempFraction += (*ch)-L'0';
-			++ch;
+			tempFraction += (*_string)-L'0';
+			++_string;
 			--i;
 		}
 

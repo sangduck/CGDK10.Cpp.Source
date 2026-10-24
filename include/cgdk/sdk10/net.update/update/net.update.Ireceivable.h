@@ -41,7 +41,7 @@ public:
 	virtual result_code			process_end () PURE;
 
 public:
-			lockable<>			m_cs_info;
+			lock_object			m_lockable_info;
 			SENDER_ID			m_sender_id;
 
 			resource::sUPDATABLE_FILE_META_INFO m_meta_info;

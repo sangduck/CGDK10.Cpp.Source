@@ -4,7 +4,7 @@
 namespace CGDK
 {
 
-buffer_view	api::file::read(FILE_HANDLE _handle_file, buffer_view _buffer) noexcept
+buffer_view	api::file::read(FILE_HANDLE _handle_file, const buffer_view& _buffer) noexcept
 {
 	// 1) read
 	auto result = read(_handle_file, _buffer.size(), _buffer.data()); 
@@ -71,6 +71,29 @@ buffer_view api::file::write(const std::string_view _filename, buffer_view _buf_
 
 	// return)
 	return buffer_view(_buf_write.data(), result_size);
+}
+
+bool api::file::create_parent_directories(const std::string_view _file_path) noexcept
+{
+	try
+	{
+		// 1) get parent directory of the file
+		auto path_parent = std::filesystem::path(_file_path).parent_path();
+
+		// check) no directory part (current directory)
+		RETURN_IF(path_parent.empty(), true);
+
+		// 2) create all missing directories
+		std::error_code ec;
+		std::filesystem::create_directories(path_parent, ec);
+
+		// return)
+		return !ec;
+	}
+	catch (...)
+	{
+		return false;
+	}
 }
 
 std::string api::file::make_full_path(const std::string_view _path, const std::string_view _file_name)

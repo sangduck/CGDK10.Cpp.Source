@@ -72,7 +72,7 @@ public:
 protected:
 			CListCtrl			m_listctrlEvent;
 			object_ptr<time_event::entity_manager>	m_pentity_manager;
-			lockable<>			m_cs_event_manager;
+	mutable	lock_object			m_lockable_event_manager;
 			BOOL				m_bEnableControl;
 
 protected:

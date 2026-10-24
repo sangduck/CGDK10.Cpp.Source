@@ -30,7 +30,7 @@ class group::list_sender :
 	public						list<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>,
 	virtual public				net::io::Isender
 {
-// definitnion)
+// definition)
 public:
 	using group_base_t = list<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>;
 	using member_t = _TMEMBER;
@@ -72,29 +72,16 @@ group::list_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::list_sender(
 template <class _TMEMBER, class _TPARAM, class _TMEMBER_DATA, class _TMEMBERBASE>
 bool group::list_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_except(member_t* _member_except, const shared_buffer& _buffer, uint64_t _option)
 {
-	// declare)
-	std::vector<object_ptr<_TMEMBER>> vector_send;
-
-	// 1) make member list
-	scoped_lock(this->m_lockable_group)
-	{
-		// - reserve
-		vector_send.reserve(this->m_container_member.size());
-
-		// - copy list
-		for (const auto& iter : this->m_container_member)
-		{
-			// check) 
-			CONTINUE_IF(iter.member() == _member_except);
-
-			// - push memer to list
-			vector_send.push_back(iter.member());
-		}
-	}
+	// 1) member snapshot (copy-on-write)
+	auto snapshot_send = this->get_member_snapshot();
 
 	// 2) send
-	for (auto& iter : vector_send)
+	for (auto* iter : snapshot_send)
 	{
+		// check) 
+		CONTINUE_IF(iter == _member_except);
+
+		// - send
 		iter->process_send(shared_buffer(_buffer), 1, _option);
 	}
 
@@ -113,29 +100,15 @@ group::list_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_except(
 	// 2) 붙인다.
 	buffer_temp.template append<T>(_data);
 
-	// declare)
-	std::vector<object_ptr<_TMEMBER>> vector_send;
+	// 3) member snapshot (copy-on-write)
+	auto snapshot_send = this->get_member_snapshot();
 
-	// 1) make member list
-	scoped_lock(this->m_lockable_group)
+	// 4) send to all
+	for (auto* iter : snapshot_send)
 	{
-		// - reserve
-		vector_send.reserve(this->m_container_member.size());
+		// check) except member == _memer_except
+		CONTINUE_IF(iter == _member_except);
 
-		// - copy member
-		for (const auto& iter : this->m_container_member)
-		{
-			// check) except member == _memer_except
-			CONTINUE_IF(iter.member() == _member_except);
-
-			// - push_back
-			vector_send.push_back(iter.member());
-		}
-	}
-
-	// 2) send to all
-	for (auto& iter : vector_send)
-	{
 		iter->process_send(shared_buffer(buffer_temp), 1, _option);
 	}
 
@@ -155,7 +128,7 @@ bool group::list_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_co
 	// declare)
 	std::vector<object_ptr<_TMEMBER>> vector_send;
 
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
 		// - reserve
 		vector_send.reserve(this->m_container_member.size());
@@ -164,10 +137,10 @@ bool group::list_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_co
 		for (const auto& iter : this->m_container_member)
 		{
 			// check) send only result of _pred is true
-			CONTINUE_IF(_pred(iter.member()) == false);
+			CONTINUE_IF(_pred(*iter) == false);
 
 			// - push_back
-			vector_send.push_back(iter.member());
+			vector_send.push_back(*iter);
 		}
 	}
 
@@ -195,15 +168,19 @@ group::list_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_conditi
 	// declare)
 	std::vector<object_ptr<_TMEMBER>> vector_send;
 
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
+		// - reserve
+		vector_send.reserve(this->m_container_member.size());
+
+		// - 모든 Member에게 전송한다.
 		for(const auto& iter: this->m_container_member)
 		{
 			// check) _pred가 false면 전송하지 않는다.
-			CONTINUE_IF(_pred(iter->member())==false);
+			CONTINUE_IF(_pred(*iter) == false);
 
 			// - push_back
-			vector_send.push_back(iter.member());
+			vector_send.push_back(*iter);
 		}
 	}
 
@@ -226,22 +203,13 @@ bool group::list_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::process
 	// check) _buffer.size()이 0이 아닌가?
 	RETURN_IF(_buffer.size() == 0, false)
 	
-	// declare)
-	std::vector<object_ptr<_TMEMBER>> vector_send;
-
-	scoped_lock(this->m_lockable_group)
-	{
-		// - 모든 Member에게 전송한다.
-		for(const auto& iter: this->m_container_member)
-		{
-			// - push_back
-			vector_send.push_back(iter.member());
-		}
-	}
+	// declare) member snapshot (copy-on-write. no group lock while the published one is valid)
+	auto snapshot_send = this->get_member_snapshot();
 
 	// 4) send
-	for (auto& iter : vector_send)
+	for (auto* iter : snapshot_send)
 	{
+		// - 모든 Member에게 전송한다.
 		iter->process_send(shared_buffer(_buffer), _count_message, _option);
 	}
 

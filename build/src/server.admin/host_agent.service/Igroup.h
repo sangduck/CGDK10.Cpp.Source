@@ -19,7 +19,7 @@
 #pragma once
 // ----------------------------------------------------------------------------
 //
-// group_server
+// group_peer_server
 //
 // ----------------------------------------------------------------------------
 class Igroup : 
@@ -27,6 +27,6 @@ class Igroup :
 	public						object::Nnameable,
 	public						object::Ninitializable_startable,
 	virtual public				Nmessage_transmitter_single,
-	public						net::io::messageable::Nbase
+	virtual public				Imessageable
 {
 };

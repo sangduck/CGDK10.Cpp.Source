@@ -17,7 +17,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{787972A7-81B0-4CC7-AEBC-3732687F6837}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>tutorialbuffer01basicconsolevs16</RootNamespace>
+    <RootNamespace>tutorialbuffer01basicconsole</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>buffer.01.basic.console</ProjectName>
   </PropertyGroup>
@@ -60,8 +60,11 @@
     <TargetName>CGDK10.tutorial.$(ProjectName).$(Configuration)</TargetName>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
-    <VcpkgEnableManifest>true</VcpkgEnableManifest>
+    <VcpkgEnableManifest>false</VcpkgEnableManifest>
+    <VcpkgEnabled>false</VcpkgEnabled>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>

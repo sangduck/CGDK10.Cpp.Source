@@ -17,6 +17,8 @@
 //*****************************************************************************
 
 #pragma once
+
+#include "cgdk/sdk10/lib_path.h"
 //----------------------------------------------------------------------------
 //
 // definitions
@@ -58,6 +60,7 @@ namespace CGDK
 			class Ibinder;
 			class Iaddress;
 			class Iconnect_requestable;
+			class Iconnect_notify;
 			class Ireconnectable;
 			class Iconnective;
 			class Iconnectable;
@@ -74,6 +77,7 @@ namespace CGDK
 			class Ireceivable_datagram;
 			class Iconnectable_manager;
 			class Ipacketable;
+			class Imessageable;
 
 			class Naddress;
 
@@ -90,8 +94,6 @@ namespace CGDK
 				class Ndummy;
 				class Ntcp;
 				class Nudp;
-
-				class Nsocket_secure;
 			}
 
 			namespace connectable
@@ -113,7 +115,6 @@ namespace CGDK
 				class Ndatagram;
 				class Nstream;
 				class Nstream_queue;
-				class Nstream_crypt;
 
 				class Nstream_rio;
 			}
@@ -129,6 +130,11 @@ namespace CGDK
 				class Ntcp_reconnect;
 			}
 
+			namespace connect_notify
+			{
+				class Nbase;
+			}
+
 			namespace connective
 			{
 				class manager;
@@ -138,7 +144,7 @@ namespace CGDK
 				namespace acceptor
 				{
 					class Ntcp;
-					class Ntcp_secure;
+					class Ntcp_ssl;
 				}
 
 				namespace connector
@@ -163,8 +169,6 @@ namespace CGDK
 
 				class Ntcp_async_rio;
 				class Ntcp_async_gather_rio;
-
-				class Ntcp_crypt;
 
 				class Nudp;
 
@@ -213,7 +217,7 @@ namespace CGDK
 				template <class> struct PRIMITIVE;
 				template <class> class Nstream;
 				template <int> class Nstream_fixed;
-				template <class> class Nstream_seperator;
+				template <class> class Nstream_separator;
 
 				class Nstream_protobuf;
 				class Nstream_json;
@@ -249,10 +253,6 @@ namespace CGDK
 			class Nudp_resend;
 			class Nretransferable;
 
-			class Nsocket_secure;
-			class Ntcp_client_crypt;
-			class Ntcp_server_crypt;
-
 			class Nhttp_server;
 			class Nhttp_client;
 		}
@@ -268,22 +268,32 @@ namespace CGDK
 		template <class,class> class acceptor;
 		template <class,class> class connector;
 
+		namespace emergency
+		{
+			class Nacceptor;
+			template <class> class acceptor;
+			class manager;
+		}
+
 		namespace socket
 		{
+			template <class, class> class Itcp;
 			template <class, class> class tcp_no_gather;
 			template <class, class> class tcp;
+			template <class, class> class tcp_lambda;
+
 			template <class, class> class tcp_queue;
 			template <class, class, class> class tcp_restorable;
 			template <class, class> class tcp_buffered;
 			class tcp_protobuf;
 
+			template <class> class Nlambda;
+
 			template <class, class> class tcp_client;
 			template <class, class> class tcp_client_reconnect;
 
-			template <class, class> class tcp_client_crypt;
 			template <class, class> class tcp_server;
 			template <class, class> class tcp_server_no_gather;
-			template <class, class> class tcp_server_crypt;
 
 			class udp;
 			class udp_resend;
@@ -325,11 +335,32 @@ namespace CGDK
 	#include <sys/ioctl.h>
 	#include <arpa/inet.h>
 	#include <netinet/tcp.h>
+	#include <sys/un.h>
 	#include <netdb.h>
 	#include <fcntl.h>
 
 	// - epoll
 	#include <sys/epoll.h>
+
+	// - error queue (MSG_ZEROCOPY notifications)
+	#include <linux/errqueue.h>
+
+	// - socket options of newer kernels (the values are fixed by the kernel ABI : defined here when the headers are old)
+	#if !defined(SO_INCOMING_CPU)
+		#define SO_INCOMING_CPU				49
+	#endif
+	#if !defined(SO_ZEROCOPY)
+		#define SO_ZEROCOPY					60
+	#endif
+	#if !defined(MSG_ZEROCOPY)
+		#define MSG_ZEROCOPY				0x4000000
+	#endif
+	#if !defined(SO_EE_ORIGIN_ZEROCOPY)
+		#define SO_EE_ORIGIN_ZEROCOPY		5
+	#endif
+	#if !defined(SO_EE_CODE_ZEROCOPY_COPIED)
+		#define SO_EE_CODE_ZEROCOPY_COPIED	1
+	#endif
 
 	// - aio
 	#include <aio.h>
@@ -342,7 +373,7 @@ namespace CGDK
 // 2) object system
 #include "cgdk/sdk10/system.object.h"
 
-// 3) definitionsr
+// 3) definitions
 #include "cgdk/sdk10/net.socket/socket/net.definitions.socket.protocol.h"
 #include "cgdk/sdk10/net.socket/socket/net.definitions.socket.h"
 
@@ -381,6 +412,7 @@ namespace CGDK
 #include "cgdk/sdk10/net.socket/socket/net.io.Iaddress.h"
 #include "cgdk/sdk10/net.socket/socket/net.io.Isocket.h"
 #include "cgdk/sdk10/net.socket/socket/net.io.Iconnect_requestable.h"
+#include "cgdk/sdk10/net.socket/socket/net.io.Iconnect_notify.h"
 #include "cgdk/sdk10/net.socket/socket/net.io.Ireconnectable.h"
 #include "cgdk/sdk10/net.socket/socket/net.io.Iconnectable.h"
 #include "cgdk/sdk10/net.socket/socket/net.io.Isend_request.h"
@@ -424,6 +456,10 @@ namespace CGDK
 #include "cgdk/sdk10/net.socket/socket/net.io.connect_requestable.tcp_reconnect.h"
 #include "cgdk/sdk10/net.socket/socket/net.io.executable.connect_requestable.h"
 
+// 5) connect_notify
+#include "cgdk/sdk10/net.socket/socket/net.io.connect_notify.Nbase.h"
+
+
 // 5) connectable
 #include "cgdk/sdk10/net.socket/socket/net.io.connectable.tcp.h"
 
@@ -436,9 +472,9 @@ namespace CGDK
 
 // 8) sendable
 #if defined(_WINSOCK2API_)
+	#include "cgdk/sdk10/net.socket/socket/net.io.sendable.gathering_queue_buffered.h"
 	#include "cgdk/sdk10/net.socket/socket/net.io.sendable.executable_send_buffer_list.h"
 	#include "cgdk/sdk10/net.socket/socket/net.io.sendable.gathering_queue.h"
-	#include "cgdk/sdk10/net.socket/socket/net.io.sendable.gathering_queue_bufferd.h"
 #endif
 #include "cgdk/sdk10/net.socket/socket/net.io.sendable.Itcp_gather.h"
 #include "cgdk/sdk10/net.socket/socket/net.io.sendable.tcp_sync.h"
@@ -453,7 +489,6 @@ namespace CGDK
 	#include "cgdk/sdk10/net.socket/socket/net.io.sendable.tcp_async_gather_raw.h"
 	#include "cgdk/sdk10/net.socket/socket/net.io.sendable.tcp_async_gather_buffered_raw.h"
 #endif
-#include "cgdk/sdk10/net.socket/socket/net.io.sendable.tcp_crypt.h"
 #include "cgdk/sdk10/net.socket/socket/net.io.sendable.udp.h"
 
 // 9) send requestor
@@ -471,7 +506,6 @@ namespace CGDK
 #include "cgdk/sdk10/net.socket/socket/net.io.receivable.stream.h"
 #include "cgdk/sdk10/net.socket/socket/net.io.receivable.datagram.h"
 #include "cgdk/sdk10/net.socket/socket/net.io.receivable.stream_queue.h"
-#include "cgdk/sdk10/net.socket/socket/net.io.receivable.stream_crypt.h"
 #if defined(_WINSOCK2API_)
 	#include "cgdk/sdk10/net.socket/socket/net.io.receivable.stream.rio.h"
 #endif
@@ -483,7 +517,8 @@ namespace CGDK
 #include "cgdk/sdk10/net.socket/socket/net.io.packetable.datagram_response.h"
 
 // 13) messageable
-#include "cgdk/sdk10/net.socket/socket/net.io.messageable.h"
+#include "cgdk/sdk10/net.socket/socket/net.io.Imessageable.h"
+#include "cgdk/sdk10/net.socket/socket/net.io.messageable.Nbase.h"
 #include "cgdk/sdk10/net.socket/socket/net.io.messageable.queue.h"
 
 // 14) add_on
@@ -495,9 +530,6 @@ namespace CGDK
 
 // 16) composition
 #include "cgdk/sdk10/net.socket/socket/net.io.retransferable.h"
-#include "cgdk/sdk10/net.socket/socket/net.io.tcp_client.crypt.h"
-#include "cgdk/sdk10/net.socket/socket/net.io.tcp_server.crypt.h"
-#include "cgdk/sdk10/net.socket/socket/net.io.socket_secure.h"
 
 // 17) restore
 #include "cgdk/sdk10/net.socket/socket/net.io.Irestorable.h"
@@ -522,18 +554,23 @@ namespace CGDK
 #include "cgdk/sdk10/net.socket/socket/net.connector.h"
 #include "cgdk/sdk10/net.socket/socket/net.connector.normal.h"
 
+// 3) emergency (an acceptor on its own executors, the signal manager : shutdown / emergency acceptor / terminate)
+#include "cgdk/sdk10/net.socket/socket/net.emergency.acceptor.h"
+#include "cgdk/sdk10/net.socket/socket/net.emergency.manager.h"
+
 // 3) socket - tcp
+#include "cgdk/sdk10/net.socket/socket/net.socket.Nlambda.h"
+#include "cgdk/sdk10/net.socket/socket/net.socket.Itcp.h"
 #include "cgdk/sdk10/net.socket/socket/net.socket.tcp_no_gather.h"
 #include "cgdk/sdk10/net.socket/socket/net.socket.tcp.h"
+#include "cgdk/sdk10/net.socket/socket/net.socket.tcp_lambda.h"
 #include "cgdk/sdk10/net.socket/socket/net.socket.tcp_queue.h"
 #include "cgdk/sdk10/net.socket/socket/net.socket.tcp_retransferable.h"
 #include "cgdk/sdk10/net.socket/socket/net.socket.tcp_buffered.h"
-#include "cgdk/sdk10/net.socket/socket/net.socket.tcp_client.crypt.h"
 
-// 3) socket - tcp client (connect_requestable socket)
+// 4) socket - tcp client (connect_requestable socket)
 #include "cgdk/sdk10/net.socket/socket/net.socket.tcp_client.h"
 #include "cgdk/sdk10/net.socket/socket/net.socket.tcp_client_reconnect.h"
-#include "cgdk/sdk10/net.socket/socket/net.socket.tcp_client.crypt.h"
 
 // 5) socket - udp
 #include "cgdk/sdk10/net.socket/socket/net.socket.udp.h"
@@ -593,15 +630,13 @@ namespace CGDK
 		// WinSDK 10
 		#if WDK_NTDDI_VERSION >= NTDDI_WIN10
 			#ifdef NDEBUG
-				#pragma message("[CGDK10] 'CGDK10.net.socket_Windows10.0_x64_Release.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.net.socket_Windows10.0_x64_Release.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.net.socket_Windows10.0_x64_Release.lib")
 			#else
-				#pragma message("[CGDK10] 'CGDK10.net.socket_Windows10.0_x64_Debug.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.net.socket_Windows10.0_x64_Debug.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.net.socket_Windows10.0_x64_Debug.lib")
 			#endif
 		// Error - No supported
 		#else
-			#error "[CGDK10] Not supported Windonws SDK version (Need Windows SDK 10.0 or higher)"
+			#error "[CGDK10] Not supported Windows SDK version (Need Windows SDK 10.0 or higher)"
 		#endif
 
 	#else

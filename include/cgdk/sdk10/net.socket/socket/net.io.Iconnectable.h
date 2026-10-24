@@ -60,7 +60,7 @@ public:
 	virtual	bool				disconnect(uint64_t _disconnect_reason = DISCONNECT_REASON_NONE) noexcept PURE;
 
 public:
-	// 1) reset할때 호출하는 함수.(기본은 빈것...)
+	// 1) reset할 때 호출하는 함수.(기본은 빈 것...)
 	virtual	void				process_reset_connectable() noexcept PURE;
 	// 2) Accept/connect를 요청할 때
 	virtual	void				process_request_connect (const net::sockaddr& _address) PURE;

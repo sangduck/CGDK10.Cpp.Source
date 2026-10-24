@@ -80,7 +80,7 @@
 // 
 //----------------------------------------------------------------------------
 #if defined(_WIN32)
-	// * vs16 Lib 
+	// * vs17 Lib 
 	#if _MSC_VER>=_MSC_VER_2022
 	#define	CGDK_CONFIGURATION_COMPILER	"v143"
 	#if defined(_M_X64)
@@ -372,7 +372,7 @@ template <typename T> T __get_saturated(T _v, T _min, T _max)	{return (_v<_min) 
 template <typename TA>
 void	SWAP(TA& a, TA& b)										{TA t=std::move(a); a=std::move(b); b=std::move(t);}
 
-// 5) Increase/Decrese
+// 5) Increase/Decrease
 #define	INCREASE(value)											++value
 #define	INCREASE_IF(condition, value)							if(condition) {++value;}
 #define	DECREASE(value)											--value
@@ -380,8 +380,8 @@ void	SWAP(TA& a, TA& b)										{TA t=std::move(a); a=std::move(b); b=std::move
 #define	DISCOUNT_TO_ZERO(value)									if(value > 0) {--value;}
 
 // 7) 계산 관련
-#define	SQURE(value)											(value*value)
-#define	VECTOR3_DISTANCE_SQURE(value)							(value.x*value.x+value.y*value.y+value.z*value.z)
+#define	SQUARE(value)											(value*value)
+#define	VECTOR3_DISTANCE_SQUARE(value)							(value.x*value.x+value.y*value.y+value.z*value.z)
 
 // 8) Unique name
 #define _MERGE_(a,b)  a##b

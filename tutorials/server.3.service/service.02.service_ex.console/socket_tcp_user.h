@@ -22,7 +22,7 @@ class socket_tcp_user : public net::socket::tcp<>
 private:
 	virtual void on_connect() override
 	{
-		LOG_INFO << "'socket_tcp_user' connected ("sv << to_string<char>(remote_endpoint()) << ")"sv;
+		LOG_INFO << "'socket_tcp_user' connected ("sv << to_string(remote_endpoint()) << ")"sv;
 	}
 	virtual void on_disconnect(uint64_t /*_disconnect_reason*/) override
 	{

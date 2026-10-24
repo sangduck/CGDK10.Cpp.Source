@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
@@ -21,9 +21,7 @@
 	#include <SDKDDKVer.h>
 #endif
 
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/buffer.hpp>
+#include <boost/asio.hpp>
 #include <set>
 #include <list>
 #include <memory>

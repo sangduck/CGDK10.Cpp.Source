@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Regenerate the summary from current per-source reports, including when
+       intermediate files were produced through another checkout alias/toolset. -->
+  <Target Name="CGDKRefreshNativeAnalysisSummary"
+          BeforeTargets="RunMergeNativeCodeAnalysis"
+          Condition="'$(RunMsvcAnalysis)' == 'true' and '$(MergedOutputCodeAnalysisFile)' != ''">
+    <Delete Files="$(MergedOutputCodeAnalysisFile);$(CodeAnalysisSucceededFile);$(NativeCodeAnalysisTLogFile)" />
+  </Target>
+</Project>

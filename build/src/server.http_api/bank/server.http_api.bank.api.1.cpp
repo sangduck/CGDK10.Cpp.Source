@@ -1,4 +1,5 @@
-Ôªø#include "pch.h"
+#include "pch.h"
+#include <charconv>
 
 
 namespace CGDK
@@ -16,9 +17,9 @@ std::string_view to_string<char>(eOAUTH_SCOPE _scope) noexcept
 	case		eOAUTH_SCOPE::INQUIRY_:					str_result = "inquiry"sv; break;
 	case		eOAUTH_SCOPE::TRANSFER_:				str_result = "transfer"sv; break;
 	case		eOAUTH_SCOPE::LOGIN_INQUIRY_:			str_result = "login+inquiry"sv; break;
-	case		eOAUTH_SCOPE::LOGIN_TRNASFER_:			str_result = "login+transfer"sv; break;
-	case		eOAUTH_SCOPE::INQUIRY_TRNASFER_:		str_result = "inquiry+transfer"sv; break;
-	case		eOAUTH_SCOPE::LOGIN_INQUIRY_TRNASFER_:	str_result = "login+inquiry+transfer"sv; break;
+	case		eOAUTH_SCOPE::LOGIN_TRANSFER_:			str_result = "login+transfer"sv; break;
+	case		eOAUTH_SCOPE::INQUIRY_TRANSFER_:		str_result = "inquiry+transfer"sv; break;
+	case		eOAUTH_SCOPE::LOGIN_INQUIRY_TRANSFER_:	str_result = "login+inquiry+transfer"sv; break;
 	case		eOAUTH_SCOPE::OOB_:						str_result = "oob"sv; break;
 	default:	CGASSERT_ERROR(false);					str_result = ""sv; break;
 	}
@@ -38,9 +39,9 @@ std::wstring_view to_string<wchar_t>(eOAUTH_SCOPE _scope) noexcept
 	case		eOAUTH_SCOPE::INQUIRY_:					str_result = L"inquiry"sv; break;
 	case		eOAUTH_SCOPE::TRANSFER_:				str_result = L"transfer"sv; break;
 	case		eOAUTH_SCOPE::LOGIN_INQUIRY_:			str_result = L"login+inquiry"sv; break;
-	case		eOAUTH_SCOPE::LOGIN_TRNASFER_:			str_result = L"login+transfer"sv; break;
-	case		eOAUTH_SCOPE::INQUIRY_TRNASFER_:		str_result = L"inquiry+transfer"sv; break;
-	case		eOAUTH_SCOPE::LOGIN_INQUIRY_TRNASFER_:	str_result = L"login+inquiry+transfer"sv; break;
+	case		eOAUTH_SCOPE::LOGIN_TRANSFER_:			str_result = L"login+transfer"sv; break;
+	case		eOAUTH_SCOPE::INQUIRY_TRANSFER_:		str_result = L"inquiry+transfer"sv; break;
+	case		eOAUTH_SCOPE::LOGIN_INQUIRY_TRANSFER_:	str_result = L"login+inquiry+transfer"sv; break;
 	case		eOAUTH_SCOPE::OOB_:						str_result = L"oob"sv; break;
 	default:	CGASSERT_ERROR(false);					str_result = L""sv; break;
 	}
@@ -347,17 +348,17 @@ eOAUTH_ACCOUNT_TYPE get_enum_OAUTH_ACCOUNT_TYPE<char>(std::string_view _string) 
 	// - "access_token"
 	switch (_string.at(0))
 	{
-		// Case Í±∞ÎûòÍ∞ÄÎä•
+		// Case ∞≈∑°∞°¥…
 	case	'1':
 		result = eOAUTH_ACCOUNT_TYPE::_1_;
 		break;
 
-		// Case Ïû•Ïï†
+		// Case ¿Âæ÷
 	case	'2':
 		result = eOAUTH_ACCOUNT_TYPE::_2_;
 		break;
 
-		// Case Í∞úÏãúÏù¥Ï†Ñ
+		// Case ∞≥Ω√¿Ã¿¸
 	case	'6':
 		result = eOAUTH_ACCOUNT_TYPE::_6_;
 		break;
@@ -385,17 +386,17 @@ eOAUTH_ACCOUNT_TYPE get_enum_OAUTH_ACCOUNT_TYPE<wchar_t>(std::wstring_view _stri
 	// - "access_token"
 	switch (_string.at(0))
 	{
-		// Case Í±∞ÎûòÍ∞ÄÎä•
+		// Case ∞≈∑°∞°¥…
 	case	'1':
 		result = eOAUTH_ACCOUNT_TYPE::_1_;
 		break;
 
-		// Case Ïû•Ïï†
+		// Case ¿Âæ÷
 	case	'2':
 		result = eOAUTH_ACCOUNT_TYPE::_2_;
 		break;
 
-		// Case Í∞úÏãúÏù¥Ï†Ñ
+		// Case ∞≥Ω√¿Ã¿¸
 	case	'6':
 		result = eOAUTH_ACCOUNT_TYPE::_6_;
 		break;
@@ -444,16 +445,16 @@ eOAUTH_SCOPE get_enum_OAUTH_SCOPE<char>(std::string_view _string) noexcept
 	// - "user_seq_no"
 	else if (_string == "login transfer"sv)
 	{
-		result = eOAUTH_SCOPE::LOGIN_TRNASFER_;
+		result = eOAUTH_SCOPE::LOGIN_TRANSFER_;
 	}
 	// - "inquiry transfer"
 	else if (_string == "inquiry transfer"sv)
 	{
-		result = eOAUTH_SCOPE::INQUIRY_TRNASFER_;
+		result = eOAUTH_SCOPE::INQUIRY_TRANSFER_;
 	}
 	else if (_string == "login inquiry transfer"sv)
 	{
-		result = eOAUTH_SCOPE::LOGIN_INQUIRY_TRNASFER_;
+		result = eOAUTH_SCOPE::LOGIN_INQUIRY_TRANSFER_;
 	}
 	else if (_string == "oob"sv)
 	{
@@ -502,16 +503,16 @@ eOAUTH_SCOPE get_enum_OAUTH_SCOPE<wchar_t>(std::wstring_view _string) noexcept
 	// - "user_seq_no"
 	else if (_string == L"login transfer"sv)
 	{
-		result = eOAUTH_SCOPE::LOGIN_TRNASFER_;
+		result = eOAUTH_SCOPE::LOGIN_TRANSFER_;
 	}
 	// - "inquiry transfer"
 	else if (_string == L"inquiry transfer"sv)
 	{
-		result = eOAUTH_SCOPE::INQUIRY_TRNASFER_;
+		result = eOAUTH_SCOPE::INQUIRY_TRANSFER_;
 	}
 	else if (_string == L"login inquiry transfer"sv)
 	{
-		result = eOAUTH_SCOPE::LOGIN_INQUIRY_TRNASFER_;
+		result = eOAUTH_SCOPE::LOGIN_INQUIRY_TRANSFER_;
 	}
 	else if (_string == L"oob"sv)
 	{
@@ -541,22 +542,22 @@ eOAUTH_BANK_STATUS get_enum_OAUTH_BANK_STATUS<char>(std::string_view _string) no
 	// - "access_token" 
 	switch (_string.at(0))
 	{
-		// Case Í±∞ÎûòÍ∞ÄÎä•
+		// Case ∞≈∑°∞°¥…
 	case	'Y':
 		result = eOAUTH_BANK_STATUS::OPEN_;
 		break;
 
-		// Case Ïû•Ïï†
+		// Case ¿Âæ÷
 	case	'D':
 		result = eOAUTH_BANK_STATUS::DISORDER_;
 		break;
 
-		// Case Í∞úÏãúÏù¥Ï†Ñ
+		// Case ∞≥Ω√¿Ã¿¸
 	case	'L':
 		result = eOAUTH_BANK_STATUS::LAUNCH_;
 		break;
 
-		// Case Ï¢ÖÎ£åÏ≤òÎ¶¨Ï§ë
+		// Case ¡æ∑·√≥∏Æ ¡ﬂ
 	case	'E':
 		result = eOAUTH_BANK_STATUS::END;
 		break;
@@ -584,22 +585,22 @@ eOAUTH_BANK_STATUS get_enum_OAUTH_BANK_STATUS<wchar_t>(std::wstring_view _string
 	// - "access_token" 
 	switch (_string.at(0))
 	{
-		// Case Í±∞ÎûòÍ∞ÄÎä•
+		// Case ∞≈∑°∞°¥…
 	case	'Y':
 		result = eOAUTH_BANK_STATUS::OPEN_;
 		break;
 
-		// Case Ïû•Ïï†
+		// Case ¿Âæ÷
 	case	'D':
 		result = eOAUTH_BANK_STATUS::DISORDER_;
 		break;
 
-		// Case Í∞úÏãúÏù¥Ï†Ñ
+		// Case ∞≥Ω√¿Ã¿¸
 	case	'L':
 		result = eOAUTH_BANK_STATUS::LAUNCH_;
 		break;
 
-		// Case Ï¢ÖÎ£åÏ≤òÎ¶¨Ï§ë
+		// Case ¡æ∑·√≥∏Æ ¡ﬂ
 	case	'E':
 		result = eOAUTH_BANK_STATUS::END;
 		break;
@@ -689,10 +690,11 @@ eOAUTH_BANK_CODE get_enum_OAUTH_BANK_CODE<char>(std::string_view _string) noexce
 	// check)
 	RETURN_IF(_string.empty(), 0);
 
-	// 1) ValueÎ•º ÏñªÏùå.
-	int	value = __from_string<int>(_string);
+	// 1) Value∏¶ æÚ¿Ω.
+	int	value = 0;
+	std::from_chars(_string.data(), _string.data() + _string.size(), value);
 
-	// check)Í∞íÏù¥ Ïú†Ìö®ÌïúÏßÄ Í≤ÄÏÇ¨.
+	// check)∞™¿Ã ¿Ø»ø«—¡ˆ ∞ÀªÁ.
 
 
 	// Return)
@@ -707,10 +709,11 @@ eOAUTH_BANK_CODE get_enum_OAUTH_BANK_CODE<wchar_t>(std::wstring_view _string) no
 	// check)
 	RETURN_IF(_string.empty(), 0);
 
-	// 1) ValueÎ•º ÏñªÏùå.
-	int	value = __from_string<int>(_string);
+	// 1) Value∏¶ æÚ¿Ω.
+	std::wstring str_value(_string);
+	int	value = static_cast<int>(std::wcstol(str_value.c_str(), nullptr, 10));
 
-	// check)Í∞íÏù¥ Ïú†Ìö®ÌïúÏßÄ Í≤ÄÏÇ¨.
+	// check)∞™¿Ã ¿Ø»ø«—¡ˆ ∞ÀªÁ.
 
 
 	// Return)

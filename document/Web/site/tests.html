@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>단위 테스트 · CI · CGDK10 기술 문서</title>
+<meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - 소스 기준 기술 설명·빌드·릴리즈 노트">
+<link rel="icon" href="assets/CGCII_logo.PNG">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
+  <div class="ver">Game Server Engine</div>
+  <ul>
+    <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
+    <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
+    <li class="sub"><a href="pool.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Pool system</a></li>
+    <li class="sub"><a href="object.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l6 3v7l-6 3-6-3v-7z"/><path d="M2 4.5l6 3 6-3M8 7.5v7"/></svg>Object system</a></li>
+    <li class="sub"><a href="log.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h6l3 3v10H4z"/><path d="M6.5 8h4M6.5 10.5h4M6.5 5.5h2"/></svg>Log system</a></li>
+    <li class="sub"><a href="socket.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1.5v3.5M10 1.5v3.5"/><path d="M3.5 5h9v3.5a4.5 4.5 0 0 1-9 0z"/><path d="M8 13v1.5"/></svg>Socket system</a></li>
+    <li class="sub"><a href="socket.io_uring.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 1.5L3.5 9h4.5l-1 5.5L12.5 7H8z"/></svg>io_uring</a></li>
+    <li class="sub"><a href="socket.uds.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.6-1.6a2.8 2.8 0 0 1 4 4L11 8.5"/><path d="M9 11.5l-1.6 1.6a2.8 2.8 0 0 1-4-4L5 7.5"/></svg>UDS (같은 host 접속)</a></li>
+    <li class="sub"><a href="socket.send.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 1.5L7 9"/><path d="M14.5 1.5l-4.5 13-2.2-5.3L2.5 6z"/></svg>send 최적화</a></li>
+    <li class="sub"><a href="socket.recv.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9.5v4h12v-4"/><path d="M8 2v8M5 7.5l3 3 3-3"/></svg>Receive 최적화</a></li>
+    <li class="sub"><a href="p2p.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="8" cy="12" r="2"/><path d="M5.6 5.2l1.6 5.2M10.4 5.2l-1.6 5.2M6 4h4"/></svg>P2P system</a></li>
+    <li class="sub"><a href="update.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5V5.2h-2.7"/></svg>Update system</a></li>
+    <li class="sub"><a href="server.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="4.5" rx="1"/><rect x="2" y="9.5" width="12" height="4.5" rx="1"/><path d="M4.5 4.25h.01M4.5 11.75h.01"/></svg>Server system</a></li>
+    <li class="sub"><a href="group.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 2.8a2.3 2.3 0 0 1 0 4.4M13.5 14c0-1.8-1-3.1-2.5-3.6"/></svg>Group system</a></li>
+    <li class="sub"><a href="query.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Query system</a></li>
+    <li class="head"><a href="build.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-3.8 3.8L2.8 12.2a1.4 1.4 0 0 0 2 2l5.9-3.9a3 3 0 0 0 3.8-3.8l-2 2-2-2z"/></svg>빌드 · 플랫폼</a></li>
+    <li class="head"><a href="tests.html" class="cur"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5.5 8.2l2 2 3.2-4"/></svg>단위 테스트 · CI</a></li>
+    <li class="head"><a href="benchmarks.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V9M8 13.5V4M13 13.5V7"/><path d="M1.5 13.5h13"/></svg>벤치마크</a></li>
+    <li class="sub"><a href="benchmarks.push.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4 3 3 6-6"/><path d="M10.5 5.5h4v4"/></svg>큰 묶음 push 처리량</a></li>
+    <li class="sub"><a href="benchmarks.cork.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h8M2 11.5h5"/><path d="M12 9.5l2 2-2 2"/></svg>send cork · 서버 push</a></li>
+    <li class="head"><a href="samples.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4"/></svg>예제 · 튜토리얼</a></li>
+    <li class="head"><a href="releases.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h5.5l6.5 6.5-5.5 5.5L2 8z"/><circle cx="5.2" cy="5.2" r=".9"/></svg>릴리즈 노트</a></li>
+    <li class="head"><a href="status.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3M8 11.5h.01"/></svg>미구현 · 알려진 문제</a></li>
+  </ul>
+</aside>
+<main>
+<h1 id="tests">단위 테스트 · CI</h1>
+<table>
+<tr><th>프로젝트</th><th>수</th><th>내용</th></tr>
+<tr><td><code>system/unit_test</code></td><td>—</td><td>log, object.buffer, context, execute, ptr, state, dump, tmp_simd, bench(lock, mem_tcmalloc, new, object_pool). CMake 는 buffer/context/execute/ptr/state/dump 만</td></tr>
+<tr><td><code>net.socket/unit_test.net_socket.http</code></td><td>96</td><td>http_parser 25, http_fuzz 4, http_request 8, http_client 9, socket_sustain 5, connect_requestable 7, socket_option 12, uds 24, linux_io 11, tcp_packet 5, ssl_loopback 1, bench 2</td></tr>
+<tr><td><code>net.socket/unit_test.net_socket.kafka</code></td><td>6</td><td>mock kafka(librdkafka 필요)</td></tr>
+<tr><td><code>server.system/unit_test.server_system.log</code></td><td>25</td><td>파일 재생성, hub 멀티스레드, 필터, slack/system/socket</td></tr>
+<tr><td><code>server.system/unit_test.server_system.service</code></td><td>166</td><td>group 118, send_defer 23, service_run 11(설정, admin e2e), message_fuzz 6, instance 직렬화 8</td></tr>
+<tr><td><code>server.system/unit_test.server_system.time_event</code></td><td>17</td><td>파싱, 엔티티 타입, 매니저 순서·id</td></tr>
+<tr><td><code>server.query/unit_test.server_query</code></td><td>14</td><td>numeric, querier 등록·통계(DB 필요, Windows 기본 제외)</td></tr>
+<tr><td><code>server.service/unit_test.server_service.doss</code></td><td>3</td><td>checkin → command → checkout</td></tr>
+<tr><td><code>server.admin/unit_test.server_admin.admin_server</code></td><td>32</td><td>policy 27 + fuzz 5, e2e 스크립트</td></tr>
+</table>
+<ul>
+  <li>Linux: 실행 파일 <code>build/src/unit_test/CGDK10.unit_test.&lt;name&gt;.&lt;Debug|Release&gt;</code>, <code>build/run_unit_tests.sh [Debug|Release] [결과 디렉터리]</code>(JUnit XML, <code>UNIT_TEST_TIMEOUT</code> 600 s, <code>UNIT_TEST_EXCLUDE</code> 정규식, 종료 코드 0 통과 / 1 실패 / 2 실행 파일 없음). sanitizer <code>build/run_sanitizer_tests.sh</code>(ASan+UBSan 또는 TSan, <code>~/.cache/cgdk_sanitizer/</code> 에 복사 빌드).</li>
+  <li>Windows: <code>build/run_unit_tests.ps1 -Configuration Debug</code>(<code>build/src/unit_test/&lt;cfg&gt;/unit_test.*.vs18_*_&lt;cfg&gt;.exe</code>, bench 와 server_query 기본 제외, 결과 <code>test-results-windows/</code>).</li>
+  <li>Jenkinsfile 파라미터 <code>NODE_NAME</code>(NODE_UBUNTU), <code>WORKSPACE</code>, <code>BUILD_TYPE</code>(All/Release/Debug), <code>REBUILD</code>, <code>BUILD_CORE/TUTORIALS/EXAMPLES</code>, <code>UNIT_TESTS</code>, <code>E2E_TESTS</code>, <code>SANITIZER_TESTS</code>, <code>SANITIZER_TYPE</code>(address,undefined | thread), <code>FUZZ_ITERATIONS/SEED</code>, <code>WINDOWS_NODE</code>, <code>COMMIT</code>. 스테이지: Prepare → Update(svn, 자격증명 <code>cgdk-svn</code>) → Prepare Build(in-source cmake) → Build Core/Tutorials/Examples(make) → Unit Test(JUnit) → Sanitizer Test → Admin E2E → Windows E2E(VS18 msbuild + ps1) → Commit(현재 echo 만).</li>
+</ul>
+
+
+<footer>CGDK10 · 소스 기준 정리 (r11415, 2026-10-22) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+</main>
+</div>
+</body>
+</html>

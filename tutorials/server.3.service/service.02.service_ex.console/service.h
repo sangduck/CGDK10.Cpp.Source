@@ -17,13 +17,13 @@
 //*****************************************************************************
 #pragma once
 
-class service : public server_system::service_ex
+class service : public server_system::Xservice
 {
 public:
 	// 1) 생성자에서 service의 구성 객체들을 생성하고 service 객체에 자식 노드로 붙인다.
 	service();
 	
 public:
-		own_ptr<net::acceptor<socket_tcp_user>>	m_pacceptor_user = make_own<net::acceptor<socket_tcp_user>>("acceptor_user"sv);
-		own_ptr<socket_tcp_server>				m_psocket_tcp = make_own<socket_tcp_server>("socket_tcp"sv);
+		own_ptr<net::acceptor<socket_tcp_user>>	pacceptor_user;
+		own_ptr<socket_tcp_server>				psocket_tcp;
 };

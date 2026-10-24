@@ -19,51 +19,44 @@
 #pragma once
 //-----------------------------------------------------------------------------
 //
-// object_ptr<TOBJECT> _make_object_create<TOBJECT>(TOBJECT* p)
+// object_ptr<T> _make_object_create<T>(T* p)
 //
 //
 //
 //-----------------------------------------------------------------------------
-template <class TOBJECT>
-std::enable_if_t<!std::is_base_of_v<CGDK::object::Idestroyable, TOBJECT> && !std::is_base_of_v<CGDK::object::Istartable, TOBJECT>, void>
-__on_object_delete(TOBJECT*)
+template <class T>
+inline void __on_object_delete([[maybe_unused]] T* _object)
 {
+	if constexpr (std::is_base_of_v<CGDK::object::Idestroyable, T>)
+	{
+		_object->destroy();
+	}
+	else if constexpr (std::is_base_of_v<CGDK::object::Istartable, T>)
+	{
+		_object->stop();
+	}
 }
 
-template <class TOBJECT>
-std::enable_if_t<std::is_base_of_v<CGDK::object::Idestroyable, TOBJECT>, void>
-__on_object_delete(TOBJECT* _object)
+template <class T, class... TARGS>
+[[nodiscard]] T* _make_object_create(CGNEW_DEBUG_INFO_PARAMETERS CGNEW_DEBUG_INFO_COMMA TARGS&&... _args)
 {
-	_object->destroy();
-}
-
-template <class TOBJECT>
-std::enable_if_t<!std::is_base_of_v<CGDK::object::Idestroyable, TOBJECT> && std::is_base_of_v<CGDK::object::Istartable, TOBJECT>, void>
-__on_object_delete(TOBJECT* _object)
-{
-	_object->stop();
-}
-
-template <class TOBJECT, class... TARGS>
-[[nodiscard]] TOBJECT* _make_object_create(CGNEW_DEBUG_INFO_PARAMETERS CGNEW_DEBUG_INFO_COMMA TARGS&&... _args)
-{
-	class __OBJECT_CREATE : public TOBJECT, public REFERENCEABLE_RELEASER
+	class __X : public T, public REFERENCEABLE_RELEASER
 	{
 	public:
-				__OBJECT_CREATE(CGNEW_DEBUG_INFO_PARAMETERS CGNEW_DEBUG_INFO_COMMA TARGS&&... _nested_args) : TOBJECT(std::forward<TARGS>(_nested_args)...) REFERENCEABLE_RELEASER_INIT(CGNEW_DEBUG_INFO_PARAMETERS_PASSING) {}
-		virtual ~__OBJECT_CREATE() { __on_object_delete<TOBJECT>(this); }
+		__X(CGNEW_DEBUG_INFO_PARAMETERS CGNEW_DEBUG_INFO_COMMA TARGS&&... _nested_args) : T(std::forward<TARGS>(_nested_args)...) REFERENCEABLE_RELEASER_INIT(CGNEW_DEBUG_INFO_PARAMETERS_PASSING) {}
+		virtual ~__X() { __on_object_delete<T>(this); }
 	};
 
 #pragma push_macro("new")
 #undef new
 #ifdef _ENABLE_DEBUG_NEW
 	#if defined(_WIN32)
-		auto pobject = new(_NORMAL_BLOCK, CGNEW_DEBUG_INFO_PARAMETERS_PASSING) __OBJECT_CREATE(CGNEW_DEBUG_INFO_PARAMETERS_PASSING CGNEW_DEBUG_INFO_COMMA std::forward<TARGS>(_args)...);
+		auto pobject = new(_NORMAL_BLOCK, CGNEW_DEBUG_INFO_PARAMETERS_PASSING) __X(CGNEW_DEBUG_INFO_PARAMETERS_PASSING CGNEW_DEBUG_INFO_COMMA std::forward<TARGS>(_args)...);
 	#else
-		auto pobject = new __OBJECT_CREATE(CGNEW_DEBUG_INFO_PARAMETERS_PASSING CGNEW_DEBUG_INFO_COMMA std::forward<TARGS>(_args)...);
+		auto pobject = new __X(CGNEW_DEBUG_INFO_PARAMETERS_PASSING CGNEW_DEBUG_INFO_COMMA std::forward<TARGS>(_args)...);
 	#endif
 #else
-	auto pobject = new __OBJECT_CREATE(std::forward<TARGS>(_args)...);
+	auto pobject = new __X(std::forward<TARGS>(_args)...);
 #endif
 #pragma pop_macro("new")
 
@@ -74,16 +67,16 @@ template <class TOBJECT, class... TARGS>
 	return pobject;
 }
 
-template <class TOBJECT>
-std::enable_if_t<std::is_base_of_v<CGDK::Npoolable<TOBJECT>, TOBJECT>, void>
-	DEALLOC(TOBJECT* p)
+template <class T>
+std::enable_if_t<std::is_base_of_v<CGDK::Npoolable<T>, T>, void>
+	DEALLOC(T* p)
 {
-	TOBJECT::dealloc(p);
+	T::dealloc(p);
 }
 
-template <class TOBJECT>
-std::enable_if_t<!std::is_base_of_v<CGDK::Npoolable<TOBJECT>, TOBJECT>, void>
-	DEALLOC(TOBJECT* p)
+template <class T>
+std::enable_if_t<!std::is_base_of_v<CGDK::Npoolable<T>, T>, void>
+	DEALLOC(T* p)
 {
 	delete p;
 }

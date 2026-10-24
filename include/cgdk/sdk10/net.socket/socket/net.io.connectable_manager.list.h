@@ -70,7 +70,17 @@ public:
 	[[nodiscard]] virtual size_t count() const noexcept override;
 
 	// 5) Iterator얻기
-	[[nodiscard]] virtual object_ptr<CONNECTABLE_ITERATOR> alloc_iterator() override { return make_object<CONNECTABLE_ITERATORList>(m_list_connectable.begin(), m_list_connectable.end(), &m_lockable_list_connectable); }
+	[[nodiscard]] virtual object_ptr<CONNECTABLE_ITERATOR> alloc_iterator() override
+	{
+		// lock) begin()/end() must be read under the lock
+		//  - read before it, a connectable erased meanwhile (its node is kept as a spare node with the released pointer) was iterated :
+		//    the connectable already returned to the pool was referenced again and returned to the pool twice
+		//  - recursive : the iterator locks it again and keeps it locked until it is destroyed
+		std::lock_guard lock(this->m_lockable_list_connectable);
+
+		// return)
+		return make_object<CONNECTABLE_ITERATORList>(m_list_connectable.begin(), m_list_connectable.end(), &m_lockable_list_connectable);
+	}
 
 	// 6) Iterator얻기.
 	[[nodiscard]] ITERATOR		begin() { return m_list_connectable.begin();}
@@ -119,7 +129,7 @@ template <class TCONNECTABLE>
 CGDK::net::io::connectable_manager::list<TCONNECTABLE>::~list() noexcept
 {
 	// check) 
-	scoped_lock(this->m_lockable_list_connectable)
+	SCOPED_LOCK(this->m_lockable_list_connectable)
 	{
 		if (this->m_list_connectable.empty() == false)
 		{
@@ -145,7 +155,7 @@ bool CGDK::net::io::connectable_manager::list<TCONNECTABLE>::add_connectable(Ico
 
 	try
 	{
-		scoped_lock(this->m_lockable_list_connectable)
+		SCOPED_LOCK(this->m_lockable_list_connectable)
 		{
 			// 1) add connectable to list
 			this->m_list_connectable.push_front(pconnectable);
@@ -159,7 +169,7 @@ bool CGDK::net::io::connectable_manager::list<TCONNECTABLE>::add_connectable(Ico
 			// 3) store iterator to flexible storage
 		#pragma push_macro("new")
 		#undef new
-			new (&pconnectable->m_flexible.flexible<32>::get<ITERATOR>(sizeof(Iconnectable_manager*))) typename circular_list<object_ptr<TCONNECTABLE>>::iterator(this->m_list_connectable.begin());
+			new (&pconnectable->m_flexible.template flexible<32>::template get<ITERATOR>(sizeof(Iconnectable_manager*))) typename circular_list<object_ptr<TCONNECTABLE>>::iterator(this->m_list_connectable.begin());
 		#pragma pop_macro("new")
 		}
 
@@ -176,7 +186,7 @@ bool CGDK::net::io::connectable_manager::list<TCONNECTABLE>::add_connectable(Ico
 template <class TCONNECTABLE>
 bool CGDK::net::io::connectable_manager::list<TCONNECTABLE>::remove_connectable(Iconnectable* _pconnectable) noexcept
 {
-	scoped_lock(this->m_lockable_list_connectable)
+	SCOPED_LOCK(this->m_lockable_list_connectable)
 	{
 		// 1) get connectable manager pointer from flexible storage
 		auto pconnectable_manager = _pconnectable->m_flexible.get<Iconnectable_manager*>();
@@ -207,7 +217,7 @@ void CGDK::net::io::connectable_manager::list<TCONNECTABLE>::remove_all_connecta
 template <class TCONNECTABLE>
 bool CGDK::net::io::connectable_manager::list<TCONNECTABLE>::is_exist_connectable(Iconnectable* _pconnectable) const noexcept
 {
-	scoped_lock(this->m_lockable_list_connectable)
+	SCOPED_LOCK(this->m_lockable_list_connectable)
 	{
 		for (auto& iter : this->m_list_connectable)
 		{
@@ -227,7 +237,7 @@ void CGDK::net::io::connectable_manager::list<TCONNECTABLE>::clear_connectable_l
 {
 	// locked) 
 	{
-		// scoped_lock)
+		// SCOPED_LOCK)
 		std::lock_guard<std::recursive_mutex> cs(this->m_lockable_list_connectable);
 
 		// check)
@@ -244,7 +254,7 @@ void CGDK::net::io::connectable_manager::list<TCONNECTABLE>::disconnect_connecta
 	// declare)
 	std::vector<object_ptr<TCONNECTABLE>> vector_connectable;
 
-	scoped_lock(this->m_lockable_list_connectable)
+	SCOPED_LOCK(this->m_lockable_list_connectable)
 	{
 		// 1) reserve vector
 		vector_connectable.reserve(this->m_list_connectable.size());
@@ -275,7 +285,7 @@ void CGDK::net::io::connectable_manager::list<TCONNECTABLE>::close_connectable_a
 
 	auto tick_now = chrono::tick::now();
 
-	scoped_lock(this->m_lockable_list_connectable)
+	SCOPED_LOCK(this->m_lockable_list_connectable)
 	{
 		// 1) reserve vector
 		vector_connectable.reserve(this->m_list_connectable.size());
@@ -320,7 +330,7 @@ bool CGDK::net::io::connectable_manager::list<TCONNECTABLE>::process_send(shared
 	// Case) send함수가 있을 경우...
 	__if_exists(TCONNECTABLE::send)
 	{
-		scoped_lock(this->m_lockable_list_connectable)
+		SCOPED_LOCK(this->m_lockable_list_connectable)
 		{
 			for(auto& iter: this->m_list_connectable)
 			{
@@ -343,7 +353,7 @@ bool CGDK::net::io::connectable_manager::list<TCONNECTABLE>::process_send(shared
 	__if_not_exists(TCONNECTABLE::send)
 	{
 #endif
-		scoped_lock(this->m_lockable_list_connectable)
+		SCOPED_LOCK(this->m_lockable_list_connectable)
 		{
 			for(auto& iter: this->m_list_connectable)
 			{
@@ -379,7 +389,7 @@ size_t CGDK::net::io::connectable_manager::list<TCONNECTABLE>::count() const noe
 {
 	// locked) 
 	{
-		// scoped_lock)
+		// SCOPED_LOCK)
 		std::lock_guard<std::recursive_mutex> cs(const_cast<std::recursive_mutex&>(this->m_lockable_list_connectable));
 
 		// return) 
@@ -390,7 +400,7 @@ size_t CGDK::net::io::connectable_manager::list<TCONNECTABLE>::count() const noe
 template <class TCONNECTABLE>
 CGDK::object_ptr<TCONNECTABLE> CGDK::net::io::connectable_manager::list<TCONNECTABLE>::find_connectable(const std::function<bool(TCONNECTABLE*)>& _pred) noexcept
 {
-	scoped_lock(this->m_lockable_list_connectable)
+	SCOPED_LOCK(this->m_lockable_list_connectable)
 	{
 		for(auto& iter: this->m_list_connectable)
 		{
@@ -412,7 +422,7 @@ bool CGDK::net::io::connectable_manager::list<TCONNECTABLE>::for_each_connectabl
 	// declare)
 	std::vector<object_ptr<TCONNECTABLE>> vector_connectable;
 
-	scoped_lock(this->m_lockable_list_connectable)
+	SCOPED_LOCK(this->m_lockable_list_connectable)
 	{
 		// 1) reserve vector
 		vector_connectable.reserve(this->m_list_connectable.size());

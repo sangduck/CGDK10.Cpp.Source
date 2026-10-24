@@ -33,7 +33,7 @@ class doss::Idepot :
 	public                      object::Ninitializable_startable,
 	public						net::io::messageable::Nbase
 {
-// defintions)
+// definitions)
 public:
 		class socket;
 		class group_immigration;
@@ -42,7 +42,6 @@ public:
 // constructor/destructor) 
 public:
 			Idepot() {}
-			Idepot(const std::string_view _name) : Nnameable(_name) {}
 	virtual	~Idepot() noexcept {}
 };
 

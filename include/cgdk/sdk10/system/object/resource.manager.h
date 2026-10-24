@@ -52,7 +52,7 @@ public:
 
 // public)
 public:
-	//! @brief '자원 경로'를 등록한다. @param _str_path 등록할 '자원 경로' @return true 신규 등록시 @return false 기존에 등록되어 있었을 경우
+	//! @brief '자원 경로'를 등록한다. @param _str_path 등록할 '자원 경로' @return true 신규 등록 시 @return false 기존에 등록되어 있었을 경우
 				bool			register_resource_path(const std::string& _path);
 				bool			unregister_resource_path(const std::string& _path) noexcept;
 
@@ -65,10 +65,10 @@ public:
 				object_ptr<Iresource> find(const std::string& _name) noexcept;
 
 	//! @brief '정방향 처음 반복자'를 얻는다. @return '정방향 처음 반복자'
-	[[nodiscard]] ITERATOR		begin() noexcept { return this->m_vector_path.begin(); }
-	[[nodiscard]] CONST_ITERATOR begin() const noexcept { return this->m_vector_path.begin(); }
-	[[nodiscard]] ITERATOR		end() noexcept { return this->m_vector_path.end(); }
-	[[nodiscard]] CONST_ITERATOR end() const noexcept { return this->m_vector_path.end(); }
+	[[nodiscard]] auto			begin() noexcept -> ITERATOR { return this->m_vector_path.begin(); }
+	[[nodiscard]] auto			begin() const noexcept -> CONST_ITERATOR { return this->m_vector_path.begin(); }
+	[[nodiscard]] auto			end() noexcept -> ITERATOR { return this->m_vector_path.end(); }
+	[[nodiscard]] auto			end() const noexcept -> CONST_ITERATOR { return this->m_vector_path.end(); }
 																		  
 	//! @brief 등록된 '자원 경로' 수를 얻는다. @return 등록된 '자원 경로' 수  
 	[[nodiscard]] size_t		registered_path_count() const noexcept	{ return this->m_vector_path.size(); }
@@ -79,9 +79,8 @@ public:
 	[[nodiscard]] auto			get_activity() noexcept { return m_activity; }
 				void			set_activity(ANativeActivity* _p) noexcept { m_activity=_p; }
 #endif
-
 	// 2) initialize Instance/run_executor
-	static	auto				instance() { if(m_s_pinstance.empty()){ initialize_instance();} return object_ptr<manager>(m_s_pinstance); }
+	static	auto				instance() { auto p = m_s_pinstance.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_s_pinstance.get_acquire(); } return object_ptr<manager>(p); }
 	static  void				initialize_instance();
 	static	void				set_instance(own_ptr<manager>&& _pinstance);
 	static	void				reset_instance() noexcept;
@@ -91,15 +90,17 @@ public:
 private:
 	// 1) 
 #if defined(__ANDROID__)
-				ANativeActivity* m_activity;
+				ANativeActivity* m_activity = nullptr;
 #endif
-	// 2) Path list
-				lockable<CONTAINER> m_vector_path;
+	// 2) path list
+				lock_object		m_lockable_vector_path;
+				CONTAINER		m_vector_path;
 
-	// 3) Resources
-				lockable<std::map<std::string, Iresource*>>	m_map_resources;
+	// 3) resources
+				lock_object		m_lockable_map_resources;
+				std::map<std::string, Iresource*> m_map_resources;
 
-	// 4) Instance
+	// 4) instance
 	static	std::mutex			m_s_lockable_create;
 	static	own_ptr<manager>	m_s_pinstance;
 
@@ -110,8 +111,6 @@ private:
 
 char*		get_filename_only(char* _dest, const char* _source);
 wchar_t*	get_filename_only(wchar_t* _dest, const wchar_t* _source);
-char16_t*	get_filename_only(char16_t* _dest, const char16_t* _source);
-char32_t*	get_filename_only(char32_t* _dest, const char32_t* _source);
 
 
 }

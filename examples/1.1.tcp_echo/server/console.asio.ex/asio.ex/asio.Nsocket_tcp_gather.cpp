@@ -1,4 +1,4 @@
-ï»¿#include "asio.h"
+#include "asio.h"
 
 
 asio::Nsocket_tcp_gather::Nsocket_tcp_gather()
@@ -116,7 +116,7 @@ void asio::Nsocket_tcp_gather::process_send_async(const SEND_NODE& _send_node)
 	if (!this->m_hold_send)
 		this->m_hold_send = this->shared_from_this();
 
-	// 2) ì „ì†¡ì„ ìœ„í•œ boost::asio::const_bufferë¥¼ ì„¤ì •ã„´
+	// 2) Àü¼ÛÀ» À§ÇÑ boost::asio::const_buffer¸¦ ¼³Á¤¤¤
 	boost::asio::const_buffer buffer_transfer { _send_node.buf_send.data(), _send_node.buf_send.size()};
 
 	// 3) send async

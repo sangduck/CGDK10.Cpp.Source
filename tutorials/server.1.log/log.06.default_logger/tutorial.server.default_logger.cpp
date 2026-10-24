@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/server.log.h"
+#include "cgdk/sdk10/server.log.h"
 #include "cgdk/sdk10/net.socket.h"
 
 #include <iostream>
@@ -14,24 +14,24 @@ using namespace CGDK;
 	using fmt::format;
 #endif
 
-// 1) socket í´ëž˜ìŠ¤ë¥¼ ì •ì˜í•œë‹¤.
+// 1) socket Å¬·¡½º¸¦ Á¤ÀÇÇÑ´Ù.
 class socket_tcp : public net::socket::tcp<>
 {
-	// (v) ì ‘ì† ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_connect() override
 	{
 		// log) 
 		LOG(log_type_t::info) << " @ connected"sv;
 	}
 
-	// (v) ì ‘ì† ì¢…ë£Œ ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó Á¾·á ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_disconnect(uint64_t /*_disconnect_reason*/) override
 	{
 		// log) 
 		LOG(log_type_t::info) << " @ disconnected"sv;
 	}
 
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜.
+	// (v) ¸Þ½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö.
 	virtual result_code on_message(sMESSAGE_NETWORK& _msg) override
 	{
 		// log) 
@@ -48,28 +48,28 @@ class socket_tcp : public net::socket::tcp<>
 int main()
 {
 	// ------------------------------------------------------------------
-	// ì„¤ëª…)
+	// ¼³¸í)
 	//
-	//  LOG(...)ë¡œ [ë¡œê·¸ ëŒ€ìƒ ê°ì²´]ë¥¼ íŒŒë¼ë©”í„°ë¡œ ë„˜ê²¨ì£¼ì–´ì•¼ í•œë‹¤.
-	//  í•˜ì§€ë§Œ ìƒëžµí•˜ê±°ë‚˜ nullptrì„ ì „ë‹¬í•  ê²½ìš° ê¸°ë³¸ [ë¡œê·¸ ëŒ€ìƒ ê°ì²´]ì—
-	//  ë¡œê·¸ë¥¼ ì „ë‹¬í•˜ê²Œ ëœë‹¤.
-	//  ê¸°ë³¸ [ë¡œê·¸ ëŒ€ìƒ ê°ì²´]ëŠ” set_default_logger()í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ì„œ ì„¤ì •í•  ìˆ˜ ìžˆë‹¤.
+	//  LOG(...)·Î [·Î±× ´ë»ó °´Ã¼]¸¦ ÆÄ¶ó¸ÞÅÍ·Î ³Ñ°ÜÁÖ¾î¾ß ÇÑ´Ù.
+	//  ÇÏÁö¸¸ »ý·«ÇÏ°Å³ª nullptrÀ» Àü´ÞÇÒ °æ¿ì ±âº» [·Î±× ´ë»ó °´Ã¼]¿¡
+	//  ·Î±×¸¦ Àü´ÞÇÏ°Ô µÈ´Ù.
+	//  ±âº» [·Î±× ´ë»ó °´Ã¼]´Â set_default_logger()ÇÔ¼ö¸¦ »ç¿ëÇØ¼­ ¼³Á¤ÇÒ ¼ö ÀÖ´Ù.
 	//
-	//  ë˜ ê¸°ë³¸ [ë¡œê·¸ ëŒ€ìƒ ê°ì²´]ë¥¼ ì„¤ì •í•˜ë©´ ì—”ì§„ ë‚´ë¶€ì ìœ¼ë¡œ ë°œìƒí•˜ëŠ” ë¡œê·¸ë¥¼
-	//  ê¸°ë³¸ [ë¡œê·¸ ëŒ€ìƒ ê°ì²´]ë¡œ ì¶œë ¥ë°›ì„ ìˆ˜ ìžˆë‹¤.
+	//  ¶Ç ±âº» [·Î±× ´ë»ó °´Ã¼]¸¦ ¼³Á¤ÇÏ¸é ¿£Áø ³»ºÎÀûÀ¸·Î ¹ß»ýÇÏ´Â ·Î±×¸¦
+	//  ±âº» [·Î±× ´ë»ó °´Ã¼]·Î Ãâ·Â¹ÞÀ» ¼ö ÀÖ´Ù.
 	//
 	// ------------------------------------------------------------------
 
-	// 1) [ë¡œê·¸ ëŒ€ìƒ ê°ì²´]ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) [·Î±× ´ë»ó °´Ã¼]¸¦ »ý¼ºÇÑ´Ù.
 	auto plog = make_own<logger_console>();
 
-	// 2) ì‹œìž‘
+	// 2) ½ÃÀÛ
 	plog->initialize();
 
-	// *3) ê¸°ë³¸ [ë¡œêµ¬ ëŒ€ìƒ ê°ì²´]ë¡œ ì„¤ì •í•œë‹¤.
+	// *3) ±âº» [·Î±¸ ´ë»ó °´Ã¼]·Î ¼³Á¤ÇÑ´Ù.
 	set_default_logger(plog);
 
-	// * ì—¬ê¸°ì„œë¶€í„° ë‚´ë¶€ì ìœ¼ë¡œ ìƒì„±ë˜ëŠ” LOG ë©”ì‹œì§€ë“¤ì´ ê¸°ë³¸ ë¡œê·¸ ê°ì²´ì— ì°ížŒë‹¤.
+	// * ¿©±â¼­ºÎÅÍ ³»ºÎÀûÀ¸·Î »ý¼ºµÇ´Â LOG ¸Þ½ÃÁöµéÀÌ ±âº» ·Î±× °´Ã¼¿¡ ÂïÈù´Ù.
 	// trace) 
 	LOG(log_type_t::system) << log_level_t::higher() << "-----------------------------------------------------------------"sv;
 	LOG(log_type_t::system) << log_level_t::higher() << " "sv;
@@ -77,19 +77,19 @@ int main()
 	LOG(log_type_t::system) << log_level_t::higher() << " "sv;
 	LOG(log_type_t::system) << log_level_t::higher() << "-----------------------------------------------------------------"sv;
 
-	// 4) acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 4) acceptor °´Ã¼¸¦ »ý¼ºÇÑ´Ù.
 	auto pacceptor = make_own<net::acceptor<socket_tcp>>();
 
-	// 5) acceptorë¥¼ ì‹œìž‘í•œë‹¤.
+	// 5) acceptor¸¦ ½ÃÀÛÇÑ´Ù.
 	pacceptor->start({{ net::ip::make_address("any"sv), 20000 }});
 
-	// 6) [ë¡œê·¸ ëŒ€ìƒ ê°ì²´]ë¥¼ ìƒëžµí•˜ë©´ ê¸°ë³¸ [ë¡œê·¸ ëŒ€ìƒ ê°ì²´]ì— ì „ë‹¬í•œë‹¤.
+	// 6) [·Î±× ´ë»ó °´Ã¼]¸¦ »ý·«ÇÏ¸é ±âº» [·Î±× ´ë»ó °´Ã¼]¿¡ Àü´ÞÇÑ´Ù.
 	LOG(log_type_t::progress) << "start server [tut.socket.01.tcp_simple.server]..."sv;
 	LOG(log_type_t::info) << "This paragraph is log"sv;
-	LOG(log_type_t::info) << format("This paragraph is log with number [{}]"sv, 10);
-	LOG(log_type_t::info) << format("This paragraph is log with string [{}]"sv, "STRING"sv);
+	LOG(log_type_t::info) << CGDK::format("This paragraph is log with number [{}]"sv, 10);
+	LOG(log_type_t::info) << CGDK::format("This paragraph is log with string [{}]"sv, "STRING"sv);
 
-	// *7) ê¸°ë³¸ ê°ì²´ë¥¼ ì œê±°í•œë‹¤. (resetìœ¼ë¡œ ì¢…ë£Œí•˜ì§€ ì•Šì•„ë„ ìžë™ ì œê±°ë˜ê¸´ í•œë‹¤.)
+	// *7) ±âº» °´Ã¼¸¦ Á¦°ÅÇÑ´Ù. (resetÀ¸·Î Á¾·áÇÏÁö ¾Ê¾Æµµ ÀÚµ¿ Á¦°ÅµÇ±ä ÇÑ´Ù.)
 	reset_default_logger();
 
 	// 8) wait input ESC key

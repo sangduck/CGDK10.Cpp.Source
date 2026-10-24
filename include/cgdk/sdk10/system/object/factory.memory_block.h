@@ -26,7 +26,7 @@ namespace CGDK
  @class		memory_block
  @brief		임의 크기의 메모리 객체를  할당해주는 풀이다.
  @todo		
- @ref		CGDK.factory::CPoolObject<TOBJECT>, CGDK.factory::CPoolMemory
+ @ref		CGDK.factory::CPoolObject<T>, CGDK.factory::CPoolMemory
  @details	\n
  임의 크기의 메모리 객체를 할당해 주는 풀이다.
  
@@ -38,8 +38,8 @@ namespace CGDK
  따라서 필요 이상의 메모리가 할당될 수 있다.(4~7% 정도)
 
  메모리 블록 크기와 설정
- 메모리블록풀은 할당하는 메모리의 한계가 있다. 메모리를 어떤 단위로 몇개의 풀로 구성하는 가에 따라 할당할 수 있는 최대 메모리 크기가 결정된다.
- 따라서 상황에 따라 메모리 블록의 크기나 갯수 분포 등을 다르게 아래와 같이 설정할 수 있다.
+ 메모리블록풀은 할당하는 메모리의 한계가 있다. 메모리를 어떤 단위로 몇 개의 풀로 구성하는 가에 따라 할당할 수 있는 최대 메모리 크기가 결정된다.
+ 따라서 상황에 따라 메모리 블록의 크기나 개수 분포 등을 다르게 아래와 같이 설정할 수 있다.
  (자세한 것은 'CGDefinitionsPoolMemoryBlock.h'파일을 참조바람.)
 
  // - 단일한 간격의 메모리 풀
@@ -70,7 +70,7 @@ namespace CGDK
     - alloc()와 ::free()가 new나 delete에 소모되는 비용을 최소화 하게 하기 위한
       것인 만큼 수행상에 최소한의 code만이 수행되는 것을 염두해서 제작되었다.
     - alloc와 free모두 Loop문은 존재하지 않으며 alloc_object는 단지 3~4번의 if문과
-      몇 라인의 실행만으로 수행되며 free함수는 단지 몇개의 라인만으로
+      몇 라인의 실행만으로 수행되며 free함수는 단지 몇 개의 라인만으로
       수행된다. 
  
  3. 다양한 형태의 memory_block 크기
@@ -101,9 +101,9 @@ namespace CGDK
     3) prepare() - 미리 memory_block을 할당해 놓는다.
        - 미리 해당 Block을 할당서 Pool에 집어 넣어 놓는 함수이다.
        - 일반적으로 Pool이 처음 실행될 때 Pool에는 저장된 memory_block이
-         존재하지 않는다. 만약 미리 사용될 memory_block의 갯수가 대략 몇개
+         존재하지 않는다. 만약 미리 사용될 memory_block의 개수가 대략 몇 개
          정도인지에 대한 정보가 존재한다면 Server의 수행전에 미리 할당해
-         놓은 다음 Server를 수행하도록 하기위해 사용된다.
+         놓은 다음 Server를 수행하도록 하기 위해 사용된다.
     
     4) shrink() - 저장된 memory_block을 할당해제함.
        - 너무 많은 Block이 저장되어 있는 경우 많은 메모리 낭비를 불러옴으로
@@ -118,7 +118,7 @@ namespace CGDK
 
 */
 //-----------------------------------------------------------------------------
-class factory::memory_block
+class factory::memory_block : private non_copyable
 {
 // constructor/destructor)
 protected:

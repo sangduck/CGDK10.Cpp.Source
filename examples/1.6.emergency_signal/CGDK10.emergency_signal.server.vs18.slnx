@@ -1,0 +1,6 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="server\console\CGDK10.emergency_signal.server.console.vs18.vcxproj" Id="df5de937-96a5-4484-919b-32d840e2d74a" />
+</Solution>

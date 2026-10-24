@@ -3,14 +3,39 @@
 using namespace CGDK;
 
 
-class schedulable::manager::executable_schedulable : 
+//-----------------------------------------------------------------------------
+//
+// schedulable::manager
+//
+//  설명)
+//  등록된 schedulable 객체를 관리(등록/등록해제/정보)만 한다.
+//  실행은 별도의 스레드 없이 executor::scheduler(timed single execution)에
+//  'next_tick' 시각으로 바로 걸어서 처리한다.
+//
+//   [등록] ──> scheduler.post_at(next_tick)
+//                 └─> (시각 도달) ──> [schedulable의 executor] ──> process_schedule()
+//                                                                  └─> 다음 next_tick으로 다시 post_at
+//
+//  - schedulable마다 실행 객체(executable_schedulable)는 하나이며 등록되어 있는 동안 재사용된다.
+//  - 등록 해제하면 scheduler에 걸려 있는 실행을 취소한다.
+//  - 실행 간격이 바뀌면(Nschedulable::execute_interval) reschedule()로 바로 다시 건다.
+//
+//-----------------------------------------------------------------------------
+namespace
+{
+	constexpr uint8_t SCHEDULE_STATE_IDLE		 = 0;	// scheduler에 걸려 있지 않음
+	constexpr uint8_t SCHEDULE_STATE_PENDING	 = 1;	// scheduler에 걸려 있음 (취소 가능)
+	constexpr uint8_t SCHEDULE_STATE_RUNNING	 = 2;	// 실행 중 (실행 후 다시 걸린다)
+}
+
+class schedulable::manager::executable_schedulable :
 	virtual public CGDK::Iexecutable,
-	public Npoolable<schedulable::manager::executable_schedulable>,
 	public factory::_traits_system
 {
 public:
-		object_ptr<Ischedulable> pschedulable;
-		object_ptr<schedulable::manager> pscheduler;
+			object_ptr<Ischedulable> pschedulable;
+			object_ptr<schedulable::manager> pmanager;
+			bool				is_dispatched = false;
 
 protected:
 	virtual	intptr_t			process_execute(intptr_t _return, size_t _param) override;
@@ -18,67 +43,32 @@ protected:
 
 intptr_t schedulable::manager::executable_schedulable::process_execute(intptr_t /*_return*/, size_t /*_param*/)
 {
-	// check)
-	CGASSERT_ERROR(this->pscheduler.exist());
-
 	// declare)
-	object_ptr<Ischedulable> pschedulable_temp = std::move(this->pschedulable);
+	auto pmanager_hold = this->pmanager;
 
 	// check)
-	CGASSERT_ERROR(pschedulable_temp.exist());
-
-	// statistics)
-	pschedulable_temp->statistics_on_extra();
-	++pschedulable_temp->m_statistics_schedulable.count_execute;
+	if (pmanager_hold.empty())
+		return 0;
 
 	// 1) execute
-	this->pscheduler->process_execute_schedulable(std::move(pschedulable_temp));
+	pmanager_hold->process_execute_schedulable(this);
 
 	// return)
 	return 0;
 }
 
 schedulable::manager::manager() noexcept :
-	Nexecutor(),
 	m_flag_run(0)
 {
 	// 1) set object type
 	this->set_object_type(eOBJECT_TYPE::EXECUTOR_SCHEDULABLE);
 
-	// 2) set executor type
-	this->m_statistics.type = eEXECUTOR_TYPE::SYSTEM;
-
-	// 3) set gc_type of factory
-	//executable_schedulable::get_factory()->set_gc_type(eFACTORY_GC_TYPE::POOLING);
-
-	// 4) register to factory manager
-	this->process_register_executor();
-}
-
-schedulable::manager::manager(std::string_view _name) noexcept :
-	Nexecutor(_name),
-	m_flag_run(0)
-{
-	// 1) set object type
-	this->set_object_type(eOBJECT_TYPE::EXECUTOR_SCHEDULABLE);
-
-	// 2) set executor type
-	this->m_statistics.type = eEXECUTOR_TYPE::SYSTEM;
-
-	// 3) set gc_type of factory
-	//executable_schedulable::get_factory()->set_gc_type(eFACTORY_GC_TYPE::POOLING);
-
-	// 4) register to executor manager
-	this->process_register_executor();
 }
 
 schedulable::manager::~manager() noexcept
 {
 	// 1) stop manager
 	this->schedulable::manager::stop();
-
-	// 2) unregister from executor manager
-	this->process_unregister_executor();
 }
 
 result_code schedulable::manager::start(context& /*_context*/)
@@ -86,34 +76,11 @@ result_code schedulable::manager::start(context& /*_context*/)
 	// 1) set m_flag_run 'true' and get old state
 	const int state_old = this->m_flag_run.exchange(1);
 
-	// check) return if aleady running
-	RETURN_IF(state_old != 0, eRESULT::ALEADY_DONE);
+	// check) return if already running
+	if(state_old != 0)
+		return result_code(eRESULT::ALREADY_DONE);
 
-	// 2) reserve
-	scoped_lock(this->m_lockable_priorityqueue)
-	{
-		// - clear & reserve
-		scoped_lock(this->m_lockable_set_schedulable)
-		{
-			this->m_set_schedulable.clear();
-		}
-		this->m_priorityqueue_schedulable.reserve(16384);
-	}
-
-	try
-	{
-		// 4) begin thread
-		this->begin_thread(fn_thread, this);
-	}
-	catch (...)
-	{
-		// - stop
-		this->stop();
-
-		// reraise)
-		throw;
-	}
-
+	// return)
 	return result_code(eRESULT::SUCCESS);
 }
 
@@ -123,250 +90,151 @@ result_code schedulable::manager::stop() noexcept
 	const int state_old = this->m_flag_run.exchange(0);
 
 	// check) return if not running
-	RETURN_IF(state_old == 0, eRESULT::ALEADY_DONE);
+	if(state_old == 0)
+		return result_code(eRESULT::ALREADY_DONE);
 
-	// 2) cancel all executable
+	// 2) unregister all schedulable (cancel pending executions)
 	this->process_cancel_schedulable_all();
 
-	// 3) wait until thread is terminated
-	this->wait();
-
-	// return) 
+	// return)
 	return result_code(eRESULT::SUCCESS);
+}
+
+void schedulable::manager::process_print_statistics() noexcept
+{
+	try
+	{
+		// declare)
+		shared_buffer buf_output;
+		auto tick_now = chrono::tick::now();
+		uint64_t count_execute_total = 0;
+
+		SCOPED_SHARED_LOCK(this->m_lockable_set_schedulable)
+		{
+			// 1) alloc shared_buffer for log text
+			buf_output = alloc_shared_buffer((static_cast<size_t>(this->m_set_schedulable.size()) + 8) * 256);
+
+			// 2) title
+			buf_output.append_text("\x1b[37m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
+			buf_output.append_text(std::format("\x1b[37m" "{:30s} {:8s}{:>10s}{:>10s}{:>11s}{:>9s}{:>13s}\n" "\x1b[0m",
+				"name",
+				"type",
+				"interval",
+				"overrun",
+				"next(ms)",
+				"state",
+				"executed")
+			);
+			buf_output.append_text("\x1b[90m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
+
+			// 3) registered schedulables
+			for (auto& iter : this->m_set_schedulable)
+			{
+				// check)
+				CGASSERT_ERROR(iter.exist());
+
+				// check)
+				CONTINUE_IF(iter.empty());
+
+				// - get statistics
+				const auto& statistics = iter->statistics();
+
+				// - "1. name" (id if not nameable)
+				std::string str_name;
+				if (auto* pnameable = dynamic_cast<object::Inameable*>(iter.get()); pnameable != nullptr)
+					str_name = std::string(pnameable->name());
+				if (str_name.empty())
+					str_name = std::format("{:#x}", statistics.id);
+				if (str_name.size() > 30)
+					str_name.resize(30);
+
+				// - "3. interval" "4. overrun" (Nschedulable only)
+				std::string str_interval = "-";
+				std::string str_overrun = "-";
+				if (auto* pnschedulable = dynamic_cast<Nschedulable*>(iter.get()); pnschedulable != nullptr)
+				{
+					str_interval = std::format("{}ms", std::chrono::duration_cast<std::chrono::milliseconds>(pnschedulable->execute_interval()).count());
+					str_overrun = std::string(to_string(pnschedulable->overrun_policy()));
+				}
+
+				// - "5. next(ms)"
+				auto tick_next = iter->next_tick();
+				std::string str_next = (tick_next == (chrono::tick::max)()) ? std::string("-") : std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(tick_next - tick_now).count());
+
+				// - "6. state"
+				std::string_view str_state = (iter->m_schedule_state == SCHEDULE_STATE_PENDING) ? "pending"sv : (iter->m_schedule_state == SCHEDULE_STATE_RUNNING) ? "running"sv : "idle"sv;
+
+				// - "7. executed"
+				auto count_execute = statistics.count_execute.load(std::memory_order_relaxed);
+				count_execute_total += count_execute;
+
+				// - append
+				buf_output.append_text(std::format("{}" "{:30s} {:8s}{:>10s}{:>10s}{:>11s}{:>9s}{:>13}" "\x1b[0m\n",
+					(count_execute != 0) ? "\x1b[92m" : "\x1b[32m",
+					str_name,
+					to_string(statistics.type),
+					str_interval,
+					str_overrun,
+					str_next,
+					str_state,
+					count_execute)
+				);
+			}
+
+			// 4) total
+			buf_output.append_text("\x1b[90m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
+			buf_output.append_text(std::format("\x1b[37m" "registered: {}  executed: {} (total by manager: {})\n" "\x1b[0m", this->m_set_schedulable.size(), count_execute_total, this->m_count_execute.load(std::memory_order_relaxed)));
+			buf_output.append_text("\x1b[37m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
+		}
+
+		// 5) output
+	#if defined(_WIN32)
+		DWORD number_written = 0;
+		WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), buf_output.data(), buf_output.size<DWORD>(), &number_written, nullptr);
+	#else
+		fwrite(buf_output.data(), 1, buf_output.size<int>(), stdout);
+	#endif
+	}
+	catch (...)
+	{
+	}
 }
 
 void schedulable::manager::print_statistics() noexcept
 {
-	//try
-	//{
-	//	// 1) get instance
-	//	auto instance = instance();
-
-	//	// 2) alloc shared_buffer for log text
-	//	auto buf_output = alloc_shared_buffer((static_cast<size_t>(instance->size()) + 4) * 256);
-
-	//	buf_output.append_text("\x1b[37m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m");
-	//	buf_output.append_text("\x1b[37m" "{:30s} {:8s}{:>5s}{:>9s}{:>13s}{:>13s}\n" "\x1b[0m",
-	//		"name",
-	//		"type",
-	//		"id",
-	//		"thread",
-	//		"executed",
-	//		"pended"
-	//	);
-	//	buf_output.append_text("\x1b[90m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m");
-
-	//	scoped_shared_lock(instance->m_lockable_list_executor)
-	//	{
-	//		for (auto& iter : instance->m_list_executor)
-	//		{
-	//			// check)
-	//			CGASSERT_ERROR(iter != nullptr);
-
-	//			// check)
-	//			CONTINUE_IF(iter == nullptr);
-
-	//			// - get statistics
-	//			auto& statistics = iter->statistics();
-
-	//			std::string_view executor_name = (statistics.name.size() < 30) ? std::string_view(statistics.name) : std::string_view(statistics.name.c_str(), 30);
-
-	//			auto alloc_execute = statistics.now.count_execute.load();
-
-	//			if (statistics.type == eEXECUTOR_TYPE::USER)
-	//			{
-	//				// "1. name" "2. type"
-	//				if (alloc_execute != 0)
-	//				{
-	//					buf_output.append_text("\x1b[92m" "{:30s} {:8s}" "\x1b[0m", executor_name, to_string<char>(statistics.type));
-	//				}
-	//				else
-	//				{
-	//					if (_using_only == true)
-	//						continue;
-
-	//					buf_output.append_text("\x1b[32m" "{:30s} {:8s}" "\x1b[0m", executor_name, to_string<char>(statistics.type));
-	//				}
-
-	//				// - "3. id"
-	//				{
-	//					auto count = statistics.id;
-
-	//					if (count != 0)
-	//					{
-	//						buf_output.append_text(" {:>4}", count);
-	//					}
-	//					else
-	//					{
-	//						buf_output.append_text("\x1b[90m" "    0" "\x1b[0m");
-	//					}
-	//				}
-
-	//				// - "4. thread_count"
-	//				{
-	//					if (statistics.now.thread_count != 0)
-	//					{
-	//						buf_output.append_text(" {:>8}", statistics.now.thread_count);
-	//					}
-	//					else
-	//					{
-	//						buf_output.append_text("\x1b[90m" "        0" "\x1b[0m");
-	//					}
-	//				}
-
-	//				// - "5. executed"
-	//				{
-	//					auto count = statistics.now.count_execute.load();
-
-	//					if (count != 0)
-	//					{
-	//						buf_output.append_text(" {:>9}", count);
-	//					}
-	//					else
-	//					{
-	//						buf_output.append_text("\x1b[90m" "         0" "\x1b[0m");
-	//					}
-	//				}
-
-	//				// - "6. pended"
-	//				{
-	//					auto* pqueue = dynamic_cast<executor::Iqueue*>(iter);
-
-	//					if (pqueue != nullptr)
-	//					{
-	//						auto count = pqueue->pended_count();
-
-	//						if (count != 0)
-	//						{
-	//							buf_output.append_text(" {:>12}", count);
-	//						}
-	//						else
-	//						{
-	//							buf_output.append_text("\x1b[90m" "            0" "\x1b[0m");
-	//						}
-	//					}
-	//				}
-
-	//				// - new line~
-	//				buf_output.append_text("\n");
-	//			}
-	//			else
-	//			{
-	//				// "1. name" "2. type"
-	//				if (alloc_execute != 0)
-	//				{
-	//					buf_output.append_text("\x1b[37m" "{:30s} {:8s}" "\x1b[0m", executor_name, to_string<char>(statistics.type));
-	//				}
-	//				else
-	//				{
-	//					if (_using_only == true)
-	//						continue;
-
-	//					buf_output.append_text("\x1b[90m" "{:30s} {:8s}" "\x1b[0m", executor_name, to_string<char>(statistics.type));
-	//				}
-
-	//				// - "3. id"
-	//				{
-	//					auto count = statistics.id;
-
-	//					if (count != 0)
-	//					{
-	//						buf_output.append_text(" {:>4}", count);
-	//					}
-	//					else
-	//					{
-	//						buf_output.append_text("\x1b[90m" "    0" "\x1b[0m");
-	//					}
-	//				}
-
-	//				// - "4. thread_count"
-	//				{
-	//					if (statistics.now.thread_count != 0)
-	//					{
-	//						buf_output.append_text(" {:>8}", statistics.now.thread_count);
-	//					}
-	//					else
-	//					{
-	//						buf_output.append_text("\x1b[90m" "        0" "\x1b[0m");
-	//					}
-	//				}
-
-	//				// - "5. executed"
-	//				{
-	//					auto count = statistics.now.count_execute.load();
-
-	//					if (count != 0)
-	//					{
-	//						buf_output.append_text(" {:>12}", count);
-	//					}
-	//					else
-	//					{
-	//						buf_output.append_text("\x1b[90m" "            0" "\x1b[0m");
-	//					}
-	//				}
-
-	//				// - "6. pended"
-	//				{
-	//					auto* pqueue = dynamic_cast<executor::Iqueue*>(iter);
-
-	//					if (pqueue != nullptr)
-	//					{
-	//						auto count = pqueue->pended_count();
-
-	//						if (count != 0)
-	//						{
-	//							buf_output.append_text(" {:>12}", count);
-	//						}
-	//						else
-	//						{
-	//							buf_output.append_text("\x1b[90m" "            0" "\x1b[0m");
-	//						}
-	//					}
-	//				}
-
-	//				// - new line~
-	//				buf_output.append_text("\n");
-	//			}
-	//		}
-	//	}
-	//	buf_output.append_text("\x1b[37m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m");
-
-	//	// 3) 최종 출력
-	//#if defined(_WIN32)
-	//	DWORD number_written = 0;
-	//	WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), buf_output.data(), buf_output.size<DWORD>(), &number_written, nullptr);
-	//#else
-	//	fwrite(buf_output.data(), 1, buf_output.size<int>(), stdout);
-	//#endif
-	//}
-	//catch (...)
-	//{
-	//}
+	system_executor::schedulable_manager()->process_print_statistics();
 }
 
 void schedulable::manager::process_cancel_schedulable_all() noexcept
 {
-	// declare) 
+	// declare)
 	std::set<object_ptr<Ischedulable>> set_schedulable;
+	std::vector<object_ptr<CGDK::Iexecutable>> vector_executable;
+	std::vector<object_ptr<schedulable::manager>> vector_hold;
 
-	// 1) terminate execting loop
-	scoped_lock(this->m_lockable_priorityqueue)
+	// 1) detach all
 	{
-		// - swap
-		scoped_lock(this->m_lockable_set_schedulable)
+		// lock)
+		std::lock_guard<std::mutex> lock(this->m_lockable_schedule);
+
 		{
+			// lock)
+			std::lock_guard<std::shared_mutex> lock_schedulable(this->m_lockable_set_schedulable);
+
+			// - swap
 			set_schedulable.swap(this->m_set_schedulable);
 		}
 
-		// - clear priority queue
-		if (this->m_priorityqueue_schedulable.empty())
+		// - cancel pending executions and detach
+		vector_executable.reserve(set_schedulable.size());
+		vector_hold.reserve(set_schedulable.size());
+
+		for (auto& iter : set_schedulable)
 		{
-			this->m_cv_priorityqueue_exist.notify_one();
-		}
-		else
-		{
-			this->m_priorityqueue_schedulable.clear();
-			this->m_cv_priorityqueue_in_time.notify_one();
+			this->_cancel_schedulable(iter.get());
+
+			vector_executable.emplace_back(std::move(iter->m_pexecutable_schedule));
+			vector_hold.emplace_back(std::move(iter->m_pschedulable_manager));
 		}
 	}
 
@@ -377,434 +245,294 @@ void schedulable::manager::process_cancel_schedulable_all() noexcept
 	}
 }
 
-bool schedulable::manager::process_post(object_ptr<CGDK::Iexecutable>&& /*_pexecutable*/)
+object_ptr<executor::scheduler> schedulable::manager::_get_scheduler()
 {
-	// Error) 이 함수의 Post execute는 불능화되어 있다! 따라서 호출되면 안됀다.
-	CGASSERT_ERROR(false);
+	// 설명) m_lockable_schedule이 lock된 상태에서 호출되어야 한다.
 
-	// return) 
-	return false;
+	// 1) default scheduler
+	if (this->m_pscheduler.empty())
+	{
+		this->m_pscheduler = system_executor::scheduler();
+	}
+
+	// return)
+	return this->m_pscheduler;
 }
 
-bool schedulable::manager::process_execute(chrono::tick::duration /*_ticks_wait*/, intptr_t /*_option*/)
+bool schedulable::manager::_post_schedulable(Ischedulable* _pschedulable)
 {
-	// 1) get current thread
-	auto pthread = api::get_current_thread();
+	// 설명) m_lockable_schedule이 lock된 상태에서 호출되어야 한다.
 
-	while (this->m_flag_run)
+	// check)
+	if (_pschedulable->m_pexecutable_schedule.empty())
+		return false;
+
+	// 1) get next tick
+	auto tick_next = _pschedulable->next_tick();
+
+	// check) not scheduled
+	if (tick_next == (chrono::tick::max)())
 	{
-		try
+		_pschedulable->m_schedule_state = SCHEDULE_STATE_IDLE;
+		return false;
+	}
+
+	// 2) get scheduler
+	auto pscheduler = this->_get_scheduler();
+
+	// check)
+	if (pscheduler.empty())
+	{
+		_pschedulable->m_schedule_state = SCHEDULE_STATE_IDLE;
+		return false;
+	}
+
+	// 3) post at 'next tick'
+	_pschedulable->m_schedule_state = SCHEDULE_STATE_PENDING;
+	pscheduler->post_at(_pschedulable->m_pexecutable_schedule, tick_next);
+
+	// return)
+	return true;
+}
+
+void schedulable::manager::_cancel_schedulable(Ischedulable* _pschedulable) noexcept
+{
+	// 설명) m_lockable_schedule이 lock된 상태에서 호출되어야 한다.
+
+	// 1) cancel the execution pending in scheduler
+	if (_pschedulable->m_schedule_state == SCHEDULE_STATE_PENDING && this->m_pscheduler.exist() && _pschedulable->m_pexecutable_schedule.exist())
+	{
+		this->m_pscheduler->cancel(_pschedulable->m_pexecutable_schedule.get());
+	}
+
+	// 2) set state
+	_pschedulable->m_schedule_state = SCHEDULE_STATE_IDLE;
+}
+
+bool schedulable::manager::process_attach(object_ptr<Ischedulable>&& _pschedulable)
+{
+	// check)
+	CGASSERT_ERROR(_pschedulable != nullptr);
+
+	// check)
+	if(_pschedulable == nullptr)
+		return false;
+
+	// lock)
+	std::lock_guard<std::mutex> lock(this->m_lockable_schedule);
+
+	// check) already registered
+	if(_pschedulable->m_pschedulable_manager.exist())
+		return false;
+
+	// 1) attach
+	_pschedulable->m_pschedulable_manager = this;
+
+	try
+	{
+		// 2) on register (set 'next tick' and executor)
+		auto result = _pschedulable->process_on_register();
+
+		// check)
+		if(result == false)
 		{
-			while (this->m_flag_run)
-			{
-				conditional_lock(this->m_lockable_priorityqueue, lock_wait)
-				{
-					// 1) wait until
-					if (this->m_priorityqueue_schedulable.empty())
-					{
-						this->m_cv_priorityqueue_exist.wait(lock_wait);
-					}
-
-					// 2) get now tick
-					auto tick_now = chrono::tick::now();
-
-					// statistics) 
-					pthread->statistics_executing_begin(tick_now);
-
-					// 3) execute 
-					while (this->m_priorityqueue_schedulable.empty() == false)
-					{
-						// - get first eecutable object
-						auto* pschedulable = this->m_priorityqueue_schedulable.at(0);
-
-						// - get next tick
-						auto next_tick = pschedulable->next_tick();
-
-						// check) wait if not yet 
-						if(next_tick > tick_now)
-						{
-							// statistics) 
-							pthread->statistics_executing_end();
-
-							// - wait time
-							auto time_wait = next_tick - tick_now;
-
-							// - sleep
-							this->m_cv_priorityqueue_in_time.wait_for(lock_wait, time_wait);
-
-							// - get now tick
-							tick_now = chrono::tick::now();
-
-							// statistics) 
-							pthread->statistics_executing_begin(tick_now);
-
-							// continue)
-							continue;
-						}
-
-						// - remove 'executable'
-						this->_pop_schedulable();
-
-						// - get executor
-						auto& pexecutor = pschedulable->m_pexecutor;
-
-						// check) set system executor if executor is nullptr
-						if (pexecutor.empty())
-						{
-							pexecutor = system_executor::executor();
-						}
-
-						// - execute 'executable'
-						auto pexecutable_scheduler = make_object<executable_schedulable>();
-						pexecutable_scheduler->pscheduler = this;
-						pexecutable_scheduler->pschedulable = pschedulable;
-
-						// - post execut
-						pexecutor->post(std::move(pexecutable_scheduler));
-
-						// statistics)
-						++this->m_statistics.now.count_execute;
-					}
-
-					// statistics) 
-					pthread->statistics_executing_end();
-				}
-			}
+			_pschedulable->m_pschedulable_manager.reset();
+			return false;
 		}
-		// On Exception) 
-		catch (std::exception& _exception)
+
+		// 3) add to set
 		{
-			// - Exception Handler를 실행한다.
-			throwable::execute_exception_handler(this, _exception, __FUNCTION__);
+			// lock)
+			std::lock_guard<std::shared_mutex> lock_schedulable(this->m_lockable_set_schedulable);
+
+			// check)
+			CGASSERT_ERROR(this->m_set_schedulable.find(_pschedulable) == this->m_set_schedulable.end());
+
+			// - add
+			this->m_set_schedulable.emplace(_pschedulable);
 		}
+
+		// 4) create execution object (reused while registered)
+		auto pexecutable = make_object<executable_schedulable>();
+		pexecutable->pschedulable = _pschedulable;
+		pexecutable->pmanager = this;
+
+		_pschedulable->m_pexecutable_schedule = std::move(pexecutable);
+		_pschedulable->m_schedule_state = SCHEDULE_STATE_IDLE;
+
+		// 5) post to scheduler at 'next tick'
+		this->_post_schedulable(_pschedulable.get());
+	}
+	catch (...)
+	{
+		// - cancel
+		this->_cancel_schedulable(_pschedulable.get());
+
+		// - detach from set'schedulable'
+		{
+			// lock)
+			std::lock_guard<std::shared_mutex> lock_schedulable(this->m_lockable_set_schedulable);
+
+			this->m_set_schedulable.erase(_pschedulable);
+		}
+
+		// - reset
+		_pschedulable->m_pexecutable_schedule.reset();
+		_pschedulable->m_pschedulable_manager.reset();
+
+		// reraise)
+		throw;
 	}
 
 	// return)
 	return true;
 }
 
-bool schedulable::manager::process_attach(object_ptr<Ischedulable>&& _pschedulable)
-{
-	// check) 
-	CGASSERT_ERROR(_pschedulable != nullptr);
-
-	// check) 
-	CGASSERT_ERROR(_pschedulable != nullptr);
-
-	// check) 
-	RETURN_IF(_pschedulable == nullptr, false);
-
-	scoped_lock(this->m_lockable_priorityqueue)
-	{
-		// check) aleady registered
-		RETURN_IF(_pschedulable->m_pschedulable_manager.exist(), false);
-
-		// 1) attach
-		_pschedulable->m_pschedulable_manager = this;
-
-		try
-		{
-			scoped_lock(this->m_lockable_set_schedulable)
-			{
-				// check) 
-				CGASSERT_ERROR(this->m_set_schedulable.find(_pschedulable) == this->m_set_schedulable.end());
-
-				// 2) push
-				auto result = _pschedulable->process_on_register();
-
-				// check) 
-				RETURN_IF(result == false, false);
-
-				// 3) push_back
-				this->m_set_schedulable.emplace(_pschedulable);
-			}
-
-			// 3) push schedulable
-			this->_push_schedulable(_pschedulable);
-		}
-		catch (...)
-		{
-			// - detach from set'schedulable'
-			scoped_lock(this->m_lockable_set_schedulable)
-			{
-				this->m_set_schedulable.erase(_pschedulable);
-			}
-
-			// - ...
-			_pschedulable->m_pschedulable_manager.reset();
-
-			// reraise)
-			throw;
-		}
-	}
-
-	// return) 
-	return true;
-}
-
 bool schedulable::manager::process_detach(Ischedulable* _pschedulable) noexcept
 {
-	// check) 
-	RETURN_IF(_pschedulable == nullptr, false);
+	// check)
+	if(_pschedulable == nullptr)
+		return false;
 
 	// declare)
 	object_ptr<schedulable::manager> phold_this;
+	object_ptr<CGDK::Iexecutable> pexecutable_hold;
 
-	scoped_lock(this->m_lockable_priorityqueue)
 	{
-		// check) 
-		RETURN_IF(_pschedulable->m_pschedulable_manager != this, false);
+		// lock)
+		std::lock_guard<std::mutex> lock(this->m_lockable_schedule);
 
-		scoped_lock(this->m_lockable_set_schedulable)
+		// check)
+		if(_pschedulable->m_pschedulable_manager != this)
+			return false;
+
 		{
-			// 1) detach from set
+			// lock)
+			std::lock_guard<std::shared_mutex> lock_schedulable(this->m_lockable_set_schedulable);
+
+			// 1) find
 			auto iter_find = this->m_set_schedulable.find(_pschedulable);
 
 			// check)
-			RETURN_IF(iter_find == this->m_set_schedulable.end(), false);
+			if(iter_find == this->m_set_schedulable.end())
+				return false;
 
 			// 2) erase from set
 			this->m_set_schedulable.erase(iter_find);
 		}
 
-		// 3) get first executable object
-		auto iter_end = this->m_priorityqueue_schedulable.end();
-		auto iter = std::find_if(this->m_priorityqueue_schedulable.begin(), iter_end, [=](const Ischedulable* iter) { return iter == _pschedulable;});
+		// 3) cancel the pending execution
+		//    - running execution will not be posted again (the manager is reset below)
+		this->_cancel_schedulable(_pschedulable);
 
-		// 4) remove schedulable if exist
-		if(iter != iter_end)
-		{
-			// - get last item
-			auto ptarget = std::move(this->m_priorityqueue_schedulable.back());
-			auto tick_compare = ptarget->next_tick();
-
-			// - get pos_now of item
-			auto pos_now = static_cast<size_t>(iter - this->m_priorityqueue_schedulable.begin());
-
-			// check) 
-			if (iter == this->m_priorityqueue_schedulable.begin())
-			{
-				// - notify one
-				this->m_cv_priorityqueue_in_time.notify_one();
-			}
-
-			// - remove tail of heap
-			this->m_priorityqueue_schedulable.pop_back();
-
-			// check) 
-			if (pos_now != this->m_priorityqueue_schedulable.size())
-			{
-				// check) 
-				CGASSERT_ERROR(pos_now < this->m_priorityqueue_schedulable.size());
-
-				// case A) up heap
-				if (pos_now != 0 && this->m_priorityqueue_schedulable.at((pos_now - 1) >> 1)->next_tick() > tick_compare)
-				{
-					// - ...
-					auto iter_child = iter;
-
-					do
-					{
-						// - minus 1 then divied 2
-						pos_now = (pos_now - 1) >> 1;
-
-						// - get left node
-						auto iter_now = this->m_priorityqueue_schedulable.begin() + pos_now;
-
-						// check) 
-						BREAK_IF((*iter_now)->next_tick() <= tick_compare);
-
-						// - move to child node
-						*iter_child = std::move(*iter_now);
-						iter_child = iter_now;
-					} while (pos_now != 0);
-
-					// - 
-					*iter_child = std::move(ptarget);
-				}
-				// case B) down heap
-				else
-				{
-					pos_now = (pos_now << 1) + 1;
-
-					// - size & parent
-					auto pos_max = this->m_priorityqueue_schedulable.size() - 1;
-					auto iter_parent = iter;
-
-					while (pos_now <= pos_max)
-					{
-						// - get left node
-						auto iter_now = this->m_priorityqueue_schedulable.begin() + pos_now;
-
-						// - select right node if right node is larger then left node
-						if (pos_now < pos_max && (*iter_now)->next_tick() >(*(iter_now + 1))->next_tick())
-						{
-							++iter_now;
-						}
-
-						// check) 
-						BREAK_IF(tick_compare <= (*iter_now)->next_tick());
-
-						// - move to parent node
-						*iter_parent = std::move(*iter_now);
-						iter_parent = iter_now;
-
-						// - set new pos_now ( pos_now x 2 + 1 )
-						pos_now = (pos_now << 1) + 1;
-					}
-
-					*iter_parent = std::move(ptarget);
-				}
-			}
-		}
-
-		// 5) reset schedulable
+		// 4) reset
+		pexecutable_hold = std::move(_pschedulable->m_pexecutable_schedule);
 		phold_this = std::move(_pschedulable->m_pschedulable_manager);
 	}
 
-	// 6) Hook
+	// 5) Hook
 	_pschedulable->process_on_unregister();
 
-	// 7) reset hold
+	// 6) reset hold
+	pexecutable_hold.reset();
 	phold_this.reset();
 
-	// return) 
+	// return)
 	return true;
 }
 
-void schedulable::manager::_push_schedulable(Ischedulable* _pschedulable)
+bool schedulable::manager::reschedule(Ischedulable* _pschedulable)
 {
 	// check)
-	CGASSERT_ERROR(_pschedulable->m_pschedulable_manager == this);
+	if (_pschedulable == nullptr)
+		return false;
 
-	// check)
-	RETURN_IF(_pschedulable->next_tick() == (chrono::tick::max)());
+	// lock)
+	std::lock_guard<std::mutex> lock(this->m_lockable_schedule);
 
-	// 1) store pos_now
-	auto pos_now = this->m_priorityqueue_schedulable.size();
+	// check) not registered
+	if (_pschedulable->m_pschedulable_manager != this || _pschedulable->m_pexecutable_schedule.empty())
+		return false;
 
-	// 2) push back item
-	this->m_priorityqueue_schedulable.emplace_back(_pschedulable);
+	// check) running - posted again with new 'next tick' after execution
+	if (_pschedulable->m_schedule_state == SCHEDULE_STATE_RUNNING)
+		return true;
 
-	// 3) heap up
-	auto iter_child = --this->m_priorityqueue_schedulable.end();
+	// 1) cancel the pending execution
+	this->_cancel_schedulable(_pschedulable);
 
-	while (pos_now != 0)
-	{
-		// - 빼기 1 후 나누기 2한다.
-		pos_now = ((pos_now - 1) >> 1);
-
-		// - ...
-		auto iter_now = this->m_priorityqueue_schedulable.begin() + pos_now;
-
-		// check) 
-		BREAK_IF((*iter_now)->next_tick() <= _pschedulable->next_tick());
-
-		// - move to down
-		*iter_child = std::move(*iter_now);
-		iter_child = iter_now;
-	}
-
-	// 4) ...
-	*iter_child = std::move(_pschedulable);
-
-	// check)
-	CGASSERT_ERROR(this->m_priorityqueue_schedulable.empty() == false);
-
-	// 5) notify_one
-	if (this->m_priorityqueue_schedulable.size() == 1)
-	{
-		this->m_cv_priorityqueue_exist.notify_one();
-	}
-	else if (_pschedulable == this->m_priorityqueue_schedulable[0])
-	{
-		this->m_cv_priorityqueue_in_time.notify_one();
-	}
+	// 2) post again at new 'next tick'
+	return this->_post_schedulable(_pschedulable);
 }
 
-void schedulable::manager::_pop_schedulable() noexcept
+void schedulable::manager::process_execute_schedulable(executable_schedulable* _pexecutable)
 {
-	// 1) 
-	auto ptarget = std::move(this->m_priorityqueue_schedulable.back());
-	auto tick_compare = ptarget->next_tick();
+	// declare)
+	object_ptr<Ischedulable> pschedulable;
 
-	// 2) target객체를 제거하고 제일 마지막 객체를 그 위치로 가져 온다.
-	this->m_priorityqueue_schedulable.pop_back();
-
-	// check) 
-	RETURN_IF(this->m_priorityqueue_schedulable.empty())
-
-	// 3) Size & Parent
-	auto pos_max = this->m_priorityqueue_schedulable.size() - 1;
-	auto pos_now = size_t(1);
-	auto iter_parent = this->m_priorityqueue_schedulable.begin();
-
-	// 4) down heap
-	while (pos_now <= pos_max)
+	// 1) check state
 	{
-		// - get now node
-		auto iter_now = this->m_priorityqueue_schedulable.begin() + pos_now;
+		// lock)
+		std::lock_guard<std::mutex> lock(this->m_lockable_schedule);
 
-		// - Left가 더 크면 Right 선택한다.
-		if (pos_now < pos_max && (*iter_now)->next_tick() > (*(iter_now + 1))->next_tick())
+		// - get schedulable
+		pschedulable = _pexecutable->pschedulable;
+
+		// check) unregistered or not this execution object
+		if (pschedulable.empty() || pschedulable->m_pschedulable_manager != this || pschedulable->m_pexecutable_schedule.get() != static_cast<CGDK::Iexecutable*>(_pexecutable))
+			return;
+
+		// - running
+		pschedulable->m_schedule_state = SCHEDULE_STATE_RUNNING;
+	}
+
+	// 2) dispatch to the executor of schedulable (if it is not the executor of scheduler)
+	if (_pexecutable->is_dispatched == false)
+	{
+		auto pexecutor = pschedulable->executor();
+		auto pscheduler = this->scheduler();
+
+		if (pexecutor.exist() && pscheduler.exist() && pexecutor.get() != pscheduler->executor().get())
 		{
-			++iter_now;
-			++pos_now;
+			_pexecutable->is_dispatched = true;
+
+			// - post to executor of schedulable (executed again on that executor)
+			if (pexecutor->post(object_ptr<CGDK::Iexecutable>(_pexecutable)))
+				return;
 		}
-
-		// check) Child가 더 크면 끝냄.
-		BREAK_IF(tick_compare <= (*iter_now)->next_tick());
-
-		// - move to up
-		*iter_parent = std::move(*iter_now);
-		iter_parent = iter_now;
-
-		// - set child node as new pos_now (pos_now = pos_now x 2 + 1)
-		pos_now = (pos_now << 1) + 1;
 	}
 
-	*iter_parent = std::move(ptarget);
-}
-
-void schedulable::manager::process_execute_schedulable(object_ptr<Ischedulable>&& _pschedulable)
-{
-	scoped_lock(this->m_lockable_priorityqueue)
-	{
-		// check)
-		RETURN_IF(_pschedulable->m_pschedulable_manager != this);
-
-		// check)
-		RETURN_IF(_pschedulable->next_tick() == (chrono::tick::max)());
-	}
-
-	// 1) execute
-	auto result = _pschedulable->process_schedule();
-
-	// check)
-	RETURN_IF(result == false);
-
-	// 2) re-push
-	scoped_lock(this->m_lockable_priorityqueue)
-	{
-		// check)
-		RETURN_IF(_pschedulable->m_pschedulable_manager != this);
-
-		// - push again
-		this->_push_schedulable(_pschedulable);
-	}
-}
-
-uint32_t schedulable::manager::fn_thread(schedulable::manager* _this)
-{
-	// statistics)
-	++_this->m_statistics.now.thread_count;
-
-	// 1) call 'execute'
-	auto result = _this->execute(chrono::tick::duration(), 0);
+	// - reset
+	_pexecutable->is_dispatched = false;
 
 	// statistics)
-	--_this->m_statistics.now.thread_count;
+	pschedulable->statistics_on_execute_elapsed_time(chrono::tick::duration::zero());
+	pschedulable->m_statistics_schedulable.count_execute.fetch_add(1, std::memory_order_relaxed);
+	this->m_count_execute.fetch_add(1, std::memory_order_relaxed);
 
-	// return) 
-	return result;
+	// 3) execute ('next tick' is updated in process_schedule())
+	try
+	{
+		pschedulable->process_schedule();
+	}
+	catch (std::exception& _exception)
+	{
+		throwable::execute_exception_handler(this, _exception, __FUNCTION__);
+	}
+	catch (...)
+	{
+	}
+
+	// 4) post again at 'next tick'
+	{
+		// lock)
+		std::lock_guard<std::mutex> lock(this->m_lockable_schedule);
+
+		// check) unregistered while executing
+		if (pschedulable->m_pschedulable_manager != this || pschedulable->m_pexecutable_schedule.get() != static_cast<CGDK::Iexecutable*>(_pexecutable))
+			return;
+
+		// - post
+		this->_post_schedulable(pschedulable.get());
+	}
 }

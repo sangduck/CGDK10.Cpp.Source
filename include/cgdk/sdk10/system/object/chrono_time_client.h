@@ -39,11 +39,11 @@ namespace client
 
 struct client_clock
 {
-    using rep                        = long long;
-    static const rep nanoseconds_per_tick = 100;
-    static const rep ticks_per_time_t = 10000000LL;
-    static const rep diff_tick       = 621355968000000000;
-    using period                     = std::ratio_multiply<std::ratio<nanoseconds_per_tick, 1>, std::nano>;
+    using rep                                 = long long;
+    static constexpr rep nanoseconds_per_tick = 100;
+    static constexpr rep ticks_per_time_t     = 10000000LL;
+    static constexpr rep diff_tick            = 621355968000000000;
+    using period                              = std::ratio_multiply<std::ratio<nanoseconds_per_tick, 1>, std::nano>;
 
     using duration = std::chrono::duration<rep, period>;
     using time_point = time::client::time_point;
@@ -125,6 +125,7 @@ constexpr local::time_point& local::time_point::operator = (const client::time_p
 to_date_time(const client_clock::time_point& _time)
 {
     auto duractioin_system = chrono::time::client::_from_client_tick<std::chrono::system_clock::duration>(_time.time_since_epoch());
+
     return to_date_time(std::chrono::system_clock::time_point(duractioin_system));
 }
 
@@ -136,11 +137,9 @@ template<>
 
 }
 
-template <class T = char>
-[[nodiscard]] inline std::basic_string<T>
-to_string(const chrono::client_clock::time_point& _time, const std::basic_string_view<T> _format = std::basic_string_view<T>()) noexcept
+[[nodiscard]] inline std::string to_string(const chrono::client_clock::time_point& _time, const std::string_view _format = {}) noexcept
 {
-    return to_string<T>(chrono::to_date_time(_time), _format);
+    return to_string(chrono::to_date_time(_time), _format);
 }
 
 

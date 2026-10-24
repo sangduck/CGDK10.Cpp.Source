@@ -49,7 +49,8 @@ public:
 // implementation)
 protected:
 			uint32_t			m_key; // Table을 만든 CRCKey입니다.
-			std::array<uint32_t, 256> m_table_CRC{}; // Key에 의해서 만들어진 CRCKey입니다.
+			std::array<std::array<uint32_t, 256>, 16> m_table_CRC{}; // slicing-by-16 tables (m_table_CRC[0] : base table)
+			std::array<uint64_t, 4> m_fold_constant{}; // PCLMULQDQ fold constants
 };
 
 

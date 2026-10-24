@@ -1,31 +1,8 @@
-//*****************************************************************************
-//*                                                                           *
-//*                      Cho sanghyun's Game Classes II                       *
-//*                       Ver 9.0 / release 2017.01.03                        *
-//*                                                                           *
-//*                        Server System MFC Controls                         *
-//*                                                                           *
-//*                                                                           *
-//*                                                                           *
-//*                                                                           *
-//*  This Program is programmed by Cho SangHyun. sangduck@cgcii.co.kr         *
-//*  Best for Game Developement and Optimized for Game Developement.          *
-//*                                                                           *
-//*                 ¨Ï 2016 Cho Sanghyun All right reserved.                  *
-//*                          http://www.CGCII.co.kr                           *
-//*                                                                           *
-//*****************************************************************************
 namespace CGDK
 {
 
 template <class TENTITY, class TCREATE>
 doss::repository::orm<TENTITY, TCREATE>::orm()
-{
-	object::Iidentifiable::set_object_type(eOBJECT_TYPE::REPOSITORY_ORM);
-}
-
-template <class TENTITY, class TCREATE>
-doss::repository::orm<TENTITY, TCREATE>::orm(const std::string_view _name) : rdb<TENTITY, TCREATE>(_name)
 {
 	object::Iidentifiable::set_object_type(eOBJECT_TYPE::REPOSITORY_ORM);
 }
@@ -94,6 +71,5 @@ void doss::repository::orm<TENTITY, TCREATE>::on_execute()
 {
 
 }
-
 
 }

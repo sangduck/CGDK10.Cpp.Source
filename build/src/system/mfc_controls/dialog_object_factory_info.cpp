@@ -45,13 +45,15 @@ END_MESSAGE_MAP()
 
 
 // CDialog_object_factory_info message handlers
-int	CDialog_object_factory_info::m_update_inverval = 2;
+int	CDialog_object_factory_info::m_update_interval = 2;
 
 BOOL CDialog_object_factory_info::CreateModaless(Ifactory* _pObjectFactory, CWnd* _pparent)
 {
 	// 1) Manager를 설정한다.
-	scoped_lock(m_pobject_factory)
 	{
+		// lock)
+		std::lock_guard lock(m_lockable_pobject_factory);
+
 		m_pobject_factory = _pObjectFactory;
 	}
 
@@ -92,7 +94,7 @@ BOOL CDialog_object_factory_info::OnInitDialog()
 	m_listctrl_object.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
 
 	// 2) 
-	m_combo_update_interval.SetCurSel(m_update_inverval);
+	m_combo_update_interval.SetCurSel(m_update_interval);
 
 
 	//-----------------------------------------------------------------
@@ -161,10 +163,11 @@ void CDialog_object_factory_info::OnBnClickedCancel()
 
 void CDialog_object_factory_info::ClearObjectFactoryInfo() noexcept
 {
-	scoped_lock(m_pobject_factory)
-	{
-		m_pobject_factory.reset();
-	}
+	// lock)
+	std::lock_guard lock(m_lockable_pobject_factory);
+
+	// 1) reset factory object
+	m_pobject_factory.reset();
 }
 
 void CDialog_object_factory_info::UpdateObjectFactoryInfo()
@@ -172,7 +175,7 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo()
 	// check) 윈도우가 생성되어 있지 않으면 끝낸다.
 	RETURN_IF(m_hWnd == nullptr)
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 
@@ -182,9 +185,12 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo()
 	// declare) 
 	object_ptr<Ifactory> pobject_factory;
 
-	// 1) Thread Manager를 설정한다.
-	scoped_lock(m_pobject_factory)
+	// 1) factory object를 설정한다.
 	{
+		// lock)
+		std::lock_guard lock(m_lockable_pobject_factory);
+
+		// - set factory object
 		pobject_factory = m_pobject_factory;
 	}
 
@@ -242,7 +248,7 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo()
 	//		// - Nameable을 얻는다.
 	//		auto* pnameable = dynamic_cast<object::Inameable*>(pSchedulable);
 
-	//		// - 값을 추가하고 데이타를 설정한다.
+	//		// - 값을 추가하고 데이터를 설정한다.
 	//		if(pnameable!=nullptr)
 	//		{
 	//			#ifdef _UNICODE
@@ -282,7 +288,7 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo()
 	//	m_listctrl_object.DeleteItem(index);
 	//}
 
-	//// 8) Thread의 갯수를 표시한다.
+	//// 8) Thread의 개수를 표시한다.
 	//SetDlgItemInt(IDC_STATIC_SCHEDULABLE_COUNT, static_cast<int>(pexecutor_schedulable->schedulable_count()));
 
 	// 9) Redraw On
@@ -324,7 +330,7 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo(int _index, chrono::ti
 
 	//// 1. "Type"
 	//list_item.iSubItem		 = 1;
-	//__sprintf(text, TEXT("%s"), typeid(*preferenceable).name());
+	//std::swprintf(text, std::size(text), std::wstring_view(TEXT("%s")).data(), typeid(*preferenceable).name());
 	//for(int i=0;text[i]!=NULL;++i)	if(text[i]=='*') {text[i]=NULL;break;}
 	//list_item.pszText		 = &text[13];
 	//m_listctrl_object.SetItem(&list_item);
@@ -338,7 +344,7 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo(int _index, chrono::ti
 
 	//	if(millisecInterval<1000)
 	//	{
-	//		__sprintf(text, TEXT("%I64ums"), millisecInterval);
+	//		std::swprintf(text, std::size(text), std::wstring_view(TEXT("%I64ums")).data(), millisecInterval);
 	//	}
 	//	else
 	//	{
@@ -347,11 +353,11 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo(int _index, chrono::ti
 
 	//		if(millisecInterval != 0)
 	//		{
-	//			__sprintf(text, TEXT("%I64usec %I64ums"), secInterval, millisecInterval);
+	//			std::swprintf(text, std::size(text), std::wstring_view(TEXT("%I64usec %I64ums")).data(), secInterval, millisecInterval);
 	//		}
 	//		else
 	//		{
-	//			__sprintf(text, TEXT("%I64usec"), secInterval);
+	//			std::swprintf(text, std::size(text), std::wstring_view(TEXT("%I64usec")).data(), secInterval);
 	//		}
 	//	}
 
@@ -361,7 +367,7 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo(int _index, chrono::ti
 	//	m_listctrl_object.SetItem(&list_item);
 
 	//	//const auto&	timeNext	 = preferenceable->next_tick();
-	//	//__sprintf(text, TEXT("%s"), timeNext.);
+	//	//std::swprintf(text, std::size(text), std::wstring_view(TEXT("%s")).data(), timeNext.);
 
 	//	// 3. "Next Tick"
 	//	list_item.iSubItem		 = 3;
@@ -388,7 +394,7 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo(int _index, chrono::ti
 	//list_item.iSubItem		 = 4;
 	//if (pexecutable!=nullptr)
 	//{
-	//	__sprintf(text, TEXT("%d"), 0);
+	//	std::swprintf(text, std::size(text), std::wstring_view(TEXT("%d")).data(), 0);
 	//	list_item.pszText	 = text;
 	//}
 	//else
@@ -400,7 +406,7 @@ void CDialog_object_factory_info::UpdateObjectFactoryInfo(int _index, chrono::ti
 
 void CDialog_object_factory_info::OnCbnSelchangeComboUpdateInterval()
 {
-	// 1) 선택된 Inteval을 얻어낸다.
+	// 1) 선택된 Interval을 얻어낸다.
 	int	selected = m_combo_update_interval.GetCurSel();
 
 	// 2) 해당하는 Update Interval로 설정한다.
@@ -416,10 +422,10 @@ void CDialog_object_factory_info::OnTimer(UINT_PTR nIDEvent)
 {
 	if (nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// 1) 상태를 Update한다.
@@ -432,10 +438,10 @@ void CDialog_object_factory_info::OnTimer(UINT_PTR nIDEvent)
 void CDialog_object_factory_info::SetUpdateInterval(int _interval)
 {
 	// 1) 
-	m_update_inverval = _interval;
+	m_update_interval = _interval;
 
 	// 2) 
-	switch (m_update_inverval)
+	switch (m_update_interval)
 	{
 	// No Update
 	case	0:

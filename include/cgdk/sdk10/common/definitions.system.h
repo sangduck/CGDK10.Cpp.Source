@@ -30,15 +30,13 @@ enum class eOS_TYPE : uint32_t
 	NOT_DEFINED			 = 0,
 	IOS					 = 1,
 	ANDROID				 = 2,
-	WINDOWS_NAVTIVE		 = 3,
+	WINDOWS_NATIVE		 = 3,
 	WINDOWS_UNIVERSAL	 = 4,
 	LINUX				 = 5,
 	MACOS				 = 6
 };
 
-template <class T=char>	std::basic_string_view<T> to_string(eOS_TYPE /*_os_type*/) noexcept	{ CGASSERT_ERROR(false); return nullptr;}
-template <> std::string_view to_string<char>(eOS_TYPE _os_type) noexcept;
-template <> std::wstring_view to_string<wchar_t>(eOS_TYPE _os_type) noexcept;
+std::string_view to_string(eOS_TYPE _os_type) noexcept;
 
 
 enum class eLANGUAGE : uint32_t
@@ -52,7 +50,7 @@ enum class eLANGUAGE : uint32_t
 	// 3) 아시아
 	MANDARIN,								// 북경어(만다린)
 	CANTONESE,								// 광동어(칸토니즈)
-	JANANESE,								// 일본어
+	JAPANESE,								// 일본어
 	TAI,									// 태국어
 
 	// 4) 유럽
@@ -65,9 +63,7 @@ enum class eLANGUAGE : uint32_t
 	RUSSIAN,								// 러시아어
 };
 
-template <class T>	std::basic_string_view<T> to_string(eLANGUAGE /*_language*/) noexcept { CGASSERT_ERROR(false); return nullptr; }
-template <> std::string_view to_string<char>(eLANGUAGE _language) noexcept;
-template <> std::wstring_view to_string<wchar_t>(eLANGUAGE _language) noexcept;
+std::string_view to_string(eLANGUAGE _language) noexcept;
 
 
 //-----------------------------------------------------------------------------
@@ -88,6 +84,5 @@ template <> std::wstring_view to_string<wchar_t>(eLANGUAGE _language) noexcept;
 #define	CONFIGURE_HIGH								3
 #define	CONFIGURE_HIGHER							4
 #define	CONFIGURE_EXTREME							5
-
 
 }

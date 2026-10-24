@@ -6,13 +6,13 @@ using namespace CGDK;
 void query::rdb::odbc::Iquery::process_set_session(session* _psession)
 {
 	// check)
-	CGASSERT_ERROR(_psession != nullptr);
+	CGASSERT_FATAL(_psession != nullptr);
 
 	// 1) alloc statement
 	SQLHDBC handle_dbc = _psession->m_handle_dbc;
 
 	// check) throw exception if it failed
-	THROW_IF(handle_dbc == nullptr, throwable::failure(eRESULT::NOT_READY, 0, "(excepp) ODBC dbc handle is not ready"sv));
+	THROW_IF(handle_dbc == nullptr, throwable::failure(eRESULT::NOT_READY, 0, "(excp) ODBC dbc handle is not ready"sv));
 
 	// declare) 
 	SQLHSTMT handle_stmt = nullptr;
@@ -24,7 +24,7 @@ void query::rdb::odbc::Iquery::process_set_session(session* _psession)
 	THROW_IF(SQL_SUCCEEDED(result_sql) == false, _dump_error_records_dbc(handle_dbc));
 
 	// 2) set session
-	scoped_lock(this->m_lockable_state_query)
+	SCOPED_LOCK(this->m_lockable_state_query)
 	{
 		// check) 
 		CGASSERT_ERROR(this->m_psession.empty());
@@ -45,7 +45,7 @@ void query::rdb::odbc::Iquery::process_reset_session() noexcept
 	object_ptr<session>	psession;
 	SQLHSTMT handle_stmt = nullptr;
 
-	scoped_lock(this->m_lockable_state_query)
+	SCOPED_LOCK(this->m_lockable_state_query)
 	{
 		// check) 
 		RETURN_IF(this->m_state_query != eOBJECT_STATE::READY);
@@ -56,7 +56,7 @@ void query::rdb::odbc::Iquery::process_reset_session() noexcept
 		// - reset session
 		psession = std::move(this->m_psession);
 
-		// - statment
+		// - statement
 		handle_stmt = this->m_handle_stmt;
 		this->m_handle_stmt = 0;
 
@@ -67,7 +67,14 @@ void query::rdb::odbc::Iquery::process_reset_session() noexcept
 	// 2) release statement
 	if (handle_stmt != nullptr)
 	{
-		::SQLFreeHandle(SQL_HANDLE_STMT, handle_stmt);
+		try
+		{
+			::SQLFreeHandle(SQL_HANDLE_STMT, handle_stmt);
+		}
+		catch(...)
+		{
+			// ignore any exception
+		}
 	}
 
 	// 3) notify to requestor
@@ -91,34 +98,63 @@ void query::rdb::odbc::Iquery::_process_notify_to_requestor() noexcept
 	this->m_prequestor.reset();
 }
 
-void query::rdb::odbc::Iquery::_process_regenerate_session()
+void query::rdb::odbc::Iquery::_process_regen_session()
 {
-	// 1) 기존 session을 얻는다.
-	auto psession_old = this->get_session();
+	// ---------------------------------------------------------------------------------
+	// 설명) session을 재생성한다.
+	//       
+	//   1) 기존 statement handle(stmt)를 stmt를 먼저 할당해제한다.
+	//   2) session을 regent한다.
+	//      - odc를 다시 할당한다. (재접속)
+	//   3) statement handle(stmt)를 새로 할당한다.
+	// 
+	// ---------------------------------------------------------------------------------
+	SCOPED_LOCK(this->m_lockable_state_query)
+	{
+		// 1) get session
+		auto psession = this->m_psession;
 
-	// check) 기존 session을 닫는다.
-	THROW_IF(psession_old.empty(), throwable::failure(eRESULT::NOT_READY, 0, std::string_view("excpt) session is nullptr. ")));
+		// check) 
+		THROW_IF(psession.empty(), throwable::failure(eRESULT::NOT_READY, 0, "(excp) ODBC dbc handle is not ready"sv));
 
-	// 2) 기존 session을 닫는다.
-	psession_old->close();
+		// 2) release old statement
+		if (this->m_handle_stmt != nullptr)
+		{
+			try
+			{
+ 				::SQLFreeHandle(SQL_HANDLE_STMT, this->m_handle_stmt);
+			}
+			catch (throwable::failure_ex& _e)
+			{
+				_log(nullptr, _e.get_log_record());
+			}
+			catch (...)
+			{
+				// ignore any exception
+			}
 
-	// 3) 기존 session의 정보를 얻어 놓는다.
-	auto pdata_source = psession_old->m_pdata_source;
-	auto pquerier = psession_old->m_pquerier;
+			this->m_handle_stmt = nullptr;
+		}
 
-	// 4) session에 정보를 제거한다.
-	psession_old->m_pdata_source.reset();
-	psession_old->m_pquerier.reset();
+		// 3) reopen session
+		psession->reopen();
 
-	// 5) 새로운 session을 생성한다.
-	auto psession = new session();
+		// 4) alloc statement
+		SQLHDBC handle_dbc = psession->m_handle_dbc;
 
-	// 6) 새로운 session을 open한다.
-	psession->open(pdata_source);
+		// check) throw exception if it failed
+		THROW_IF(handle_dbc == nullptr, throwable::failure(eRESULT::NOT_READY, 0, "(excp) ODBC dbc handle is not ready"sv));
 
-	// 7) Querier를 설정한다.
-	psession->m_pquerier = pquerier;
+		// declare) 
+		SQLHSTMT handle_stmt = nullptr;
 
-	// 8) 새로운 session을 세팅한다.
-	this->set_session(psession);
-}
+		// 5) alloc new statement handle
+		auto result_sql = ::SQLAllocHandle(SQL_HANDLE_STMT, handle_dbc, &handle_stmt);
+
+		// check) throw exception if it failed
+		THROW_IF(SQL_SUCCEEDED(result_sql) == false, _dump_error_records_dbc(handle_dbc));
+
+		// 6) set new hstmt
+		this->m_handle_stmt = handle_stmt;
+	}
+} 

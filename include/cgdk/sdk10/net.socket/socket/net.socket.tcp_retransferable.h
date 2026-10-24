@@ -28,6 +28,7 @@ namespace CGDK
 template <class TRESTORABLE, class RECEIVE_HEADER_T = uint32_t, class SEND_HEADER_T = RECEIVE_HEADER_T>
 class net::socket::tcp_restorable :
 	public						net::io::socket::tcp::Ndefault,
+	public						net::io::connect_notify::tcp::Ndefault,
 	public						net::io::sendable::tcp::Ndefault,
 	public				 		net::io::send_request::tcp::Ndefault,
 	public						net::io::sender::tcp::Ndefault<SEND_HEADER_T>,

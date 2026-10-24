@@ -1,0 +1,10 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="host_agent.service\CGDK10.server.admin.host_agent.service.shared.vcxitems" Id="ad65497a-7bae-410d-bded-23bc233960a1" />
+  <Folder Name="/windows/" Id="644b000c-1da1-40cb-a082-cfbcdb242fdd">
+    <Project Path="CGDK.html_to_cpp\CGDK.html_to_cpp.vs18.vcxproj" Id="0db3a058-b7cc-4e38-b8dc-48aa84071107" />
+    <Project Path="host_agent.service\CGDK10.server.admin.host_agent.service.vs18.vcxproj" Id="ee545efa-bc88-4492-a88e-e63cee28400d" />
+  </Folder>
+</Solution>

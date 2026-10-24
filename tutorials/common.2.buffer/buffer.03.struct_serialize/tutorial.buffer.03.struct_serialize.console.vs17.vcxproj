@@ -17,7 +17,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{49001313-6F6C-41E5-9EE8-E6980EAA092D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>tutorialbuffer04structserializeconsolevs16</RootNamespace>
+    <RootNamespace>tutorialbuffer04structserializeconsole</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>buffer.03.struct_serialize.console</ProjectName>
   </PropertyGroup>
@@ -60,8 +60,11 @@
     <TargetName>CGDK10.tutorial.$(ProjectName).$(Configuration)</TargetName>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
-    <VcpkgEnableManifest>true</VcpkgEnableManifest>
+    <VcpkgEnableManifest>false</VcpkgEnableManifest>
+    <VcpkgEnabled>false</VcpkgEnabled>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>

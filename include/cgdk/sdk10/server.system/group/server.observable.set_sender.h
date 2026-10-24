@@ -30,7 +30,7 @@ namespace CGDK
  @details	\n
  List형 Observer Class 객체
  Group과 다른 점은 독점적이지 않다는 것이다.
- 여러개의 Observer에도 붙어서 동작할 수 있다.
+ 여러 개의 Observer에도 붙어서 동작할 수 있다.
 
 *///-----------------------------------------------------------------------------
 template <class _TOBSERVER, class _TOBSERVER_DATA=int64_t, class _observer_base_t=_TOBSERVER>
@@ -39,7 +39,7 @@ class observable::set_sender :
 	public						observable::set<_TOBSERVER, _TOBSERVER_DATA, _observer_base_t>,
 	virtual public				net::io::Isender
 {
-// definitnion)
+// definition)
 public:
 	using observable_bast_t = observable::set<_TOBSERVER, _TOBSERVER_DATA, _observer_base_t>;
 	using observer_t = _TOBSERVER;
@@ -51,7 +51,7 @@ public:
 
 // publics) 
 public:
-			bool				send_except(observer_t* _member_except, const shared_buffer& _buffer, uint64_t _option = 0);
+			bool				send_except(observer_t* _pobserver_except, const shared_buffer& _buffer, uint64_t _option = 0);
 			bool				send_conditional(const shared_buffer& _buffer, const std::function<bool (const observer_t*)>& _pred, uint64_t _option = 0);
 
 // implementations)
@@ -66,13 +66,14 @@ bool observable::set_sender<_TOBSERVER, _TOBSERVER_DATA, _observer_base_t>::proc
 	// check)
 	RETURN_IF(_buffer.empty(), false)
 
-	// 1) send to all member
-	scoped_lock(this->m_lockable_observable)
+	// declare) observer snapshot (copy-on-write. no lock while the published one is valid)
+	auto snapshot_send = this->get_observer_snapshot();
+
+
+	// 1) send to all observer
+	for (auto* iter : snapshot_send)
 	{
-		for(auto& iter: this->m_container_observer)
-		{
-			iter.pobserver->send({ shared_buffer(_buffer), _count_message }, _option);
-		}
+		iter->send({ shared_buffer(_buffer), _count_message }, _option);
 	}
 
 	// return)
@@ -80,31 +81,19 @@ bool observable::set_sender<_TOBSERVER, _TOBSERVER_DATA, _observer_base_t>::proc
 }
 
 template <class _TOBSERVER, class _TOBSERVER_DATA, class _observer_base_t>
-bool observable::set_sender<_TOBSERVER, _TOBSERVER_DATA, _observer_base_t>::send_except(observer_t* _member_except, const shared_buffer& _buffer, uint64_t _option)
+bool observable::set_sender<_TOBSERVER, _TOBSERVER_DATA, _observer_base_t>::send_except(observer_t* _pobserver_except, const shared_buffer& _buffer, uint64_t _option)
 {
-	scoped_lock(this->m_lockable_observable)
+	// declare) observer snapshot (copy-on-write. no lock while the published one is valid)
+	auto snapshot_send = this->get_observer_snapshot();
+
+
+	for (auto* iter : snapshot_send)
 	{
-		auto iter = this->m_container_observer.begin();
-		auto iter_end = this->m_container_observer.end();
+		// check) _pobserver_except
+		CONTINUE_IF(iter == _pobserver_except);
 
-		for(; iter!=iter_end; ++iter)
-		{
-			// check) 
-			if(*iter == _member_except)
-			{
-				++iter;
-				break;
-			}
-
-			// - send to member
-			iter.second.pobserver->send(shared_buffer(_buffer), _option);
-		}
-
-		for(; iter!=iter_end; ++iter)
-		{
-			// - send to member
-			iter.pobserver->send(shared_buffer(_buffer), _option);
-		}
+		// - send to observer
+		iter->send(shared_buffer(_buffer), _option);
 	}
 
 	// return)
@@ -114,16 +103,28 @@ bool observable::set_sender<_TOBSERVER, _TOBSERVER_DATA, _observer_base_t>::send
 template <class _TOBSERVER, class _TOBSERVER_DATA, class _observer_base_t>
 bool observable::set_sender<_TOBSERVER, _TOBSERVER_DATA, _observer_base_t>::send_conditional(const shared_buffer& _buffer, const std::function<bool (const observer_t*)>& _pred, uint64_t _option)
 {
-	scoped_lock(this->m_lockable_observable)
-	{
-		for(auto& iter: this->m_container_observer)
-		{
-			// check) 
-			CONTINUE_IF(_pred(iter) == false);
+	// declare)
+	std::vector<object_ptr<observer_t>> vector_send;
 
-			// - send to member
-			iter.pobserver->send(shared_buffer(_buffer), _option);
+	SCOPED_LOCK(this->m_lockable_observable)
+	{
+		// - reserve
+		vector_send.reserve(this->m_container_observer.size());
+
+		for(const auto& iter: this->m_container_observer)
+		{
+			// check)
+			CONTINUE_IF(_pred(iter.pobserver) == false);
+
+			// - copy observer
+			vector_send.push_back(iter.pobserver);
 		}
+	}
+
+	for(auto& iter: vector_send)
+	{
+		// - send to observer
+		iter->send(shared_buffer(_buffer), _option);
 	}
 
 	// return)

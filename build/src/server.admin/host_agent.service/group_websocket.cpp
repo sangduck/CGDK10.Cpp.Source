@@ -3,17 +3,17 @@
 
 group_websocket::group_websocket()
 {
-	this->m_pobservable_websocket_system_info = make_own<observable_websocket_system_info>("observable_websocket_system_info");
-	this->m_pobservable_websocket_system_info->set_name("observable_websocket_system_info");
-	Nattachable<object::Istate>::process_attach(this->m_pobservable_websocket_system_info);
+	this->m_pobservable_websocket_system_info = make_own<observable_websocket_system_info>();
+	this->m_pobservable_websocket_system_info->name("observable_websocket_system_info");
+	this->attach_child_object(this->m_pobservable_websocket_system_info);
 
-	this->m_pobservable_websocket_host_info = make_own<observable_websocket_host_info>("observable_websocket_host_info");
-	this->m_pobservable_websocket_host_info->set_name("observable_websocket_host_info");
-	Nattachable<object::Istate>::process_attach(this->m_pobservable_websocket_host_info);
+	this->m_pobservable_websocket_host_info = make_own<observable_websocket_host_info>();
+	this->m_pobservable_websocket_host_info->name("observable_websocket_host_info");
+	this->attach_child_object(this->m_pobservable_websocket_host_info);
 
-	this->m_pobservable_websocket_peer_info = make_own<observable_websocket_peer_info>("observable_websocket_peer_info");
-	this->m_pobservable_websocket_peer_info->set_name("observable_websocket_peer_info");
-	Nattachable<object::Istate>::process_attach(this->m_pobservable_websocket_peer_info);
+	this->m_pobservable_websocket_peer_info = make_own<observable_websocket_peer_info>();
+	this->m_pobservable_websocket_peer_info->name("observable_websocket_peer_info");
+	this->attach_child_object(this->m_pobservable_websocket_peer_info);
 }
 
 group_websocket::~group_websocket()
@@ -26,7 +26,7 @@ void group_websocket::on_initialize(context& /*_context*/)
 	LOG_INFO << " - initialize GROUP['"sv << name() << "']"sv;
 
 	// 1) Register MediatorÇÑ´Ù.
-	this->register_messageable(service::instance());
+	this->register_messageable(::service::instance());
 }
 
 void group_websocket::on_destroy()
@@ -35,7 +35,7 @@ void group_websocket::on_destroy()
 	LOG_INFO << " - destroy GROUP['"sv << name() << "']"sv;
 
 	// 1) register mediator
-	this->unregister_messageable(service::instance());
+	this->unregister_messageable(::service::instance());
 }
 
 void group_websocket::on_start(context& /*_context*/)
@@ -74,7 +74,7 @@ uintptr_t group_websocket::on_member_leaving(socket_websocket* _pmember, uintptr
 	// 1) unregister to observable
 	_pmember->unsubscribe(OCID_SYSTEM);
 
-	// 2) uregister _pmenber
+	// 2) unregister _pmenber
 	_pmember->unregister_messageable(this);
 
 	// return) 
@@ -147,18 +147,18 @@ result_code group_websocket::on_message(sMESSAGE_NETWORK& _msg)
 	return eRESULT::BYPASS;
 }
 
-void group_websocket::notify_to_web_controls_INSTANCE_ENTER(server_admin::Iinstance* _pinstance)
+void group_websocket::notify_to_web_controls_INSTANCE_ENTER(server_system::Iinstance* _pinstance)
 {
 	this->m_pobservable_websocket_peer_info->notify_to_web_controls_INSTANCE_ENTER(_pinstance);
 	this->m_pobservable_websocket_host_info->notify_to_web_controls_INSTANCE_ENTER(_pinstance);
 }
-void group_websocket::notify_to_web_controls_INSTANCE_LEAVE(server_admin::Iinstance* _pinstance)
+void group_websocket::notify_to_web_controls_INSTANCE_LEAVE(server_system::Iinstance* _pinstance)
 {
 	this->m_pobservable_websocket_peer_info->notify_to_web_controls_INSTANCE_LEAVE(_pinstance);
 	this->m_pobservable_websocket_host_info->notify_to_web_controls_INSTANCE_LEAVE(_pinstance);
 }
 
-void group_websocket::notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_admin::Iinstance* _pinstance)
+void group_websocket::notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_system::Iinstance* _pinstance)
 {
 	this->m_pobservable_websocket_peer_info->notify_to_web_controls_INSTANCE_STATUS_UPDATE(_pinstance);
 	this->m_pobservable_websocket_host_info->notify_to_web_controls_INSTANCE_STATUS_UPDATE(_pinstance);

@@ -48,7 +48,7 @@ constexpr void _do_post_make_shared_buffer(CGDK::_shared_buffer<buffer>&)
 	buf_serialized = _mem_alloc(_size CGNEW_DEBUG_INFO_COMMA CGNEW_DEBUG_INFO_PARAMETERS_PASSING);
 
 	// 2) set bound info
-	buf_serialized.bound.upper = reinterpret_cast<const char*>(buf_serialized.bound.lower) + _size;
+	buf_serialized.bound.upper = reinterpret_cast<const char*>(buf_serialized.bound.lower) + _size; 
 
 	// return) 
 	return buf_serialized;
@@ -102,6 +102,9 @@ template<class BUFFER_T>
 
 	// check) 
 	RETURN_IF(length == 0, buf_temp);
+
+	// check) upper bound 
+	_CGD_BUFFER_BOUND_CHECK(length <= this->size());
 
 	// 2) alloc memory buffer
 	buf_temp = alloc_shared_buffer(length);

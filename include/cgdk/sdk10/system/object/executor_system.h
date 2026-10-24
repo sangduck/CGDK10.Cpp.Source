@@ -18,21 +18,54 @@
 
 #pragma once
 
-namespace CGDK
+#if defined(__cpp_impl_coroutine)
+namespace CGDK::coroutine
 {
-//-----------------------------------------------------------------------------
+	template <class TRESULT>
+	class task;
+
+	namespace detail
+	{
+		// 1) the implementation of system_executor::post() / execute() with a coroutine (coroutine.post.h)
+		template <class TRESULT>
+		struct post_impl;
+		template <class TCALLABLE>
+		struct post_impl_auto;
+		template <class TCALLABLE>
+		struct execute_impl_auto;
+
+		// 2) the owner of system_executor::post(): a pointer or an object_ptr of Ireferenceable (not an executor)
+		//    - an executor is not an owner: 'system_executor::post(pstrand, foo())' is a compile error.
+		//      (use 'pstrand->post(foo())'. object_ptr converts to a pointer implicitly)
+		template <class T> struct post_owner_type { using type = void; };
+		template <class T> struct post_owner_type<T*> { using type = T; };
+		template <class T> struct post_owner_type<object_ptr<T>> { using type = T; };
+
+		template <class TOWNER, class T = typename post_owner_type<std::remove_cvref_t<TOWNER>>::type>
+		constexpr bool is_post_owner_v = !std::is_void_v<T>
+			&& std::is_base_of_v<Ireferenceable, std::remove_cv_t<T>>
+			&& !std::is_base_of_v<Iexecutor, std::remove_cv_t<T>>;
+
+		template <class T> Ireferenceable* to_post_owner(T* _powner) noexcept { return _powner; }
+		template <class T> Ireferenceable* to_post_owner(const object_ptr<T>& _powner) noexcept { return _powner.get(); }
+	}
+}
+#endif
+
+namespace CGDK
+{//-----------------------------------------------------------------------------
 /**
 
  @class		Default
- @brief		³»ºÎÀûÀ¸·Î ÀÚµ¿ »ý¼ºµÇ´Â ±âº» executorÀÌ´Ù.
+ @brief		ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç´ï¿½ ï¿½âº» executorï¿½Ì´ï¿½.
  @todo		
  @ref		
  @details	\n
- ³»ºÎÀûÀ¸·Î »ç¿ëµÇ´Â ¸ðµç ½ÇÇàÃ³¸®¿¡ »ç¿ëµÇ´Â ½Ì±ÛÅÏ executorÀÌ´Ù.
- ³»ºÎÀûÀ¸·Î ´ÙÁß ¾²·¹µå executor¿Í SingleExecutor¿Í schedulable_manager¸¦ °¡Áö°í ÀÖ´Ù.
- ±âº»ÀûÀ¸·Î´Â ÀÚµ¿»ý¼ºµÇ³ª ÃÊ±âÈ­±â ÇÊ¿äÇÒ °æ¿ì initialize_instance()¸¦ È£ÃâÇØ ÃÊ±âÈ­ÇÒ ¼öµµ ÀÖ´Ù.
- ½ÇÇà¿äÃ»Àº post(...)ÇÔ¼ö·Î °¡´ÉÇÏ¸ç register_schedulable·Î Scheudler¿¡ µî·ÏÇÒ ¼öµµ ÀÖ´Ù.
- ¼Ò¸êÃ³¸®µµ ÀÚµ¿À¸·Î µÇ±â ¶§¹®¿¡ ´Ù¸¥ Ã³¸®¸¦ ÇØÁÙ ÇÊ¿äµµ ¾ø´Ù.
+ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ç´ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ã³ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ç´ï¿½ ï¿½Ì±ï¿½ï¿½ï¿½ executorï¿½Ì´ï¿½.
+ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ executorï¿½ï¿½ SingleExecutorï¿½ï¿½ schedulable_managerï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½.
+ ï¿½âº»ï¿½ï¿½ï¿½ï¿½ï¿½Î´ï¿½ ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç³ï¿½ ï¿½Ê±ï¿½È­ï¿½ï¿½ ï¿½Ê¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ initialize_instance()ï¿½ï¿½ È£ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½.
+ ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ post(...)ï¿½Ô¼ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ register_schedulableï¿½ï¿½ Schedulerï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½.
+ ï¿½Ò¸ï¿½Ã³ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ç±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù¸ï¿½ Ã³ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿äµµ ï¿½ï¿½ï¿½ï¿½.
 
 
   configure
@@ -45,7 +78,8 @@ class system_executor :
 	public						object::Nstate,
 	public						object::Ninitializable,
 	public						Idisposable::Nno_act,
-	public						factory::_traits_system
+	public						factory::_traits_system,
+	private						non_copyable
 {
 public:
 	using schedulable_manager_t = schedulable::manager;
@@ -58,16 +92,16 @@ protected:
 	virtual ~system_executor() noexcept;
 
 public:
-	static	void				initialize_instance(size_t _count_thread = CGEXECUTOR_AUTO);
+	static	void				initialize_instance(int _count_thread = static_cast<int>(CGEXECUTOR_AUTO));
 	static	void				initialize_instance(context& _context);
 	static	void				destroy_instance() noexcept;
 	static	void				detach_instance() noexcept;
-	static	system_executor*	instance() { if(m_s_instance.m_pexecutable_scheduler.empty()) initialize_instance(); return &m_s_instance;}
-	static	system_executor*	peek_instance() noexcept { if (m_s_instance.m_pexecutable_scheduler.empty()) return nullptr; return &m_s_instance; }
+	static	system_executor*	instance() { if(m_s_instance.m_pexecutable_scheduler.get_acquire() == nullptr) initialize_instance(); return &m_s_instance;}
+	static	system_executor*	peek_instance() noexcept { if (m_s_instance.m_pexecutable_scheduler.get_acquire() == nullptr) return nullptr; return &m_s_instance; }
 
-	static	auto				executor() { if(m_s_instance.m_psystem_executor.empty()) initialize_instance(); return object_ptr<executor::Iio_context>(m_s_instance.m_psystem_executor); }
-	static	auto				schedulable_manager() { if(m_s_instance.m_pschedulable_manager.empty()) initialize_instance(); return object_ptr<schedulable_manager_t>(m_s_instance.m_pschedulable_manager);}
-	static	auto				scheduler() { if(m_s_instance.m_pexecutable_scheduler.empty()) initialize_instance(); return object_ptr<executable_scheduler_t>(m_s_instance.m_pexecutable_scheduler);}
+	static	auto				executor() { auto p = m_s_instance.m_psystem_executor.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_s_instance.m_psystem_executor.get_acquire(); } return object_ptr<executor::Iio_context>(p); }
+	static	auto				schedulable_manager() { auto p = m_s_instance.m_pschedulable_manager.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_s_instance.m_pschedulable_manager.get_acquire(); } return object_ptr<schedulable_manager_t>(p); }
+	static	auto				scheduler() { auto p = m_s_instance.m_pexecutable_scheduler.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_s_instance.m_pexecutable_scheduler.get_acquire(); } return object_ptr<executable_scheduler_t>(p); }
 	[[nodiscard]] static size_t	thread_count() noexcept;					  
 		
 	static	void				run_executor();
@@ -77,17 +111,79 @@ public:
 	static	bool				start_thread_observer();
 	static	bool				stop_thread_observer() noexcept;
 
-	static	bool				post(object_ptr<Iexecutable>&& _pexecutable) { return executor()->post(std::move(_pexecutable)); }
+	// - system executorï¿½ï¿½ raw pointer (ï¿½ï¿½ï¿½ï¿½ count ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ : postï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ threadï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ countï¿½ï¿½ ï¿½Ã¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Êµï¿½ï¿½ï¿½)
+	//   destroyï¿½Ç¾îµµ ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê°ï¿½ system_executorï¿½ï¿½ ï¿½Ò¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï¹Ç·ï¿½(m_vector_executor_retired) ï¿½ï¿½ï¿½ï¿½ ï¿½ß¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê´Â´ï¿½.
+	//   (destroyï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ postï¿½ï¿½ handleï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¾ï¿½ falseï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ø´ï¿½)
+	[[nodiscard]] static executor::Iio_context* executor_ptr() { auto p = m_s_instance.m_psystem_executor.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_s_instance.m_psystem_executor.get_acquire(); } return p; }
+	[[nodiscard]] static executor::Iio_context* executor_ptr_peek() noexcept { return m_s_instance.m_psystem_executor.get_acquire(); }	// - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê´Â´ï¿½. (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ : ï¿½ï¿½ï¿½ï¿½ ï¿½ß¿ï¿½ ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Êµï¿½ï¿½ï¿½)
+
+	static	bool				post(object_ptr<Iexecutable>&& _pexecutable) { auto pexecutor = executor_ptr(); return (pexecutor != nullptr) ? pexecutor->post(std::move(_pexecutable)) : false; }
 	static	bool				post(const object_ptr<Iexecutable>& _pexecutable) { return post(object_ptr<Iexecutable>(_pexecutable)); }
 
 	static	bool				post(object_ptr<Iexecutable>&& _pexecutable, chrono::tick::time_point _tick_execute) { return scheduler()->post_at(std::move(_pexecutable), _tick_execute); }
-	static	bool				post(object_ptr<Iexecutable>&& _pexecutable, chrono::tick::duration _duration) { return scheduler()->post_at(std::move(_pexecutable), _duration); }
+	static	bool				post(object_ptr<Iexecutable>&& _pexecutable, chrono::tick::duration _durationtick_after) { return scheduler()->post_at(std::move(_pexecutable), chrono::tick::now() + _durationtick_after); }
 	static	bool				post(const object_ptr<Iexecutable>& _pexecutable, chrono::tick::time_point _tick_execute) { return post(object_ptr<Iexecutable>(_pexecutable), _tick_execute); }
-	static	bool				post(const object_ptr<Iexecutable>& _pexecutable, chrono::tick::duration _duration) { return post(object_ptr<Iexecutable>(_pexecutable), _duration); }
+	static	bool				post(const object_ptr<Iexecutable>& _pexecutable, chrono::tick::duration _durationtick_after) { return post(object_ptr<Iexecutable>(_pexecutable), _durationtick_after); }
+
+#if defined(__cpp_impl_coroutine)
+	// - post: starts a coroutine::task (or a function, wrapped in a coroutine) on the system_executor without waiting (coroutine.post.h)
+	template <class TCALLABLE>
+	static	std::enable_if_t<coroutine::detail::is_post_callable_v<TCALLABLE>, void>
+								post(TCALLABLE&& _callable) { coroutine::detail::post_impl_auto<TCALLABLE>::post(object_ptr<Iexecutor>(), nullptr, std::forward<TCALLABLE>(_callable)); }
+	template <class TOWNER, class TCALLABLE>
+	static	std::enable_if_t<coroutine::detail::is_post_owner_v<TOWNER> && coroutine::detail::is_post_callable_v<TCALLABLE>, void>
+								post(const TOWNER& _powner, TCALLABLE&& _callable) { coroutine::detail::post_impl_auto<TCALLABLE>::post(object_ptr<Iexecutor>(), coroutine::detail::to_post_owner(_powner), std::forward<TCALLABLE>(_callable)); }
+	template <class TCALLABLE, class FCOMPLETE>
+	static	std::enable_if_t<coroutine::detail::is_post_callable_v<TCALLABLE> && std::is_invocable_v<std::decay_t<FCOMPLETE>&, std::exception_ptr>, void>
+								post(TCALLABLE&& _callable, FCOMPLETE&& _on_complete) { coroutine::detail::post_impl_auto<TCALLABLE>::post(object_ptr<Iexecutor>(), nullptr, std::forward<TCALLABLE>(_callable), std::forward<FCOMPLETE>(_on_complete)); }
+	template <class TOWNER, class TCALLABLE, class FCOMPLETE>
+	static	std::enable_if_t<coroutine::detail::is_post_owner_v<TOWNER> && coroutine::detail::is_post_callable_v<TCALLABLE> && std::is_invocable_v<std::decay_t<FCOMPLETE>&, std::exception_ptr>, void>
+								post(const TOWNER& _powner, TCALLABLE&& _callable, FCOMPLETE&& _on_complete) { coroutine::detail::post_impl_auto<TCALLABLE>::post(object_ptr<Iexecutor>(), coroutine::detail::to_post_owner(_powner), std::forward<TCALLABLE>(_callable), std::forward<FCOMPLETE>(_on_complete)); }
+
+	// - execute: runs the task right here until it suspends for the first time, then continues on the system_executor (coroutine.post.h)
+	template <class TCALLABLE>
+	static	std::enable_if_t<coroutine::detail::is_post_callable_v<TCALLABLE>, void>
+								execute(TCALLABLE&& _callable) { coroutine::detail::execute_impl_auto<TCALLABLE>::execute(object_ptr<Iexecutor>(), nullptr, std::forward<TCALLABLE>(_callable)); }
+	template <class TOWNER, class TCALLABLE>
+	static	std::enable_if_t<coroutine::detail::is_post_owner_v<TOWNER> && coroutine::detail::is_post_callable_v<TCALLABLE>, void>
+								execute(const TOWNER& _powner, TCALLABLE&& _callable) { coroutine::detail::execute_impl_auto<TCALLABLE>::execute(object_ptr<Iexecutor>(), coroutine::detail::to_post_owner(_powner), std::forward<TCALLABLE>(_callable)); }
+	template <class TCALLABLE, class FCOMPLETE>
+	static	std::enable_if_t<coroutine::detail::is_post_callable_v<TCALLABLE> && std::is_invocable_v<std::decay_t<FCOMPLETE>&, std::exception_ptr>, void>
+								execute(TCALLABLE&& _callable, FCOMPLETE&& _on_complete) { coroutine::detail::execute_impl_auto<TCALLABLE>::execute(object_ptr<Iexecutor>(), nullptr, std::forward<TCALLABLE>(_callable), std::forward<FCOMPLETE>(_on_complete)); }
+	template <class TOWNER, class TCALLABLE, class FCOMPLETE>
+	static	std::enable_if_t<coroutine::detail::is_post_owner_v<TOWNER> && coroutine::detail::is_post_callable_v<TCALLABLE> && std::is_invocable_v<std::decay_t<FCOMPLETE>&, std::exception_ptr>, void>
+								execute(const TOWNER& _powner, TCALLABLE&& _callable, FCOMPLETE&& _on_complete) { coroutine::detail::execute_impl_auto<TCALLABLE>::execute(object_ptr<Iexecutor>(), coroutine::detail::to_post_owner(_powner), std::forward<TCALLABLE>(_callable), std::forward<FCOMPLETE>(_on_complete)); }
+
+	// - post with time scheduling: schedule coroutine task or function for later execution
+	template <class TCALLABLE>
+	static	std::enable_if_t<coroutine::detail::is_post_callable_v<TCALLABLE>, void>
+								post(TCALLABLE&& _callable, chrono::tick::time_point _tick_execute)
+	{
+		post(make_executable([_callable = std::forward<TCALLABLE>(_callable)]() mutable
+		{
+			coroutine::detail::post_impl_auto<TCALLABLE>::post(object_ptr<Iexecutor>(), nullptr, std::forward<TCALLABLE>(_callable));
+		}), _tick_execute);
+	}
+	template <class TCALLABLE>
+	static	std::enable_if_t<coroutine::detail::is_post_callable_v<TCALLABLE>, void>
+								post(TCALLABLE&& _callable, chrono::tick::duration _duration)
+	{
+		post(std::forward<TCALLABLE>(_callable), chrono::tick::now() + _duration);
+	}
+#endif
 
 	static	bool				register_schedulable(object_ptr<Ischedulable>&& _pschedulable);
 	static	bool				register_schedulable(const object_ptr<Ischedulable>& _pschedulable) { return register_schedulable(object_ptr<Ischedulable>(_pschedulable)); }
 	static	bool				unregister_schedulable(Ischedulable* _pschedulable) noexcept;
+
+	// - destroy handlers : called at the beginning of the (normal) destroy of the system_executor, before the system
+	//   executor and the scheduler are stopped. (ex. net::emergency::manager stops the emergency acceptor and its executors there)
+	//   * one-shot : the handlers are taken out when they are called (register again after a re-initialize if needed)
+	//   * never called on an abnormal termination (crash, std::terminate, _Exit ...)
+	//   * the same name replaces the handler registered before. the handlers are called in the reverse order of the registration.
+	using destroy_handler_t = std::function<void()>;
+	static	bool				register_destroy_handler(std::string_view _name, destroy_handler_t&& _handler);
+	static	bool				unregister_destroy_handler(std::string_view _name) noexcept;
 
 private:
 	static std::mutex			m_s_lockable_create;
@@ -101,7 +197,7 @@ public:
 private:
 	virtual	result_code			process_initialize(context& _context) override;
 	virtual	result_code			process_destroy() noexcept override;
-			void				process_detach() noexcept;
+			void				process_detach_instance() noexcept;
 	virtual	result_code			destroy() noexcept override { return object::Ninitializable::destroy();}
 
 			own_ptr<executor::Iio_context> m_psystem_executor;
@@ -109,8 +205,13 @@ private:
 			own_ptr<schedulable_manager_t> m_pschedulable_manager;
 			object_ptr<factory_sustain_t> m_pschedulable_factory_garbage_collection;
 			object_ptr<thread_observer_t> m_pschedulable_thread_observer;
+			std::vector<own_ptr<executor::Iio_context>> m_vector_executor_retired;	// - destroyï¿½ï¿½ system executor (executor_ptr()ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ö¾ï¿½ ï¿½Ò¸ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½)
 			std::recursive_mutex m_lockable_lock;
-			size_t				m_init_param = CGEXECUTOR_AUTO;
+			int					m_init_param = static_cast<int>(CGEXECUTOR_AUTO);
+
+			struct DESTROY_HANDLER { std::string name; destroy_handler_t handler; };
+			std::vector<DESTROY_HANDLER> m_vector_destroy_handler;	// - guarded by m_lockable_lock
+			void				process_call_destroy_handlers() noexcept;
 };
 
 

@@ -51,9 +51,9 @@ private:
 	virtual result_code			on_message (sMESSAGE_NETWORK& _msg);
 
 public:
-			void				notify_to_web_controls_INSTANCE_ENTER(server_admin::Iinstance* _pinstance);
-			void				notify_to_web_controls_INSTANCE_LEAVE(server_admin::Iinstance* _pinstance);
-			void				notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_admin::Iinstance* _pinstance);
+			void				notify_to_web_controls_INSTANCE_ENTER(server_system::Iinstance* _pinstance);
+			void				notify_to_web_controls_INSTANCE_LEAVE(server_system::Iinstance* _pinstance);
+			void				notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_system::Iinstance* _pinstance);
 			void				notify_to_web_controls_INSTANCE_STATUS_UPDATE();
 
 public:

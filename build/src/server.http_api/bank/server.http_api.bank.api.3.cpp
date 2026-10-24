@@ -1,24 +1,50 @@
-ï»¿#include "pch.h"
+#include "pch.h"
+
+// - CGDK: enable rapidjson SSE4.2 SIMD on x86-64 (skip whitespace/scan strings with _mm_cmpestri)
+#if (defined(_M_X64) || defined(__x86_64__)) && !defined(RAPIDJSON_SSE42) && !defined(RAPIDJSON_SSE2) && !defined(RAPIDJSON_NEON)
+	#if defined(_MSC_VER) || defined(__SSE4_2__)
+		#define RAPIDJSON_SSE42		// msvc compiles sse4.2 intrinsics without a flag; gcc needs -msse4.2 (__SSE4_2__)
+	#else
+		#define RAPIDJSON_SSE2		// sse2 is baseline on x86-64 (gcc enables it without a flag)
+	#endif
+#endif
+#include <charconv>
+
+#ifdef _MSC_VER
+	#pragma warning(disable:6102)
+	#pragma warning(disable:6313)
+	#pragma warning(disable:6385)
+	#pragma warning(disable:4996)
+	#pragma warning(disable:5054)
+	#pragma warning(disable:26495)
+	#pragma warning(disable:33010)
+#endif
 
 #if !defined(__linux__)
-	#pragma warning (disable:5054)
-	#pragma warning (disable:6340)
-	#pragma warning (disable:6313)
-	//#pragma diag_suppress 177 // supress #177-D function  was declared but never referenced
-	#include "../../common/rapidjson/document.h"
-	#include "../../common/rapidjson/writer.h"
-	#include "../../common/rapidjson/stringbuffer.h"
-	#include "../../common/rapidjson/filereadstream.h"
-	#include "../../common/rapidjson/filewritestream.h"
-	#pragma warning (default:6340)
-	#pragma warning (default:6313)
-	#pragma warning (default:5054)
+	#pragma warning(disable:5054)
+	//#pragma diag_suppress 177 // suppress #177-D function  was declared but never referenced
+	#include "rapidjson/document.h"
+	#include "rapidjson/writer.h"
+	#include "rapidjson/stringbuffer.h"
+	#include "rapidjson/filereadstream.h"
+	#include "rapidjson/filewritestream.h"
+	#pragma warning(default:5054)
 #else
 	#include "../../common/rapidjson/document.h"
 	#include "../../common/rapidjson/writer.h"
 	#include "../../common/rapidjson/stringbuffer.h"
 	#include "../../common/rapidjson/filereadstream.h"
 	#include "../../common/rapidjson/filewritestream.h"
+#endif
+
+#ifdef _MSC_VER
+	#pragma warning(default:6102)
+	#pragma warning(default:6313)
+	#pragma warning(default:6385)
+	#pragma warning(default:4996)
+	#pragma warning(default:5054)
+	#pragma warning(default:26495)
+	#pragma warning(default:33010)
 #endif
 
 namespace CGDK
@@ -33,26 +59,26 @@ http_api::bank::RESPONSE_ACCOUNT_TRANSACTION_LIST http_api::bank::request(const 
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/v1.0/account/transaction_list
 	//	 3) HTTP Method		GET
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Header
-	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	//   6) Parameters
-	//		- fintech_use_num			"12345678901234567890"	AN(24) í•€í…Œí¬ì´ìš©ë²ˆí˜¸
-	//		- inquiry_type				"A"						A(1) ì¡°íšŒêµ¬ë¶„ì½›ë“œ A:All, I:ì…ê¸ˆ, O:ì…ê¸ˆ
-	//		- from_date					"20160310101921"		N(14) ì¡°íšŒì‹œì‘ì¼ì
-	//		- to_date					"20160310101921"		N(14) ì¡°íšŒì¢…ë£Œì¼ì
-	//		- sort_order				"D"						A(1) ì •ë ¬ìˆœì„œ D:Descending, A:Ascending
-	//		- page_index				"00001"					N(5) í˜ì´ì§€ë²ˆí˜¸
-	//		- tran_dtime				"20160310101921"		N(14) ìš”ì²­ì¼ì‹œ
-	//		- before_inquiry_trace_info	"123"					AN(20) ì§ì „ ì¡°íšŒ ì¶”ì  ì •ë³´
-	//		- list_tran_seqno			"123"					N(10) ìµœì¢… ê±°ë˜ë‚´ì—­ ìˆœë²ˆ
+	//		- fintech_use_num			"12345678901234567890"	AN(24) ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
+	//		- inquiry_type				"A"						A(1) Á¶È¸±¸ºĞ±”µå A:All, I:ÀÔ±İ, O:ÀÔ±İ
+	//		- from_date					"20160310101921"		N(14) Á¶È¸½ÃÀÛÀÏÀÚ
+	//		- to_date					"20160310101921"		N(14) Á¶È¸Á¾·áÀÏÀÚ
+	//		- sort_order				"D"						A(1) Á¤·Ä¼ø¼­ D:Descending, A:Ascending
+	//		- page_index				"00001"					N(5) ÆäÀÌÁö¹øÈ£
+	//		- tran_dtime				"20160310101921"		N(14) ¿äÃ»ÀÏ½Ã
+	//		- before_inquiry_trace_info	"123"					AN(20) Á÷Àü Á¶È¸ ÃßÀû Á¤º¸
+	//		- list_tran_seqno			"123"					N(10) ÃÖÁ¾ °Å·¡³»¿ª ¼ø¹ø
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -64,19 +90,19 @@ http_api::bank::RESPONSE_ACCOUNT_TRANSACTION_LIST http_api::bank::request(const 
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto bufObject = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 2) ì‹œê°„ì„ ì–»ëŠ”ë‹¤.
+	// 2) ½Ã°£À» ¾ò´Â´Ù.
 	auto& from_time = _request.from_time;
 	auto& to_time = _request.to_time;
 	auto& tran_dtime = _request.tran_dtime;
 
-	// 3) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(bufObject.data<char>(), SIZE_BUFFER, "/v1.0/account/transaction_list?fintech_use_num=%s&inquiry_type=%s&from_date=%04u%02u%02u&to_date=%04u%02u%02u&sort_order=%s&page_index=%05u&tran_dtime=%04u%02u%02u%02u%02u%02u&befor_inquiry_trace_info=%llu&list_tran_seqno=%llu"sv,
+	// 3) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(bufObject.data<char>(), SIZE_BUFFER, "/v1.0/account/transaction_list?fintech_use_num=%s&inquiry_type=%s&from_date=%04u%02u%02u&to_date=%04u%02u%02u&sort_order=%s&page_index=%05u&tran_dtime=%04u%02u%02u%02u%02u%02u&befor_inquiry_trace_info=%zu&list_tran_seqno=%zu",
 		_request.fintech_use_num.c_str(),
 		to_string<char>(_request.inquiry_type).data(),
 		static_cast<uint32_t>(from_time.t_year),
@@ -97,37 +123,37 @@ http_api::bank::RESPONSE_ACCOUNT_TRANSACTION_LIST http_api::bank::request(const 
 		_request.list_tran_seqno
 	);
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 4) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 4) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::GET_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 5) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 5) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 6) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv, buf_header.data<char>() };
+	// 6) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8", buf_header.data<char>() };
 
 	// declare) 
 	shared_buffer buf_option;
 
-	// 7) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
-	//std::vector<std::string_view> vector_accept{ "*/*"sv, "application/json"sv };
+	// 7) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	std::vector<std::string_view> vector_accept{ "*/*", "text/plain"sv };
+	//std::vector<std::string_view> vector_accept{ "*/*", "application/json"sv };
 
-	// 8) requestë¥¼ Setí•œë‹¤.
+	// 8) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
 		443,
-		"HTTP/1.1"sv,
+		"HTTP/1.1",
 		bufObject.data<char>(),
 		std::string_view(),
 		std::move(vector_header),
@@ -139,144 +165,141 @@ http_api::bank::RESPONSE_ACCOUNT_TRANSACTION_LIST http_api::bank::request(const 
 	// declare) 
 	http_api::bank::RESPONSE_ACCOUNT_TRANSACTION_LIST	response;
 
-	// 9) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 9) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 10) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 10) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
 		//// declare) 
 		//int	page_record_cnt = 0;
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv)==0)
+			if(std::string_view(str_name).compare("rsp_code"sv)==0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
 			// - "bank_tran_id"
-			else if (__strcmp(str_name, "bank_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_tran_id"sv) == 0)
 			{
 				response.bank_tran_id = value.GetString();
 			}
 			// - "bank_tran_date"
-			else if (__strcmp(str_name, "bank_tran_date"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_tran_date"sv) == 0)
 			{
 				response.bank_tran_date = from_string_date(value.GetString());
 			}
 			// - "bank_code_tran"
-			else if (__strcmp(str_name, "bank_code_tran"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_code_tran"sv) == 0)
 			{
 				response.bank_code_tran = value.GetString();
 			}
 			// - "bank_rsp_code"
-			else if (__strcmp(str_name, "bank_rsp_code"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_rsp_code"sv) == 0)
 			{
 				response.bank_rsp_code = get_enum_OAUTH_BANK_CODE<char>(value.GetString());
 			}
 			// - "bank_rsp_message"
-			else if (__strcmp(str_name, "bank_rsp_message"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_rsp_message"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.bank_rsp_message, value.GetString());
 			}
 			// - "fintech_use_num"
-			else if (__strcmp(str_name, "fintech_use_num"sv) == 0)
+			else if (std::string_view(str_name).compare("fintech_use_num"sv) == 0)
 			{
 				response.fintech_use_num = value.GetString();
 			}
 			// - "balance_amt"
-			else if (__strcmp(str_name, "balance_amt"sv) == 0)
+			else if (std::string_view(str_name).compare("balance_amt"sv) == 0)
 			{
-				response.balance_amt = __from_string<int64_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), response.balance_amt);
 			}
 			// - "page_index_use_yn"
-			else if (__strcmp(str_name, "page_index_use_yn"sv) == 0)
+			else if (std::string_view(str_name).compare("page_index_use_yn"sv) == 0)
 			{
 				response.page_index_use_yn = get_enum_OAUTH_YESNO<char>(value.GetString());
 			}
 			// - "page_index"
-			else if (__strcmp(str_name, "page_index"sv) == 0)
+			else if (std::string_view(str_name).compare("page_index"sv) == 0)
 			{
-				response.page_index = __from_string<int64_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), response.page_index);
 			}
 			// - "total_record_cnt"
-			else if (__strcmp(str_name, "total_record_cnt"sv) == 0)
+			else if (std::string_view(str_name).compare("total_record_cnt"sv) == 0)
 			{
-				response.total_record_cnt = __from_string<int64_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), response.total_record_cnt);
 			}
 			// - "page_record_cnt"
-			else if (__strcmp(str_name, "page_record_cnt"sv) == 0)
+			else if (std::string_view(str_name).compare("page_record_cnt"sv) == 0)
 			{
 				//page_record_cnt = __from_string<int>(value.GetString());
 			}
 			// - "next_page_yn"
-			else if (__strcmp(str_name, "next_page_yn"sv) == 0)
+			else if (std::string_view(str_name).compare("next_page_yn"sv) == 0)
 			{
 				response.next_page_yn = get_enum_OAUTH_YESNO<char>(value.GetString());
 			}
 			// - "befor_inquiry_trace_info"
-			else if (__strcmp(str_name, "befor_inquiry_trace_info"sv) == 0)
+			else if (std::string_view(str_name).compare("befor_inquiry_trace_info"sv) == 0)
 			{
 				response.befor_inquiry_trace_info = value.GetString();
 			}
 			// - "list_tran_seqno"
-			else if (__strcmp(str_name, "list_tran_seqno"sv) == 0)
+			else if (std::string_view(str_name).compare("list_tran_seqno"sv) == 0)
 			{
 				response.list_tran_seqno = value.GetString();
 			}
 			// - "res_list"
-			else if (__strcmp(str_name, "res_list"sv) == 0)
+			else if (std::string_view(str_name).compare("res_list"sv) == 0)
 			{
 				for (auto iterRes = value.Begin(); iterRes != value.End(); ++iterRes)
 				{
@@ -289,31 +312,31 @@ http_api::bank::RESPONSE_ACCOUNT_TRANSACTION_LIST http_api::bank::request(const 
 						auto& value_Nested = iterNest->value;
 
 						// - "tran_date"
-						if (__strcmp(str_name_nested, "tran_date"sv) == 0)
+						if (std::string_view(str_name_nested).compare("tran_date"sv) == 0)
 						{
 							transaction.tran_date = from_string_date(value_Nested.GetString());
 						}
 						// - "tran_time"
-						else if (__strcmp(str_name_nested, "tran_time"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("tran_time"sv) == 0)
 						{
 							transaction.tran_time = from_string_time(value_Nested.GetString());
 						}
 						// - "inout_type"
-						else if (__strcmp(str_name_nested, "inout_type"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("inout_type"sv) == 0)
 						{
 							// declare) 
 							static_string<64> temp_string;
 
-							// - ë¬¸ìì—´ ë³€í™˜
+							// - ¹®ÀÚ¿­ º¯È¯
 							convert_utf8_to_multibyte(temp_string, value_Nested.GetString());
 
 							// - "access_token"
-							if (__strcmp(temp_string.c_str(), "ì…ê¸ˆ"sv) == 0)
+							if (std::string_view(temp_string.c_str()).compare("ÀÔ±İ"sv) == 0)
 							{
 								transaction.inout_type = eOAUTH_INOUT_TYPE::IN_;
 							}
 							// - "token_type"
-							else if (__strcmp(temp_string.c_str(), "ì¶œê¸ˆ"sv) == 0)
+							else if (std::string_view(temp_string.c_str()).compare("Ãâ±İ"sv) == 0)
 							{
 								transaction.inout_type = eOAUTH_INOUT_TYPE::OUT_;
 							}
@@ -323,39 +346,39 @@ http_api::bank::RESPONSE_ACCOUNT_TRANSACTION_LIST http_api::bank::request(const 
 							}
 						}
 						// - "tran_type"
-						else if (__strcmp(str_name_nested, "tran_type"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("tran_type"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.tran_type, value_Nested.GetString());
 						}
 						// - "print_content"
-						else if (__strcmp(str_name_nested, "print_content"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("print_content"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.print_content, value_Nested.GetString());
 						}
 						// - "tran_amt"
-						else if (__strcmp(str_name_nested, "tran_amt"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("tran_amt"sv) == 0)
 						{
-							transaction.tran_amt = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.tran_amt);
 						}
 						// - "after_balance_amt"
-						else if (__strcmp(str_name_nested, "after_balance_amt"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("after_balance_amt"sv) == 0)
 						{
-							transaction.after_balance_amt = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.after_balance_amt);
 						}
 						// - "branch_name"
-						else if (__strcmp(str_name_nested, "branch_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("branch_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.branch_name, value_Nested.GetString());
 						}
 					}
 
-					response.res_list.push_back(transaction);
+					response.res_list.push_back(std::move(transaction));
 				}
 			}
 		}
 	});
 
-	// 11) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 11) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -365,21 +388,21 @@ http_api::bank::RESPONSE_TRANSFER_WITHDRAW http_api::bank::request(const REQUEST
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/v1.0/transfer/withdraw
 	//	 3) HTTP Method		POST
 	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 	//   5) Header
-	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	//   6) Parameters
-	//		- dps_print_content			"ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­"		AH(20) ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­
-	//		- fintech_use_num			"12345678901234567890"	AN(24) í•€í…Œí¬ì´ìš©ë²ˆí˜¸
-	//		- tran_amt					"10000"					N(12) ê±°ë˜ê¸ˆì•¡
-	//		- tran_dtime				"20160310101921"		N(14) ìš”ì²­ì¼ì‹œ
+	//		- dps_print_content			"ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª"		AH(20) ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª
+	//		- fintech_use_num			"12345678901234567890"	AN(24) ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
+	//		- tran_amt					"10000"					N(12) °Å·¡±İ¾×
+	//		- tran_dtime				"20160310101921"		N(14) ¿äÃ»ÀÏ½Ã
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -391,41 +414,41 @@ http_api::bank::RESPONSE_TRANSFER_WITHDRAW http_api::bank::request(const REQUEST
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto str_object = "/v1.0/transfer/withdraw"sv;
 
-	// 2) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::POST_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 3) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 3) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv, buf_header.data<char>() };
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8", buf_header.data<char>() };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
 	// declare)
 	char strDpsPrintContent[256];
 
-	// 6) ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+	// 6) ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 	convert_multibyte_to_utf8(strDpsPrintContent, _request.dps_print_content.c_str());
 
 	// 7) Option
-	size_write = __sprintf(buf_option.data<char>(), SIZE_BUFFER, "{\"dps_print_content\": \"%s\", \"fintech_use_num\": \"%s\", \"tran_amt\": \"%lld\", \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}"sv,
+	size_write = std::snprintf(buf_option.data<char>(), SIZE_BUFFER, "{\"dps_print_content\": \"%s\", \"fintech_use_num\": \"%s\", \"tran_amt\": \"%jd\", \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}",
 		strDpsPrintContent,
 		_request.fintech_use_num.c_str(),
-		_request.tran_amt,
+		static_cast<intmax_t>(_request.tran_amt),
 		static_cast<uint32_t>(_request.tran_dtime.t_year),
 		static_cast<uint32_t>(_request.tran_dtime.t_month),
 		static_cast<uint32_t>(_request.tran_dtime.t_day),
@@ -434,22 +457,22 @@ http_api::bank::RESPONSE_TRANSFER_WITHDRAW http_api::bank::request(const REQUEST
 		static_cast<uint32_t>(_request.tran_dtime.t_second)
 		);
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 8) Optionì˜ ê¸¸ì´ë¥¼ ì €ì¥í•œë‹¤.
+	// 8) OptionÀÇ ±æÀÌ¸¦ ÀúÀåÇÑ´Ù.
 	buf_option.set_size(size_write);
 
-	// 9) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
-	//std::vector<std::string_view> vector_accept{ "*/*"sv, "application/json"sv };
+	// 9) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	std::vector<std::string_view> vector_accept{ "*/*", "text/plain"sv };
+	//std::vector<std::string_view> vector_accept{ "*/*", "application/json"sv };
 
-	// 10) requestë¥¼ Setí•œë‹¤.
+	// 10) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
 		443,
-		"HTTP/1.1"sv,
+		"HTTP/1.1",
 		str_object,
 		std::string_view(),
 		std::move(vector_header),
@@ -461,173 +484,170 @@ http_api::bank::RESPONSE_TRANSFER_WITHDRAW http_api::bank::request(const REQUEST
 	// declare) 
 	http_api::bank::RESPONSE_TRANSFER_WITHDRAW	response;
 
-	// 11) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 11) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 12) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 12) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv)==0)
+			if(std::string_view(str_name).compare("rsp_code"sv)==0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
 			// - "dps_bank_code_std"
-			else if (__strcmp(str_name, "dps_bank_code_std"sv) == 0)
+			else if (std::string_view(str_name).compare("dps_bank_code_std"sv) == 0)
 			{
 				response.dps_bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value.GetString());
 			}
 			// - "dps_bank_code_sub"
-			else if (__strcmp(str_name, "dps_bank_code_sub"sv) == 0)
+			else if (std::string_view(str_name).compare("dps_bank_code_sub"sv) == 0)
 			{
-				response.dps_bank_code_sub = __from_string<int64_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), response.dps_bank_code_sub);
 			}
 			// - "dps_bank_name"
-			else if (__strcmp(str_name, "dps_bank_name"sv) == 0)
+			else if (std::string_view(str_name).compare("dps_bank_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.dps_bank_name, value.GetString());
 			}
 			// - "dps_account_num_masked"
-			else if (__strcmp(str_name, "dps_account_num_masked"sv) == 0)
+			else if (std::string_view(str_name).compare("dps_account_num_masked"sv) == 0)
 			{
 				response.dps_account_num_masked = value.GetString();
 			}
 			// - "dps_print_content"
-			else if (__strcmp(str_name, "dps_print_content"sv) == 0)
+			else if (std::string_view(str_name).compare("dps_print_content"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.dps_print_content, value.GetString());
 			}
 			// - "dps_account_holder_name"
-			else if (__strcmp(str_name, "dps_account_holder_name"sv) == 0)
+			else if (std::string_view(str_name).compare("dps_account_holder_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.dps_account_holder_name, value.GetString());
 			}
 			// - "bank_tran_id"
-			else if (__strcmp(str_name, "bank_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_tran_id"sv) == 0)
 			{
 				response.bank_tran_id = value.GetString();
 			}
 			// - "bank_tran_date"
-			else if (__strcmp(str_name, "bank_tran_date"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_tran_date"sv) == 0)
 			{
 				response.bank_tran_date = from_string_date(value.GetString());
 			}
 			// - "bank_code_tran"
-			else if (__strcmp(str_name, "bank_code_tran"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_code_tran"sv) == 0)
 			{
 				response.bank_code_tran = value.GetString();
 			}
 			// - "bank_rsp_code"
-			else if (__strcmp(str_name, "bank_rsp_code"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_rsp_code"sv) == 0)
 			{
 				response.bank_rsp_code = get_enum_OAUTH_BANK_CODE<char>(value.GetString());
 			}
 			// - "bank_rsp_message"
-			else if (__strcmp(str_name, "bank_rsp_message"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_rsp_message"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.bank_rsp_message, value.GetString());
 			}
 			// - "fintech_use_num"
-			else if (__strcmp(str_name, "fintech_use_num"sv) == 0)
+			else if (std::string_view(str_name).compare("fintech_use_num"sv) == 0)
 			{
 				response.fintech_use_num = value.GetString();
 			}
 			// - "account_alias"
-			else if (__strcmp(str_name, "account_alias"sv) == 0)
+			else if (std::string_view(str_name).compare("account_alias"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.account_alias, value.GetString());
 			}
 			// - "bank_code_std"
-			else if (__strcmp(str_name, "bank_code_std"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_code_std"sv) == 0)
 			{
 				response.bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value.GetString());
 			}
 			// - "bank_code_sub"
-			else if (__strcmp(str_name, "bank_code_sub"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_code_sub"sv) == 0)
 			{
-				response.bank_code_sub = __from_string<int64_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), response.bank_code_sub);
 			}
 			// - "bank_name"
-			else if (__strcmp(str_name, "bank_name"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.bank_name, value.GetString());
 			}
 			// - "account_num_masked"
-			else if (__strcmp(str_name, "account_num_masked"sv) == 0)
+			else if (std::string_view(str_name).compare("account_num_masked"sv) == 0)
 			{
 				response.account_num_masked = value.GetString();
 			}
 			// - "print_content"
-			else if (__strcmp(str_name, "print_content"sv) == 0)
+			else if (std::string_view(str_name).compare("print_content"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.print_content, value.GetString());
 			}
 			// - "account_holder_name"
-			else if (__strcmp(str_name, "account_holder_name"sv) == 0)
+			else if (std::string_view(str_name).compare("account_holder_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.account_holder_name, value.GetString());
 			}
 			// - "tran_amt"
-			else if (__strcmp(str_name, "tran_amt"sv) == 0)
+			else if (std::string_view(str_name).compare("tran_amt"sv) == 0)
 			{
-				response.tran_amt = __from_string<int64_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), response.tran_amt);
 			}
 		}
 	});
 
-	// 13) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 13) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -637,26 +657,26 @@ http_api::bank::RESPONSE_TRANSFER_DEPOSIT http_api::bank::request(const REQUEST_
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/v1.0/transfer/deposit
 	//	 3) HTTP Method		POST
 	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 	//   5) Header
-	//		- Authorization				Bearer<access_token> ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization				Bearer<access_token> ¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	//   6) Parameters
-	//		- ws_pass_pharase			"ASDFQWERZXCVTYUI"	AN(64) ì´ìš©ê¸°ê´€ ì…ê¸ˆì´ì²´ìš© ì•”í˜¸ë¬¸êµ¬
-	//		- ws_print_content			"ì¶œê¸ˆê³„ì¢Œì¸ìë‚´ì—­"	AH(20) ì¶œê¸ˆê³„ì¢Œì¸ìë‚´ì—­
-	//		- req_cnt					"25"				N(5)   ì…ê¸ˆìš”ì²­ê±´ìˆ˜
-	//		- req_list					<object>			       ì…ê¸ˆìš”ì²­ëª©ë¡
-	//		- --tran_no					"1"					N(5)   ê±°ë˜ìˆœë²ˆ
-	//		- --fintech_use_num			"1234567890123456"	N(24)  í•€í…Œí¬ì´ìš©ë²ˆí˜¸
-	//		- --print_content			"ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­"	AH(20) ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­
-	//		- --tran_amt				"10000"				N(12) ê±°ë˜ê¸ˆì•¡
-	//		- tran_dtime				"20160310101921"	N(14) ìš”ì²­ì¼ì‹œ
+	//		- ws_pass_pharase			"ASDFQWERZXCVTYUI"	AN(64) ÀÌ¿ë±â°ü ÀÔ±İÀÌÃ¼¿ë ¾ÏÈ£¹®±¸
+	//		- ws_print_content			"Ãâ±İ°èÁÂÀÎÀÚ³»¿ª"	AH(20) Ãâ±İ°èÁÂÀÎÀÚ³»¿ª
+	//		- req_cnt					"25"				N(5)   ÀÔ±İ¿äÃ»°Ç¼ö
+	//		- req_list					<object>			       ÀÔ±İ¿äÃ»¸ñ·Ï
+	//		- --tran_no					"1"					N(5)   °Å·¡¼ø¹ø
+	//		- --fintech_use_num			"1234567890123456"	N(24)  ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
+	//		- --print_content			"ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª"	AH(20) ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª
+	//		- --tran_amt				"10000"				N(12) °Å·¡±İ¾×
+	//		- tran_dtime				"20160310101921"	N(14) ¿äÃ»ÀÏ½Ã
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -668,72 +688,72 @@ http_api::bank::RESPONSE_TRANSFER_DEPOSIT http_api::bank::request(const REQUEST_
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto str_object = "/v1.0/transfer/deposit"sv;
 
-	// 2) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::POST_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 3) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 3) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8"sv, buf_header.data<char>() };
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8", buf_header.data<char>() };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
 	// declare) 
 	char str_print_content[256];
 
-	// 6) ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+	// 6) ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 	convert_multibyte_to_utf8(str_print_content, _request.wd_print_content.c_str());
 
 	// - ...
-	size_write = __sprintf(buf_option.data<char>(), SIZE_BUFFER, "{\"wd_pass_phrase\": \"%s\", \"wd_print_content\": \"%s\", \"req_cnt\": \"%llu\", \"req_list\": ["sv,
+	size_write = std::snprintf(buf_option.data<char>(), SIZE_BUFFER, "{\"wd_pass_phrase\": \"%s\", \"wd_print_content\": \"%s\", \"req_cnt\": \"%zu\", \"req_list\": [",
 		_request.wd_pass_phrase.c_str(),
 		str_print_content,
 		_request.req_list.size()
 		);
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+	// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 	buf_option.add_size(size_write);
 
-	// - req_listë¥¼ ì¶”ê°€í•œë‹¤.
-	for(auto iter: _request.req_list)
+	// - req_list¸¦ Ãß°¡ÇÑ´Ù.
+	for(const auto& iter: _request.req_list)
 	{
-		// - ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+		// - ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 		convert_multibyte_to_utf8(str_print_content, iter.print_content.c_str());
 
-		// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-		auto sizeWrite2 = __sprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER - buf_option.size(), "{ \"tran_no\": \"%d\", \"fintech_use_num\": \"%s\", \"print_content\": \"%s\", \"tran_amt\": \"%lld\"}"sv,
+		// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+		auto sizeWrite2 = std::snprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER - buf_option.size(), "{ \"tran_no\": \"%d\", \"fintech_use_num\": \"%s\", \"print_content\": \"%s\", \"tran_amt\": \"%jd\"}",
 			iter.tran_no,					// tran_no
 			iter.fintech_use_num.c_str(),	// fintech_use_num
 			str_print_content,				// print_content
-			iter.tran_amt					// tran_amt
+			static_cast<intmax_t>(iter.tran_amt)					// tran_amt
 		);
 
-		// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+		// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 		THROW_IF(sizeWrite2 < 0, throwable::failure(eRESULT::FAIL));
 
-		// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+		// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 		buf_option.add_size(sizeWrite2);
 	}
 
-	// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-	size_write = __sprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER- buf_option.size(), "], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}"sv,
+	// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+	size_write = std::snprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER- buf_option.size(), "], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}",
 		static_cast<uint32_t>(_request.tran_dtime.t_year),
 		static_cast<uint32_t>(_request.tran_dtime.t_month),
 		static_cast<uint32_t>(_request.tran_dtime.t_day),
@@ -742,22 +762,22 @@ http_api::bank::RESPONSE_TRANSFER_DEPOSIT http_api::bank::request(const REQUEST_
 		static_cast<uint32_t>(_request.tran_dtime.t_second)
 		);
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 7) Optionì˜ ê¸¸ì´ë¥¼ ë”í•œë‹¤.
+	// 7) OptionÀÇ ±æÀÌ¸¦ ´õÇÑ´Ù.
 	buf_option.add_size(size_write);
 
-	// 8) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
-	//std::vector<std::string_view>	vector_accept{ "*/*"sv, "application/json"sv };
+	// 8) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	std::vector<std::string_view> vector_accept{ "*/*", "text/plain"sv };
+	//std::vector<std::string_view>	vector_accept{ "*/*", "application/json"sv };
 
-	// 9) requestë¥¼ Setí•œë‹¤.
+	// 9) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
 		443,
-		"HTTP/1.1"sv,
+		"HTTP/1.1",
 		str_object,
 		std::string_view(),
 		std::move(vector_header),
@@ -769,108 +789,105 @@ http_api::bank::RESPONSE_TRANSFER_DEPOSIT http_api::bank::request(const REQUEST_
 	// declare) 
 	http_api::bank::RESPONSE_TRANSFER_DEPOSIT	response;
 
-	// 10) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 10) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 11) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 11) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
 		// declare)
 		[[maybe_unused]] std::size_t res_cnt = 0;
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
 			// - "wd_bank_code_std"
-			else if (__strcmp(str_name, "wd_bank_code_std"sv) == 0)
+			else if (std::string_view(str_name).compare("wd_bank_code_std"sv) == 0)
 			{
 				response.wd_bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value.GetString());
 			}
 			// - "wd_bank_code_sub"
-			else if (__strcmp(str_name, "wd_bank_code_sub"sv) == 0)
+			else if (std::string_view(str_name).compare("wd_bank_code_sub"sv) == 0)
 			{
-				response.wd_bank_code_sub = __from_string<int64_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), response.wd_bank_code_sub);
 			}
 			// - "wd_bank_name"
-			else if (__strcmp(str_name, "wd_bank_name"sv) == 0)
+			else if (std::string_view(str_name).compare("wd_bank_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.wd_bank_name, value.GetString());
 			}
 			// - "wd_account_num_masked"
-			else if (__strcmp(str_name, "wd_account_num_masked"sv) == 0)
+			else if (std::string_view(str_name).compare("wd_account_num_masked"sv) == 0)
 			{
 				response.wd_account_num_masked = value.GetString();
 			}
 			// - "wd_print_content"
-			else if (__strcmp(str_name, "wd_print_content"sv) == 0)
+			else if (std::string_view(str_name).compare("wd_print_content"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.wd_print_content, value.GetString());
 			}
 			// - "wd_account_holder_name"
-			else if (__strcmp(str_name, "wd_account_holder_name"sv) == 0)
+			else if (std::string_view(str_name).compare("wd_account_holder_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.wd_account_holder_name, value.GetString());
 			}
-			else if(__strcmp(str_name, "res_cnt"sv) == 0)
+			else if(std::string_view(str_name).compare("res_cnt"sv) == 0)
 			{
-				res_cnt	 = __from_string<size_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), res_cnt);
 			}
 			// - "res_list"
-			else if (__strcmp(str_name, "res_list"sv) == 0)
+			else if (std::string_view(str_name).compare("res_list"sv) == 0)
 			{
 				for (auto iterRes = value.Begin(); iterRes != value.End(); ++iterRes)
 				{
@@ -883,83 +900,83 @@ http_api::bank::RESPONSE_TRANSFER_DEPOSIT http_api::bank::request(const REQUEST_
 						auto& value_Nested = iterNest->value;
 
 						// - "tran_no"
-						if (__strcmp(str_name_nested, "tran_no"sv) == 0)
+						if (std::string_view(str_name_nested).compare("tran_no"sv) == 0)
 						{
-							transaction.tran_no = __from_string<int>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.tran_no);
 						}
 						// - "bank_tran_id"
-						else if (__strcmp(str_name_nested, "bank_tran_id"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_tran_id"sv) == 0)
 						{
 							transaction.bank_tran_id = value_Nested.GetString();
 						}
 						// - "bank_tran_date"
-						else if (__strcmp(str_name_nested, "bank_tran_date"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_tran_date"sv) == 0)
 						{
 							transaction.bank_tran_date = from_string_date(value_Nested.GetString());
 						}
 						// - "bank_code_tran"
-						else if (__strcmp(str_name_nested, "bank_code_tran"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_code_tran"sv) == 0)
 						{
 							transaction.bank_code_tran = value_Nested.GetString();
 						}
 						// - "bank_rsp_code"
-						else if (__strcmp(str_name_nested, "bank_rsp_code"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_rsp_code"sv) == 0)
 						{
 							transaction.bank_rsp_code = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
 						}
 						// - "bank_rsp_message"
-						else if (__strcmp(str_name_nested, "bank_rsp_message"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_rsp_message"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.bank_rsp_message, value_Nested.GetString());
 						}
 						// - "fintech_use_num"
-						else if (__strcmp(str_name_nested, "fintech_use_num"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("fintech_use_num"sv) == 0)
 						{
 							transaction.fintech_use_num = value_Nested.GetString();
 						}
 						// - "account_alias"
-						else if (__strcmp(str_name_nested, "account_alias"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("account_alias"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.account_alias, value_Nested.GetString());
 						}
 						// - "bank_code_std"
-						else if (__strcmp(str_name_nested, "bank_code_std"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_code_std"sv) == 0)
 						{
 							transaction.bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
 						}
 						// - "bank_code_sub"
-						else if (__strcmp(str_name_nested, "bank_code_sub"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_code_sub"sv) == 0)
 						{
-							transaction.bank_code_sub = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.bank_code_sub);
 						}
 						// - "bank_name"
-						else if (__strcmp(str_name_nested, "bank_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.bank_name, value_Nested.GetString());
 						}
 						// - "account_num_masked"
-						else if (__strcmp(str_name_nested, "account_num_masked"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("account_num_masked"sv) == 0)
 						{
 							transaction.account_num_masked = value_Nested.GetString();
 						}
 						// - "print_content"
-						else if (__strcmp(str_name_nested, "print_content"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("print_content"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.print_content, value_Nested.GetString());
 						}
 						// - "account_holder_name"
-						else if (__strcmp(str_name_nested, "account_holder_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("account_holder_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.account_holder_name, value_Nested.GetString());
 						}
 						// - "tran_amt"
-						else if (__strcmp(str_name_nested, "tran_amt"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("tran_amt"sv) == 0)
 						{
-							transaction.tran_amt = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.tran_amt);
 						}
 					}
 
-					response.res_list.push_back(transaction);
+					response.res_list.push_back(std::move(transaction));
 				}
 
 				// check) 
@@ -968,7 +985,7 @@ http_api::bank::RESPONSE_TRANSFER_DEPOSIT http_api::bank::request(const REQUEST_
 		}
 	});
 
-	// 12) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 12) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -978,28 +995,28 @@ http_api::bank::RESPONSE_TRANSFER_DEPOSIT2 http_api::bank::request(const REQUEST
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/v1.0/transfer/deposit2
 	//	 3) HTTP Method		POST
 	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 	//   5) Header
-	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	//   6) Parameters
-	//		- ws_pass_pharase			"ASDFQWERZXCVTYUI"	AN(64) ì´ìš©ê¸°ê´€ ì…ê¸ˆì´ì²´ìš© ì•”í˜¸ë¬¸êµ¬
-	//		- ws_print_content			"ì¶œê¸ˆê³„ì¢Œì¸ìë‚´ì—­"	AH(20) ì¶œê¸ˆê³„ì¢Œì¸ìë‚´ì—­
-	//		- req_cnt					"25"				N(5)   ì…ê¸ˆìš”ì²­ê±´ìˆ˜
-	//		- req_list					<object>			       ì…ê¸ˆìš”ì²­ëª©ë¡
-	//		- --tran_no					"1"					N(5)   ê±°ë˜ìˆœë²ˆ
-	//		- --bank_code_std			"097"				AN(3)  ì…ê¸ˆì€í–‰.í‘œì¤€ì½”ë“œ
-	//		- --account_num				"001230000678"		AN(16) ê³„ì¢Œë²ˆí˜¸
-	//		- --account_holder_name		"í™ê¸¸ë™"			AH(20) ì…ê¸ˆê³„ì¢Œì˜ˆê¸ˆì£¼ëª…
-	//		- --print_content			"ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­"	AH(20) ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­
-	//		- --tran_amt				"10000"				N(12) ê±°ë˜ê¸ˆì•¡
-	//		- tran_dtime				"20160310101921"	N(14) ìš”ì²­ì¼ì‹œ
+	//		- ws_pass_pharase			"ASDFQWERZXCVTYUI"	AN(64) ÀÌ¿ë±â°ü ÀÔ±İÀÌÃ¼¿ë ¾ÏÈ£¹®±¸
+	//		- ws_print_content			"Ãâ±İ°èÁÂÀÎÀÚ³»¿ª"	AH(20) Ãâ±İ°èÁÂÀÎÀÚ³»¿ª
+	//		- req_cnt					"25"				N(5)   ÀÔ±İ¿äÃ»°Ç¼ö
+	//		- req_list					<object>			       ÀÔ±İ¿äÃ»¸ñ·Ï
+	//		- --tran_no					"1"					N(5)   °Å·¡¼ø¹ø
+	//		- --bank_code_std			"097"				AN(3)  ÀÔ±İÀºÇà.Ç¥ÁØÄÚµå
+	//		- --account_num				"001230000678"		AN(16) °èÁÂ¹øÈ£
+	//		- --account_holder_name		"È«±æµ¿"			AH(20) ÀÔ±İ°èÁÂ¿¹±İÁÖ¸í
+	//		- --print_content			"ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª"	AH(20) ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª
+	//		- --tran_amt				"10000"				N(12) °Å·¡±İ¾×
+	//		- tran_dtime				"20160310101921"	N(14) ¿äÃ»ÀÏ½Ã
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -1011,103 +1028,90 @@ http_api::bank::RESPONSE_TRANSFER_DEPOSIT2 http_api::bank::request(const REQUEST
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto str_object = "/v1.0/transfer/deposit2"sv;
 
-	// 2) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::POST_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 3) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 3) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8"sv, buf_header.data<char>() };
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8", buf_header.data<char>() };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
 	// declare) 
 	char str_wd_print_content[256];
 
-	// 6) ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+	// 6) ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 	convert_multibyte_to_utf8(str_wd_print_content, _request.wd_print_content.c_str());
 
 	// - ...
-	size_write = __sprintf(buf_option.data<char>(), SIZE_BUFFER, "{\"wd_pass_phrase\": \"%s\", \"wd_print_content\": \"%s\", \"req_cnt\": \"%llu\", \"req_list\": ["sv,
-		_request.wd_pass_phrase.c_str(),
-		str_wd_print_content,
-		_request.req_list.size()
-		);
+	size_write = std::snprintf(buf_option.data<char>(), SIZE_BUFFER, "{\"wd_pass_phrase\": \"%s\", \"wd_print_content\": \"%s\", \"req_cnt\": \"%zu\", \"req_list\": [", _request.wd_pass_phrase.c_str(), str_wd_print_content, _request.req_list.size());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+	// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 	buf_option.add_size(size_write);
 
-	// -) req_listë¥¼ ì¶”ê°€í•œë‹¤.
-	for(auto iter: _request.req_list)
+	// -) req_list¸¦ Ãß°¡ÇÑ´Ù.
+	for(const auto& iter: _request.req_list)
 	{
 		// declare) 
 		char strAccountHolderName[256];
 		char str_print_content[256];
 
-		// 6) ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+		// 6) ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 		convert_multibyte_to_utf8(strAccountHolderName, iter.account_holder_name.c_str());
 		convert_multibyte_to_utf8(str_print_content, iter.print_content.c_str());
 
-		// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-		size_write = __sprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER - buf_option.size(), "{ \"tran_no\": \"%d\", \"bank_code_std\": \"%03d\", \"account_num\": \"%s\", \"account_holder_name\": \"%s\", \"print_content\": \"%s\", \"tran_amt\": \"%lld\"}"sv,
-			iter.tran_no,							// tran_no
-			static_cast<int>(iter.bank_code_std),	// bank_code_std
-			iter.accoount_num.c_str(),				// account_num
-			strAccountHolderName,					// account_holder_name
-			str_print_content,						// print_content
-			iter.tran_amt							// tran_amt
-		);
+		// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+		size_write = std::snprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER - buf_option.size(), "{ \"tran_no\": \"%d\", \"bank_code_std\": \"%03d\", \"account_num\": \"%s\", \"account_holder_name\": \"%s\", \"print_content\": \"%s\", \"tran_amt\": \"%jd\"}", iter.tran_no, // tran_no
+			static_cast<int>(iter.bank_code_std), // bank_code_std
+			iter.account_num.c_str(), // account_num
+			strAccountHolderName, // account_holder_name
+			str_print_content, // print_content
+			static_cast<intmax_t>(iter.tran_amt)							); // tran_amt
 
-		// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+		// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 		THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-		// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+		// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 		buf_option.add_size(size_write);
 	}
 
-	// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-	size_write = __sprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER- buf_option.size(), "], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}"sv,
-		static_cast<uint32_t>(_request.tran_dtime.t_year),
-		static_cast<uint32_t>(_request.tran_dtime.t_month),
-		static_cast<uint32_t>(_request.tran_dtime.t_day),
-		static_cast<uint32_t>(_request.tran_dtime.t_hour),
-		static_cast<uint32_t>(_request.tran_dtime.t_minute),
-		static_cast<uint32_t>(_request.tran_dtime.t_second)
-		);
+	// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+	size_write = std::snprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER- buf_option.size(), "], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}", static_cast<uint32_t>(_request.tran_dtime.t_year), static_cast<uint32_t>(_request.tran_dtime.t_month), static_cast<uint32_t>(_request.tran_dtime.t_day), static_cast<uint32_t>(_request.tran_dtime.t_hour), static_cast<uint32_t>(_request.tran_dtime.t_minute), static_cast<uint32_t>(_request.tran_dtime.t_second));
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 7) Optionì˜ ê¸¸ì´ë¥¼ ì €ì¥í•œë‹¤.
+	// 7) OptionÀÇ ±æÀÌ¸¦ ÀúÀåÇÑ´Ù.
 	buf_option.add_size(size_write);
 
-	// 8) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
-	//std::vector<std::string_view> vector_accept{ "*/*"sv, "application/json"sv };
+	// 8) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	std::vector<std::string_view> vector_accept{ "*/*", "text/plain"sv };
+	//std::vector<std::string_view> vector_accept{ "*/*", "application/json"sv };
 
-	// 9) requestë¥¼ Setí•œë‹¤.
+	// 9) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
 		443,
-		"HTTP/1.1"sv,
+		"HTTP/1.1",
 		str_object,
 		std::string_view(),
 		std::move(vector_header),
@@ -1119,108 +1123,105 @@ http_api::bank::RESPONSE_TRANSFER_DEPOSIT2 http_api::bank::request(const REQUEST
 	// declare) 
 	http_api::bank::RESPONSE_TRANSFER_DEPOSIT2	response;
 
-	// 10) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 10) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 11) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 11) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
 		// declare)
 		[[maybe_unused]] std::size_t res_cnt = 0;
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
 			// - "wd_bank_code_std"
-			else if (__strcmp(str_name, "wd_bank_code_std"sv) == 0)
+			else if (std::string_view(str_name).compare("wd_bank_code_std"sv) == 0)
 			{
 				response.wd_bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value.GetString());
 			}
 			// - "wd_bank_code_sub"
-			else if (__strcmp(str_name, "wd_bank_code_sub"sv) == 0)
+			else if (std::string_view(str_name).compare("wd_bank_code_sub"sv) == 0)
 			{
-				response.wd_bank_code_sub = __from_string<int64_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), response.wd_bank_code_sub);
 			}
 			// - "wd_bank_name"
-			else if (__strcmp(str_name, "wd_bank_name"sv) == 0)
+			else if (std::string_view(str_name).compare("wd_bank_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.wd_bank_name, value.GetString());
 			}
 			// - "wd_account_num_masked"
-			else if (__strcmp(str_name, "wd_account_num_masked"sv) == 0)
+			else if (std::string_view(str_name).compare("wd_account_num_masked"sv) == 0)
 			{
 				response.wd_account_num_masked = value.GetString();
 			}
 			// - "wd_print_content"
-			else if (__strcmp(str_name, "wd_print_content"sv) == 0)
+			else if (std::string_view(str_name).compare("wd_print_content"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.wd_print_content, value.GetString());
 			}
 			// - "wd_account_holder_name"
-			else if (__strcmp(str_name, "wd_account_holder_name"sv) == 0)
+			else if (std::string_view(str_name).compare("wd_account_holder_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.wd_account_holder_name, value.GetString());
 			}
-			else if (__strcmp(str_name, "res_cnt"sv) == 0)
+			else if (std::string_view(str_name).compare("res_cnt"sv) == 0)
 			{
-				res_cnt = __from_string<size_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), res_cnt);
 			}
 			// - "res_list"
-			else if (__strcmp(str_name, "res_list"sv) == 0)
+			else if (std::string_view(str_name).compare("res_list"sv) == 0)
 			{
 				for (auto iterRes = value.Begin(); iterRes != value.End(); ++iterRes)
 				{
@@ -1233,78 +1234,78 @@ http_api::bank::RESPONSE_TRANSFER_DEPOSIT2 http_api::bank::request(const REQUEST
 						auto& value_Nested = iterNest->value;
 
 						// - "tran_no"
-						if (__strcmp(str_name_nested, "tran_no"sv) == 0)
+						if (std::string_view(str_name_nested).compare("tran_no"sv) == 0)
 						{
-							transaction.tran_no = __from_string<int>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.tran_no);
 						}
 						// - "bank_tran_id"
-						else if (__strcmp(str_name_nested, "bank_tran_id"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_tran_id"sv) == 0)
 						{
 							transaction.bank_tran_id = value_Nested.GetString();
 						}
 						// - "bank_tran_date"
-						else if (__strcmp(str_name_nested, "bank_tran_date"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_tran_date"sv) == 0)
 						{
 							transaction.bank_tran_date = from_string_date(value_Nested.GetString());
 						}
 						// - "bank_code_tran"
-						else if (__strcmp(str_name_nested, "bank_code_tran"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_code_tran"sv) == 0)
 						{
 							transaction.bank_code_tran = value_Nested.GetString();
 						}
 						// - "bank_rsp_code"
-						else if (__strcmp(str_name_nested, "bank_rsp_code"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_rsp_code"sv) == 0)
 						{
 							transaction.bank_rsp_code = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
 						}
 						// - "bank_rsp_message"
-						else if (__strcmp(str_name_nested, "bank_rsp_message"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_rsp_message"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.bank_rsp_message, value_Nested.GetString());
 						}
 						// - "bank_code_std"
-						else if (__strcmp(str_name_nested, "bank_code_std"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_code_std"sv) == 0)
 						{
 							transaction.bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
 						}
 						// - "bank_code_sub"
-						else if (__strcmp(str_name_nested, "bank_code_sub"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_code_sub"sv) == 0)
 						{
-							transaction.bank_code_sub = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.bank_code_sub);
 						}
 						// - "bank_name"
-						else if (__strcmp(str_name_nested, "bank_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.bank_name, value_Nested.GetString());
 						}
 						// - "account_num"
-						else if (__strcmp(str_name_nested, "account_num"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("account_num"sv) == 0)
 						{
 							transaction.account_num = value_Nested.GetString();
 						}
 						// - "account_num_masked"
-						else if (__strcmp(str_name_nested, "account_num_masked"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("account_num_masked"sv) == 0)
 						{
 							transaction.account_num_masked = value_Nested.GetString();
 						}
 						// - "print_content"
-						else if (__strcmp(str_name_nested, "print_content"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("print_content"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.print_content, value_Nested.GetString());
 						}
 						// - "account_holder_name"
-						else if (__strcmp(str_name_nested, "account_holder_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("account_holder_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.account_holder_name, value_Nested.GetString());
 						}
 						// - "tran_amt"
-						else if (__strcmp(str_name_nested, "tran_amt"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("tran_amt"sv) == 0)
 						{
 							transaction.tran_amt = value_Nested.GetString();
 						}
 					}
 
-					response.res_list.push_back(transaction);
+					response.res_list.push_back(std::move(transaction));
 				}
 
 				// check) 
@@ -1313,7 +1314,7 @@ http_api::bank::RESPONSE_TRANSFER_DEPOSIT2 http_api::bank::request(const REQUEST
 		}
 	});
 
-	// 12) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 12) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -1323,25 +1324,25 @@ http_api::bank::RESPONSE_TRANSFER_RESULT http_api::bank::request(const REQUEST_T
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/v1.0/transfer/result
 	//	 3) HTTP Method		POST
 	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 	//   5) Header
-	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	//   6) Parameters
-	//		- check_type				"1"					AN(1) 1:ì¶œê¸ˆì´ì²´, 2:ì…ê¸ˆì´ì²´
-	//		- req_cnt					"25"					N(5)   ì…ê¸ˆìš”ì²­ê±´ìˆ˜
-	//		- req_list					<object>				       ì…ê¸ˆìš”ì²­ëª©ë¡
-	//		- --tran_no					"1"					N(5)   ê±°ë˜ìˆœë²ˆ
-	//		- --org_bank_tran_id		"123456712345"		AN(20) ì›ê±°ë˜, ê±°ë˜ê³ ìœ ë²ˆí˜¸(ì°¸ê°€ê¸°ê´€)
-	//		- --org_bank_tran_date		"20160310"			N(8)   ì›ê±°ë˜ ê±°ë˜ì¼ì(ì°¸ê°€ê¸°ê´€)
-	//		- --org_tran_amt			"10000"				N(12)  ì›ê±°ë˜ ê±°ë˜ê¸ˆì•¡
-	//		- tran_dtime				"20160310101921"		N(14)  ìš”ì²­ì¼ì‹œ
+	//		- check_type				"1"					AN(1) 1:Ãâ±İÀÌÃ¼, 2:ÀÔ±İÀÌÃ¼
+	//		- req_cnt					"25"					N(5)   ÀÔ±İ¿äÃ»°Ç¼ö
+	//		- req_list					<object>				       ÀÔ±İ¿äÃ»¸ñ·Ï
+	//		- --tran_no					"1"					N(5)   °Å·¡¼ø¹ø
+	//		- --org_bank_tran_id		"123456712345"		AN(20) ¿ø°Å·¡, °Å·¡°íÀ¯¹øÈ£(Âü°¡±â°ü)
+	//		- --org_bank_tran_date		"20160310"			N(8)   ¿ø°Å·¡ °Å·¡ÀÏÀÚ(Âü°¡±â°ü)
+	//		- --org_tran_amt			"10000"				N(12)  ¿ø°Å·¡ °Å·¡±İ¾×
+	//		- tran_dtime				"20160310101921"		N(14)  ¿äÃ»ÀÏ½Ã
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -1353,91 +1354,77 @@ http_api::bank::RESPONSE_TRANSFER_RESULT http_api::bank::request(const REQUEST_T
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto str_object = "/v1.0/transfer/result"sv;
 
-	// 2) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::POST_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 3) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 3) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8"sv, buf_header.data<char>() };
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8", buf_header.data<char>() };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
 	// - ...
-	size_write = __sprintf(buf_option.data<char>(), SIZE_BUFFER, "{\"check_type\": \"%s\", \"req_cnt\": \"%llu\", \"req_list\": ["sv,
-		to_string<char>(_request.check_type).data(),
-		_request.req_list.size()
-		);
+	size_write = std::snprintf(buf_option.data<char>(), SIZE_BUFFER, "{\"check_type\": \"%s\", \"req_cnt\": \"%zu\", \"req_list\": [", to_string<char>(_request.check_type).data(), _request.req_list.size());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+	// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 	buf_option.add_size(size_write);
 
 
-	// -) req_listë¥¼ ì¶”ê°€í•œë‹¤.
-	for(auto iter: _request.req_list)
+	// -) req_list¸¦ Ãß°¡ÇÑ´Ù.
+	for(const auto& iter: _request.req_list)
 	{
 		const auto& org_bank_tran_date = iter.org_bank_tran_date;
 
-		// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-		auto sizeWrite2 = __sprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER - buf_option.size(), "{ \"tran_no\": \"%d\", \"org_bank_tran_id\": \"%s\", \"org_bank_tran_date\": \"%04u%02u%02u\", \"org_tran_amt\": \"%lld\"}"sv,
-			iter.tran_no,						// tran_no
-			iter.org_bank_tran_id.c_str(),		// org_bank_tran_id
-			static_cast<uint32_t>(org_bank_tran_date.t_year),
-			static_cast<uint32_t>(org_bank_tran_date.t_month),
-			static_cast<uint32_t>(org_bank_tran_date.t_day),	// org_bank_tran_date
-			iter.org_tran_amt					// org_tran_amt
-		);
+		// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+		auto sizeWrite2 = std::snprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER - buf_option.size(), "{ \"tran_no\": \"%d\", \"org_bank_tran_id\": \"%s\", \"org_bank_tran_date\": \"%04u%02u%02u\", \"org_tran_amt\": \"%jd\"}", iter.tran_no, // tran_no
+			iter.org_bank_tran_id.c_str(), // org_bank_tran_id
+			static_cast<uint32_t>(org_bank_tran_date.t_year), static_cast<uint32_t>(org_bank_tran_date.t_month), static_cast<uint32_t>(org_bank_tran_date.t_day), // org_bank_tran_date
+			static_cast<intmax_t>(iter.org_tran_amt)					); // org_tran_amt
 
-		// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+		// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 		THROW_IF(sizeWrite2 < 0, throwable::failure(eRESULT::FAIL));
 
-		// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+		// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 		buf_option.add_size(sizeWrite2);
 	}
 
-	// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-	size_write = __sprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER- buf_option.size(), "], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}"sv,
-		static_cast<uint32_t>(_request.tran_dtime.t_year),
-		static_cast<uint32_t>(_request.tran_dtime.t_month),
-		static_cast<uint32_t>(_request.tran_dtime.t_day),
-		static_cast<uint32_t>(_request.tran_dtime.t_hour),
-		static_cast<uint32_t>(_request.tran_dtime.t_minute),
-		static_cast<uint32_t>(_request.tran_dtime.t_second)
-		);
+	// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+	size_write = std::snprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER- buf_option.size(), "], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}", static_cast<uint32_t>(_request.tran_dtime.t_year), static_cast<uint32_t>(_request.tran_dtime.t_month), static_cast<uint32_t>(_request.tran_dtime.t_day), static_cast<uint32_t>(_request.tran_dtime.t_hour), static_cast<uint32_t>(_request.tran_dtime.t_minute), static_cast<uint32_t>(_request.tran_dtime.t_second));
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 6) Optionì˜ ê¸¸ì´ë¥¼ ì €ì¥í•œë‹¤.
+	// 6) OptionÀÇ ±æÀÌ¸¦ ÀúÀåÇÑ´Ù.
 	buf_option.add_size(size_write);
 
-	// 7) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
-	//std::vector<std::string_view> vector_accept{ "*/*"sv, "application/json"sv };
+	// 7) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	std::vector<std::string_view> vector_accept{ "*/*", "text/plain"sv };
+	//std::vector<std::string_view> vector_accept{ "*/*", "application/json"sv };
 
-	// 8) requestë¥¼ Setí•œë‹¤.
+	// 8) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
 		443,
-		"HTTP/1.1"sv,
+		"HTTP/1.1",
 		str_object,
 		std::string_view(),
 		std::move(vector_header),
@@ -1449,78 +1436,75 @@ http_api::bank::RESPONSE_TRANSFER_RESULT http_api::bank::request(const REQUEST_T
 	// declare) 
 	http_api::bank::RESPONSE_TRANSFER_RESULT response;
 
-	// 9) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 9) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 10) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 10) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
 		// declare)
 		[[maybe_unused]] std::size_t res_cnt = 0;
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
-			else if (__strcmp(str_name, "res_cnt"sv) == 0)
+			else if (std::string_view(str_name).compare("res_cnt"sv) == 0)
 			{
-				res_cnt = __from_string<size_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), res_cnt);
 			}
 			// - "res_list"
-			else if (__strcmp(str_name, "res_list"sv) == 0)
+			else if (std::string_view(str_name).compare("res_list"sv) == 0)
 			{
 				for (auto iterRes = value.Begin(); iterRes != value.End(); ++iterRes)
 				{
@@ -1533,113 +1517,113 @@ http_api::bank::RESPONSE_TRANSFER_RESULT http_api::bank::request(const REQUEST_T
 						auto& value_Nested = iterNest->value;
 
 						// - "tran_no"
-						if (__strcmp(str_name_nested, "tran_no"sv) == 0)
+						if (std::string_view(str_name_nested).compare("tran_no"sv) == 0)
 						{
-							transaction.tran_no = __from_string<int>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.tran_no);
 						}
 						// - "bank_tran_id"
-						else if (__strcmp(str_name_nested, "bank_tran_id"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_tran_id"sv) == 0)
 						{
 							transaction.bank_tran_id = value_Nested.GetString();
 						}
 						// - "bank_tran_date"
-						else if (__strcmp(str_name_nested, "bank_tran_date"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_tran_date"sv) == 0)
 						{
 							transaction.bank_tran_date = from_string_date(value_Nested.GetString());
 						}
 						// - "bank_code_tran"
-						else if (__strcmp(str_name_nested, "bank_code_tran"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_code_tran"sv) == 0)
 						{
 							transaction.bank_code_tran = value_Nested.GetString();
 						}
 						// - "bank_rsp_code"
-						else if (__strcmp(str_name_nested, "bank_rsp_code"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_rsp_code"sv) == 0)
 						{
 							transaction.bank_rsp_code = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
 						}
 						// - "bank_rsp_message"
-						else if (__strcmp(str_name_nested, "bank_rsp_message"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_rsp_message"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.bank_rsp_message, value_Nested.GetString());
 						}
 						// - "wd_bank_code_std"
-						else if (__strcmp(str_name_nested, "wd_bank_code_std"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_bank_code_std"sv) == 0)
 						{
 							transaction.wd_bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
 						}
 						// - "wd_bank_code_sub"
-						else if (__strcmp(str_name_nested, "wd_bank_code_sub"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_bank_code_sub"sv) == 0)
 						{
-							transaction.wd_bank_code_sub = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.wd_bank_code_sub);
 						}
 						// - "wd_bank_name"
-						else if (__strcmp(str_name_nested, "wd_bank_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_bank_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.wd_bank_name, value_Nested.GetString());
 						}
 						// - "wd_fintech_use_num"
-						else if (__strcmp(str_name_nested, "wd_fintech_use_num"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_fintech_use_num"sv) == 0)
 						{
 							transaction.wd_fintech_use_num = value_Nested.GetString();
 						}
 						// - "wd_account_num_masked"
-						else if (__strcmp(str_name_nested, "wd_account_num_masked"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_account_num_masked"sv) == 0)
 						{
 							transaction.wd_account_num_masked = value_Nested.GetString();
 						}
 						// - "wd_print_content"
-						else if (__strcmp(str_name_nested, "wd_print_content"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_print_content"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.wd_print_content, value_Nested.GetString());
 						}
 						// - "wd_account_holder_name"
-						else if (__strcmp(str_name_nested, "wd_account_holder_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_account_holder_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.wd_account_holder_name, value_Nested.GetString());
 						}
 						// - "dps_bank_code_std"
-						else if (__strcmp(str_name_nested, "dps_bank_code_std"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_bank_code_std"sv) == 0)
 						{
 							transaction.dps_bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
 						}
 						// - "dps_bank_code_sub"
-						else if (__strcmp(str_name_nested, "dps_bank_code_sub"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_bank_code_sub"sv) == 0)
 						{
-							transaction.dps_bank_code_sub = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.dps_bank_code_sub);
 						}
 						// - "dps_bank_name"
-						else if (__strcmp(str_name_nested, "dps_bank_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_bank_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.dps_bank_name, value_Nested.GetString());
 						}
 						// - "dps_fintech_use_num"
-						else if (__strcmp(str_name_nested, "dps_fintech_use_num"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_fintech_use_num"sv) == 0)
 						{
 							transaction.dps_fintech_use_num = value_Nested.GetString();
 						}
 						// - "dps_account_num_masked"
-						else if (__strcmp(str_name_nested, "dps_account_num_masked"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_account_num_masked"sv) == 0)
 						{
 							transaction.dps_account_num_masked = value_Nested.GetString();
 						}
 						// - "dps_print_content"
-						else if (__strcmp(str_name_nested, "dps_print_content"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_print_content"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.dps_print_content, value_Nested.GetString());
 						}
 						// - "dps_account_holder_name"
-						else if (__strcmp(str_name_nested, "dps_account_holder_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_account_holder_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.dps_account_holder_name, value_Nested.GetString());
 						}
 						// - "tran_amt"
-						else if (__strcmp(str_name_nested, "tran_amt"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("tran_amt"sv) == 0)
 						{
-							transaction.tran_amt = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.tran_amt);
 						}
 					}
 
-					response.res_list.push_back(transaction);
+					response.res_list.push_back(std::move(transaction));
 				}
 
 				// check) 
@@ -1648,7 +1632,7 @@ http_api::bank::RESPONSE_TRANSFER_RESULT http_api::bank::request(const REQUEST_T
 		}
 	});
 
-	// 11) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 11) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -1658,27 +1642,27 @@ http_api::bank::RESPONSE_TRANSFER_RECHECK http_api::bank::request(const REQUEST_
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/v1.0/transfer/recheck
 	//	 3) HTTP Method		POST
 	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 	//   5) Header
-	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	//   6) Parameters
-	//		- check_type				"1"					AN(1)  1:ì¶œê¸ˆì´ì²´, 2:ì…ê¸ˆì´ì²´
-	//		- req_cnt					"25"				N(5)   ì…ê¸ˆìš”ì²­ê±´ìˆ˜
-	//		- req_list					<object>			       ì…ê¸ˆìš”ì²­ëª©ë¡
-	//		-   tran_no					"1"					N(5)   ê±°ë˜ìˆœë²ˆ
-	//		-   org_bank_tran_dtime		"20160725100010"	AN(14) ì›ê±°ë˜ìš”ì²­ì¼ì‹œ
-	//		-   org_req_gubun			"1"					AN(1)  ì›ê±°ë˜ìš”ì²­ê³„ì¢Œì§€ì •ë°©ì‹êµ¬ë¶„ 1:í•€í…Œí¬ì´ã…£ìš©ë²ˆí˜¸, 2:ê³„ì¢Œë²ˆí˜¸
-	//		-   print_content			"ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­"	AH(20) ì›ê±°ë˜ ì…ì¶œê¸ˆê³„ì¢Œì¸ìë‚´ì—­
-	//		-   fintech_use_num			"1234567890123456"	AN(24) í•€í…Œí¬ì´ìš©ë²ˆí˜¸
-	//		-   org_tran_amt			"10000"				N(12)  ì›ê±°ë˜ ê±°ë˜ê¸ˆì•¡
-	//		- tran_dtime				"20160310101921"	N(14)  ìš”ì²­ì¼ì‹œ
+	//		- check_type				"1"					AN(1)  1:Ãâ±İÀÌÃ¼, 2:ÀÔ±İÀÌÃ¼
+	//		- req_cnt					"25"				N(5)   ÀÔ±İ¿äÃ»°Ç¼ö
+	//		- req_list					<object>			       ÀÔ±İ¿äÃ»¸ñ·Ï
+	//		-   tran_no					"1"					N(5)   °Å·¡¼ø¹ø
+	//		-   org_bank_tran_dtime		"20160725100010"	AN(14) ¿ø°Å·¡¿äÃ»ÀÏ½Ã
+	//		-   org_req_gubun			"1"					AN(1)  ¿ø°Å·¡¿äÃ»°èÁÂÁöÁ¤¹æ½Ä±¸ºĞ 1:ÇÉÅ×Å©ÀÌ¤Ó¿ë¹øÈ£, 2:°èÁÂ¹øÈ£
+	//		-   print_content			"ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª"	AH(20) ¿ø°Å·¡ ÀÔÃâ±İ°èÁÂÀÎÀÚ³»¿ª
+	//		-   fintech_use_num			"1234567890123456"	AN(24) ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
+	//		-   org_tran_amt			"10000"				N(12)  ¿ø°Å·¡ °Å·¡±İ¾×
+	//		- tran_dtime				"20160310101921"	N(14)  ¿äÃ»ÀÏ½Ã
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -1690,104 +1674,86 @@ http_api::bank::RESPONSE_TRANSFER_RECHECK http_api::bank::request(const REQUEST_
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto str_object	= "/v1.0/transfer/recheck"sv;
 
-	// 2) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::POST_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 3) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 3) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8"sv, buf_header.data<char>() };
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8", buf_header.data<char>() };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
 	// - ...
-	size_write = __sprintf(buf_option.data<char>(), SIZE_BUFFER, "{\"check_type\": \"%s\", \"req_cnt\": \"%llu\", \"req_list\": ["sv,
-		to_string<char>(_request.check_type).data(),
-		_request.req_list.size()
-		);
+	size_write = std::snprintf(buf_option.data<char>(), SIZE_BUFFER, "{\"check_type\": \"%s\", \"req_cnt\": \"%zu\", \"req_list\": [", to_string<char>(_request.check_type).data(), _request.req_list.size());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+	// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 	buf_option.add_size(size_write);
 
-	// - req_listë¥¼ ì¶”ê°€í•œë‹¤.
-	for(auto iter: _request.req_list)
+	// - req_list¸¦ Ãß°¡ÇÑ´Ù.
+	for(const auto& iter: _request.req_list)
 	{
 		// declare) 
 		char str_print_content[256];
 
-		// - ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+		// - ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 		convert_multibyte_to_utf8(str_print_content, iter.print_content.c_str());
 
 		// - 
 		const auto& org_tran_dtime = iter.org_tran_dtime;
 
-		// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-		auto sizeWrite2 = __sprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER - buf_option.size(), "{ \"tran_no\": \"%d\", \"org_tran_dtime\": \"%04u%02u%02u%02u%02u%02u\", \"org_req_gubun\": \"%s\", \"bank_code_std\": \"%03d\", \"account_num\": \"%s\", \"print_content\": \"%s\", \"fintech_use_num\": \"%s\", \"org_tran_amt\": \"%lld\"}"sv,
-			iter.tran_no,					// tran_no
-			static_cast<uint32_t>(org_tran_dtime.t_year),
-			static_cast<uint32_t>(org_tran_dtime.t_month),
-			static_cast<uint32_t>(org_tran_dtime.t_day),
-			static_cast<uint32_t>(org_tran_dtime.t_hour),
-			static_cast<uint32_t>(org_tran_dtime.t_minute),
-			static_cast<uint32_t>(org_tran_dtime.t_second),
-			to_string<char>(iter.org_req_gubun).data(), // org_req_gubun
-			iter.bank_code_std,				// bank_code_std
-			iter.accoount_num.c_str(),		// account_num
-			str_print_content,				// print_content
-			iter.fintech_use_num.c_str(),	// fintech_use_num
-			iter.org_tran_amt				// org_tran_amt
-		);
+		// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+		auto sizeWrite2 = std::snprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER - buf_option.size(), "{ \"tran_no\": \"%d\", \"org_tran_dtime\": \"%04u%02u%02u%02u%02u%02u\", \"org_req_gubun\": \"%s\", \"bank_code_std\": \"%03d\", \"account_num\": \"%s\", \"print_content\": \"%s\", \"fintech_use_num\": \"%s\", \"org_tran_amt\": \"%jd\"}", iter.tran_no, // tran_no
+			static_cast<uint32_t>(org_tran_dtime.t_year), static_cast<uint32_t>(org_tran_dtime.t_month), static_cast<uint32_t>(org_tran_dtime.t_day), static_cast<uint32_t>(org_tran_dtime.t_hour), static_cast<uint32_t>(org_tran_dtime.t_minute), static_cast<uint32_t>(org_tran_dtime.t_second), to_string<char>(iter.org_req_gubun).data(), // org_req_gubun
+			iter.bank_code_std, // bank_code_std
+			iter.account_num.c_str(), // account_num
+			str_print_content, // print_content
+			iter.fintech_use_num.c_str(), // fintech_use_num
+			static_cast<intmax_t>(iter.org_tran_amt)				); // org_tran_amt
 
-		// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+		// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 		THROW_IF(sizeWrite2 < 0, throwable::failure(eRESULT::FAIL));
 
-		// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+		// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 		buf_option.add_size(sizeWrite2);
 	}
 
-	// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-	size_write = __sprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER- buf_option.size(), "], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}"sv,
-		static_cast<uint32_t>(_request.tran_dtime.t_year),
-		static_cast<uint32_t>(_request.tran_dtime.t_month),
-		static_cast<uint32_t>(_request.tran_dtime.t_day),
-		static_cast<uint32_t>(_request.tran_dtime.t_hour),
-		static_cast<uint32_t>(_request.tran_dtime.t_minute),
-		static_cast<uint32_t>(_request.tran_dtime.t_second)
-		);
+	// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+	size_write = std::snprintf(buf_option.data<char>(buf_option.size()), SIZE_BUFFER- buf_option.size(), "], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}", static_cast<uint32_t>(_request.tran_dtime.t_year), static_cast<uint32_t>(_request.tran_dtime.t_month), static_cast<uint32_t>(_request.tran_dtime.t_day), static_cast<uint32_t>(_request.tran_dtime.t_hour), static_cast<uint32_t>(_request.tran_dtime.t_minute), static_cast<uint32_t>(_request.tran_dtime.t_second));
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 5) Optionì˜ ê¸¸ì´ë¥¼ ì €ì¥í•œë‹¤.
+	// 5) OptionÀÇ ±æÀÌ¸¦ ÀúÀåÇÑ´Ù.
 	buf_option.add_size(size_write);
 
-	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
-	//std::vector<std::string_view> vector_accept{ "*/*"sv, "application/json"sv };
+	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	std::vector<std::string_view> vector_accept{ "*/*", "text/plain"sv };
+	//std::vector<std::string_view> vector_accept{ "*/*", "application/json"sv };
 
-	// 7) requestë¥¼ Setí•œë‹¤.
+	// 7) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
 		443,
-		"HTTP/1.1"sv,
+		"HTTP/1.1",
 		str_object,
 		std::string_view(),
 		std::move(vector_header),
@@ -1799,78 +1765,75 @@ http_api::bank::RESPONSE_TRANSFER_RECHECK http_api::bank::request(const REQUEST_
 	// declare) 
 	http_api::bank::RESPONSE_TRANSFER_RECHECK response;
 
-	// 8) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 8) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 9) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 9) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
 		// declare)
 		[[maybe_unused]] std::size_t res_cnt = 0;
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv) == 0)
+			if(std::string_view(str_name).compare("rsp_code"sv) == 0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
-			else if (__strcmp(str_name, "res_cnt"sv) == 0)
+			else if (std::string_view(str_name).compare("res_cnt"sv) == 0)
 			{
-				res_cnt = __from_string<size_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), res_cnt);
 			}
 			// - "res_list"
-			else if (__strcmp(str_name, "res_list"sv) == 0)
+			else if (std::string_view(str_name).compare("res_list"sv) == 0)
 			{
 				for (auto iterRes = value.Begin(); iterRes != value.End(); ++iterRes)
 				{
@@ -1883,113 +1846,113 @@ http_api::bank::RESPONSE_TRANSFER_RECHECK http_api::bank::request(const REQUEST_
 						auto&	value_Nested = iterNest->value;
 
 						// - "tran_no"
-						if (__strcmp(str_name_nested, "tran_no"sv) == 0)
+						if (std::string_view(str_name_nested).compare("tran_no"sv) == 0)
 						{
-							transaction.tran_no = __from_string<int>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.tran_no);
 						}
 						// - "bank_tran_id"
-						else if (__strcmp(str_name_nested, "bank_tran_id"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_tran_id"sv) == 0)
 						{
 							transaction.bank_tran_id = value_Nested.GetString();
 						}
 						// - "bank_tran_date"
-						else if (__strcmp(str_name_nested, "bank_tran_date"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_tran_date"sv) == 0)
 						{
 							transaction.bank_tran_date = from_string_date(value_Nested.GetString());
 						}
 						// - "bank_code_tran"
-						else if (__strcmp(str_name_nested, "bank_code_tran"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_code_tran"sv) == 0)
 						{
 							transaction.bank_code_tran = value_Nested.GetString();
 						}
 						// - "bank_rsp_code"
-						else if (__strcmp(str_name_nested, "bank_rsp_code"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_rsp_code"sv) == 0)
 						{
 							transaction.bank_rsp_code = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
 						}
 						// - "bank_rsp_message"
-						else if (__strcmp(str_name_nested, "bank_rsp_message"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_rsp_message"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.bank_rsp_message, value_Nested.GetString());
 						}
 						// - "wd_bank_code_std"
-						else if (__strcmp(str_name_nested, "wd_bank_code_std") == 0)
+						else if (std::string_view(str_name_nested).compare("wd_bank_code_std") == 0)
 						{
 							transaction.wd_bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
 						}
 						// - "wd_bank_code_sub"
-						else if (__strcmp(str_name_nested, "wd_bank_code_sub"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_bank_code_sub"sv) == 0)
 						{
-							transaction.wd_bank_code_sub = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.wd_bank_code_sub);
 						}
 						// - "wd_bank_name"
-						else if (__strcmp(str_name_nested, "wd_bank_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_bank_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.wd_bank_name, value_Nested.GetString());
 						}
 						// - "wd_fintech_use_num"
-						else if (__strcmp(str_name_nested, "wd_fintech_use_num"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_fintech_use_num"sv) == 0)
 						{
 							transaction.wd_fintech_use_num = value_Nested.GetString();
 						}
 						// - "wd_account_num_masked"
-						else if (__strcmp(str_name_nested, "wd_account_num_masked"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_account_num_masked"sv) == 0)
 						{
 							transaction.wd_account_num_masked = value_Nested.GetString();
 						}
 						// - "wd_print_content"
-						else if (__strcmp(str_name_nested, "wd_print_content"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_print_content"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.wd_print_content, value_Nested.GetString());
 						}
 						// - "wd_account_holder_name"
-						else if (__strcmp(str_name_nested, "wd_account_holder_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("wd_account_holder_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.wd_account_holder_name, value_Nested.GetString());
 						}
 						// - "dps_bank_code_std"
-						else if (__strcmp(str_name_nested, "dps_bank_code_std"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_bank_code_std"sv) == 0)
 						{
 							transaction.dps_bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value_Nested.GetString());
 						}
 						// - "dps_bank_code_sub"
-						else if (__strcmp(str_name_nested, "dps_bank_code_sub"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_bank_code_sub"sv) == 0)
 						{
-							transaction.dps_bank_code_sub = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.dps_bank_code_sub);
 						}
 						// - "dps_bank_name"
-						else if (__strcmp(str_name_nested, "dps_bank_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_bank_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.dps_bank_name, value_Nested.GetString());
 						}
 						// - "dps_fintech_use_num"
-						else if (__strcmp(str_name_nested, "dps_fintech_use_num"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_fintech_use_num"sv) == 0)
 						{
 							transaction.dps_fintech_use_num = value_Nested.GetString();
 						}
 						// - "dps_account_num_masked"
-						else if (__strcmp(str_name_nested, "dps_account_num_masked"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_account_num_masked"sv) == 0)
 						{
 							transaction.dps_account_num_masked = value_Nested.GetString();
 						}
 						// - "dps_print_content"
-						else if (__strcmp(str_name_nested, "dps_print_content"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_print_content"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.dps_print_content, value_Nested.GetString());
 						}
 						// - "dps_account_holder_name"
-						else if (__strcmp(str_name_nested, "dps_account_holder_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("dps_account_holder_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(transaction.dps_account_holder_name, value_Nested.GetString());
 						}
 						// - "tran_amt"
-						else if (__strcmp(str_name_nested, "tran_amt"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("tran_amt"sv) == 0)
 						{
-							transaction.tran_amt = __from_string<int64_t>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), transaction.tran_amt);
 						}
 					}
 
-					response.res_list.push_back(transaction);
+					response.res_list.push_back(std::move(transaction));
 				}
 
 				// check) 
@@ -1998,7 +1961,7 @@ http_api::bank::RESPONSE_TRANSFER_RECHECK http_api::bank::request(const REQUEST_
 		}
 	});
 
-	// 10) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 10) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -2008,21 +1971,21 @@ http_api::bank::RESPONSE_INQUIRY_REAL_NAME http_api::bank::request(const REQUEST
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/v1.0/inquiry/realname
 	//	 3) HTTP Method		POST
 	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 	//   5) Header
-	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	//   6) Parameters
-	//		- bank_code_std				"097"					AN(3)  ê°œì„¤ê¸°ê´€ í‘œì¤€ì½”ë“œ
-	//		- account_num				"1234567890123123"	AN(16) ê°œì¢Œë²ˆí˜¸
-	//		- account_holder_info		"8801012"				AN(7)  ì˜ˆê¸ˆì£¼ ì¸ì¦ì •ë³´ YYYYMMDD(6) + ì‹ë³„ì •ë³´(1)
-	//		- tran_dtime				"20160310101921"		N(14)  ìš”ì²­ì¼ì‹œ
+	//		- bank_code_std				"097"					AN(3)  °³¼³±â°ü Ç¥ÁØÄÚµå
+	//		- account_num				"1234567890123123"	AN(16) °³ÁÂ¹øÈ£
+	//		- account_holder_info		"8801012"				AN(7)  ¿¹±İÁÖ ÀÎÁõÁ¤º¸ YYYYMMDD(6) + ½Äº°Á¤º¸(1)
+	//		- tran_dtime				"20160310101921"		N(14)  ¿äÃ»ÀÏ½Ã
 	//
 	// ------------------------------------------------------------------
 	// declare) 
@@ -2034,57 +1997,47 @@ http_api::bank::RESPONSE_INQUIRY_REAL_NAME http_api::bank::request(const REQUEST
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
 	// declare)
 	auto str_object = "/v1.0/inquiry/real_name"sv;
 
-	// 2) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::POST_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 3) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 3) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8"sv, buf_header.data<char>() };
+	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8", buf_header.data<char>() };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// decalre) 
+	// declare) 
 	auto& tran_dtime = _request.tran_dtime;
 
 	// - ...
-	size_write = __sprintf(buf_option.data<char>(), SIZE_BUFFER, "{\"bank_code_std\": \"%03d\", \"account_num\": \"%s\", \"account_holder_info\": \"%s\", \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}"sv,
-		_request.bank_code_std,
-		_request.accoount_num.c_str(),
-		_request.accoount_holder_info.c_str(),
-		static_cast<uint32_t>(tran_dtime.t_year),
-		static_cast<uint32_t>(tran_dtime.t_month),
-		static_cast<uint32_t>(tran_dtime.t_day),
-		static_cast<uint32_t>(tran_dtime.t_hour),
-		static_cast<uint32_t>(tran_dtime.t_minute),
-		static_cast<uint32_t>(tran_dtime.t_second)
-	);
+	size_write = std::snprintf(buf_option.data<char>(), SIZE_BUFFER, "{\"bank_code_std\": \"%03d\", \"account_num\": \"%s\", \"account_holder_info\": \"%s\", \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}", _request.bank_code_std, _request.account_num.c_str(), _request.account_holder_info.c_str(), static_cast<uint32_t>(tran_dtime.t_year), static_cast<uint32_t>(tran_dtime.t_month), static_cast<uint32_t>(tran_dtime.t_day), static_cast<uint32_t>(tran_dtime.t_hour), static_cast<uint32_t>(tran_dtime.t_minute), static_cast<uint32_t>(tran_dtime.t_second));
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+	// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 	buf_option.set_size(size_write);
 
-	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
-	//std::vector<std::string_view>	vector_accept{ "*/*"sv, "application/json"sv };
+	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	std::vector<std::string_view> vector_accept{ "*/*", "text/plain"sv };
+	//std::vector<std::string_view>	vector_accept{ "*/*", "application/json"sv };
 
-	// 7) requestë¥¼ Setí•œë‹¤.
+	// 7) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
@@ -2101,129 +2054,126 @@ http_api::bank::RESPONSE_INQUIRY_REAL_NAME http_api::bank::request(const REQUEST
 	// declare) 
 	http_api::bank::RESPONSE_INQUIRY_REAL_NAME	response;
 
-	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 7) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code"sv)==0)
+			if(std::string_view(str_name).compare("rsp_code"sv)==0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
 
 			// - "bank_tran_id"
-			else if (__strcmp(str_name, "bank_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_tran_id"sv) == 0)
 			{
 				response.bank_tran_id = value.GetString();
 			}
 			// - "bank_tran_date"
-			else if (__strcmp(str_name, "bank_tran_date"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_tran_date"sv) == 0)
 			{
 				response.bank_tran_date = from_string_date(value.GetString());
 			}
 			// - "bank_code_tran"
-			else if (__strcmp(str_name, "bank_code_tran"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_code_tran"sv) == 0)
 			{
 				response.bank_code_tran = value.GetString();
 			}
 			// - "bank_rsp_code"
-			else if (__strcmp(str_name, "bank_rsp_code"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_rsp_code"sv) == 0)
 			{
 				response.bank_rsp_code = get_enum_OAUTH_BANK_CODE<char>(value.GetString());
 			}
 			// - "bank_rsp_message"
-			else if (__strcmp(str_name, "bank_rsp_message"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_rsp_message"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.bank_rsp_message, value.GetString());
 			}
 			// - "bank_code_std"
-			else if (__strcmp(str_name, "bank_code_std"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_code_std"sv) == 0)
 			{
 				response.bank_code_std = get_enum_OAUTH_BANK_CODE<char>(value.GetString());
 			}
 			// - "bank_code_sub"
-			else if (__strcmp(str_name, "bank_code_sub"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_code_sub"sv) == 0)
 			{
-				response.bank_code_sub = __from_string<int64_t>(value.GetString());
+				std::from_chars(value.GetString(), value.GetString() + value.GetStringLength(), response.bank_code_sub);
 			}
 			// - "bank_name"
-			else if (__strcmp(str_name, "bank_name"sv) == 0)
+			else if (std::string_view(str_name).compare("bank_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.bank_name, value.GetString());
 			}
 			// - "account_num"
-			else if (__strcmp(str_name, "account_num"sv) == 0)
+			else if (std::string_view(str_name).compare("account_num"sv) == 0)
 			{
 				response.account_num = value.GetString();
 			}
 			// - "account_holder_info"
-			else if (__strcmp(str_name, "account_holder_info"sv) == 0)
+			else if (std::string_view(str_name).compare("account_holder_info"sv) == 0)
 			{
 				response.account_holder_info = value.GetString();
 			}
 			// - "account_holder_name"
-			else if (__strcmp(str_name, "account_holder_name"sv) == 0)
+			else if (std::string_view(str_name).compare("account_holder_name"sv) == 0)
 			{
 				convert_utf8_to_multibyte(response.account_holder_name, value.GetString());
 			}
 		}
 	});
 
-	// 9) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 9) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 
@@ -2233,15 +2183,15 @@ http_api::bank::RESPONSE_BANK_STATUS http_api::bank::request(const REQUEST_BANK_
 {
 	// ------------------------------------------------------------------
 	// 
-	// ì°¸ê°€ê¸°ê´€ìƒíƒœì¡°íšŒ
+	// Âü°¡±â°ü»óÅÂÁ¶È¸
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		/v1.0/bank/status
 	//	 3) HTTP Method		GET
 	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 	//   5) Header
-	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 	//
 	// ------------------------------------------------------------------
 	// declare)
@@ -2253,39 +2203,39 @@ http_api::bank::RESPONSE_BANK_STATUS http_api::bank::request(const REQUEST_BANK_
 	// check)
 	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto prequest_http = make_object<query::http::query>();
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
+	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
 	auto str_object = "/v1.0/bank/status"sv;
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 	auto http_method = eHTTP_METHOD::GET_;
 
 	// declare)
 	auto buf_header = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto size_write = __sprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s"sv, _request.authorization.c_str());
+	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	auto size_write = std::snprintf(buf_header.data<char>(), SIZE_BUFFER, "Authorization: Bearer %s", _request.authorization.c_str());
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 	THROW_IF(size_write < 0, throwable::failure(eRESULT::FAIL));
 
-	// 5) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"sv, buf_header.data<char>() };
+	// 5) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8", buf_header.data<char>() };
 
 	// declare) 
 	shared_buffer buf_option;
 
-	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*"sv, "text/plain"sv };
+	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	std::vector<std::string_view> vector_accept{ "*/*", "text/plain"sv };
 
-	// 7) requestë¥¼ Setí•œë‹¤.
+	// 7) request¸¦ SetÇÑ´Ù.
 	prequest_http->set_request(
 		http_method,
 		_request.str_url,
 		443,
-		"HTTP/1.1"sv,
+		"HTTP/1.1",
 		str_object,
 		std::string_view(),
 		std::move(vector_header),
@@ -2297,71 +2247,68 @@ http_api::bank::RESPONSE_BANK_STATUS http_api::bank::request(const REQUEST_BANK_
 	// declare) 
 	http_api::bank::RESPONSE_BANK_STATUS response;
 
-	// 8) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+	// 8) ±âº»°ªÀ» ¼³Á¤...
 	response.rsp_code = eRESPONSE_CODE::A0000_;
 	response.rsp_message.clear();
 
-	// 9) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+	// 9) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
 	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 			response.rsp_code = eRESPONSE_CODE::FAIL_;
 			response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
+			// - buffer¸¦ clearÇÑ´Ù.
 			response.buf_response.clear();
 
 			// Return)
 			return;
 		}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
-
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+		// - buffer¸¦ ³Ö´Â´Ù.
 		response.buf_response = _msg.contents[0];
 
 		// declare) 
 		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data<char>());
+		// - ParsingÇÑ´Ù.
+		const auto&	result = json_data.Parse(_msg.contents[0].data<char>(), _msg.contents[0].size());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 		RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 		{
 			auto str_name = (*iter).name.GetString();
 			auto& value = (*iter).value;
 
 			// - rsp_code
-			if(__strcmp(str_name, "rsp_code")==0)
+			if(std::string_view(str_name).compare("rsp_code")==0)
 			{
 				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
 			}
 			// - rsp_message
-			else if(__strcmp(str_name, "rsp_message"sv) == 0)
+			else if(std::string_view(str_name).compare("rsp_message"sv) == 0)
 			{
 				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
 			}
 
 			// - "api_tran_id"
-			else if (__strcmp(str_name, "api_tran_id"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_id"sv) == 0)
 			{
 				response.api_tran_id = value.GetString();
 			}
 			// - "api_tran_dtm"
-			else if (__strcmp(str_name, "api_tran_dtm"sv) == 0)
+			else if (std::string_view(str_name).compare("api_tran_dtm"sv) == 0)
 			{
 				response.api_tran_dtm = from_string_date_time_millsec(value.GetString());
 			}
 			// - "res_list"
-			else if (__strcmp(str_name, "res_list"sv) == 0)
+			else if (std::string_view(str_name).compare("res_list"sv) == 0)
 			{
 				for (auto iterRes = value.Begin(); iterRes != value.End(); ++iterRes)
 				{
@@ -2374,17 +2321,17 @@ http_api::bank::RESPONSE_BANK_STATUS http_api::bank::request(const REQUEST_BANK_
 						auto&	value_Nested = iterNest->value;
 
 						// - "bank_code_std"
-						if (__strcmp(str_name_nested, "bank_code_std"sv) == 0)
+						if (std::string_view(str_name_nested).compare("bank_code_std"sv) == 0)
 						{
-							bankStatus.bank_code_std = __from_string<int>(value_Nested.GetString());
+							std::from_chars(value_Nested.GetString(), value_Nested.GetString() + value_Nested.GetStringLength(), bankStatus.bank_code_std);
 						}
 						// - "bank_name"
-						else if (__strcmp(str_name_nested, "bank_name"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_name"sv) == 0)
 						{
 							convert_utf8_to_multibyte(bankStatus.bank_name, value_Nested.GetString());
 						}
 						// - "bank_status"
-						else if (__strcmp(str_name_nested, "bank_status"sv) == 0)
+						else if (std::string_view(str_name_nested).compare("bank_status"sv) == 0)
 						{
 							bankStatus.bank_status = get_enum_OAUTH_BANK_STATUS<char>(value_Nested.GetString());
 						}
@@ -2397,7 +2344,7 @@ http_api::bank::RESPONSE_BANK_STATUS http_api::bank::request(const REQUEST_BANK_
 		}
 	});
 
-	// 10) requestë¥¼ ìš”ì²­í•œë‹¤.
+	// 10) request¸¦ ¿äÃ»ÇÑ´Ù.
 	prequest_http->request();
 
 	// return) 

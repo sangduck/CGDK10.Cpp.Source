@@ -38,14 +38,14 @@ shared_buffer message_SERVER_DOSS_SEND_ACK			(uint64_t _send_sequence);
 enum class  eRESULT_DOSS : int
 {
 	SUCCESS									 = static_cast<int>(eRESULT::SUCCESS),
-	ALEADY_CHECKINED						 = 0x00000200,
+	ALREADY_CHECKINED						 = 0x00000200,
 	PENDED									 = static_cast<int>(eRESULT::PENDED),
 	SUCCESS_CREATE							 = static_cast<int>(eRESULT::SUCCESS_CREATE),
 	SUCCESS_RESTORE							 = static_cast<int>(eRESULT::SUCCESS_RESTORE),
 	PENDING									 = static_cast<int>(eRESULT::PENDING),
 
 	FAIL									 = static_cast<int>(eRESULT::FAIL),	// 0x3******* Fail
-	ALEADY_EXIST							 = static_cast<int>(eRESULT::ALEADY_EXIST),
+	ALREADY_EXIST							 = static_cast<int>(eRESULT::ALREADY_EXIST),
 	EXPIRED									 = static_cast<int>(eRESULT::EXPIRED),
 	NOT_EXIST								 = static_cast<int>(eRESULT::NOT_EXIST),
 	NOT_READY								 = static_cast<int>(eRESULT::NOT_READY),

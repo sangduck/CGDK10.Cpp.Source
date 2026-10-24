@@ -25,10 +25,10 @@ bool net::io::add_on::Nkeep_alive::start_keep_alive()
 	// 2) 기타값을 설정.
 	this->m_nested.m_tick_tat = chrono::tick::duration::zero();
 
-	// 3) Progress를 붙힌다.
+	// 3) Progress를 붙인다.
 	system_executor::register_schedulable(&m_nested);
 
-	// 4) messageable을 붙힌다.
+	// 4) messageable을 붙인다.
 	CGASSERT_ERROR(false);
 	//AttachMessageable(&m_nested);
 

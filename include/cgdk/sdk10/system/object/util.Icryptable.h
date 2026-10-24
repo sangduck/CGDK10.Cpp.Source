@@ -22,25 +22,26 @@ namespace CGDK
 {
 //-----------------------------------------------------------------------------
 //
-// cryptBase
-//
-// 1. cryptBase란!
-//    1) 암복호화에 관련된...
+// Icryptable
 //
 //
 //-----------------------------------------------------------------------------
-class Icryptable : 
-// inherited classes)
-	virtual	public				Ireferenceable
+class Icryptable : virtual public Ireferenceable
 {
-// constructor/destructor)
 protected:
 			Icryptable() noexcept {}
 	virtual	~Icryptable() noexcept {}
 
-// public)
 public:
-			object_ptr<Icrypt>	m_pcrypt;
+			auto get_cryptor() const noexcept { return this->m_pcryptor; }
+			auto cryption_type() const noexcept { return this->m_cryption_type; }
+public:
+			void process_set_cryption_type(eCRYPTION_TYPE _type) noexcept { this->m_cryption_type= _type;}
+			auto process_set_cryptor(object_ptr<Icryptor>&& _pcryptor) noexcept { this->m_pcryptor = std::move(_pcryptor); }
+			void process_reset_cryptor() noexcept { this->m_pcryptor.reset(); }
+private:
+			object_ptr<Icryptor>	m_pcryptor;
+			eCRYPTION_TYPE			m_cryption_type{ eCRYPTION_TYPE::NONE };
 };
 
 

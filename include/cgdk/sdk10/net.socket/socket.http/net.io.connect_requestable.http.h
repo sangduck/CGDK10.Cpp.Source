@@ -44,7 +44,7 @@ namespace CGDK
 //-----------------------------------------------------------------------------
 class net::io::connect_requestable::Nhttp :
 // inherited classes) 
-	public						net::io::connect_requestable::Ntcp_secure
+	public						net::io::connect_requestable::Ntcp_ssl
 {
 // publics) 
 public:
@@ -54,7 +54,8 @@ public:
 	
 // implementation) 
 protected:
-			lockable<object_ptr<Ihttp_request>>	m_prequest;
+	mutable	lock_object			m_lock_prequest;
+			object_ptr<Ihttp_request> m_prequest;
 
 protected:
 			void				set_request(Ihttp_request* _prequest) noexcept;
@@ -62,7 +63,7 @@ protected:
 			object_ptr<Ihttp_request> move_request() noexcept;
 
 protected:
-	virtual	uint16_t			process_get_default_port() noexcept override { return (m_pssl_context.empty()) ? 80 : 443; }
+	virtual	uint16_t			process_get_default_port() noexcept override { return (this->m_pssl_context.empty()) ? 80 : 443; }
 };
 
 

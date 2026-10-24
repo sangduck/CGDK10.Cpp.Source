@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.http.h"
+#include "cgdk/sdk10/net.socket.http.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -7,7 +7,7 @@
 
 using namespace CGDK;
 
-// 1) socket_web_client í´ë˜ìŠ¤ë¥¼ ì •ì˜í•œë‹¤.
+// 1) socket_web_client Å¬·¡½º¸¦ Á¤ÀÇÇÑ´Ù.
 class socket_web_client : public net::socket::http_client
 {
 	virtual void on_connect() override
@@ -30,22 +30,22 @@ class socket_web_client : public net::socket::http_client
 	virtual result_code on_message(sMESSAGE_HTTP_WEBSOCKET& _msg) override
 	{
 		// 
-		// ì„¤ëª…) on_meessageëŠ” ì¼ë°˜ì ì¸ httpì¼ìˆ˜ë„ ìˆê³  websocketì¼ìˆ˜ë„ ìˆë‹¤.
-		//      ë”°ë¼ì„œ _msg.methodë¥¼ í™•ì¸ìœ¼ë¡œ ì•Œìˆ˜ ìˆë‹¤.
+		// ¼³¸í) on_meessage´Â ÀÏ¹İÀûÀÎ httpÀÏ¼öµµ ÀÖ°í websocketÀÏ¼öµµ ÀÖ´Ù.
+		//      µû¶ó¼­ _msg.method¸¦ È®ÀÎÀ¸·Î ¾Ë ¼ö ÀÖ´Ù.
 		//
-		//      _msg.methodê°’ì´ eHTTP_METHOD::TEXT_ í˜¹ì€ eHTTP_METHOD::BINARY_ì´ë©´
-		//      websocketì´ë‹¤.
+		//      _msg.method°ªÀÌ eHTTP_METHOD::TEXT_ È¤Àº eHTTP_METHOD::BINARY_ÀÌ¸é
+		//      websocketÀÌ´Ù.
 		// 
 		
-		// check) TEXT í˜•ì‹ì¼ ê²½ìš°ë§Œ ì§„í–‰...
+		// check) TEXT Çü½ÄÀÏ °æ¿ì¸¸ ÁøÇà...
 		RETURN_IF(_msg.method != eHTTP_METHOD::TEXT_, eRESULT::BYPASS);
 
-		// - textí˜•ì‹ì´ë¯€ë¡œ ì „ì†¡ë°›ì€ ë²„í¼ë¥¼ std::string_viewí˜•ìœ¼ë¡œ ë³€í™˜í•œë‹¤.
-		//   ì£¼ì˜!) 1.ë‹¤ì¤‘ ë¼ì¸ì¼ ê²½ìš° '\r\n'ì„ í„°ë¯¸ë„ ë¬¸ìë¡œ ì‚¬ìš©í•˜ë¯€ë¡œ extract_webì„ ì‚¬ìš©í•´ ì½ì–´ë‚´ë©´ ëœë‹¤.
-		//   ì£¼ì˜!) 2. TEXTí˜•ì€ ë¬´ì¡°ê±´ UTF-8í˜• ë¬¸ìì—´ì´ë‹¤! ë”°ë¼ì„œ ë³€í™˜í•´ì„œ ì¶œë ¥í•´ì•¼ í•œë‹¤.
+		// - textÇü½ÄÀÌ¹Ç·Î Àü¼Û¹ŞÀº ¹öÆÛ¸¦ std::string_viewÇüÀ¸·Î º¯È¯ÇÑ´Ù.
+		//   ÁÖÀÇ!) 1.´ÙÁß ¶óÀÎÀÏ °æ¿ì '\r\n'À» ÅÍ¹Ì³Î ¹®ÀÚ·Î »ç¿ëÇÏ¹Ç·Î extract_webÀ» »ç¿ëÇØ ÀĞ¾î³»¸é µÈ´Ù.
+		//   ÁÖÀÇ!) 2. TEXTÇüÀº ¹«Á¶°Ç UTF-8Çü ¹®ÀÚ¿­ÀÌ´Ù! µû¶ó¼­ º¯È¯ÇØ¼­ Ãâ·ÂÇØ¾ß ÇÑ´Ù.
 		std::u8string_view str_message = _msg.buf_message;
 
-		// trace) mbcs ë¬¸ìì—´ë¡œ ë³€í™˜í•´ì„œ ì¶œë ¥í•œë‹¤.
+		// trace) mbcs ¹®ÀÚ¿­·Î º¯È¯ÇØ¼­ Ãâ·ÂÇÑ´Ù.
 		std::cout << ' ' << encode_string<char>(str_message) << '\n';
 
 		// return)
@@ -58,18 +58,18 @@ int main()
 	// trace) 
 	std::cout << "start client [tut.socket.06.websocket.client]..."sv << '\n';
 
-	// 1) 'socket_tcp'ì„ ì‚¬ìš©í•˜ëŠ” acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) 'socket_tcp'À» »ç¿ëÇÏ´Â acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto psocket = make_own<socket_web_client>();
 
-	// 2) wsë¡œ ì ‘ì†ì„ ì‹œë„í•œë‹¤.
+	// 2) ws·Î Á¢¼ÓÀ» ½ÃµµÇÑ´Ù.
 	psocket->connect("wss://127.0.0.1");
 
-	// 3) ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+	// 3) ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 	while (_getch() != 27);
 
 	// trace) 
 	std::cout << "stop server [tut.socket.06.websocket.client]..."sv << '\n';
 
-	// end) ì¢…ë£Œ
+	// end) Á¾·á
 	return 0;
 }

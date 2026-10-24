@@ -68,6 +68,12 @@ public:
 	static	void				set_default_maximum_receive_buffer_size(std::size_t _size) noexcept;
 	[[nodiscard]] static std::size_t default_maximum_receive_buffer_size() noexcept { return m_default_maximum_receive_buffer_size;}
 
+	//! @brief SO_SNDBUF/SO_RCVBUF are set on every TCP socket (maximum_send/receive_buffer_size). default : windows true, linux false
+	//!        (linux : an explicit size turns the autotuning of the kernel (tcp_moderate_rcvbuf, tcp_wmem) off and, set after connect, does not change the window scale.
+	//!         the default leaves the sizing to the kernel : one setsockopt less per connection and a buffer that follows the link)
+	static	void				enable_explicit_socket_buffer_size(bool _enable = true) noexcept { m_s_enable_explicit_socket_buffer_size = _enable; }
+	[[nodiscard]] static bool	is_explicit_socket_buffer_size_enabled() noexcept { return m_s_enable_explicit_socket_buffer_size; }
+
 protected:
 	virtual	void				process_create_socket(ADDRESS_FAMILY _address_family = AF_INET) override;
 	virtual void				process_dispose_socket() noexcept override;
@@ -78,10 +84,15 @@ protected:
 
 	static	std::size_t			m_s_default_maximum_send_buffer_size;
 	static	std::size_t			m_default_maximum_receive_buffer_size;
+	static	bool				m_s_enable_explicit_socket_buffer_size;
 
 #if defined(_SYS_EPOLL_H)
 protected:
 	virtual	intptr_t			process_execute_epoll(intptr_t _event, std::size_t _param) override;
+
+	// - io_uring completion : the receivable and the sendable of the socket decide (Isocket::process_start_io)
+	virtual	bool				process_is_io_completion_supported() const noexcept override;
+	virtual	bool				process_start_io_completion() noexcept override;
 
 public:
 #endif

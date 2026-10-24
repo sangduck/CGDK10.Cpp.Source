@@ -43,62 +43,78 @@ public:
 	using object_data_t = _TOBJECT_DATA;
 	using object_set_t = OBJECT_SET_DATA<object_t, object_data_t>;
 	using container_t = circular_list<object_set_t>;
+	using object_snapshot_t = group::member_snapshot_ptr<object_t>;
 	using iterator_t = typename container_t::iterator;
 	using const_iterator_t = typename container_t::const_iterator;
 
 public:
-			result_code			register_object(object_t* _pobject) { object_data_t observer_data; return register_object(_pobject, observer_data);}
+			result_code			register_object(object_t* _pobject) { object_data_t observer_data {}; return register_object(_pobject, observer_data);}
 	virtual	result_code			register_object(object_t* _pobject, const object_data_t& _object_data);
+	//! @brief unregisters _pobject. (no reference of _pobject is taken before it is found : it can be called in the final release of _pobject)
 	virtual	bool				unregister_object(object_t* _pobject) noexcept override;
 	virtual	void				unregister_object_all() noexcept override;
 
-	[[nodiscard]] size_t		count() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_container)); return _get_object_count(); }
-	[[nodiscard]] size_t		capacity() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_container)); return _get_max_object_count(); }
+	[[nodiscard]] size_t		count() const noexcept { std::lock_guard lock(this->m_lockable_container); return _get_object_count(); }
+	[[nodiscard]] size_t		capacity() const noexcept { std::lock_guard lock(this->m_lockable_container); return _get_max_object_count(); }
 			void				capacity(size_t _max_count);
-	[[nodiscard]] size_t		room_count() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_container)); return _get_object_room_count();}
+	[[nodiscard]] size_t		room_count() const noexcept { std::lock_guard lock(this->m_lockable_container); return _get_object_room_count();}
 
-	[[nodiscard]] bool			empty() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_container)); return _is_object_empty(); }
-	[[nodiscard]] bool			exist() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_container)); return _is_object_exist(); }
-	[[nodiscard]] bool			is_full() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_container)); return _is_object_full(); }
-	[[nodiscard]] bool			is_room() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_container)); return _is_object_room(); }
+	[[nodiscard]] bool			empty() const noexcept { std::lock_guard lock(this->m_lockable_container); return _is_object_empty(); }
+	[[nodiscard]] bool			exist() const noexcept { std::lock_guard lock(this->m_lockable_container); return _is_object_exist(); }
+	[[nodiscard]] bool			is_full() const noexcept { std::lock_guard lock(this->m_lockable_container); return _is_object_full(); }
+	[[nodiscard]] bool			is_room() const noexcept { std::lock_guard lock(this->m_lockable_container); return _is_object_room(); }
 
-	[[nodiscard]] iterator_t	begin() noexcept { return m_container_object.begin();}
-	[[nodiscard]] const_iterator_t begin() const noexcept { return m_container_object.begin();}
-	[[nodiscard]] iterator_t	end() noexcept { return m_container_object.end();}
-	[[nodiscard]] const_iterator_t end() const noexcept { return m_container_object.end();}
+	[[nodiscard]] iterator_t	begin() noexcept { return this->m_container_object.begin();}
+	[[nodiscard]] const_iterator_t begin() const noexcept { return this->m_container_object.begin();}
+	[[nodiscard]] iterator_t	end() noexcept { return this->m_container_object.end();}
+	[[nodiscard]] const_iterator_t end() const noexcept { return this->m_container_object.end();}
 
+	//! @brief returns the first object _pred returned true for. _pred runs out of the lock over the object snapshot (see for_each)
 	[[nodiscard]] object_ptr<object_t> find_object(const std::function<bool (object_t*)>& _pred) const noexcept;
 
+	//! @brief calls _function for the objects of the snapshot out of the lock (same as for_each_snapshot) @return false _function returned false
+	// - an object can be unregistered before or while _function runs.
 			bool				for_each(const std::function<bool (object_t*)>& _function);
 
+	//! @brief objects as an immutable array (copy-on-write). no lock while the published one is valid. in on_object_registered / on_object_unregistering / on_object_unregistered : the live objects
+	[[nodiscard]] object_snapshot_t get_object_snapshot() const;
+	//! @brief calls _function for the objects of the snapshot out of the lock. (objects may be registered / unregistered in _function) @return false _function returned false
+			bool				for_each_snapshot(const std::function<bool (object_t*)>& _function) const;
+
 protected:
+	// - lock of the events : on_object_registering in m_lockable_container_enter, the others in m_lockable_container.
+	//   do not wait for another thread which locks this container in them (deadlock). the object is held (object_ptr) while they run.
 	virtual	result_code			on_object_registering (object_t* /*_pobject*/, const object_data_t& /*_object_data*/){ return eRESULT::SUCCESS;}
 	virtual	void				on_object_registered (object_t* /*_pobject*/, const object_data_t& /*_object_data*/) {}
 	virtual	uintptr_t			on_object_unregistering (object_t* /*_pobject*/) { return 0;}
 	virtual	void				on_object_unregistered (object_t* /*_pobject*/, uintptr_t /*_result*/){}
 
 private:
-	[[nodiscard]] size_t		_get_object_count() const noexcept { return m_container_object.size();}
-	[[nodiscard]] size_t		_get_object_room_count() const noexcept { return m_capacity- m_container_object.size();}
-	[[nodiscard]] size_t		_get_max_object_count() const noexcept { return m_capacity;}
+	[[nodiscard]] size_t		_get_object_count() const noexcept { return this->m_container_object.size();}
+	[[nodiscard]] size_t		_get_object_room_count() const noexcept { return this->m_capacity - this->m_container_object.size();}
+	[[nodiscard]] size_t		_get_max_object_count() const noexcept { return this->m_capacity;}
 			
-	[[nodiscard]] bool			_is_object_full() const noexcept { return m_container_object.size()>=m_capacity;}
-	[[nodiscard]] bool			_is_object_empty() const noexcept { return m_container_object.empty();}
-	[[nodiscard]] bool			_is_object_room() const noexcept { return m_container_object.size()<m_capacity;}
-	[[nodiscard]] bool			_is_object_exist() const noexcept { return !m_container_object.empty();}
+	[[nodiscard]] bool			_is_object_full() const noexcept { return this->m_container_object.size()>=this->m_capacity;}
+	[[nodiscard]] bool			_is_object_empty() const noexcept { return this->m_container_object.empty();}
+	[[nodiscard]] bool			_is_object_room() const noexcept { return this->m_container_object.size()<this->m_capacity;}
+	[[nodiscard]] bool			_is_object_exist() const noexcept { return !this->m_container_object.empty();}
+	[[nodiscard]] group::member_snapshot<object_t>* _build_object_snapshot() const;
 
 protected:
 			container_t			m_container_object;
-			size_t				m_capacity;
+			size_t				m_capacity = SIZE_MAX;
+
+	// - published object snapshot (changed in m_lockable_container, read without it)
+	mutable	group::member_snapshot_holder<object_t> m_object_snapshot;
 };
 
 template <class _TOBJECT, class _TOBJECT_DATA, class _TOBJECTBASE>
 result_code container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::register_object(object_t* _pobject,const object_data_t& _object_data)
 {
-	// check) _pobject가 nullptr이면 안됀다.
+	// check) _pobject가 nullptr이면 안 된다.
 	RETURN_IF(_pobject == nullptr, eRESULT::INVALID_ARGUMENT);
 	
-	scoped_lock(this->m_lockable_container_enter)
+	SCOPED_LOCK(this->m_lockable_container_enter)
 	{
 		// check) 꽉 찼는가?
 		RETURN_IF(is_full(), eRESULT::MEMBER_FULL);
@@ -107,42 +123,44 @@ result_code container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::register_obj
 		object_set_t temp_object_set(_pobject, _object_data);
 
 		// 1) 이미 존재하는지 확인한다.
-		scoped_lock(this->m_lockable_container)
+		SCOPED_LOCK(this->m_lockable_container)
 		{
-			for (auto& iter : m_container_object)
+			for (auto& iter : this->m_container_object)
 			{
 				// check) 이미 존재하면 끝낸다.
-				RETURN_IF(iter == temp_object_set, eRESULT::ALEADY_EXIST);
+				RETURN_IF(iter == temp_object_set, eRESULT::ALREADY_EXIST);
 			}
 		}
 
 		// 2) on_object_registering()함수를 호출한다.
-		auto result = on_object_registering(_pobject, _object_data);
+		auto result = this->on_object_registering(_pobject, _object_data);
 
 		// check) 입장 조건에 맞지 않는다!
 		RETURN_IF(result != eRESULT::SUCCESS, result);
 
-		scoped_lock(this->m_lockable_container)
+		SCOPED_LOCK(this->m_lockable_container)
 		{
+			typename group::member_snapshot_holder<object_t>::write_scope scope_write(this->m_object_snapshot);
+
 			// 3) 추가한다.
-			m_container_object.push_back(temp_object_set);
+			this->m_container_object.push_back(temp_object_set);
 
 			// 4) on_object_registered()함수를 호출한다.
 			try
 			{
-				on_object_registered(_pobject, _object_data);
+				this->on_object_registered(_pobject, _object_data);
 			}
 			// exception) rollback한다.
 			catch(std::exception& e)
 			{
 				// log)
-				LOG_FATAL << "(excp) exception completeion[on_object_registered]"sv;
+				LOG_FATAL << "(excp) exception completion[on_object_registered]"sv;
 
-				// - exceeption complete
+				// - exception complete
 				auto is_executed = throwable::execute_exception_handler(this, e, __FUNCTION__);
 
 				// - object를 제거한다.
-				m_container_object.pop_back();
+				this->m_container_object.pop_back();
 
 				// check) 
 				RETURN_IF(is_executed, eRESULT::EXCEPTION);
@@ -153,50 +171,61 @@ result_code container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::register_obj
 		}
 	}
 
-	// return) 성공이닷!!!
+	// return) 성공이다!!!
 	return	eRESULT::SUCCESS;
 }
 
 template <class _TOBJECT, class _TOBJECT_DATA, class _TOBJECTBASE>
 bool container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::unregister_object(object_t* _pobject) noexcept
 {
-	// check) _pobject가 nullptr이여서는 안됀다.
+	// check) _pobject가 nullptr이여서는 안 된다.
 	CGASSERT_ERROR(_pobject != nullptr);
-	
-	scoped_lock(this->m_lockable_container)
+
+	// check) 
+	RETURN_IF(_pobject == nullptr, false);
+
+	// declare) holds the object till return (erase releases the reference of the container)
+	object_ptr<object_t> pobject;
+
+	SCOPED_LOCK(this->m_lockable_container)
 	{
 		// declare) 
 		uintptr_t result = 0;
 
-		// 1) 먼저 이미 등록되어 있는지 찾는다.
-		auto iter_find = std::find(m_container_object.begin(), m_container_object.end(), object_set_t(_pobject));
+		// 1) 먼저 이미 등록되어 있는지 찾는다. (by the raw pointer. no object_ptr of _pobject before it is found)
+		auto iter_find = std::find_if(this->m_container_object.begin(), this->m_container_object.end(), [=](const object_set_t& _iter) { return _iter.pobject.get() == _pobject; });
 
 		// check) 찾지 못했으면 끝낸다.
-		RETURN_IF(iter_find== m_container_object.end(), false);
+		RETURN_IF(iter_find== this->m_container_object.end(), false);
+
+		typename group::member_snapshot_holder<object_t>::write_scope scope_write(this->m_object_snapshot);
+
+		// - holds the object till on_object_unregistered() and the return
+		pobject = iter_find->pobject;
 
 		// 2) on_object_unregistering()함수를 호출한다.
 		try
 		{
-			result = on_object_unregistering(_pobject);
+			result = on_object_unregistering(pobject.get());
 		}
 		// exception) 
-		catch(std::exception& /*_8e*/)
+		catch(...)
 		{
-			LOG_FATAL << "(prgr) occure exception in 'on_object_unregistering' function on object"sv;
+			LOG_FATAL << "(prgr) exception occurred in 'on_object_unregistering' function on object"sv;
 		}
 
 		// 3) 제거한다.
-		m_container_object.erase(iter_find);
+		this->m_container_object.erase(iter_find);
 
 		// 4) on_object_unregistered()함수를 호출한다.
 		try
 		{
-			on_object_unregistered(_pobject, result);
+			this->on_object_unregistered(pobject.get(), result);
 		}
 		// exception) 
-		catch(std::exception& /*_e*/)
+		catch(...)
 		{
-			LOG_FATAL << "(prgr) occure exception in 'on_object_unregistered' function on object"sv;
+			LOG_FATAL << "(prgr) exception occurred in 'on_object_unregistered' function on object"sv;
 		}
 	}
 
@@ -211,22 +240,22 @@ void container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::unregister_object_a
 	container_t vector_object;
 
 	// 1) 복사한다.
-	scoped_lock(this->m_lockable_container)
+	SCOPED_LOCK(this->m_lockable_container)
 	{
-		vector_object = m_container_object;
+		vector_object = this->m_container_object;
 	}
 
 	// 2) 모두 unregister한다.
 	for(auto& iter: vector_object)
 	{
-		unregister_object(iter.pobject);
+		this->unregister_object(iter.pobject);
 	}
 }
 
 template <class _TOBJECT, class _TOBJECT_DATA, class _TOBJECTBASE>
 void container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::capacity(size_t _max_count)
 {
-	scoped_lock(this->m_lockable_container)
+	SCOPED_LOCK(this->m_lockable_container)
 	{
 		// 1) 최대 Object수를 설정한다.
 		m_capacity = _max_count;
@@ -235,7 +264,7 @@ void container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::capacity(size_t _ma
 	#if defined(_MSC_VER)
 		__if_exists(container_t::reserve)
 		{
-			m_container_object.reserve((_max_count>256) ? 256:_max_count);
+			this->m_container_object.reserve((_max_count>256) ? 256:_max_count);
 		}
 	#endif
 	}
@@ -244,16 +273,13 @@ void container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::capacity(size_t _ma
 template <class _TOBJECT, class _TOBJECT_DATA, class _TOBJECTBASE>
 object_ptr<_TOBJECT> container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::find_object(const std::function<bool (object_t*)>& _pred) const noexcept
 {
-	scoped_lock(this->m_lockable_container)
-	{
-		for(auto& iter: m_container_object)
-		{
-			// 1) execute함수를 실행한다.
-			bool result = _pred(iter);
+	// 1) snapshot (_pred runs out of the lock)
+	auto snapshot = this->get_object_snapshot();
 
-			// check) 
-			RETURN_IF(result == true, iter);
-		}
+	for (auto* iter : snapshot)
+	{
+		if (_pred(iter) == true)
+			return object_ptr<object_t>(iter);
 	}
 
 	// return) 찾지 못했다..
@@ -263,21 +289,42 @@ object_ptr<_TOBJECT> container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::fin
 template <class _TOBJECT, class _TOBJECT_DATA, class _TOBJECTBASE>
 bool container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::for_each(const std::function<bool (object_t*)>& _function)
 {
-	scoped_lock(this->m_lockable_container)
-	{
-		for(auto& iter: m_container_object)
-		{
-			// 1) execute함수를 실행한다.
-			bool result = _function(*iter);
+	// 1) snapshot (_function runs out of the lock)
+	return this->for_each_snapshot(_function);
+}
 
-			// check) 
-			RETURN_IF(result == false, false);
-		}
+
+template <class _TOBJECT, class _TOBJECT_DATA, class _TOBJECTBASE>
+typename container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::object_snapshot_t container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::get_object_snapshot() const
+{
+	return this->m_object_snapshot.get(this->m_lockable_container, [this]() { return this->_build_object_snapshot(); });
+}
+
+template <class _TOBJECT, class _TOBJECT_DATA, class _TOBJECTBASE>
+bool container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::for_each_snapshot(const std::function<bool (object_t*)>& _function) const
+{
+	auto snapshot = this->get_object_snapshot();
+
+	for (auto* iter : snapshot)
+	{
+		if (_function(iter) == false)
+			return false;
 	}
 
-	// return) 성공...
 	return true;
 }
 
+template <class _TOBJECT, class _TOBJECT_DATA, class _TOBJECTBASE>
+group::member_snapshot<typename container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::object_t>* container::list<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::_build_object_snapshot() const
+{
+	auto psnapshot = group::member_snapshot<object_t>::create(this->m_container_object.size());
+
+	for (const auto& iter : this->m_container_object)
+	{
+		psnapshot->push_back(iter.pobject.get());
+	}
+
+	return psnapshot;
+}
 
 }

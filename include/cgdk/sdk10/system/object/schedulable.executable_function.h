@@ -48,7 +48,7 @@ public:
 
 public:
 			result_code			start() { return this->object::Nstartable::start();}
-			result_code			start(const START_PARAMETER& _parameter) { context temp{ buffer_view((char*)&_parameter, sizeof(START_PARAMETER)) }; return this->start(temp); }
+			result_code			start(const START_PARAMETER& _parameter) { context temp; temp = buffer_view((char*)&_parameter, sizeof(START_PARAMETER)); return this->start(temp); }
 	virtual	result_code			start(context& _context) override { return this->object::Nstartable::start(_context);}
 
 protected:
@@ -66,7 +66,7 @@ result_code schedulable::executable_function<TEXECUTE>::_process_initialize(cont
 	START_PARAMETER parameter;
 
 	// 1A) 
-	if (_context.type() == eCONTEXT_VALUE_TYPE::BUFFER_)
+	if (_context.type() == context::value_type_t::buffer_)
 	{
 		// - get parameter
 		parameter = _context.v.value_buffer.front<START_PARAMETER>();
@@ -100,7 +100,7 @@ result_code schedulable::executable_function<TEXECUTE>::_process_start(context& 
 	START_PARAMETER parameter;
 
 	// 1A)
-	if (_context.type() == eCONTEXT_VALUE_TYPE::BUFFER_)
+	if (_context.type() == context::value_type_t::buffer_)
 	{
 		// - get parameter
 		parameter = _context.v.value_buffer.front<START_PARAMETER>();

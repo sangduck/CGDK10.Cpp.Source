@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                               CGDK::buffer                                *
 //*                       ver 3.03 / release 2023.10.17                       *
@@ -32,6 +32,10 @@ protected:
 public:
 			size_type		size_ = 0;
 			element_t*		data_ = nullptr;
+
+public:
+	constexpr size_type		size() const noexcept { return size_; }
+	constexpr element_t*		data() const noexcept { return data_; }
 };
 
 
@@ -46,7 +50,7 @@ using mutable_buffer = buffer_base<char>;
 
 
 //-----------------------------------------------------------------------------
-// class defintions
+// class definitions
 //-----------------------------------------------------------------------------
 // 1) memory
 class Imemory;

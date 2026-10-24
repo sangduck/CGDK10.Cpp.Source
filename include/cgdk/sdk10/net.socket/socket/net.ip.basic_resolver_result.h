@@ -24,7 +24,7 @@ namespace CGDK::net::ip
 template<class InternetProtocol>
 class basic_resolver_results
 {
-// defintions)
+// definitions)
 public:
 	using protocol_type		 = InternetProtocol;
 	using endpoint_type		 = typename protocol_type::endpoint;
@@ -41,9 +41,8 @@ public:
 public:
 	// [21.15.1] construct / copy / destroy:
 			basic_resolver_results() noexcept {}
-			basic_resolver_results(const basic_resolver_results& _rhs) noexcept {}
+			basic_resolver_results(const basic_resolver_results& _rhs) noexcept : m_vector_result(_rhs.m_vector_result) {}
 			basic_resolver_results(basic_resolver_results&& _rhs) noexcept : m_vector_result{std::move(_rhs.m_vector_result)}  {}
-			template<class T>
 			basic_resolver_results(container_type&& _rhs) noexcept : m_vector_result(std::move(_rhs)) {}
 			~basic_resolver_results() noexcept {}
 // public) 
@@ -60,7 +59,7 @@ public:
 	[[nodiscard]] const_iterator cend() const noexcept { return m_vector_result.cend(); }
 
 	// [21.15.5] swap
-			void				swap(basic_resolver_results& that) noexcept {}
+			void				swap(basic_resolver_results& that) noexcept { m_vector_result.swap(that.m_vector_result); }
 
 	// [21.15.2]
 			basic_resolver_results&	operator = (const basic_resolver_results& _rhs) { m_vector_result = _rhs.m_vector_result; return *this; }
@@ -69,7 +68,7 @@ public:
 
 	// [extra]
 	[[nodiscard]] const_reference at(size_t _index) const	{ return m_vector_result.at(_index);}
-	[[nodiscard]] const_iterator operator [] (size_t _index) { if (_index >= m_vector_result.size()) throw std::out_of_range(); return m_vector_result.at(_index); }
+	[[nodiscard]] const_reference operator [] (size_t _index) const { return m_vector_result.at(_index); }
 
 protected:
 			container_type		m_vector_result;
@@ -82,7 +81,7 @@ public:
 template<class InternetProtocol>
 [[nodiscard]] bool operator==(const basic_resolver_results<InternetProtocol>& _lhs, const basic_resolver_results<InternetProtocol>& _rhs)
 {
-	return _lhs.m_vector_result = _rhs.m_vector_result;
+	return _lhs.m_vector_result == _rhs.m_vector_result;
 }
 
 template<class InternetProtocol>

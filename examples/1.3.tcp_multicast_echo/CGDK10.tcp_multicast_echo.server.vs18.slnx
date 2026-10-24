@@ -1,0 +1,9 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="server\console\CGDK10.tcp_multicast_echo.server.console.vs18.vcxproj" Id="218ea6a6-833a-404a-91fd-c14cd3afa6ae" />
+  <Project Path="server\console.asio\CGDK10.tcp_multicast_echo.server.asio.console.vs18.vcxproj" Id="6947ca3f-ba21-4747-9301-26f1ee9e1649" />
+  <Project Path="server\console.asio.ex\CGDK10.tcp_multicast_echo.server.asio.ex.console.vs18.vcxproj" Id="0f220b3d-340d-472b-8ca6-1d2070d69e61" />
+  <Project Path="server\console.gather\CGDK10.tcp_multicast_echo.server.console.gather.vs18.vcxproj" Id="1c4ed19b-d636-4fd6-a7c0-3ecb173f1aff" />
+</Solution>

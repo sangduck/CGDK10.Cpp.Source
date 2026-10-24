@@ -1,4 +1,4 @@
-﻿#include "asio.h"
+#include "asio.h"
 
 
 asio::Nconnective::Nconnective()

@@ -16,20 +16,20 @@
 //	m_buf_processing(),
 //	m_bytes_required(0),
 //	m_max_received_bytes_queued(DEFAULT_BYTES_MAX_MESSAGE_RECEIVE_QUEUE),
-//	m_minimum_mesage_buffer_size(g_bytes_message_buffer_default_min_size),
+//	m_minimum_message_buffer_size(g_bytes_message_buffer_default_min_size),
 //	m_maximum_message_buffer_size(g_bytes_message_buffer_default_max_size)
 //{
 //	// check) 최소 MINIMUM_REMAINED_RECEIVE_BUFFER보다는 크거나 같아야 한다.
-//	CGASSERT_ERROR(m_minimum_mesage_buffer_size >= MINIMUM_REMAINED_RECEIVE_BUFFER);
+//	CGASSERT_ERROR(m_minimum_message_buffer_size >= MINIMUM_REMAINED_RECEIVE_BUFFER);
 //
 //	// check) MAX_TCP_MESSAGE_SIZE보다는 같거나 작아야 한다.
 //	CGASSERT_ERROR(m_maximum_message_buffer_size <= MAX_TCP_MESSAGE_SIZE);
 ////#if defined(_WINSOCK2API_)
-////	// 1) executable Receiving 객첼를 생성한다.
+////	// 1) executable Receiving 객체를 생성한다.
 ////	m_pexecutable_receiving = make_object<executable_receiving>();
 ////	m_pexecutable_receiving->m_preceivable = this;
 ////
-////	// 2) executable Received 객첼를 생성한다.
+////	// 2) executable Received 객체를 생성한다.
 ////	m_pexecutable_received = make_object<executable_received>();
 ////	m_pexecutable_received->m_preceivable = this;
 ////#endif
@@ -46,7 +46,7 @@
 //std::size_t net::io::receivable::Nstream_queue::minimum_message_buffer_size(std::size_t _size) noexcept
 //{
 //	// 1) 기존의 Min receive buffer 크기를 저장해 놓는다.
-//	std::size_t	old = m_minimum_mesage_buffer_size;
+//	std::size_t	old = m_minimum_message_buffer_size;
 //
 //	// 2) 최하크기 이하일 경우 최하크기로 맞춘다.
 //	SATURATE_MIN(_size, MINIMUM_REMAINED_RECEIVE_BUFFER)
@@ -55,12 +55,12 @@
 //	RETURN_IF(old == _size, old);
 //
 //	// 3) 값을 변경한다.
-//	m_minimum_mesage_buffer_size = _size;
+//	m_minimum_message_buffer_size = _size;
 //
 //	// 4) 
-//	if (m_minimum_mesage_buffer_size > m_maximum_message_buffer_size)
+//	if (m_minimum_message_buffer_size > m_maximum_message_buffer_size)
 //	{
-//		m_maximum_message_buffer_size = m_minimum_mesage_buffer_size;
+//		m_maximum_message_buffer_size = m_minimum_message_buffer_size;
 //	}
 //
 //	// return) 
@@ -69,7 +69,7 @@
 //
 //std::size_t net::io::receivable::Nstream_queue::minimum_message_buffer_size() noexcept
 //{
-//	return	m_minimum_mesage_buffer_size;
+//	return	m_minimum_message_buffer_size;
 //}
 //
 //std::size_t net::io::receivable::Nstream_queue::maximum_message_buffer_size(std::size_t _size) noexcept
@@ -84,9 +84,9 @@
 //	m_maximum_message_buffer_size = _size;
 //
 //	// 3) 
-//	if (m_minimum_mesage_buffer_size > m_maximum_message_buffer_size)
+//	if (m_minimum_message_buffer_size > m_maximum_message_buffer_size)
 //	{
-//		m_minimum_mesage_buffer_size = m_maximum_message_buffer_size;
+//		m_minimum_message_buffer_size = m_maximum_message_buffer_size;
 //	}
 //
 //	// return) 
@@ -107,7 +107,7 @@
 //	m_buffer_receiving = alloc_shared_buffer(size_alloc) ^ size_alloc;
 //
 //	// 3) Received Queue를 clear한다.
-//	scoped_lock(m_lockable_queue_received)
+//	SCOPED_LOCK(m_lockable_queue_received)
 //	{
 //		m_queue_received.clear();
 //		m_byte_queued = 0;
@@ -123,7 +123,7 @@
 //	// 1) io_context를 얻는다.
 //	auto pio_context = io_context();
 //
-//	// check) io_context가 없으면 안됀다!
+//	// check) io_context가 없으면 안 된다!
 //	CGASSERT_ERROR(pio_context.exist()); 
 //
 //	// 2) add_ref를 해준다. 이것은 execute 처리 된이후에 release될 것이다.
@@ -248,8 +248,8 @@
 //		//-----------------------------------------------------------------
 //		// exception) 보통 여기까지 진행되면 막장이다. 해당 socket을 끊고 끝낸다.
 //		//
-//		// * on_receive()는 User Definine함수이므로 이 함수 수행중 Exception발생가능성이 있다.
-//		// * process_packet() 역시 수행중 Exception이 발생가능하다.
+//		// * on_receive()는 User Define함수이므로 이 함수 수행 중 Exception발생가능성이 있다.
+//		// * process_packet() 역시 수행 중 Exception이 발생가능하다.
 //		//-----------------------------------------------------------------
 //		// trace) 
 //		LOG_DEBUG << "(excp) CGDK.net.socket: exception complete " << __CGFUNCTION__;
@@ -320,7 +320,7 @@
 ////process_on_receive(buffer_receive^ bytes_transfered, address_peer);
 ////
 ////// 3) Process message를 수행한다.
-//////    - 여기서 Return해 오는 값은 다음 message를 받기위해 대음에 필요로 하는 메모리 용량이다.
+//////    - 여기서 Return해 오는 값은 다음 message를 받기 위해 다음에 필요로 하는 메모리 용량이다.
 //////    - 주어지는 &buffer_receive에 진행된 Memory과 남은 Size등이 되돌아 온다.
 //////      따라서 buffer_receive은 받은 데이터 그대로 사용하면 된다.
 //////    - Exception이 발생가능하다.
@@ -328,7 +328,7 @@
 ////
 //
 ////// check) 필요 message size가 최대 message buffer size보다 크면 exception을 던진다.
-////THROW_IF(required_bytes > m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH), LOG_ERROR << log_level_t::important() << "(excp) CGDK.net.socket: message size of to BIG. required size:" << required_bytes << "bytes/max_buffer_size:" << m_maximum_message_buffer_size << "bytes, ip:" << remote_endpoint().to_string<char>());
+////THROW_IF(required_bytes > m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH), LOG_ERROR << log_level_t::important() << "(excp) CGDK.net.socket: message size too BIG. required size:" << required_bytes << "bytes/max_buffer_size:" << m_maximum_message_buffer_size << "bytes, ip:" << remote_endpoint().to_string());
 ////
 ////// 4) 처리하고 남은 Bytes들을 저장해 놓는다.
 ////if (buffer_receive.size() != 0)
@@ -383,7 +383,7 @@
 //void net::io::receivable::Nstream_queue::queue_close_message()
 //{
 //	//-----------------------------------------------------------------
-//	// 1. 접속 종료시 처리
+//	// 1. 접속 종료 시 처리
 //	//    - 접속이 종료되었을 때 buffer(0,0,0)을 Queuing하고 끝낸다.
 //	//    - 버퍼를 받아 처리하는 쪽에서 만약 buffer의 size_이 0이면
 //	//      접속종료처리를 하도록 처리된다.
@@ -391,7 +391,7 @@
 //	// declare) 
 //	bool bPost = false;
 //
-//	scoped_lock(m_lockable_queue_received)
+//	SCOPED_LOCK(m_lockable_queue_received)
 //	{
 //		// 1) Empty엿으면 새로 PostReceive를 걸어야 한다.
 //		bPost = m_queue_received.empty();
@@ -424,7 +424,7 @@
 //	// declare) 
 //	bool bPost = false;
 //
-//	scoped_lock(m_lockable_queue_received)
+//	SCOPED_LOCK(m_lockable_queue_received)
 //	{
 //		// 1) bPrePost인지 확인한다.(Empty라면 새로 Post해야 한다.)
 //		bPost = m_queue_received.empty();
@@ -508,12 +508,12 @@
 //			CGASSERT_ERROR(bytes_required <= m_maximum_message_buffer_size);
 //
 //			// check) 요구한 message의 크기가 최대 message buffer 크기보다 크면 Exception을 던진다.
-//			THROW_IF(bytes_required > m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long lengnth"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
+//			THROW_IF(bytes_required > m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long length"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
 //
 //			// - m_bytes_required를 저장한다.
 //			m_bytes_required = bytes_required;
 //		}
-//		// Case 5-2) 기본 buffer가 완전히 빈경우.
+//		// Case 5-2) 기본 buffer가 완전히 빈 경우.
 //		else if(buf_processing.size() == 0)
 //		{
 //			// - 그대로 덥어 쓴다.
@@ -529,7 +529,7 @@
 //			CGASSERT_ERROR(bytes_required <= m_maximum_message_buffer_size);
 //
 //			// check) 요구한 message의 크기가 최대 message buffer 크기보다 크면 Exception을 던진다.
-//			THROW_IF(bytes_required > m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long lengnth"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
+//			THROW_IF(bytes_required > m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long length"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
 //
 //			// - m_bytes_required를 저장한다.
 //			m_bytes_required = bytes_required;
@@ -548,7 +548,7 @@
 //				// check) 
 //				CGASSERT_ERROR(m_bytes_required>buf_processing.size());
 //
-//				// - 더 복사해 넣어야할 량을 계산한다.
+//				// - 더 복사해 넣어야 할 량을 계산한다.
 //				auto more_needed = m_bytes_required- buf_processing.size();
 //
 //				// - 나머지 데이터는 새로 받은 데이터에서 복사해 넣는다.
@@ -572,7 +572,7 @@
 //				CGASSERT_ERROR(bytes_required <= m_maximum_message_buffer_size);
 //
 //				// check) 요구한 message의 크기가 최대 message buffer 크기보다 크면 Exception을 던진다.
-//				THROW_IF(bytes_required > m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long lengnth"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
+//				THROW_IF(bytes_required > m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long length"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
 //
 //				// - m_bytes_required를 저장한다.
 //				m_bytes_required = bytes_required;
@@ -599,7 +599,7 @@
 //					CGASSERT_ERROR(bytes_required <= m_maximum_message_buffer_size);
 //
 //					// check) 요구한 message의 크기가 최대 message buffer 크기보다 크면 Exception을 던진다.
-//					THROW_IF(bytes_required > m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long lengnth"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
+//					THROW_IF(bytes_required > m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long length"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
 //
 //					// - m_bytes_required를 저장한다.
 //					m_bytes_required = bytes_required;
@@ -668,7 +668,7 @@
 //	bool bPost = false;
 //
 //	// 6) 비어 있는지 확인한다.
-//	scoped_lock(m_lockable_queue_received)
+//	SCOPED_LOCK(m_lockable_queue_received)
 //	{
 //		// - Pop front한다.
 //		m_queue_received.pop_front();

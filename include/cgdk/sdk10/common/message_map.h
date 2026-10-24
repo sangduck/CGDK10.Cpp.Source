@@ -95,10 +95,10 @@
 #define	DECLARE_CGMESSAGE_MAP	CGDK::result_code __execute_message(sMESSAGE& _msg);
 
 // 2) declare message map
-#define	DEFINE_PROCESS_MESSAGE			virtual	CGDK::result_code process_message(sMESSAGE& _msg) override	{ EXECUTE_CGMESSAGE_MAP(_msg); return eRESULT::BYPASS;}
-#define	DEFINE_PROCESS_MESSAGE_BLOCK	virtual	CGDK::result_code process_message(sMESSAGE& _msg) override	{ EXECUTE_CGMESSAGE_MAP(_msg); return eRESULT::DONE;}
-#define	DEFINE_ON_MESSAGE				virtual	CGDK::result_code on_message(sMESSAGE& _msg) override		{ EXECUTE_CGMESSAGE_MAP(_msg); return eRESULT::BYPASS;}
-#define	DEFINE_ON_MESSAGE_BLOCK			virtual	CGDK::result_code on_message(sMESSAGE& _msg) override		{ EXECUTE_CGMESSAGE_MAP(_msg); return eRESULT::DONE;}
+#define	DEFINE_PROCESS_MESSAGE			virtual	CGDK::result_code process_message(sMESSAGE& _msg) override	{ EXECUTE_CGMESSAGE_MAP(_msg); return result_code(eRESULT::BYPASS);}
+#define	DEFINE_PROCESS_MESSAGE_BLOCK	virtual	CGDK::result_code process_message(sMESSAGE& _msg) override	{ EXECUTE_CGMESSAGE_MAP(_msg); return result_code(eRESULT::DONE);}
+#define	DEFINE_ON_MESSAGE				virtual	CGDK::result_code on_message(sMESSAGE& _msg) override		{ EXECUTE_CGMESSAGE_MAP(_msg); return result_code(eRESULT::BYPASS);}
+#define	DEFINE_ON_MESSAGE_BLOCK			virtual	CGDK::result_code on_message(sMESSAGE& _msg) override		{ EXECUTE_CGMESSAGE_MAP(_msg); return result_code(eRESULT::DONE);}
 
 // 3) message mask
 const CGDK::message_t eMESSAGE_MASK = 0x00ffffff;
@@ -108,15 +108,15 @@ const CGDK::message_t eMESSAGE_MASK = 0x00ffffff;
 {																\
 	auto _mm_result = parent::on_message(_msg);					\
 																\
-	if (_mm_result != eRESULT::BYPASS)							\
-		return result;											\
+	if (_mm_result != result_code(eRESULT::BYPASS))				\
+		return _mm_result;											\
 }
 
 #define	EXECUTE_CGMESSAGE_MAP(msg)								\
 {																\
 	auto xcg_result = __execute_message(msg);					\
 																\
-	if(xcg_result != eRESULT::BYPASS)							\
+	if(xcg_result != result_code(eRESULT::BYPASS))				\
 		return xcg_result;										\
 }
 
@@ -125,11 +125,11 @@ const CGDK::message_t eMESSAGE_MASK = 0x00ffffff;
 {																\
 	auto xcg_result = class_type::__execute_message(msg);		\
 																\
-	if(xcg_result != eRESULT::BYPASS)							\
+	if(xcg_result != result_code(eRESULT::BYPASS))				\
 		return xcg_result;										\
 }
 
-// 6) begin mssage map head
+// 6) begin message map head
 #define	CGMESSAGE_MAP_HEAD										\
 	{															\
 		result_code _mm_result;									\
@@ -137,7 +137,7 @@ const CGDK::message_t eMESSAGE_MASK = 0x00ffffff;
 		{														\
 		default:												\
 				{												\
-					_mm_result = eRESULT::BYPASS;				\
+					_mm_result = result_code(eRESULT::BYPASS);	\
 					break;
 
 #define	CGMESSAGE_MAP_HEAD_MASK(mask)							\
@@ -147,7 +147,7 @@ const CGDK::message_t eMESSAGE_MASK = 0x00ffffff;
 		{														\
 		default:												\
 				{												\
-					_mm_result = eRESULT::BYPASS;				\
+					_mm_result = result_code(eRESULT::BYPASS);	\
 					break;
 
 
@@ -210,7 +210,7 @@ const CGDK::message_t eMESSAGE_MASK = 0x00ffffff;
 					{											\
 					default:									\
 							{									\
-								_mm_result = eRESULT::BYPASS;	\
+								_mm_result = result_code(eRESULT::BYPASS); \
 								break;
 
 // body) execute Message Function
@@ -228,7 +228,7 @@ const CGDK::message_t eMESSAGE_MASK = 0x00ffffff;
 							auto temp_buffer = alloc_shared_buffer(sizeof(return_type));\
 							temp_buffer.append<return_type>(function());\
 							((sMESSAGE_BUFFER&)_msg).buf_message = temp_buffer;\
-							_mm_result = eRESULT::DONE;			\
+							_mm_result = result_code(eRESULT::DONE);\
 							break;
 
 #define	ON_CGMETHOD(message, function)							\
@@ -236,7 +236,7 @@ const CGDK::message_t eMESSAGE_MASK = 0x00ffffff;
 				case	static_cast<CGDK::message_t>(message):	\
 						{										\
 							function();							\
-							_mm_result = eRESULT::DONE;			\
+							_mm_result = result_code(eRESULT::DONE);\
 							break;
 
 #define	END_SUB_CGMESSAGE_MAP									\
@@ -258,20 +258,20 @@ const CGDK::message_t eMESSAGE_MASK = 0x00ffffff;
 #define	END_NESTED_CGMESSAGE_MAP								\
 				};												\
 		};														\
-		if(_mm_result != eRESULT::BYPASS)						\
+		if(_mm_result != result_code(eRESULT::BYPASS))			\
 			return _mm_result;									\
 	}
 
 // attribute¿ë Message Map
-#define	CGMESSAGE_TYPE_ATTRIBUTE								CGMESSAGE_TYPE_SUB(static_cast<CGDK::message_t>(CGMESSAGE::ATTRIBUTE), ((const sMESSAGE_BUFFER&)_msg).data()fer.front<CGDK::message_t>(4) & CGMESSAGE::SYSTEM::MASK)
+#define	CGMESSAGE_TYPE_ATTRIBUTE								CGMESSAGE_TYPE_SUB(static_cast<CGDK::message_t>(CGMESSAGE::ATTRIBUTE), ((const sMESSAGE_BUFFER&)_msg).buf_message.front<CGDK::message_t>(4) & CGMESSAGE::SYSTEM::MASK)
 
 
 //-----------------------------------------------------------------------------
 // sub-message type
 //-----------------------------------------------------------------------------
 // 1) buffer message
-#define	CGMESSAGE_TYPE_SUB_BUFFER								CGMESSAGE_TYPE_SUB(static_cast<CGDK::message_t>(CGMESSAGE::BUFFER), ((const sMESSAGE_BUFFER&)_msg).data()fer.front<CGDK::message_t>(4) & CGMESSAGE::SYSTEM::MASK)
-#define	CGMESSAGE_TYPE_SUB_BUFFER_MESSAGE(msg)					CGMESSAGE_TYPE_SUB(msg, ((const sMESSAGE_BUFFER&)_msg).data()fer.front<CGDK::message_t>(4) & CGMESSAGE::SYSTEM::MASK)
+#define	CGMESSAGE_TYPE_SUB_BUFFER								CGMESSAGE_TYPE_SUB(static_cast<CGDK::message_t>(CGMESSAGE::BUFFER), ((const sMESSAGE_BUFFER&)_msg).buf_message.front<CGDK::message_t>(4) & CGMESSAGE::SYSTEM::MASK)
+#define	CGMESSAGE_TYPE_SUB_BUFFER_MESSAGE(msg)					CGMESSAGE_TYPE_SUB(msg, ((const sMESSAGE_BUFFER&)_msg).buf_message.front<CGDK::message_t>(4) & CGMESSAGE::SYSTEM::MASK)
 
 // 2) declare message map
 #define	DECLARE_CGMESSAGE_MAP_SUB(name)	CGDK::result_code __execute_message##name(sMESSAGE& _msg);
@@ -281,7 +281,7 @@ const CGDK::message_t eMESSAGE_MASK = 0x00ffffff;
 {																\
 	auto xcg_result = __execute_message##name(msg);				\
 																\
-	if(xcg_result != eRESSULT::BYPASS)							\
+	if(xcg_result != result_code(eRESULT::BYPASS))				\
 		return xcg_result;										\
 }
 
@@ -293,7 +293,7 @@ const CGDK::message_t eMESSAGE_MASK = 0x00ffffff;
 		{														\
 		default:												\
 				{												\
-					return eRESSULT::BYPASS;
+					return eRESULT::BYPASS;
 
 // head) execute message function
 #define	BEGIN_CGMESSAGE_MAP_SUB_MASK(class_name, name)			\
@@ -303,4 +303,4 @@ const CGDK::message_t eMESSAGE_MASK = 0x00ffffff;
 		{														\
 		default:												\
 				{												\
-					return eRESSULT::BYPASS;
+					return result_code(eRESULT::BYPASS);

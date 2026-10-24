@@ -1,11 +1,11 @@
-ï»¿
-// chatting_server_dlg.h: í—¤ë” íŒŒì¼
+
+// chatting_server_dlg.h: Çì´õ ÆÄÀÏ
 //
 
 #pragma once
 
 
-// chatting_server_dlg ëŒ€í™” ìƒì
+// chatting_server_dlg ´ëÈ­ »óÀÚ
 class chatting_server_dlg : 
 	public						CDialogEx,
 	virtual public				Imessageable
@@ -14,7 +14,7 @@ public:
 			chatting_server_dlg(CWnd* pParent = nullptr);
 
 protected:
-	virtual void				DoDataExchange(CDataExchange* pDX);	// DDX/DDV ì§€ì›ì…ë‹ˆë‹¤.
+	virtual void				DoDataExchange(CDataExchange* pDX);	// DDX/DDV Áö¿øÀÔ´Ï´Ù.
 	virtual BOOL				OnInitDialog();
 
 public:
@@ -48,7 +48,7 @@ public:
 	afx_msg LRESULT				OnNotifymessage_Update(WPARAM _wparam, LPARAM _lparam);
 
 private:
-	// 1) messageë¥¼ ë°›ì•˜ì„ ë•Œ ë¶ˆë ¤ì§€ëŠ” í•¨ìˆ˜.
+	// 1) message¸¦ ¹Ş¾ÒÀ» ¶§ ºÒ·ÁÁö´Â ÇÔ¼ö.
 	virtual	result_code			process_message(sMESSAGE& _msg) override;
 
 	// 2) message
@@ -71,7 +71,8 @@ protected:
 
 	// 2) Users & Channels
 			CChild_acceptor_control			m_child_acceptor_user;
-			lockable<CListCtrl>				m_list_channel;
+			lock_object						m_lockable_list_channel;
+			CListCtrl						m_list_channel;
 
 	// 3) Traffic
 			CChild_traffic_info				m_child_traffic_info;
@@ -90,7 +91,7 @@ protected:
 				uint32_t					message;
 				object_ptr<channel::Igroup>	psource;
 			};
-			lockable<>						m_lockable_vector_event;
+			lock_object						m_lockable_vector_event;
 			std::vector<EVENT_NOTIFY>		m_vector_event_queuing;
 			std::vector<EVENT_NOTIFY>		m_vector_event_processing;
 

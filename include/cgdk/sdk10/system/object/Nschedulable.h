@@ -39,11 +39,19 @@ public:
 // public)
 public:
 	[[nodiscard]] auto			execute_interval() const noexcept { return this->m_tick_diff_execute; }
-			void				execute_interval(chrono::tick::duration _tick_interval)	{ this->m_tick_diff_execute=_tick_interval; this->m_tick_next = chrono::tick::now()+m_tick_diff_execute;}
+			void				execute_interval(chrono::tick::duration _tick_interval);
+
+	//! @brief policy when the next execution time has already passed (see eSCHEDULE_OVERRUN)
+	[[nodiscard]] auto			overrun_policy() const noexcept { return this->m_overrun_policy; }
+			void				overrun_policy(eSCHEDULE_OVERRUN _overrun_policy) noexcept { this->m_overrun_policy = _overrun_policy; }
 
 // framework)
 protected:
+	//! @brief advance 'next tick' by the interval (applying the overrun policy)
+			void				process_advance_next_tick() noexcept;
+
 			chrono::tick::duration	m_tick_diff_execute = 1s;
+			eSCHEDULE_OVERRUN	m_overrun_policy = eSCHEDULE_OVERRUN::DEFAULT;
 };
 
 

@@ -158,7 +158,7 @@
 // ----------------------------------------------------------------------------
 // 제어문
 // ----------------------------------------------------------------------------
-// 1) 제어문 Serise
+// 1) 제어문 Series
 #define	CGD_CONTINUE_IF(equation)							if(equation)			{ continue;}
 #define	CGD_BREAK_IF(equation)								if(equation)			{ break;}
 #define	CGD_RETURN_IF(equation, ...)						if(equation)			{ return __VA_ARGS__;}

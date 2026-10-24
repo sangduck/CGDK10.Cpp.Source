@@ -105,7 +105,7 @@ public:
 protected:
 			SC_HANDLE			m_hService;
 			PDH_HCOUNTER		m_hCounter;
-			object_ptr<manager_perfornamce_query>	m_pmanager;
+			object_ptr<manager_performance_query>	m_pmanager;
 #elif defined(__linux__)
 #else
 #endif

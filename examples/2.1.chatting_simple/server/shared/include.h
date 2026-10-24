@@ -28,7 +28,6 @@
 
 using namespace CGDK;
 
-
 //-----------------------------------------------------------------
 // 2. 
 //-----------------------------------------------------------------
@@ -53,8 +52,11 @@ namespace user
 //-----------------------------------------------------------------
 // 3. definitionss
 //-----------------------------------------------------------------
-const uint32_t	CGNOTIFY_SERVER_UPDATE	 = (eMESSAGE::USER | 1);
+// 1) Json setting file
+#define JSON_SETTING_FILE	"../chatting_server/chatting_server_setting.json"
 
+// 2) message
+const uint32_t	CGNOTIFY_SERVER_UPDATE	 = (eMESSAGE::USER | 1);
 const uint32_t	CGNOTIFY_CHANNEL_ADD	 = (eMESSAGE::USER | 2);
 const uint32_t	CGNOTIFY_CHANNEL_REMOVE	 = (eMESSAGE::USER | 3);
 const uint32_t	CGNOTIFY_CHANNEL_UPDATE	 = (eMESSAGE::USER | 4);

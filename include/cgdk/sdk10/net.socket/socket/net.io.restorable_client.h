@@ -30,7 +30,7 @@ namespace CGDK
 //
 //    2) 주요 기능은...
 //
-//       - 접속이 상대에 의해 종료되었을 경우 재접속시 복원 가능하도록 한다.
+//       - 접속이 상대에 의해 종료되었을 경우 재접속 시 복원 가능하도록 한다.
 //       - 다만 주의할 점은 접속이 종료된 socket으로 다시 재접속 요청해야
 //         복원 기능이 작동된다.
 //
@@ -47,7 +47,7 @@ namespace CGDK
 //         접속이 상대에 의해 끊김 처리 이후에 호출된다.
 //
 //       - on_restoring()
-//         재접속후 복원 과정이 시작될 때 호출된다.
+//         재접속 후 복원 과정이 시작될 때 호출된다.
 //         만약 처음 접속시나 복원 정보가 유실되어 reset된 경우 호출되지 않는다.
 //
 //       - on_restore()
@@ -85,7 +85,7 @@ namespace CGDK
 //       - on_connecting()함수가 호출 된 이후 접속이 종료되더라도 on_disconnect()
 //         함수는 호출되지 않는다.
 //
-//       - on_restoring()함수가 호출되다 Exception이 발생되거나 더이상 처리하지
+//       - on_restoring()함수가 호출되다 Exception이 발생되거나 더 이상 처리하지
 //         못할 경우 바로 on_disconnect()가 호출된다.
 //       - on_restore()함수가 호출되던 중 Exception이 발생하게 되었을 때도
 //         on_disconnect()가 호출된다 따라서 on_restore()함수중 오류가 발생되면
@@ -120,8 +120,8 @@ protected:
 	virtual	void				process_on_restore ();
 	virtual	bool				process_on_suspend (uint64_t _disconnect_reason);
 
-	virtual	void				process_request_io_restore	(result_code _result, SEQUENCE_ID _ack_received) override;
-	virtual	void				process_response_io_restore	(result_code _result, SEQUENCE_ID _ack_received) override;
+	virtual	void				process_request_io_restore	(result_code _result, sequence_id_t _ack_received) override;
+	virtual	void				process_response_io_restore	(result_code _result, sequence_id_t _ack_received) override;
 	virtual	void				process_complete_io_restore	(result_code _result) override;
 };
 

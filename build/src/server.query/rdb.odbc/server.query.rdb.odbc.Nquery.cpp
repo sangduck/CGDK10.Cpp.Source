@@ -14,12 +14,12 @@ CGDK::query::rdb::odbc::Nquery::~Nquery() noexcept
 
 void CGDK::query::rdb::odbc::Nquery::prepare_query(const std::string_view _command)
 {
-	scoped_lock(this->m_lockable_state_query)
+	SCOPED_LOCK(this->m_lockable_state_query)
 	{
 		// check) 
 		CGASSERT_ERROR(this->m_state_query == eOBJECT_STATE::READY);
 
-		// check) must be preapre
+		// check) must be prepare
 		THROW_IF(this->m_state_query != eOBJECT_STATE::READY, throwable::failure(eRESULT::NOT_READY));
 
 		// declare) 
@@ -38,8 +38,55 @@ void CGDK::query::rdb::odbc::Nquery::prepare_query(const std::string_view _comma
 		// check) throw exception if handle_stmt is 0
 		THROW_IF(handle_stmt == nullptr, throwable::failure(eRESULT::NOT_READY));
 
+		// check) the same SQL text is already prepared on this stmt handle -> skip SQLPrepare (soft parsing)
+		//        (close_query() keeps the stmt handle and its prepared statement. SQL_CLOSE/SQL_RESET_PARAMS do not drop it)
+		if (this->m_prepared_query_string.empty() == false && this->m_prepared_query_string == _command)
+		{
+			// - restore the param infos (cleared by close_query())
+			this->m_vector_params = this->m_vector_params_prepared;
+
+			// - set state query
+			this->m_state_query = eOBJECT_STATE::REQUESTING;
+
+			// return) prepared already
+			return;
+		}
+
+		// check) the session caches a prepared statement for the same SQL text -> swap the stmt handle (soft parsing)
+		if (this->m_prepared_query_string.empty() == true)
+		{
+			// declare)
+			SQLHSTMT handle_cached = nullptr;
+			std::vector<sPARAM> vector_params_cached;
+
+			if (this->m_psession->checkout_prepared_stmt(_command, handle_cached, vector_params_cached))
+			{
+				// - free the own (not prepared) stmt handle and take the cached one
+				::SQLFreeHandle(SQL_HANDLE_STMT, this->m_handle_stmt);
+				this->m_handle_stmt = handle_cached;
+
+				// - restore the prepared infos
+				this->m_prepared_query_string = _command;
+				this->m_vector_params_prepared = vector_params_cached;
+				this->m_vector_params = std::move(vector_params_cached);
+
+				// - set state query
+				this->m_state_query = eOBJECT_STATE::REQUESTING;
+
+				// return) prepared already (checked out from the session cache)
+				return;
+			}
+		}
+
+		// - this stmt handle is being prepared with a new SQL text now
+		this->m_prepared_query_string.clear();
+		this->m_vector_params_prepared.clear();
+
 		// statistics) 
 		pquerier->statistics_on_query_try();
+
+		// notify) thread block
+		scoped_thread_block thread_block;
 
 		// 1) prepare query
 		auto result = this->_prepare_query(_command, handle_stmt);
@@ -60,7 +107,7 @@ void CGDK::query::rdb::odbc::Nquery::prepare_query(const std::string_view _comma
 					// - trace retry count
 					if (retry > 0)
 					{
-						e.add_description(NFMT::format("- {} failed and re-tries", retry));
+						e.add_description(CGDK::stream_string("- ", retry, " failed and re-tries"));
 					}
 
 					// statistics) 
@@ -77,7 +124,7 @@ void CGDK::query::rdb::odbc::Nquery::prepare_query(const std::string_view _comma
 				++retry;
 
 				// - regen session
-				regen_session(this->m_psession);
+				this->_process_regen_session();
 
 				// - get new stmt handle
 				handle_stmt = this->m_handle_stmt;
@@ -159,6 +206,10 @@ void CGDK::query::rdb::odbc::Nquery::prepare_query(const std::string_view _comma
 			}
 		}
 
+		// 4-2) keep the prepared SQL text and the param infos (to reuse the prepared statement. soft parsing)
+		this->m_prepared_query_string = _command;
+		this->m_vector_params_prepared = this->m_vector_params;
+
 		// 5) set state query
 		this->m_state_query = eOBJECT_STATE::REQUESTING;
 	}
@@ -175,7 +226,7 @@ SQLRETURN CGDK::query::rdb::odbc::Nquery::_prepare_query(std::wstring_view _comm
 }
 
 
-void CGDK::query::rdb::odbc::Nquery::execute_query(const std::string_view _command)
+void CGDK::query::rdb::odbc::Nquery::execute_query_sync(const std::string_view _command)
 {
 	// 1) query string을 설정한다.
 	this->set_query_string(_command);
@@ -184,7 +235,7 @@ void CGDK::query::rdb::odbc::Nquery::execute_query(const std::string_view _comma
 	this->_execute_query(this->m_query_string);
 }
 
-void CGDK::query::rdb::odbc::Nquery::execute_query()
+void CGDK::query::rdb::odbc::Nquery::execute_query_sync()
 {
 	this->_execute_query();
 }
@@ -200,7 +251,7 @@ result_code CGDK::query::rdb::odbc::Nquery::move_first()
 	// 2) Move Next
 	auto result = ::SQLFetch(handle_stmt);
 
-	// check) throw if occure error
+	// check) throw if an error occurred
 	if (result == SQL_ERROR)
 	{
 		// raise)
@@ -302,7 +353,7 @@ std::size_t CGDK::query::rdb::odbc::Nquery::get_ordinal(const std::string_view _
 	}
 
 	// 2)  find column
-	auto iter_find = this->m_map_column.find(_column.data());
+	auto iter_find = this->m_map_column.find(_column);
 
 	// check)
 	RETURN_IF(iter_find == this->m_map_column.end(), 0);
@@ -314,12 +365,12 @@ std::size_t CGDK::query::rdb::odbc::Nquery::get_ordinal(const std::string_view _
 
 void CGDK::query::rdb::odbc::Nquery::open_query()
 {
-	scoped_lock(this->m_lockable_state_query)
+	SCOPED_LOCK(this->m_lockable_state_query)
 	{
 		// check)
 		CGASSERT_ERROR(this->m_state_query == eOBJECT_STATE::READY);
 
-		// check) must be preapre
+		// check) must be prepare
 		THROW_IF(this->m_state_query != eOBJECT_STATE::READY, throwable::failure(eRESULT::NOT_READY));
 
 		// declare) 
@@ -340,7 +391,10 @@ void CGDK::query::rdb::odbc::Nquery::open_query()
 		// check) throw exception if handle_stmt is 0
 		THROW_IF(handle_stmt == 0, throwable::failure(eRESULT::NOT_READY));
 
-		// 3) open_query
+		// notify) thread blocking 
+		scoped_thread_block thread_lock;
+
+		// 2) open_query
 		auto result = ::SQLExecute(handle_stmt);
 
 		// check) 
@@ -361,9 +415,10 @@ void CGDK::query::rdb::odbc::Nquery::open_query()
 	}
 }
 
+
 void CGDK::query::rdb::odbc::Nquery::close_query() noexcept
 {
-	scoped_lock(this->m_lockable_state_query)
+	SCOPED_LOCK(this->m_lockable_state_query)
 	{
 		// check) 
 		RETURN_IF(this->m_state_query != eOBJECT_STATE::PROCESSED && this->m_state_query != eOBJECT_STATE::REQUESTING);
@@ -387,7 +442,7 @@ void CGDK::query::rdb::odbc::Nquery::close_query() noexcept
 
 void CGDK::query::rdb::odbc::Nquery::process_execute_query()
 {
-	this->execute_query(this->get_query_string());
+	this->execute_query_sync(this->get_query_string());
 }
 
 void CGDK::query::rdb::odbc::Nquery::process_reset_session() noexcept
@@ -395,19 +450,36 @@ void CGDK::query::rdb::odbc::Nquery::process_reset_session() noexcept
 	// 1) close query 
 	this->close_query();
 
-	// 2) call 'Iquery::process_reset_session'
+	// 2) check the prepared statement in to the session cache (to reuse it. soft parsing)
+	//    (on success the stmt handle ownership moves to the session)
+	SCOPED_LOCK(this->m_lockable_state_query)
+	{
+		if (this->m_prepared_query_string.empty() == false && this->m_handle_stmt != 0 && this->m_psession.exist())
+		{
+			if (this->m_psession->checkin_prepared_stmt(std::move(this->m_prepared_query_string), this->m_handle_stmt, std::move(this->m_vector_params_prepared)))
+			{
+				this->m_handle_stmt = 0;
+			}
+		}
+
+		// - reset the reuse info ('moved-from' remains are cleared too)
+		this->m_prepared_query_string.clear();
+		this->m_vector_params_prepared.clear();
+	}
+
+	// 3) call 'Iquery::process_reset_session'
 	this->Iquery::process_reset_session();
 
 }
 
 void CGDK::query::rdb::odbc::Nquery::_execute_query(std::string_view _command)
 {
-	scoped_lock(this->m_lockable_state_query)
+	SCOPED_LOCK(this->m_lockable_state_query)
 	{
 		// check) 
 		CGASSERT_ERROR(this->m_state_query == eOBJECT_STATE::READY);
 
-		// check) must be preapre
+		// check) must be prepare
 		THROW_IF(this->m_state_query != eOBJECT_STATE::READY, throwable::failure(eRESULT::NOT_READY));
 
 		// check) 
@@ -432,10 +504,17 @@ void CGDK::query::rdb::odbc::Nquery::_execute_query(std::string_view _command)
 		// check) 
 		THROW_IF(handle_stmt == nullptr, throwable::failure(eRESULT::NOT_READY));
 
+		// - SQLExecDirect replaces the prepared statement on this stmt handle -> invalidate the reuse info
+		this->m_prepared_query_string.clear();
+		this->m_vector_params_prepared.clear();
+
 		// statistics) 
 		pquerier->statistics_on_query_try();
 
-		// 2) execute query
+		// notify) thread block
+		scoped_thread_block thread_block;
+
+		// 3) execute query
 		auto result = ::SQLExecDirectA(handle_stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(_command.data())), SQL_NTS);
 
 		if (SQL_SUCCEEDED(result) == false)
@@ -454,7 +533,7 @@ void CGDK::query::rdb::odbc::Nquery::_execute_query(std::string_view _command)
 					// - trace retry count
 					if (retry > 0)
 					{
-						e.add_description(NFMT::format("- {} failed and re-tries", retry));
+						e.add_description(CGDK::stream_string("- ", retry, " failed and re-tries"));
 					}
 
 					// statistics) 
@@ -471,7 +550,7 @@ void CGDK::query::rdb::odbc::Nquery::_execute_query(std::string_view _command)
 				++retry;
 
 				// - regen session
-				regen_session(this->m_psession);
+				this->_process_regen_session();
 
 				// - get new stmt handle
 				handle_stmt = this->m_handle_stmt;
@@ -479,7 +558,7 @@ void CGDK::query::rdb::odbc::Nquery::_execute_query(std::string_view _command)
 				// check) throw exception if handle_stmt is 0
 				THROW_IF(handle_stmt == nullptr, throwable::failure(eRESULT::NOT_READY));
 
-				// - retry query
+				// - retry execute query
 				result = ::SQLExecDirectA(handle_stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(_command.data())), SQL_NTS);
 
 				// check) break if success!!
@@ -493,14 +572,11 @@ void CGDK::query::rdb::odbc::Nquery::_execute_query(std::string_view _command)
 					// - get stmt error
 					_dump_error_records(e_nest, SQL_HANDLE_STMT, handle_stmt);
 
-					// - get reason
-					auto reason_new = e_nest.reason();
-
 					// - update reason
-					e.m_reason = reason_new;
+					e.m_reason = e_nest.reason();
 
 					// - add odbc error records
-					if (reason_new != eRESULT::CONNECTION_FAILURE)
+					if (e.m_reason != eRESULT::CONNECTION_FAILURE)
 					{
 						// - copy error result
 						for (auto& iter_v: e_nest.m_description_ex)
@@ -522,12 +598,12 @@ void CGDK::query::rdb::odbc::Nquery::_execute_query(std::string_view _command)
 
 void CGDK::query::rdb::odbc::Nquery::_execute_query()
 {
-	scoped_lock(this->m_lockable_state_query)
+	SCOPED_LOCK(this->m_lockable_state_query)
 	{
 		// check) 
 		CGASSERT_ERROR(this->m_state_query == eOBJECT_STATE::REQUESTING);
 
-		// check) must be preapre
+		// check) must be prepare
 		THROW_IF(this->m_state_query != eOBJECT_STATE::REQUESTING, throwable::failure(eRESULT::NOT_READY));
 
 		// check) m_psession must not be nullptr
@@ -549,7 +625,7 @@ void CGDK::query::rdb::odbc::Nquery::_execute_query()
 		// 1) get stmt handle
 		SQLHSTMT handle_stmt = this->m_handle_stmt;
 
-		// check) handle_stmt가 0이면 안됀다.(이미 prepare되어 있을 것이므로)
+		// check) handle_stmt가 0이면 안 된다.(이미 prepare되어 있을 것이므로)
 		CGASSERT_ERROR(handle_stmt != nullptr)
 
 		// check) throw exception if handle_stmt is 0
@@ -557,6 +633,9 @@ void CGDK::query::rdb::odbc::Nquery::_execute_query()
 
 		// statistics) 
 		pquerier->statistics_on_query_try();
+
+		// notify) thread block
+		scoped_thread_block thread_block;
 
 		// 2) execute query
 		auto result = ::SQLExecute(handle_stmt);
@@ -577,7 +656,7 @@ void CGDK::query::rdb::odbc::Nquery::_execute_query()
 					// - trace retry count
 					if (retry > 0)
 					{
-						e.add_description(NFMT::format("- {} failed and re-tries", retry));
+						e.add_description(CGDK::stream_string("- ", retry, " failed and re-tries"));
 					}
 
 					// statistics) 
@@ -594,7 +673,11 @@ void CGDK::query::rdb::odbc::Nquery::_execute_query()
 				++retry;
 
 				// - regen session
-				regen_session(this->m_psession);
+				this->_process_regen_session();
+
+				// - the stmt handle is regenerated. the prepared statement is lost
+				this->m_prepared_query_string.clear();
+				this->m_vector_params_prepared.clear();
 
 				// - get new stmt handle
 				handle_stmt = this->m_handle_stmt;

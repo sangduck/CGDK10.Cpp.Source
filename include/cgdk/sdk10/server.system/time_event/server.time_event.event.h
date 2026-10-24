@@ -31,7 +31,6 @@ class time_event::event : virtual public time_event::Ievent
 // public) 
 public:
 			event() noexcept {}
-			event(const std::string_view _name) : event() { set_name(_name); }
 			event(const sEVENT_SETTING& _entity_setting, const EVENT_FUNCTION& _event_function) : event()
 			{
 				event_setting() = _entity_setting;
@@ -64,9 +63,9 @@ public:
 namespace time_event
 {
 	std::vector<own_ptr<Ievent>> make_event_once(chrono::time::utc::time_point _time_execute, EVENT_FUNCTION&& _event_function);
-	std::vector<own_ptr<Ievent>> make_event_iteration(chrono::time::utc::time_point _time_first, chrono::time::duration _duraction, int _count, EVENT_FUNCTION&& _event_function);
+	std::vector<own_ptr<Ievent>> make_event_iteration(chrono::time::utc::time_point _time_first, chrono::time::duration _duration, int _count, EVENT_FUNCTION&& _event_function);
 	std::vector<own_ptr<Ievent>> make_event_start_stop(chrono::time::utc::time_point _time_start, chrono::time::utc::time_point _time_end, int _count, EVENT_FUNCTION&& _event_function);
-	std::vector<own_ptr<Ievent>> make_event_start_iteration_stop(chrono::time::utc::time_point _time_start, chrono::time::duration _duraction, int _count, chrono::time::utc::time_point _time_end, EVENT_FUNCTION&& _event_function);
+	std::vector<own_ptr<Ievent>> make_event_start_iteration_stop(chrono::time::utc::time_point _time_start, chrono::time::duration _duration, int _count, chrono::time::utc::time_point _time_end, EVENT_FUNCTION&& _event_function);
 }
 
 }

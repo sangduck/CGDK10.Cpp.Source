@@ -53,23 +53,30 @@ public:
 											const std::string_view			_object,
 											const std::string_view			_referer,
 											const std::vector<std::string_view>& _vector_header,
-											const buffer_view				_buffer_optinal,
+											const buffer_view				_buffer_optional,
 											const std::vector<std::string_view>& _vector_accept,
 											bool							_flag
 										);
 
-	// 4) Event
+	// 4) Event (the completion of the request : the response, a failure or a timeout)
+	//    - process_request() resets it (a request object can be requested again)
+	//    - the completion before wait() is not missed (the flag is checked)
+	[[nodiscard]] bool			is_completed() const noexcept { return this->m_is_completed.load(std::memory_order_acquire); }
 			auto&				get_condition_variable() noexcept { return this->m_cv_complete;}
-			template <class TLOCK>								  
-			void				wait(typename _unique_lock<TLOCK>::type& _cs) { this->m_cv_complete.wait(_cs); return; }
-			void				wait() { std::unique_lock<lockable<>> cs(this->m_lockable_wait); this->m_cv_complete.wait(cs); return; }
+			template <class TLOCK>
+			void				wait(typename _unique_lock<TLOCK>::type& _cs) { this->m_cv_complete.wait(_cs, [this] { return this->is_completed(); }); }
+			void				wait() { std::unique_lock<lock_object> cs(this->m_lockable_wait); this->m_cv_complete.wait(cs, [this] { return this->is_completed(); }); }
+			template <class TREP, class TPERIOD>
+	[[nodiscard]] bool			wait_for(const std::chrono::duration<TREP, TPERIOD>& _timeout) { std::unique_lock<lock_object> cs(this->m_lockable_wait); return this->m_cv_complete.wait_for(cs, _timeout, [this] { return this->is_completed(); }); }
 // framework)
 public:
 	virtual	result_code			process_request();
 	virtual	int					process_response(sMESSAGE& _msg);
+			void				_process_complete() noexcept;
 
 			std::condition_variable_any m_cv_complete;
-			lockable<>			m_lockable_wait;
+	mutable	lock_object			m_lockable_wait;
+			std::atomic<bool>	m_is_completed{ false };
 };
 
 

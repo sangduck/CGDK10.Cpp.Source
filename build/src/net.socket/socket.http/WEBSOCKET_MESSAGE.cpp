@@ -52,24 +52,6 @@ void _append_length(buffer& _buffer, std::size_t _length)
 	}
 }
 
-buffer_view sWEBSOCKET_MESSAGE::process_prepend(buffer& _buffer) const
-{
-	// declare) 
-	auto p = _buffer.data();
-	auto size = process_get_size_of();
-
-	// 1)
-	buffer buf_temp{ buffer_view{ _buffer.data() - size, _buffer.size() }, _buffer.get_bound() };
-
-	// 2) append
-	process_append(buf_temp);
-
-	// 3) set result
-	_buffer = buf_temp;
-
-	// return) 
-	return buffer_view(_buffer.data(), p - _buffer.data());
-}
 
 buffer_view sWEBSOCKET_MESSAGE::process_append(buffer& _buffer) const
 {

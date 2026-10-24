@@ -5,13 +5,6 @@ using namespace CGDK;
 
 query::manager_querier::manager_querier() : m_db_querier_serial(0)
 {
-#if defined(_WIN32)
-	// 1) coUninitialize
-	::CoUninitialize();
-#elif defined(__linux__)
-#else
-	#error "CGDK Not supported platform"
-#endif
 }
 
 query::manager_querier::~manager_querier()
@@ -22,31 +15,14 @@ query::manager_querier::~manager_querier()
 
 void query::manager_querier::initialize_instance()
 {
-	{ 
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(m_lockable_create);
+	// SCOPED_LOCK) 
+	std::lock_guard cs(m_lockable_create);
 
-		// check) 기존에 Instance가 있는지 확인한다.
-		RETURN_IF(m_pinstance.exist())
+	// check) 기존에 Instance가 있는지 확인한다.
+	RETURN_IF(m_pinstance.exist())
 
-		// 1) CoInitialize한다.
-	#if defined(_WIN32)
-		//auto	result	 = ::CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-		auto result = ::CoInitializeEx(NULL, COINIT_MULTITHREADED | COINIT_SPEED_OVER_MEMORY);
-
-		// check) 
-		THROW_IF(
-			result != S_OK &&
-			result != S_FALSE,		// S_FALSE indicates that the COM library is already initialized.
-			throwable::failure(eRESULT::BAD_FUNCTION_CALL));
-	#elif defined(__linux__)
-	#else
-		#error "CGDK Not supported platform"
-	#endif
-
-		// 1)새로운 Instance를 생성한다.
-		set_instance(_make_own_raw<query::manager_querier>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL));
-	}
+	// 1)새로운 Instance를 생성한다.
+	set_instance(_make_own_raw<query::manager_querier>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL));
 }
 
 void query::manager_querier::set_instance(own_ptr<manager_querier>&& _pinstance) noexcept
@@ -54,13 +30,13 @@ void query::manager_querier::set_instance(own_ptr<manager_querier>&& _pinstance)
 	// declare)
 	own_ptr<manager_querier> pinstance_pre;
 
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) move old instance
 		pinstance_pre = std::move(m_pinstance);
 
 		// 2) set new instance
-		m_pinstance = std::move(_pinstance);
+		m_pinstance.exchange_release(std::move(_pinstance));
 	}
 
 	// 3) reset old instance
@@ -69,21 +45,105 @@ void query::manager_querier::set_instance(own_ptr<manager_querier>&& _pinstance)
 
 void query::manager_querier::reset_instance() noexcept
 {
-	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(m_lockable_create);
+	// lock) 
+	std::lock_guard cs(m_lockable_create);
 
-		m_pinstance.reset();
+	m_pinstance.reset();
+}
+
+void query::manager_querier::print_statistics() noexcept
+{
+	try
+	{
+		// 1) get instance
+		auto temp_instance = instance();
+
+		// declare)
+		shared_buffer buf_output;
+
+		SCOPED_LOCK(temp_instance->m_lockable_list_querier)
+		{
+			// 2) alloc shared_buffer for log text
+			buf_output = alloc_shared_buffer((static_cast<size_t>(temp_instance->m_list_querier.size()) + 6) * 256);
+
+			// 3) title
+			buf_output.append_text("\x1b[37m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
+			buf_output.append_text(std::format("\x1b[37m" "{:30s}{:>5s}{:>13s}{:>13s}{:>9s}{:>9s}{:>12s}{:>10s}{:>10s}\n" "\x1b[0m",
+				"name",
+				"id",
+				"try",
+				"success",
+				"fail",
+				"retry",
+				"processing",
+				"session",
+				"using")
+			);
+			buf_output.append_text("\x1b[90m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
+
+			// 4) queriers
+			for (auto& iter : temp_instance->m_list_querier)
+			{
+				// check)
+				CGASSERT_ERROR(iter != nullptr);
+
+				// check)
+				CONTINUE_IF(iter == nullptr);
+
+				// - "1. name"
+				std::string str_name;
+				if (auto* pnameable = dynamic_cast<object::Inameable*>(iter); pnameable != nullptr)
+					str_name = std::string(pnameable->name());
+				if (str_name.empty())
+					str_name = std::format("querier {}", iter->m_id_querier);
+				if (str_name.size() > 30)
+					str_name.resize(30);
+
+				// - statistics
+				auto count_try = iter->statistics_get_query_try();
+				auto count_fail = iter->statistics_get_query_fail();
+
+				// - color : processed(green) / failed(yellow) / not used(gray)
+				std::string_view color = (count_fail != 0) ? "\x1b[93m"sv : (count_try != 0) ? "\x1b[92m"sv : "\x1b[90m"sv;
+
+				buf_output.append_text(std::format("{}" "{:30s}{:>5}{:>13}{:>13}{:>9}{:>9}{:>12}{:>10}{:>10}" "\x1b[0m\n",
+					color,
+					str_name,
+					iter->m_id_querier,
+					count_try,
+					iter->statistics_get_query_success(),
+					count_fail,
+					iter->statistics_get_query_retry(),
+					iter->statistics_get_query_processing(),
+					iter->statistics_get_exist_session(),
+					iter->statistics_get_using_session())
+				);
+			}
+
+			// - no querier
+			if (temp_instance->m_list_querier.empty())
+				buf_output.append_text("\x1b[90m" "(no querier)\n" "\x1b[0m"sv);
+
+			buf_output.append_text("\x1b[37m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
+		}
+
+		// 5) output
+	#if defined(_WIN32)
+		DWORD number_written = 0;
+		WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), buf_output.data(), buf_output.size<DWORD>(), &number_written, nullptr);
+	#else
+		fwrite(buf_output.data(), 1, buf_output.size<int>(), stdout);
+	#endif
+	}
+	catch (...)
+	{
 	}
 }
 
-
 result_code query::manager_querier::destroy() noexcept
 {
-	{ 
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(m_lockable_create);
-	}
+	// lock)
+	std::lock_guard cs(m_lockable_create);
 
 	// return)
 	return eRESULT::SUCCESS;
@@ -94,7 +154,7 @@ void query::manager_querier::register_querier(Iquerier* _pquerier)
 	// 1) add_reference한다.
 	add_ref();
 
-	scoped_lock(m_lockable_list_querier)
+	SCOPED_LOCK(m_lockable_list_querier)
 	{
 		// 2) 같은 것이 있는지 먼저 검사한다.
 		auto iter_connective = std::find(m_list_querier.begin(), m_list_querier.end(), _pquerier);
@@ -115,12 +175,12 @@ void query::manager_querier::register_querier(Iquerier* _pquerier)
 
 void query::manager_querier::unregister_querier(Iquerier* _pquerier) noexcept
 {
-	scoped_lock(m_lockable_list_querier)
+	SCOPED_LOCK(m_lockable_list_querier)
 	{
 		// 1) Pool 관리 List에서 떼낸다.
 		auto iter_connective = std::find(m_list_querier.begin(), m_list_querier.end(), _pquerier);
 
-		// check) 해당 connectie가 없으면 제거한다.
+		// check) 해당 connective가 없으면 제거한다.
 		RETURN_IF(iter_connective == m_list_querier.end());
 
 		// 2) 리스트에서 제거한다.

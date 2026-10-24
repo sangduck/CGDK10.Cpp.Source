@@ -9,16 +9,16 @@ object_ptr<channel::Igroup> channel::manager::register_channel(CHANNEL_ID _chann
 	// declare) 
 	object_ptr<channel::Igroup> pgroup_channel = _pgroup_channel;
 
-	// check) _channelID가 0이면 안됀다!
+	// check) _channelID가 0이면 안 된다!
 	CGASSERT_ERROR(_channel != 0);
 
-	scoped_lock(this->m_container_channel)
+	SCOPED_LOCK(this->m_lockable_container_channel)
 	{
 		// 1) 먼저 같은 것이 있는지 찾아 본다.
 		auto iter_find = this->m_container_channel.find(_channel);
 
 		// check) 만약 찾았으면 찾은 것을 리턴해준다.
-		THROW_IF(iter_find != this->m_container_channel.end(), throwable::failure(eRESULT::ALEADY_EXIST));
+		THROW_IF(iter_find != this->m_container_channel.end(), throwable::failure(eRESULT::ALREADY_EXIST));
 
 		// 2) 찾지 못했으면 추가한다.
 		this->m_container_channel.insert(std::make_pair(_channel, std::move(_pgroup_channel)));
@@ -45,7 +45,7 @@ own_ptr<channel::Igroup> channel::manager::unregister_channel(CHANNEL_ID _id_cha
 	// Declare) 
 	own_ptr<channel::Igroup> pgroup_channel;
 
-	scoped_lock(this->m_container_channel)
+	SCOPED_LOCK(this->m_lockable_container_channel)
 	{
 		// 1) 먼저 같은 것이 있는지 찾아 본다.
 		auto iter_find = this->m_container_channel.find(_id_channel);
@@ -59,7 +59,7 @@ own_ptr<channel::Igroup> channel::manager::unregister_channel(CHANNEL_ID _id_cha
 		// 3) 먼저 복사해 놓고
 		pgroup_channel = std::move(iter_find->second);
 
-		// check) pgrounpChannel이 nullptr이면 안됀다.
+		// check) pgrounpChannel이 nullptr이면 안 된다.
 		CGASSERT_ERROR(pgroup_channel.exist());
 
 		// 4) 제거한다.
@@ -85,7 +85,7 @@ object_ptr<channel::Igroup> channel::manager::get_channel(CHANNEL_ID _channel) n
 	// Declare) 
 	object_ptr<channel::Igroup> pgroup_channel;
 
-	scoped_lock(this->m_container_channel)
+	SCOPED_LOCK(this->m_lockable_container_channel)
 	{
 		// 1) 먼저 같은 CHANNEL_ID를 가진 channel이 있는지 찾아 본다.
 		auto iter_find = this->m_container_channel.find(_channel);
@@ -103,13 +103,13 @@ object_ptr<channel::Igroup> channel::manager::get_channel(CHANNEL_ID _channel) n
 			auto pgroup_chatting = make_own<channel::group_chatting>();
 
 			// - set setting
-			pgroup_chatting->set_name(NFMT::format("chatting room {}"sv, _channel));
+			pgroup_chatting->name(std::format("chatting room {}"sv, _channel));
 
 			// - 새 channel 객체를 생성해서 등록한다.
 			pgroup_channel = register_channel(_channel, std::move(pgroup_chatting));
 		}
 
-		// check) pgrounpChannel이 nullptr이면 안됀다.
+		// check) pgrounpChannel이 nullptr이면 안 된다.
 		CGASSERT_ERROR(pgroup_channel.exist());
 	}
 
@@ -129,7 +129,7 @@ void channel::manager::on_starting(context& /*_msg*/)
 	auto pgroup_waiting = make_own<channel::group_waiting>();
 
 	// 2) set setting
-	pgroup_waiting->set_name("waiting channel"sv);
+	pgroup_waiting->name("waiting channel"sv);
 
 	// 3) wait channel을 생성해서 등록한다.
 	this->register_channel(CHANNEL_ID(1), std::move(pgroup_waiting));
@@ -137,10 +137,10 @@ void channel::manager::on_starting(context& /*_msg*/)
 void channel::manager::on_stop()
 {
 	// declare) 
-	lockable<std::unordered_map<CHANNEL_ID, own_ptr<channel::Igroup>>> container_channel;
+	std::unordered_map<CHANNEL_ID, own_ptr<channel::Igroup>> container_channel;
 
 	// 1) move channels
-	scoped_lock(this->m_container_channel)
+	SCOPED_LOCK(this->m_lockable_container_channel)
 	{
 		container_channel = std::move(this->m_container_channel);
 	}

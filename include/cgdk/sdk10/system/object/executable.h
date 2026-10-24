@@ -41,7 +41,7 @@ protected:
 	virtual	void				on_execute() PURE;
 
 public:
-	virtual intptr_t			process_execute(intptr_t /*_return*/, size_t /*_param*/) override { on_execute(); return 0;}
+	virtual intptr_t			process_execute(intptr_t /*_return*/, size_t /*_param*/) override { this->on_execute(); return 0;}
 };
 
 

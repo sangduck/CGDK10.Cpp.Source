@@ -3,14 +3,13 @@
 using namespace CGDK;
 
 
-net::io::restore_manager::restore_manager() :
-	Nnameable("restore manager")
+net::io::restore_manager::restore_manager()
 {
-	m_tick_timeout = chrono::seconds(10);
+	this->name("restore manager"sv);
+	this->m_tick_timeout = chrono::seconds(10);
 }
 net::io::restore_manager::~restore_manager() noexcept
 {
-
 }
 
 void net::io::restore_manager::set_suspend_timeout(chrono::tick::duration _tick_duration)
@@ -25,8 +24,8 @@ object_ptr<net::io::Irestorable_server>	net::io::restore_manager::process_alloc_
 
 void net::io::restore_manager::restore_restorable(Irestore_server* _prestore_server, buffer_view _buffer)
 {
-	// check) _prestore_server가 nullptr이면 안됀다.
-	CGASSERT_ERROR(_prestore_server != nullptr);
+	// check) _prestore_server가 nullptr이면 안 된다.
+	CGASSERT_FATAL(_prestore_server != nullptr);
 
 	// check) 먼저 Server ID가 동일한지 확인한다.
 	THROW_IF(_prestore_server == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT));
@@ -35,21 +34,21 @@ void net::io::restore_manager::restore_restorable(Irestore_server* _prestore_ser
 	_buffer.extract(size(8));
 
 	// 2) 메시지의 데이터들을 읽어들인다.
-	auto id_restore_server = _buffer.extract<RESTORE_SERVER_ID>();
-	auto id_restore_client = _buffer.extract<RESTORE_CLIENT_ID>();
+	auto id_restore_server = _buffer.extract<restore_server_id_t>();
+	auto id_restore_client = _buffer.extract<restore_client_io_t>();
 
 	// 3) message를 얻어낸다.
-	auto ackReceived = _buffer.extract<SEQUENCE_ID>();
-	auto ack_sended = _buffer.extract<SEQUENCE_ID>();
+	auto ackReceived = _buffer.extract<sequence_id_t>();
+	auto ack_sent = _buffer.extract<sequence_id_t>();
 
 	// check) 먼저 Server ID가 동일한지 확인한다.
-	THROW_IF(this->m_id_restore_server != id_restore_server, throwable::failure(eRESULT::DOMAIN_ERROR))
+	THROW_IF(this->m_id_restore_server != id_restore_server, throwable::failure(eRESULT::DOMAIN_ERROR));
 
 	// declare) 
 	object_ptr<net::io::Irestorable_server>	prestorable_server;
 	result_code result;
 
-	scoped_lock(this->m_map_restorable)
+	SCOPED_LOCK(this->m_lockable_map_restorable)
 	{
 		// 1) 먼저 존재하는 것 중에 있는지 찾는다.
 		auto iter_find = this->m_map_restorable.find(id_restore_client);
@@ -66,7 +65,7 @@ void net::io::restore_manager::restore_restorable(Irestore_server* _prestore_ser
 			// - 찾은 것이 복원 가능한지 여부를 확인한다.
 			//   복원 가능(true) -> 그것을 사용한다.
 			//   복원 불가능(false) -> 신규 발급한다.
-			auto result_nested = prestorable_server->process_get_restore_result(id_restore_server, id_restore_client, ackReceived, ack_sended);
+			auto result_nested = prestorable_server->process_get_restore_result(id_restore_server, id_restore_client, ackReceived, ack_sent);
 
 			// - 복원 가능(true)이면 그것을 m_map_restorable을 제거하고 사용한다.
 			if(result_nested != eRESULT::RESTORE)
@@ -81,7 +80,7 @@ void net::io::restore_manager::restore_restorable(Irestore_server* _prestore_ser
 			// - 새로운 Restorable 객체를 생성한다.
 			prestorable_server = _prestore_server->process_alloc_restorable();
 
-			// - [RESTORE_SERVER_ID]를 써넣는다.
+			// - [restore_server_id_t]를 써넣는다.
 			prestorable_server->m_id_restore_server = m_id_restore_server;
 
 			// - Result를 eRESULT::RESET로...
@@ -94,13 +93,13 @@ void net::io::restore_manager::restore_restorable(Irestore_server* _prestore_ser
 			result = eRESULT::RESTORE;
 		}
 
-		// 4) 새로운 [RESTORE_CLIENT_ID]를 발급받고 기타 등등 설정한다.
+		// 4) 새로운 [restore_client_io_t]를 발급받고 기타 등등 설정한다.
 		prestorable_server->m_id_restore_client = process_generate_RESTORE_CLIENT_ID();
 		prestorable_server->m_prestore_server = _prestore_server;
 		_prestore_server->m_prestorable = prestorable_server;
 
 		// 5) 
-		if (m_map_restorable.size() == 0)
+		if (m_map_restorable.empty())
 		{
 			system_executor::unregister_schedulable(this);
 		}
@@ -122,7 +121,7 @@ bool net::io::restore_manager::suspend_restorable(Irestore_server* _prestore_ser
 	object_ptr<Irestorable_server>	prestorable_server;
 	bool result;
 
-	scoped_lock(m_map_restorable)
+	SCOPED_LOCK(m_lockable_map_restorable)
 	{
 		// check) 
 		CGASSERT_ERROR(_prestore_server->m_prestore_manager==this);
@@ -166,7 +165,7 @@ bool net::io::restore_manager::suspend_restorable(Irestore_server* _prestore_ser
 		// 5) reset한다.
 		_prestore_server->m_prestorable.reset();
 
-		// 6) unregister shcedulable
+		// 6) unregister schedulable
 		if (result == true && this->m_map_restorable.size() == 1)
 		{
 			system_executor::register_schedulable(this);
@@ -193,12 +192,12 @@ bool net::io::restore_manager::suspend_restorable(Irestore_server* _prestore_ser
 	return true;
 }
 
-RESTORE_CLIENT_ID net::io::restore_manager::process_generate_RESTORE_CLIENT_ID()
+restore_client_io_t net::io::restore_manager::process_generate_RESTORE_CLIENT_ID()
 {
 	// declare) 
-	RESTORE_CLIENT_ID id_restore_client;
+	restore_client_io_t id_restore_client;
 
-	static uint64_t sXXX = 0;
+	static std::atomic<uint64_t> sXXX = 0;
 
 	id_restore_client.id_key = ++sXXX;
 	id_restore_client.id_certify = rand();
@@ -216,7 +215,7 @@ void net::io::restore_manager::on_execute()
 	std::vector<object_ptr<Irestorable_server>> vector_restorable;
 
 	// 2) Timeout된 
-	scoped_lock(this->m_map_restorable)
+	SCOPED_LOCK(this->m_lockable_map_restorable)
 	{
 		for(auto iter = this->m_map_restorable.begin(); iter != this->m_map_restorable.end();)
 		{
@@ -246,13 +245,13 @@ void net::io::restore_manager::on_execute()
 
 void net::io::restore_manager::initialize_instance()
 {
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// check) 
 		RETURN_IF(m_pinstance.exist());
 
 		// 1) create instance
-		m_pinstance = _make_own_raw<restore_manager>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL);
+		m_pinstance.exchange_release(_make_own_raw<restore_manager>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL));
 	}
 }
 void net::io::restore_manager::set_instance(own_ptr<restore_manager>&& _pinstance) noexcept
@@ -260,13 +259,13 @@ void net::io::restore_manager::set_instance(own_ptr<restore_manager>&& _pinstanc
 	// declare)
 	own_ptr<restore_manager> pinstance_pre;
 
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) move old instance
 		pinstance_pre = std::move(m_pinstance);
 
 		// 2) set new instance
-		m_pinstance = std::move(_pinstance);
+		m_pinstance.exchange_release(std::move(_pinstance));
 	}
 
 	// 3) destroy instance
@@ -285,7 +284,7 @@ void net::io::restore_manager::reset_instance() noexcept
 	// declare) 
 	own_ptr<restore_manager> pinstance;
 
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) move instance
 		pinstance = std::move(m_pinstance);

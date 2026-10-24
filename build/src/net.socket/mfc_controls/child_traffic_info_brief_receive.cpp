@@ -34,7 +34,7 @@ END_MESSAGE_MAP()
 BOOL CChild_traffic_info_brief_receive::CreateChild(const statistics::unit_traffic* _pinfo, CWnd* _pwnd)
 {
 	// 1) Statistics의 포인터를 저장~
-	scoped_lock(m_lockable_statistics)
+	SCOPED_LOCK(m_lockable_statistics)
 	{
 		m_pstatistics	 = _pinfo;
 	}
@@ -72,10 +72,10 @@ void CChild_traffic_info_brief_receive::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// 1) Update한다.
@@ -94,13 +94,13 @@ void CChild_traffic_info_brief_receive::UpdateTrafficeInfoBriefReceive()
 	// check) 
 	RETURN_IF(m_hWnd == nullptr);
 	
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 	// declare) 
 	const statistics::unit_traffic* pstatistics = nullptr;
 
-	scoped_lock(m_lockable_statistics)
+	SCOPED_LOCK(m_lockable_statistics)
 	{
 		pstatistics = m_pstatistics;
 	}
@@ -110,7 +110,7 @@ void CChild_traffic_info_brief_receive::UpdateTrafficeInfoBriefReceive()
 	
 
 	//-----------------------------------------------------------------
-	// 1. Traffice Info 계산하기.
+	// 1. Traffic Info 계산하기.
 	//-----------------------------------------------------------------
 	// 1) 현재 Tick과 Tick Gap을 구한다.
 	chrono::tick::time_point	tick_now	 = chrono::tick::now();
@@ -138,11 +138,11 @@ void CChild_traffic_info_brief_receive::UpdateTrafficeInfoBriefReceive()
 	TCHAR tempString[256];
 
 	// 1) Total send/receive 정보.
-	SetDlgItemText(IDC_STATIC_RECEIVEDMESSAGE, to_string_scaled_byte(tempString, 256, countReceived).data());
+	SetDlgItemText(IDC_STATIC_RECEIVEDMESSAGE, CString(to_string_scaled_byte(countReceived).c_str()));
 
 	// 2) 초당 전송률 표시.
-	__sprintf(tempString, TEXT("%.2f"), totalReceive_Message_PerSec);SetDlgItemText(IDC_STATIC_RECEIVEDMESSAGE_PERSEC,tempString);
-	SetDlgItemText(IDC_STATIC_RECEIVEDBYTES_PERSEC,	to_string_scaled_byte(tempString, 256, totalReceive_Byte_PerSec).data());
+	std::swprintf(tempString, std::size(tempString), std::wstring_view(TEXT("%.2f")).data(), totalReceive_Message_PerSec);SetDlgItemText(IDC_STATIC_RECEIVEDMESSAGE_PERSEC,tempString);
+	SetDlgItemText(IDC_STATIC_RECEIVEDBYTES_PERSEC, CString(to_string_scaled_byte(totalReceive_Byte_PerSec).c_str()));
 }
 
 void CChild_traffic_info_brief_receive::OnEnable(BOOL is_enable)

@@ -1,0 +1,57 @@
+{
+  "service": {
+  },
+
+  "system_executor": {
+    "thread_count": 2
+  },
+
+  "socket_to_admin_server": {
+    "remote_endpoint": {
+      "address": "127.0.0.1",
+      "port": 21887
+    },
+    "--certify_key": "change-me (or set CGDK_ADMIN_CERTIFY_KEY)"
+  },
+
+  "acceptor_server": {
+    "local_endpoint": {
+      "Port": 22044
+    },
+    "--certify_key": "change-me (or set CGDK_ADMIN_CERTIFY_KEY)",
+    "--allowed_addresses": [ "127.0.0.1" ],
+    "prepare_on_start": 2,
+    "must_prepare": 2
+  },
+
+  "acceptor_web": {
+    "local_endpoint": {
+      "Port": 22052
+    },
+    "--allowed_addresses": [ "127.0.0.1" ],
+    "prepare_on_start": 2,
+    "must_prepare": 2
+  },
+  "acceptor_websocket": {
+    "local_endpoint": {
+      "Port": 22053
+    },
+    "--allowed_addresses": [ "127.0.0.1" ],
+    "prepare_on_start": 2,
+    "must_prepare": 2
+  },
+
+  "logger": {
+    "logger_file": {
+      "path": "log",
+      "filename": "host_agent.log",
+      "instant_open": false,
+      "instant_close_delay": 100
+    }
+  }
+
+}
+
+
+
+

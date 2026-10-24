@@ -1,18 +1,18 @@
-ï»¿
-// CGDK.network.update.server.MFC.vs16.h: PROJECT_NAME ì• í”Œë¦¬ì¼€ì´ì…˜ì— ëŒ€í•œ ì£¼ í—¤ë” íŒŒì¼ì…ë‹ˆë‹¤.
+
+// CGDK10.network.update.server.mfc_controls.h: PROJECT_NAME ¾ÖÇÃ¸®ÄÉÀÌ¼Ç¿¡ ´ëÇÑ ÁÖ Çì´õ ÆÄÀÏÀÔ´Ï´Ù.
 //
 
 #pragma once
 
 #ifndef __AFXWIN_H__
-	#error "PCHì— ëŒ€í•´ ì´ íŒŒì¼ì„ í¬í•¨í•˜ê¸° ì „ì— 'pch.h'ë¥¼ í¬í•¨í•©ë‹ˆë‹¤."
+	#error "PCH¿¡ ´ëÇØ ÀÌ ÆÄÀÏÀ» Æ÷ÇÔÇÏ±â Àü¿¡ 'pch.h'¸¦ Æ÷ÇÔÇÕ´Ï´Ù."
 #endif
 
-#include "resource.h"		// ì£¼ ê¸°í˜¸ì…ë‹ˆë‹¤.
+#include "resource.h"		// ÁÖ ±âÈ£ÀÔ´Ï´Ù.
 
 
 // CCGUpdateServerApp:
-// ì´ í´ë˜ìŠ¤ì˜ êµ¬í˜„ì— ëŒ€í•´ì„œëŠ” CGDK.network.update.server.MFC.vs16.cppì„(ë¥¼) ì°¸ì¡°í•˜ì„¸ìš”.
+// ÀÌ Å¬·¡½ºÀÇ ±¸Çö¿¡ ´ëÇØ¼­´Â CGDK10.network.update.server.mfc_controls.cppÀ»(¸¦) ÂüÁ¶ÇÏ¼¼¿ä.
 //
 
 class CCGUpdateServerApp : public CWinApp
@@ -20,11 +20,11 @@ class CCGUpdateServerApp : public CWinApp
 public:
 	CCGUpdateServerApp();
 
-// ì¬ì •ì˜ì…ë‹ˆë‹¤.
+// ÀçÁ¤ÀÇÀÔ´Ï´Ù.
 public:
 	virtual BOOL InitInstance();
 
-// êµ¬í˜„ì…ë‹ˆë‹¤.
+// ±¸ÇöÀÔ´Ï´Ù.
 
 	DECLARE_MESSAGE_MAP()
 };

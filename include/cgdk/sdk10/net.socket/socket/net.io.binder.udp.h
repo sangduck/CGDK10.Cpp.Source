@@ -30,25 +30,20 @@ namespace CGDK
 //
 //-----------------------------------------------------------------------------
 class net::io::binder::Nudp :
-// inherited classes)
 	virtual public				net::io::Isocket,
 	virtual public				net::io::Ibinder,
 	virtual public				net::io::Ireceivable_datagram,
 	public						object::Nnameable,
 	virtual public				net::io::statistics::Nsocket
 {
-// constructor/destructor)
 protected:
-			Nudp() noexcept { register_binder(this); }
-			Nudp(std::string_view _name) : object::Nnameable{ _name } {}
-	virtual ~Nudp() noexcept { unregister_binder(); }
+			Nudp() noexcept { this->register_binder(this); }
+	virtual ~Nudp() noexcept { this->unregister_binder(); }
 
-// publics)
 public:
 	virtual	bool				process_request_bind(const net::sockaddr& _address) override;
 	virtual	void				process_reset_binder() override {}
 
-// framework)
 protected:
 	virtual	void				on_bind() {}
 };

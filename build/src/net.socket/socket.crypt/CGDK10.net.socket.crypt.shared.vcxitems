@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{94f89245-a64d-4993-b093-e95db24788a8}</ItemsProjectGuid>
+    <ItemsProjectName>CGDK10.net.socket.crypt.shared</ItemsProjectName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket.crypt.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket.crypt\net.acceptor.secure.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket.crypt\net.io.connect_requestable.tcp_reconnect_ssl.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket.crypt\net.io.connect_requestable.tcp_ssl.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket.crypt\net.io.receivable.stream_crypt.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket.crypt\net.io.sendable.tcp_crypt.executable_buffer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket.crypt\net.io.sendable.tcp_crypt.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket.crypt\net.io.socket_ssl.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket.crypt\net.io.tcp_crypt.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket.crypt\net.socket.tcp_crypt.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket.crypt\net.socket.tcp_ssl.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.crypt\net.definitions.crypt.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.crypt\net.io.sendable.tcp_crypt.async_gather_buffered.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.definitions.crypt.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connective.acceptor_ssl.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connect_requestable.tcp_reconnect_ssl.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connect_requestable.tcp_ssl.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_crypt.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_crypt.epoll.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_crypt.iocp.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.async_gather_buffered.epoll.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.async_gather_buffered.iocp.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.epoll.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.executable_buffer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.iocp.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.socket_ssl.epoll.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.socket_ssl.iocp.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.tcp_crypt.cpp" />
+  </ItemGroup>
+</Project>

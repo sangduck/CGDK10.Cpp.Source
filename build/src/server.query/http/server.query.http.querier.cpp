@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 
 using namespace CGDK;
 
@@ -19,8 +19,8 @@ query::http::querier::querier(const std::string_view _name) :
 	// 1) set Object type as QUERIER_HTTP
 	this->set_object_type(eOBJECT_TYPE::QUERIER_HTTP);
 
-	// 2) Nameì„ ì„¤ì •í•œë‹¤.
-	this->set_name(_name);
+	// 2) NameÀ» ¼³Á¤ÇÑ´Ù.
+	this->name(_name);
 
 	// 3) Register Querier to Manager
 	this->register_querier();
@@ -34,7 +34,7 @@ query::http::querier::~querier() noexcept
 
 result_code query::http::querier::start(Iexecutor* /*_pexecutor*/)
 {
-	context temp_msg;	// _pexecutor
+	context temp_msg;
 
 	return this->start(temp_msg);
 }
@@ -58,9 +58,9 @@ result_code query::http::querier::_process_destroy() noexcept
 
 result_code query::http::querier::_process_starting(context& _context)
 {
-	scoped_lock(this->m_lockable_query)
+	SCOPED_LOCK(this->m_lockable_query)
 	{
-		// 1) executorê°€ nullptrì´ë©´ ê¸°ë³¸ executorë¥¼ ì‚¬ìš©í•œë‹¤.
+		// 1) executor°¡ nullptrÀÌ¸é ±âº» executor¸¦ »ç¿ëÇÑ´Ù.
 		if(this->m_pexecutor.empty())
 		{
 			this->m_pexecutor = system_executor::executor();
@@ -86,19 +86,19 @@ result_code query::http::querier::_process_stopping() noexcept
 	object_ptr<Iexecutor> pexecutor;
 	bool is_created = false;
 
-	// 2) êµì²´í•œë‹¤.
-	scoped_lock(this->m_lockable_query)
+	// 2) ±³Ã¼ÇÑ´Ù.
+	SCOPED_LOCK(this->m_lockable_query)
 	{
-		// - executorë¥¼ Swap
+		// - executor¸¦ Swap
 		pexecutor = this->m_pexecutor;
 		pexecutor.reset();
 
-		// - ì¼ë‹¨ create flagëŠ” ë¬´ì¡°ê±´ falseë¡œ...
+		// - ÀÏ´Ü create flag´Â ¹«Á¶°Ç false·Î...
 		is_created = this->m_is_create;
 		this->m_is_create = false;
 	}
 
-	// 3) executorê°€ ì¡´ìž¬í•˜ê³  ì—¬ê¸°ì„œ ìƒì„±ëœ ê²ƒì´ë¼ë©´ closeí•œë‹¤.
+	// 3) executor°¡ Á¸ÀçÇÏ°í ¿©±â¼­ »ý¼ºµÈ °ÍÀÌ¶ó¸é closeÇÑ´Ù.
 	if(pexecutor.exist() && is_created == true)
 	{
 		pexecutor->stop();
@@ -115,21 +115,21 @@ result_code query::http::querier::_process_stop() noexcept
 
 void query::http::querier::process_execute_query(Iserver_query* /*_pquery*/)
 {
-	//// 1) Castingí•œë‹¤.
+	//// 1) CastingÇÑ´Ù.
 	//auto pquery = dynamic_cast<query*>(_pquery);
 
-	//scoped_lock_named(m_lockable_query, cs)
+	//SCOPED_LOCK_NAMED(m_lockable_query, cs)
 	//{
 	//	// 1) setting
 	//	pquery->m_pquerier = this;
 
-	//	// 2) executeë¥¼ ê±´ë‹¤.
+	//	// 2) execute¸¦ °Ç´Ù.
 	//	pquery->request();
 
 	//	// statistics)
 	//	statistics_on_query_try();
 
-	//	// 3) ì™„ë£Œë¥¼ waití•œë‹¤.
+	//	// 3) ¿Ï·á¸¦ waitÇÑ´Ù.
 	//	pquery->m_cv_complete.wait(cs);
 	//}
 
@@ -139,7 +139,7 @@ void query::http::querier::process_execute_query(Iserver_query* /*_pquery*/)
 
 void query::http::querier::process_post_execute_query(Iserver_query* /*_pquery*/)
 {
-	//// 1) Castingí•œë‹¤.
+	//// 1) CastingÇÑ´Ù.
 	//auto	pquery = dynamic_cast<query*>(_pquery);
 
 	//// check) ...

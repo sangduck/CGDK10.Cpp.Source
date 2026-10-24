@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "echo_client.h"
 
 own_ptr<test_tcp_relay_echo_client> g_ptest_tcp_relay_echo_client;
@@ -88,10 +88,10 @@ void test_tcp_relay_echo_client::request_closesocket(std::size_t _count)
 {
 	std::size_t disconnected = 0;
 
-	scoped_lock(this->m_pconnector_socket->get_lockable())
+	SCOPED_LOCK(this->m_pconnector_socket->get_lockable())
 	{
-		// ì£¼ì˜) closesocketì„ í•  ê²½ìš° m_pconnectorì˜ connectable_listì—ì„œ ì œê±°ë ìˆ˜ ìˆì–´
-		//       iterator ë¬´íš¨í™” í˜„ìƒì´ ë°œìƒí•  ìˆ˜ ìˆìœ¼ë¯€ë¡œ ë°˜ë“œì‹œ iterator ë¬´íš¨í™”ì— ëŒ€ë¹„í•´ ì²˜ë¦¬í•´ì•¼ í•œë‹¤.
+		// ÁÖÀÇ) closesocketÀ» ÇÒ °æ¿ì m_pconnectorÀÇ connectable_list¿¡¼­ Á¦°ÅµÉ ¼ö ÀÖ¾î
+		//       iterator ¹«È¿È­ Çö»óÀÌ ¹ß»ıÇÒ ¼ö ÀÖÀ¸¹Ç·Î ¹İµå½Ã iterator ¹«È¿È­¿¡ ´ëºñÇØ Ã³¸®ÇØ¾ß ÇÑ´Ù.
 
 		auto iter = this->m_pconnector_socket->begin();
 		auto iter_end = this->m_pconnector_socket->end();
@@ -117,10 +117,10 @@ void test_tcp_relay_echo_client::request_disconnect_socket(std::size_t _count)
 {
 	std::size_t disconnected = 0;
 
-	scoped_lock(this->m_pconnector_socket->get_lockable())
+	SCOPED_LOCK(this->m_pconnector_socket->get_lockable())
 	{
-		// ì£¼ì˜) disconnectì„ í•  ê²½ìš° m_pconnectorì˜ connectable_listì—ì„œ ì œê±°ë ìˆ˜ ìˆì–´
-		//       iterator ë¬´íš¨í™” í˜„ìƒì´ ë°œìƒí•  ìˆ˜ ìˆìœ¼ë¯€ë¡œ ë°˜ë“œì‹œ iterator ë¬´íš¨í™”ì— ëŒ€ë¹„í•´ ì²˜ë¦¬í•´ì•¼ í•œë‹¤.
+		// ÁÖÀÇ) disconnectÀ» ÇÒ °æ¿ì m_pconnectorÀÇ connectable_list¿¡¼­ Á¦°ÅµÉ ¼ö ÀÖ¾î
+		//       iterator ¹«È¿È­ Çö»óÀÌ ¹ß»ıÇÒ ¼ö ÀÖÀ¸¹Ç·Î ¹İµå½Ã iterator ¹«È¿È­¿¡ ´ëºñÇØ Ã³¸®ÇØ¾ß ÇÑ´Ù.
 
 		auto iter = this->m_pconnector_socket->begin();
 		auto iter_end = this->m_pconnector_socket->end();
@@ -142,7 +142,7 @@ void test_tcp_relay_echo_client::request_disconnect_socket_all()
 	this->m_pconnector_socket->disconnect_connectable_all();
 }
 
-void test_tcp_relay_echo_client::request_send_immidiately()
+void test_tcp_relay_echo_client::request_send_immediately()
 {
 	this->process_send_message(this->m_selected_message_size);
 }
@@ -190,12 +190,12 @@ void test_tcp_relay_echo_client::on_starting(context& /*_context*/)
 	// 2) ready messges for send test
 	::prepare_message(m_buf_message);
 
-	// 3) Connectorë¥¼ ìƒì„±í•œë‹¤.
+	// 3) Connector¸¦ »ı¼ºÇÑ´Ù.
 	this->m_pconnector_socket = make_own<net::connector<socket_tcp>>();
 	this->m_endpoint_connect = net::ip::tcp::endpoint{ net::ip::tcp::resolver().resolve("localhost", "20000") };
 	//m_endpoint_connect = net::ip::tcp::endpoint{ net::ip::address_v4::loopback(), 20000 };
 
-	// 4) Connectorë¥¼ ì‹œì‘í•œë‹¤.
+	// 4) Connector¸¦ ½ÃÀÛÇÑ´Ù.
 	this->m_pconnector_socket->start();
 
 	// 5) 
@@ -262,7 +262,7 @@ void test_tcp_relay_echo_client::on_execute()
 
 void test_tcp_relay_echo_client::process_connect(std::size_t _n)
 {
-	// 1) ì ‘ì†í•œë‹¤.
+	// 1) Á¢¼ÓÇÑ´Ù.
 	for (std::size_t i = 0; i < _n; i++)
 	{
 		this->m_pconnector_socket->request_connect(this->m_endpoint_connect);
@@ -275,7 +275,7 @@ void test_tcp_relay_echo_client::process_send_message(std::size_t _index)
 	{
 		auto buf_message = m_buf_message[_index];
 
-		scoped_lock(this->m_pconnector_socket->get_lockable())
+		SCOPED_LOCK(this->m_pconnector_socket->get_lockable())
 		{
 			for (auto& iter : *this->m_pconnector_socket)
 			{

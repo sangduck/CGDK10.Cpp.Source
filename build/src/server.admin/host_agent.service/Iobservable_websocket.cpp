@@ -1,8 +1,7 @@
 #include "pch.h"
 
 
-Iobservable_websocket::Iobservable_websocket(const std::string_view _name) :
-	Nnameable(_name)
+Iobservable_websocket::Iobservable_websocket()
 {
 }
 

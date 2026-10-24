@@ -49,10 +49,10 @@ public:
 	[[nodiscard]] object_ptr<Irepository> find(const std::string_view _name) const noexcept;
 
 	// 2) lock
-	[[nodiscard]]				operator lockable<>&() noexcept { return m_list_repository;}
+	[[nodiscard]]				operator lock_object&() noexcept { return m_lockable_list_repository;}
 
 	// 3) Init Instance/RunExecutor										  
-	static	auto				get_instance() { if(m_pinstance.empty()){ init_instance();} return static_cast<object_ptr<manager_repository>>(m_pinstance);}
+	static	auto				get_instance() { auto p = m_pinstance.get_acquire(); if (p == nullptr) { init_instance(); p = m_pinstance.get_acquire(); } return object_ptr<manager_repository>(p);}
 	static	void				set_instance(own_ptr<manager_repository>&& _pInstance);
 	static	void				reset_instance() noexcept;
 
@@ -62,13 +62,14 @@ public:
 // implementation) 
 private:
 	// 1) Pool List.
-			lockable<circular_list<Irepository*>> m_list_repository;
+			lock_object			m_lockable_list_repository;
+			circular_list<Irepository*> m_list_repository;
 			uint64_t			m_repository_serial = 0;
 
 	// 3) instance
 	static	own_ptr<manager_repository> m_pinstance;
 	static	void				init_instance();
-	static	lockable<>			m_lockable_create;
+	static	lock_object			m_lockable_create;
 
 public:
 	// 4) destroy

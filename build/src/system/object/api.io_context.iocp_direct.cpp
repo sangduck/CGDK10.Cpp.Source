@@ -1,6 +1,6 @@
 #include "pch.h"
+#include "platform.h"
 #include <chrono>
-
 
 #if defined(_IO_APISET_H_)
 
@@ -64,7 +64,7 @@ bool api::io_context_iocp_direct::post_executable(uint32_t _bytes_transferred, u
 	// check) m_handle_epoll가 INVALID_CGHANDLE_VALUE이어서는 안된다.
 	RETURN_IF(iocp_handle == INVALID_CGHANDLE_VALUE, false);
 
-	// check) _pexecutable이 nullptr이면 안됀다.
+	// check) _pexecutable이 nullptr이면 안 된다.
 	RETURN_IF(_pexecutable == nullptr, false);
 
 	// 2) add_ref한다.
@@ -81,6 +81,31 @@ bool api::io_context_iocp_direct::post_executable(uint32_t _bytes_transferred, u
 		// return)
 		return false;
 	}
+
+	// return)
+	return true;
+}
+
+bool api::io_context_iocp_direct::post_executable(uint32_t _bytes_transferred, uintptr_t _completion_key, object_ptr<Iexecutable>&& _pexecutable) noexcept
+{
+	// - 넘겨받은 참조를 그대로 completion에 넘긴다. (add_ref하고 호출한 쪽이 release하는 한 쌍을 줄인다)
+
+	// 1) get handle
+	auto iocp_handle = this->handle();
+
+	// check)
+	RETURN_IF(iocp_handle == INVALID_CGHANDLE_VALUE, false);
+
+	// check)
+	auto pexecutable = _pexecutable.get();
+	RETURN_IF(pexecutable == nullptr, false);
+
+	// 2) post (실패하면 참조는 _pexecutable에 남아 있다 : 호출한 쪽에서 해제된다)
+	RETURN_IF(::PostQueuedCompletionStatus(iocp_handle, _bytes_transferred, _completion_key, pexecutable) == 0, false);
+
+	// 3) 참조는 completion을 처리하는 thread로 넘어갔다.
+	//    (그 thread가 이미 실행하고 release했을 수 있으므로 객체는 건드리지 않고 포인터만 비운다)
+	_pexecutable.detach();
 
 	// return)
 	return true;

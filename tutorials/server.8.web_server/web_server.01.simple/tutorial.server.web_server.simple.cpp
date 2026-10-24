@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/server.web.h"
+#include "cgdk/sdk10/server.web.h"
 
 #if defined(_WIN32)
 	#include <conio.h>
@@ -8,19 +8,19 @@ using namespace CGDK;
 
 int main()
 {
-	// 1) ì›¹ acceptorë¥¼ ìƒì„±í•œë‹¤./ create webserver
+	// 1) À¥ acceptor¸¦ »ı¼ºÇÑ´Ù./ create webserver
 	auto pacceptor_web = make_own<net::acceptor_web_server<>>();
 
-	// 2) ì›¹ ì„œë²„ìš© êµ¬ì„±ë¬¼ì„ ìƒì„±í•œë‹¤./ create web component
+	// 2) À¥ ¼­¹ö¿ë ±¸¼º¹°À» »ı¼ºÇÑ´Ù./ create web component
 	auto pweb_entity = make_object<server::web::entity::folder>("test_web"sv);
 
-	// 3) ì›¹ êµ¬ì„± ìš”ì†Œë¥¼ ì„¤ì •í•œë‹¤./ add web component
+	// 3) À¥ ±¸¼º ¿ä¼Ò¸¦ ¼³Á¤ÇÑ´Ù./ add web component
 	pacceptor_web->set_web_entity(pweb_entity);
 
-	// 4) ì›¹ì„œë²„ë¥¼ ì‹œì‘í•œë‹¤./ start webserver
+	// 4) À¥¼­¹ö¸¦ ½ÃÀÛÇÑ´Ù./ start webserver
 	pacceptor_web->start();
 
-	// 5) ESCë¥¼ ëˆŒëŸ¬ ì¢…ë£Œí•˜ê¸°ë¥¼ ê¸°ë‹¤ë¦°ë‹¤. / waiting ESC key and exit
+	// 5) ESC¸¦ ´­·¯ Á¾·áÇÏ±â¸¦ ±â´Ù¸°´Ù. / waiting ESC key and exit
 	while (_getch() != 27);
 
 	// return)

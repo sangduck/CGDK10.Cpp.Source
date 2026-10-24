@@ -30,7 +30,8 @@ class net::io::connective::manager :
 	public						object::Nnameable,
 	virtual public				object::Idestroyable,
 	virtual public				Nmessage_transmitter,
-	public						factory::_traits_system
+	public						factory::_traits_system,
+	private						non_copyable
 {
 // definitions) 
 public:
@@ -55,11 +56,12 @@ public:
 	[[nodiscard]] 				operator const std::shared_mutex& () const noexcept { return this->get_lockable();}
 
 	// 2) singleton
-	static 	auto				instance() { if (m_pinstance.empty()) { initialize_instance(); } return object_ptr<manager>(m_pinstance); }
+	static 	auto				instance() { auto p = m_pinstance.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_pinstance.get_acquire(); } return object_ptr<manager>(p); }
 	static	void				initialize_instance();
 	static	void				set_instance(own_ptr<manager>&& _pinstance) noexcept;
 	static	void				reset_instance() noexcept;
 	static	void				detach_instance() noexcept { m_pinstance.detach(); }
+	static	void				print_statistics() noexcept;
 
 // implementations) 
 private:

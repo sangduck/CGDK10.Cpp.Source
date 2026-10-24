@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -27,7 +27,7 @@ using namespace CGDK;
 
 //-----------------------------------------------------------------------------
 //
-// step 2) CGDK::Nobject_state, CGDK::Ninitializable, CGDK::Nstartable ì¸í„°í˜ì´ìŠ¤
+// step 2) CGDK::Nobject_state, CGDK::Ninitializable, CGDK::Nstartable ÀÎÅÍÆäÀÌ½º
 //
 // 
 // 
@@ -65,64 +65,64 @@ public:
 
 void tutorial_object_interface_2_step_2_Nobject()
 {
-	// * initializeì— ì „ë‹¬í•  contextë¥¼ ì„¤ì •í•œë‹¤.
+	// * initialize¿¡ Àü´ŞÇÒ context¸¦ ¼³Á¤ÇÑ´Ù.
 	context context_setting;
 	context_setting["param_1"sv] = 100;
 	context_setting["param_2"sv] = "hahaha"sv;
 
-	// 1) ê¸°ë³¸ ë™ì‘ initialize -> start -> stop -> destroy
+	// 1) ±âº» µ¿ÀÛ initialize -> start -> stop -> destroy
 	{
-		// - own_ptr<T>ë¥¼ ì‚¬ìš©í•´ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// - own_ptr<T>¸¦ »ç¿ëÇØ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pobject = make_own<bar>();
 
-		// * initializeë¥¼ í˜¸ì¶œí•œë‹¤.
+		// * initialize¸¦ È£ÃâÇÑ´Ù.
 		pobject->initialize(context_setting);
 
-		// * startí•œë‹¤.
+		// * startÇÑ´Ù.
 		pobject->start(context_setting);
 
-		// * stopí•œë‹¤.
+		// * stopÇÑ´Ù.
 		pobject->stop();
 
-		// * destroyí•œë‹¤.
+		// * destroyÇÑ´Ù.
 		pobject->destroy();
 	}
 
-	// 2) ìë™ í˜¸ì¶œ - 1
+	// 2) ÀÚµ¿ È£Ãâ - 1
 	{
-		// - own_ptr<T>ë¥¼ ì‚¬ìš©í•´ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// - own_ptr<T>¸¦ »ç¿ëÇØ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pobject = make_own<bar>();
 
-		// * startë§Œ í•´ë„ initializeëŠ” ìë™ í•˜ì¶œëœë‹¤.
+		// * start¸¸ ÇØµµ initialize´Â ÀÚµ¿ ÇÏÃâµÈ´Ù.
 		pobject->start(context_setting);
 
-		// * stopê³¼ destroyëŠ” own_ptr<T>ì—ì„œ ìë™ì ìœ¼ë¡œ í˜¸ì¶œí•´ì¤€ë‹¤.
+		// * stop°ú destroy´Â own_ptr<T>¿¡¼­ ÀÚµ¿ÀûÀ¸·Î È£ÃâÇØÁØ´Ù.
 	}
 
-	// 3) ìë™ í˜¸ì¶œ - 2
+	// 3) ÀÚµ¿ È£Ãâ - 2
 	{
-		// - own_ptr<T>ë¥¼ ì‚¬ìš©í•´ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// - own_ptr<T>¸¦ »ç¿ëÇØ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pobject = make_own<bar>();
 
-		// - startí•œë‹¤.
+		// - startÇÑ´Ù.
 		pobject->start(context_setting);
 
-		// * destroyë§Œ í˜¸ì¶œí•´ë„ startë˜ì—ˆë‹¤ë©´ stopì´ ë¨¼ì € í˜¸ì¶œëœí›„ destroyê°€ ì²˜ë¦¬í•œë‹¤.
+		// * destroy¸¸ È£ÃâÇØµµ startµÇ¾ú´Ù¸é stopÀÌ ¸ÕÀú È£ÃâµÈÈÄ destroy°¡ Ã³¸®ÇÑ´Ù.
 		pobject->destroy();
 	}
 
-	// 4) ì¤‘ë³µ í˜¸ì¶œ
+	// 4) Áßº¹ È£Ãâ
 	{
-		// - own_ptr<T>ë¥¼ ì‚¬ìš©í•´ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// - own_ptr<T>¸¦ »ç¿ëÇØ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pobject = make_own<bar>();
 
-		// - startí•œë‹¤.
+		// - startÇÑ´Ù.
 		pobject->start(context_setting);
 
-		// * startë¥¼ í•œë²ˆ ë”í•´ë„ ë‘ë²ˆ í˜¸ì¶œë˜ì§€ ì•ŠëŠ”ë‹¤.
+		// * start¸¦ ÇÑ¹ø ´õÇØµµ µÎ ¹ø È£ÃâµÇÁö ¾Ê´Â´Ù.
 		pobject->start(context_setting);
 
-		// * initializeë¥¼ í˜¸ì¶œí•´ë„ startí˜¸ì¶œì‹œ ì´ë¯¸ í˜¸ì¶œë˜ì—ˆìœ¼ë¯€ë¡œ í˜¸ì¶œë˜ì§€ ì•ŠëŠë‹¤.
+		// * initialize¸¦ È£ÃâÇØµµ startÈ£Ãâ ½Ã ÀÌ¹Ì È£ÃâµÇ¾úÀ¸¹Ç·Î È£ÃâµÇÁö ¾Ê´À´Ù.
 		pobject->initialize(context_setting);
 	}
 }

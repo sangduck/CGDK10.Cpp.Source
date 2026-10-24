@@ -12,7 +12,7 @@
 #endif
 
 extern CGPTR<CCGLogHub>	g_pLog;
-CGPTR<CService>			g_pService;
+CGPTR<CService>			g_pservice;
 
 
 // CLoginServerDlg 대화 상자
@@ -39,7 +39,7 @@ BEGIN_MESSAGE_MAP(CLoginServerDlg, CDialogEx)
 	ON_COMMAND(ID_SYSTEM_START, &CLoginServerDlg::OnSystemServiceStart)
 	ON_COMMAND(ID_SYSTEM_STOP, &CLoginServerDlg::OnSystemServiceStop)
 	ON_COMMAND(ID_SYSTEM_EXIT, &CLoginServerDlg::OnSystemExit)
-	ON_COMMAND(ID_SETTING_CONFIQURES, &CLoginServerDlg::OnSettingConfigures)
+	ON_COMMAND(ID_SETTING_CONFIGURES, &CLoginServerDlg::OnSettingConfigures)
 	ON_COMMAND(ID_SETTING_ENGINETUNNING, &CLoginServerDlg::OnSettingEnginetunning)
 	ON_COMMAND(ID_ABOUT_SYSTEM_INFO, &CLoginServerDlg::OnAboutSystemInfo)
 	ON_COMMAND(ID_SYSTEM_CANCEL, &CLoginServerDlg::OnSystemServiceCancel)
@@ -103,10 +103,10 @@ BOOL CLoginServerDlg::OnInitDialog()
 	// 4. 초기화.
 	//-----------------------------------------------------------------
 	// 1) Service를 생성한다.
-	g_pService = make_object<service>();
+	g_pservice = make_object<service>();
 
 	// 2) Unregister한다.
-	g_pService->RegisterMessageable(this);
+	g_pservice->RegisterMessageable(this);
 
 	// 3) Initialize
 	RequestServiceInitialize();
@@ -122,16 +122,16 @@ BOOL CLoginServerDlg::OnInitDialog()
 	tempContext.read_from_JSON_file("LoginServer_Setting.json");
 
 	// 2) User
-	m_childAcceptorUser.CreateChild(g_pService->m_pacceptorUser, this);
+	m_childAcceptorUser.CreateChild(g_pservice->m_pacceptorUser, this);
 	//m_childAcceptorUser.SetDefaultPort(tempContext["acceptorUser"]["Port"]);
 	m_childAcceptorUser.Move(5, 0, ORIGIN_REAR | ORIGIN_CENTER_Y, GetDlgItem(IDC_STATIC_ACCEPTOR_USER));
 
-	m_childConnectiveUser.CreateChild(g_pService->m_pacceptorUser->Statistics_GetConnectionInfo(), this);
+	m_childConnectiveUser.CreateChild(g_pservice->m_pacceptorUser->Statistics_GetConnectionInfo(), this);
 	m_childConnectiveUser.Move(0, 25, ORIGIN_CENTER_X | ORIGIN_CENTER_Y, GetDlgItem(IDC_STATIC_FRAME_USER));
 	m_childConnectiveUser.SetUpdateInterval(1);
 
 	// 3) Server Lobby
-	m_childAcceptorServerLobby.CreateChild(g_pService->m_pacceptorServerLobby, this);
+	m_childAcceptorServerLobby.CreateChild(g_pservice->m_pacceptorServerLobby, this);
 	//m_childAcceptorServerLobby.SetDefaultPort(tempContext["acceptorServerLobby"]["Port"]);
 	m_childAcceptorServerLobby.Move(5, 0, ORIGIN_REAR | ORIGIN_CENTER_Y, GetDlgItem(IDC_STATIC_ACCEPTOR_LOGINSERVER));
 
@@ -258,7 +258,7 @@ int CLoginServerDlg::OnMessage(CGMSG& _msg)
 		{
 		case	CGNOTIFY_SERVER_UPDATE:
 				{
-					g_pService->AddRef();
+					g_pservice->AddRef();
 				}
 				break;
 
@@ -328,7 +328,7 @@ LRESULT CLoginServerDlg::OnNotifyMessage_Update(WPARAM _wParam, LPARAM _lParam)
 	case	CGNOTIFY_SERVER_UPDATE:
 			{
 				UpdateServerInfo();
-				g_pService->Release();
+				g_pservice->Release();
 			}
 			break;
 
@@ -418,12 +418,12 @@ void CLoginServerDlg::OnTimer(UINT_PTR nIDEvent)
 	if (nIDEvent == 0)
 	{
 		// check) 
-		RETURN_IF(g_pService.empty());
+		RETURN_IF(g_pservice.empty());
 
-		//SetDlgItemInt(IDC_STATIC_SERVER_VERSION, g_pService->GetServerVersion());
+		//SetDlgItemInt(IDC_STATIC_SERVER_VERSION, g_pservice->GetServerVersion());
 		//SetDlgItemText(IDC_STATIC_SVN_VERSION, SVN_UPDATE_REVISION);
 
-		//time::local::time_point	timeUpdated	 = g_pService->m_timeServerList_Updated;
+		//time::local::time_point	timeUpdated	 = g_pservice->m_timeServerList_Updated;
 		//SetDlgItemText(IDC_STATIC_SERVERLIST_LAST_UPDATED, timeUpdated.to_string<TCHAR>().c_str());
 
 		// 1) 모든 Lobby Server 정보를 Update한다.
@@ -449,13 +449,13 @@ void CLoginServerDlg::RequestServiceInitialize()
 	CGMSG_CONTEXT	msgContext;
 
 	// 1) Service를 초기화한다.
-	g_pService->Initialize(msgContext);
+	g_pservice->Initialize(msgContext);
 }
 
 void CLoginServerDlg::RequestServiceStart()
 {
 	// check) 
-	RETURN_IF(g_pService.empty());
+	RETURN_IF(g_pservice.empty());
 
 	// 1) Menu Control
 	GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_DISABLED);
@@ -469,7 +469,7 @@ void CLoginServerDlg::RequestServiceStart()
 		// Declar)
 		CGMSG_CONTEXT	msgContext;
 
-		g_pService->Start(msgContext);
+		g_pservice->Start(msgContext);
 	});
 }
 
@@ -480,7 +480,7 @@ void CLoginServerDlg::RequestServiceCancel()
 void CLoginServerDlg::RequestServiceStop()
 {
 	// check) 
-	RETURN_IF(g_pService.empty());
+	RETURN_IF(g_pservice.empty());
 
 	// 1) Menu Control
 	GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_ENABLED);
@@ -491,7 +491,7 @@ void CLoginServerDlg::RequestServiceStop()
 	// 2) Close의 실행을 요청한다.
 	POST_EXECUTE([]()
 	{
-		g_pService->Stop();
+		g_pservice->Stop();
 	});
 }
 
@@ -510,15 +510,15 @@ void CLoginServerDlg::RequestServiceDestroy()
 	POST_EXECUTE([=]
 	{
 		// - Server를 닫는다.
-		g_pService->Destroy();
+		g_pservice->Destroy();
 
 		// - Trace를 등록해제한다.
 		g_pLog->UnregisterMessageable(&m_childLogView);
 
 		// - Unregister한다.
-		g_pService->UnregisterMessageable(this);
+		g_pservice->UnregisterMessageable(this);
 
-		// - QUIT Message를 현재의 Thread에 날린다.(이것으로 어플리케이션은 종료된다.)
+		// - QUIT Message를 현재의 Thread에 날린다.(이것으로 애플리케이션은 종료된다.)
 		PostThreadMessage(iThreadID, WM_QUIT, (WPARAM)-1, 0);
 	});
 }
@@ -565,7 +565,7 @@ int CLoginServerDlg::List_LobbyServerAdd(ServerLobby::CSocket* _pSocket)
 	LV_ITEM	list_item;
 	int		iCountUser;
 
-	scoped_lock(m_listServerLobby)
+	SCOPED_LOCK(m_listServerLobby)
 	{
 		// 1) 추가한다.
 		list_item.iItem = m_listServerLobby.InsertItem(m_listServerLobby.GetItemCount(), TEXT(""));
@@ -602,7 +602,7 @@ void CLoginServerDlg::List_LobbyServerRemove(ServerLobby::CSocket* _pSocket)
 	// Declare) 
 	int		iCountUser;
 
-	scoped_lock(m_listServerLobby)
+	SCOPED_LOCK(m_listServerLobby)
 	{
 		// 1) Index를 얻는다.
 		int	iIndex = m_listServerLobby.MapIDToIndex(_pSocket->m_idxList);
@@ -629,7 +629,7 @@ void CLoginServerDlg::List_LobbyServerRemove(ServerLobby::CSocket* _pSocket)
 
 void CLoginServerDlg::List_LobbyServerUpdate(ServerLobby::CSocket* _pSocket)
 {
-	scoped_lock(m_listServerLobby)
+	SCOPED_LOCK(m_listServerLobby)
 	{
 		// 1) Index를 얻는다.
 		int	iIndex = m_listServerLobby.MapIDToIndex(_pSocket->m_idxList);
@@ -697,9 +697,9 @@ void CLoginServerDlg::List_LobbyServerUpdate(int _Index)
 
 void CLoginServerDlg::List_LobbyServerUpdateAll()
 {
-	scoped_lock(m_listServerLobby)
+	SCOPED_LOCK(m_listServerLobby)
 	{
-		// 1) Game Server의 갯수를 얻는다.
+		// 1) Game Server의 개수를 얻는다.
 		int	countGameServer = m_listServerLobby.GetItemCount();
 
 		/// 2) 모든 Game Server를 Update한다.
@@ -712,6 +712,6 @@ void CLoginServerDlg::List_LobbyServerUpdateAll()
 
 void CLoginServerDlg::UpdateServerInfo()
 {
-	//SetDlgItemInt(IDC_STATIC_SERVER_VERSION, g_pService->GetServerVersion());
+	//SetDlgItemInt(IDC_STATIC_SERVER_VERSION, g_pservice->GetServerVersion());
 	//SetDlgItemText(IDC_STATIC_SVN_VERSION, _TO_CGSTRING(SVN_UPDATE_REVISION));
 }

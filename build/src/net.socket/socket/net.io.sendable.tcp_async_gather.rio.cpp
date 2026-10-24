@@ -8,7 +8,7 @@ using namespace CGDK;
 void net::io::sendable::Ntcp_async_gather_rio::QUEUE_SEND::buffer_alloc(std::size_t _count)
 {
 	// 1) get alloc count - 
-	//    주의) 할당갯수를 _count에 최소 1의 마진을 줘야 한다. 최대 _count + 1 까지 억세스를 할수 있기 때문이다.
+	//    주의) 할당개수를 _count에 최소 1의 마진을 줘야 한다. 최대 _count + 1 까지 억세스를 할 수 있기 때문이다.
 	auto count_alloc = _count + 2;
 
 	// 2) alloc buffer
@@ -59,42 +59,46 @@ void net::io::sendable::Ntcp_async_gather_rio::QUEUE_SEND::buffer_move(QUEUE_SEN
 bool net::io::sendable::Ntcp_async_gather_rio::process_sendable( const buffer_view _buffer, object_ptr<Ireferenceable>&& _powner, std::size_t _count_message, const net::sockaddr& /*_paddress*/)
 {
 	// check) _buffer.size()이 0이 아닌가?
-	CGASSERT(_buffer.size() != 0, false);
+	CGASSERT_ERROR(_buffer.size() != 0);
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	RETURN_IF(_buffer.size() == 0, false);
+	if(_buffer.size() == 0)
+		return false;
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	CGASSERT(_buffer.data() != nullptr, false);
+	CGASSERT_FATAL(_buffer.data() != nullptr);
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	THROW_IF(_buffer.data() == nullptr, throwable::failure(eRESULT::INVALID_MESSAGE_BUFFER_IS_NULL, 0, "buffer.data is null ('net::io::sendable::Ntcp_async_gather_rio::process_sendable')"sv));
+	if(_buffer.data() == nullptr)
+		return false;
 
 	// declare)
 	CGSOCKET handle_socket;
 
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		// check) if socket is not connected, return false (after lock)
-		RETURN_IF(this->socket_state() < eSOCKET_STATE::ESTABLISHED, false);
+		if(this->socket_state() < eSOCKET_STATE::ESTABLISHED)
+			return false;
 
 		// 1) get socket native handle
 		handle_socket = this->native_handle();
 
 		// check) if invalid socket, return false 
-		RETURN_IF(handle_socket == INVALID_SOCKET, false);
+		if(handle_socket == INVALID_SOCKET)
+			return false;
 
 		// check) 
 		if (this->m_flag_sending == true)
 		{
-			// check) quque overflowed?
+			// check) queue overflowed?
 			if ((this->m_queue_pending.count_node >= this->m_max_depth_of_send_buffer) || (this->m_queue_pending.bytes_data >= this->m_bytes_max_queued) )
 			{
 				// statistics)
 				this->statistics_on_error_send();
 
 				// check)
-				THROW_IF(this->exception_on_send_overflow(), throwable::failure(eRESULT::OVERFLOW_ERROR, 0, "occure send overflow"sv));
+				this->process_on_send_overflow();
 
 				// return)
 				return false;
@@ -121,12 +125,10 @@ bool net::io::sendable::Ntcp_async_gather_rio::process_sendable( const buffer_vi
 
 				// - create new if empty
 				if (index == 0)
-				{
 					this->m_queue_pending.buffer_alloc(this->m_max_depth_of_send_buffer);
-				}
 
 				// check)
-				CGASSERT_ERROR(this->m_queue_pending.array_buffer != nullptr);
+				CGASSERT_FATAL(this->m_queue_pending.array_buffer != nullptr);
 
 				// - set buf data
 				this->m_queue_pending.array_buffer[index] = WSABUF{ _buffer.size<ULONG>(), _buffer.data() };
@@ -232,7 +234,7 @@ void net::io::sendable::Ntcp_async_gather_rio::process_complete_sendable( uintpt
 	// 1) clear m_queue_sending
 	this->m_queue_sending.buffer_free();
 
-	scoped_lock_named(this->m_lockable_sending, cs)
+	SCOPED_LOCK_NAMED(this->m_lockable_sending, cs)
 	{
 		// check) 
 		if (this->native_handle() == INVALID_SOCKET)
@@ -251,7 +253,7 @@ void net::io::sendable::Ntcp_async_gather_rio::process_complete_sendable( uintpt
 			this->m_flag_sending = false;
 
 			// - lock leave
-			scoped_lock_leave(cs)
+			SCOPED_LOCK_LEAVE(cs)
 
 			// - shutdown if send_disconnected
 			if (this->socket_state() == eSOCKET_STATE::SEND_DISCONNECTED)
@@ -268,7 +270,7 @@ void net::io::sendable::Ntcp_async_gather_rio::process_complete_sendable( uintpt
 		}
 
 		// 2) move buffer
-		this->m_queue_sending.buffer_move(std::move(m_queue_pending));
+		this->m_queue_sending.buffer_move(std::move(this->m_queue_pending));
 
 		// 3) Queueing 전송 관련 변수들을 초기화한다.
 		this->m_ptr_queued_buffer_tail = nullptr;
@@ -319,7 +321,7 @@ void net::io::sendable::Ntcp_async_gather_rio::process_close_sender()
 	// check)
 	bool do_shutdown;
 
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		do_shutdown = this->m_queue_sending.count_node == 0;
 	}
@@ -337,7 +339,7 @@ void net::io::sendable::Ntcp_async_gather_rio::process_close_sender()
 void net::io::sendable::Ntcp_async_gather_rio::process_reset_sendable() noexcept
 {
 	// 1) prepare & reset sending status
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		// - prepare and reset send buffer
 		this->_process_prepare_send_buffers();

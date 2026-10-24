@@ -34,7 +34,7 @@ namespace CGDK
 //       호출한다.
 //
 //    주위) 만약 대규모의 재전송을 수행할 경우 이 클래스보다는 Reliable 클래스를 
-//         사용하길 권장한다. 대규모의 재전송을 수행할 경우 각종 Cogestion control
+//         사용하길 권장한다. 대규모의 재전송을 수행할 경우 각종 Congestion control
 //         및 다양한 재전송 알고리즘이 추가된 Reliable 클래스보다 성능이 많이 떨어
 //         진다.
 //
@@ -44,7 +44,7 @@ namespace CGDK
 class net::io::Nudp_resend :
 	public						net::io::send_request::Nudp_resend,
 	public						net::io::packetable::Ndatagram_response,
-	virtual public				Imessageable,
+	virtual public				CGDK::Imessageable,
 	virtual public				net::io::statistics::Nsocket
 {
 public:

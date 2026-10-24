@@ -18,7 +18,7 @@ net::io::connective::manager::~manager() noexcept
 result_code net::io::connective::manager::destroy() noexcept
 {
 	// 1) ...
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{ 
 	}
 
@@ -31,7 +31,7 @@ void net::io::connective::manager::join( net::io::Iconnective* _pconnective)
 	// 1) add_reference한다.
 	this->add_ref();
 
-	scoped_unique_lock(this->m_lockable_list_connective)
+	SCOPED_UNIQUE_LOCK(this->m_lockable_list_connective)
 	{
 		// 1) 같은 것이 있는지 먼저 검사한다.
 		auto iter_connective = std::find(this->m_list_connective.begin(), this->m_list_connective.end(), _pconnective);
@@ -52,12 +52,12 @@ void net::io::connective::manager::join( net::io::Iconnective* _pconnective)
 
 void net::io::connective::manager::leave( net::io::Iconnective* _pconnective) noexcept
 {
-	scoped_unique_lock(this->m_lockable_list_connective)
+	SCOPED_UNIQUE_LOCK(this->m_lockable_list_connective)
 	{
 		// 1) Pool 관리 List에서 떼낸다.
 		auto iter_connective = std::find(this->m_list_connective.begin(), this->m_list_connective.end(), _pconnective);
 
-		// check) 해당 Connectie가 없으면 제거한다.
+		// check) 해당 Connective가 없으면 제거한다.
 		RETURN_IF(iter_connective == this->m_list_connective.end());
 
 		// 2) 리스트에서 제거한다.
@@ -73,11 +73,11 @@ void net::io::connective::manager::leave( net::io::Iconnective* _pconnective) no
 
 void net::io::connective::manager::initialize_instance()
 {
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		RETURN_IF(m_pinstance.exist());
 		
-		m_pinstance = _make_own_raw<manager>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL);
+		m_pinstance.exchange_release(_make_own_raw<manager>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL));
 	} 
 }
 void net::io::connective::manager::set_instance(own_ptr<manager>&& _pinstance) noexcept
@@ -85,13 +85,13 @@ void net::io::connective::manager::set_instance(own_ptr<manager>&& _pinstance) n
 	// declare)
 	own_ptr<manager> pinstance_pre;
 
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) move old instance
 		pinstance_pre = std::move(m_pinstance);
 
 		// 2) set new instance
-		m_pinstance = std::move(_pinstance);
+		m_pinstance.exchange_release(std::move(_pinstance));
 	}
 
 	// 3) reset old instance
@@ -103,7 +103,7 @@ void net::io::connective::manager::reset_instance() noexcept
 	// declare)
 	own_ptr<manager> pinstance;
 
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) move instance
 		pinstance = std::move(m_pinstance);
@@ -111,4 +111,161 @@ void net::io::connective::manager::reset_instance() noexcept
 
 	// 2) reset old instance
 	pinstance.reset();
+}
+
+void net::io::connective::manager::print_statistics() noexcept
+{
+	try
+	{
+			// 1) get instance
+			auto temp_instance = instance();
+
+			// 2) alloc shared_buffer for log text
+			auto buf_output = alloc_shared_buffer((static_cast<size_t>(temp_instance->size()) + 4) * 256);
+
+			buf_output.append_text("\x1b[37m" "-----------------------------------------------------------------------------------------------------------------\n" "\x1b[0m");
+			buf_output.append_text(std::format("\x1b[37m" "{:30s} {:>3s} {:>11s}{:>11s}{:>11s}{:>11s}{:>11s}{:>11s}{:>11s}\n" "\x1b[0m"sv,
+				"name"sv,
+				"id"sv,
+				"try"sv,
+				"con.succ"sv,
+				"con.fail"sv,
+				"discon"sv,
+				"err.dis"sv,
+				"now"sv,
+				"sync"sv)
+			);
+			buf_output.append_text("\x1b[90m" "-----------------------------------------------------------------------------------------------------------------\n" "\x1b[0m");
+
+			SCOPED_SHARED_LOCK(temp_instance->m_lockable_list_connective)
+			{
+				for (auto iter : temp_instance->m_list_connective)
+				{
+					// check)
+					CGASSERT_ERROR(iter != nullptr);
+
+					// check)
+					CONTINUE_IF(iter == nullptr);
+
+					// - get statistics
+					auto& statistics = iter->statistics_get_connection_info();
+
+					auto name = iter->name();
+
+					std::string_view connective_name = (name.size() < 30) ? std::string_view(name) : std::string_view(name.data(), 30);
+
+					// - "1. name"
+					// - "2. id"
+					buf_output.append_text(std::format("\x1b[92m" "{:30s} {:>3}" "\x1b[0m"sv, connective_name, iter->get_connective_id()));
+
+					// - "3. try"
+					{
+						auto count = statistics.count_try.load();
+						if (count != 0)
+						{
+							buf_output.append_text(CGDK::stream_width(count, 12));
+						}
+						else
+						{
+							buf_output.append_text("\x1b[90m" "           0" "\x1b[0m"sv);
+						}
+					}
+
+					// - "4. success_connect"
+					{
+
+						auto count = statistics.count_success_connect.load();
+						if (count != 0)
+						{
+							buf_output.append_text(CGDK::stream_width(count, 11));
+						}
+						else
+						{
+							buf_output.append_text("\x1b[90m" "          0" "\x1b[0m"sv);
+						}
+					}
+
+					// - "5. count_fail_connect"
+					{
+						auto count = statistics.count_fail_connect.load();
+						if (count != 0)
+						{
+							buf_output.append_text(CGDK::stream_width(count, 11));
+						}
+						else
+						{
+							buf_output.append_text("\x1b[90m" "          0" "\x1b[0m"sv);
+						}
+					}
+
+					// - "6. count_disconnect"
+					{
+						auto count = statistics.count_disconnect.load();
+						if (count != 0)
+						{
+							buf_output.append_text(CGDK::stream_width(count, 11));
+						}
+						else
+						{
+							buf_output.append_text("\x1b[90m" "          0" "\x1b[0m"sv);
+						}
+					}
+
+					// - "7. count_error_disconnect"
+					{
+
+						auto count = statistics.count_error_disconnect.load();
+						if (count != 0)
+						{
+							buf_output.append_text(CGDK::stream_width(count, 11));
+						}
+						else
+						{
+							buf_output.append_text("\x1b[90m" "          0" "\x1b[0m"sv);
+						}
+					}
+
+					// - "8. count_keep"
+					{
+						auto count = statistics.count_keep.load();
+						if (count != 0)
+						{
+							buf_output.append_text(CGDK::stream_width(count, 11));
+						}
+						else
+						{
+							buf_output.append_text("\x1b[90m" "          0" "\x1b[0m"sv);
+						}
+					}
+					// - "9. count_async"
+					{
+						auto count = statistics.count_async.load();
+						if (count != 0)
+						{
+							buf_output.append_text(CGDK::stream_width(count, 11));
+						}
+						else
+						{
+							buf_output.append_text("\x1b[90m" "          0" "\x1b[0m"sv);
+						}
+					}
+
+					// - new line~
+					buf_output.append_text("\n");
+				}
+			}
+			buf_output.append_text("\x1b[37m" "-----------------------------------------------------------------------------------------------------------------\n" "\x1b[0m");
+
+			// 3) 최종 출력
+		#if defined(_WIN32)
+			DWORD number_written = 0;
+			WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), buf_output.data(), buf_output.size<DWORD>(), &number_written, nullptr);
+		#else
+			fwrite(buf_output.data(), 1, buf_output.size<int>(), stdout);
+			fflush(stdout);
+		#endif
+	}
+	catch (...)
+	{
+	}
 }

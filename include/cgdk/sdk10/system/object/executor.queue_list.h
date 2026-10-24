@@ -24,7 +24,7 @@ namespace CGDK
 /**
 
  @class		executor::queue_list
- @brief		IOCP를 사용한 쓰레드풀을 구성한 executor이다.
+ @brief		IOCP를 사용한 스레드풀을 구성한 executor이다.
  @todo		
  @ref		
  @details	\n
@@ -41,7 +41,6 @@ class executor::queue_list :
 {
 public:
 			queue_list() noexcept;
-			queue_list(std::string_view _name);
 	virtual	~queue_list() noexcept;
 
 public:
@@ -51,12 +50,12 @@ public:
 
 public:
 			result_code			start() { context _context; return this->start(_context);}
-			result_code			start(const START_PARAMETER& _parameter) { context temp(buffer_view((char*)&_parameter, sizeof(START_PARAMETER)));  return this->start(temp); }
+			result_code			start(const START_PARAMETER& _parameter) { context temp; temp = buffer_view((char*)&_parameter, sizeof(START_PARAMETER));  return this->start(temp); }
 	virtual result_code			start(context& _context) override;
 	virtual	result_code			stop() noexcept override;
 	virtual	void				execute_all() noexcept;
 
-	[[nodiscard]] virtual size_t pended_count() const noexcept override { scoped_lock(this->m_lock_complete) { return this->m_queue_executable.size(); } }
+	[[nodiscard]] virtual size_t pended_count() const noexcept override { std::lock_guard lock(this->m_lockable_queue_executable); return this->m_queue_executable.size(); }
 
 protected:
 	virtual	bool				process_post(object_ptr<Iexecutable>&& _pexecutable) override;
@@ -65,12 +64,15 @@ protected:
 protected:
 		using CONTAINER_EXECUTABLE_QUEUE = circular_list<object_ptr<Iexecutable>>;
 
-			lockable<CONTAINER_EXECUTABLE_QUEUE> m_queue_executable;
+	mutable	lock_object			m_lockable_queue_executable;
+			CONTAINER_EXECUTABLE_QUEUE m_queue_executable;
 
-			std::mutex			m_lock_complete;
+			std::mutex			m_lockable_complete;
 			std::condition_variable m_cv_complete;
+			bool				m_is_wait_cancelled = false;	// - true면 process_execute()가 기다리지 않는다. (m_lockable_complete 안에서 읽고 쓴다)
 
 			object_ptr<Iexecutable> pop_queued_executable() noexcept;
+			void				cancel_wait(bool _is_cancel) noexcept;
 };
 
 

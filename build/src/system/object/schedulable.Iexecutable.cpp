@@ -10,9 +10,7 @@ bool schedulable::Iexecutable::process_on_register()
 
 	// 2) default executor
 	if (this->has_executor() == false)
-	{
 		this->executor(system_executor::executor());
-	}
 
 	// return)
 	return true;
@@ -26,7 +24,8 @@ void schedulable::Iexecutable::process_on_unregister()
 bool schedulable::Iexecutable::process_schedule()
 {
 	// check) 
-	RETURN_IF(chrono::tick::now() < this->m_tick_next, false);
+	if(chrono::tick::now() < this->m_tick_next)
+		return false;
 
 	// 1) execute
 	try
@@ -38,7 +37,7 @@ bool schedulable::Iexecutable::process_schedule()
 	}
 
 	// 2) set next tick
-	this->m_tick_next = this->m_tick_next + this->m_tick_diff_execute;
+	this->process_advance_next_tick();
 
 	// return)
 	return true;

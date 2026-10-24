@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CGDK.server.web.controls.MFC.vs16.cpp">
+    <ClCompile Include="CGDK10.server.web.controls.mfc.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="dllmain.cpp">
@@ -26,10 +26,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="CGDK.server.web.controls.MFC.vs16.def">
+    <None Include="CGDK10.server.web.controls.mfc.def">
       <Filter>소스 파일</Filter>
     </None>
-    <None Include="res\CGDK.server.web.controls.MFC.vs16.rc2">
+    <None Include="res\CGDK10.server.web.controls.mfc.rc2">
       <Filter>리소스 파일</Filter>
     </None>
   </ItemGroup>
@@ -48,7 +48,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="CGDK.server.web.controls.MFC.vs16.rc">
+    <ResourceCompile Include="CGDK10.server.web.controls.mfc.rc">
       <Filter>리소스 파일</Filter>
     </ResourceCompile>
   </ItemGroup>

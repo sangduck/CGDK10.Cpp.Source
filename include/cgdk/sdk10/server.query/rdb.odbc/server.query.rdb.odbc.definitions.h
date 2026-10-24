@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                         Server Query odbc Classes                         *
+//*                          server.query.rdb.odbc                            *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -39,8 +39,6 @@ namespace odbc
 	void						_dump_error_records_stmt(throwable::failure_ex& _e, SQLHSTMT _handle_stmt) noexcept;
 
 	throwable::failure_ex trace_error_records(Iquery* _pquery, SQLRETURN _result, const std::string_view _str_query_string);
-	void regen_session(session* _psession);
-
 }
 }
 }
@@ -66,7 +64,7 @@ struct ODBC_DRIVER_INFO
 
 //----------------------------------------------------------------------------
 //
-//  query odbc fuctions
+//  query odbc functions
 //
 //----------------------------------------------------------------------------
 [[nodiscard]] NUMERIC				__to_numeric(const SQL_NUMERIC_STRUCT& _decimal) noexcept;
@@ -92,16 +90,10 @@ template<> class _sql_param<double>				{ public: using type = SQLDOUBLE;   [[nod
 template<> class _sql_param<void*>				{ public: using type = SQLCHAR;		[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_C_BINARY; }	[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_BINARY; } };
 template<> class _sql_param<char*>				{ public: using type = SQLCHAR;		[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_C_CHAR; }		[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_CHAR; } };
 template<> class _sql_param<wchar_t*>			{ public: using type = SQLWCHAR;	[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_C_WCHAR; }		[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_WCHAR; } };
-template<> class _sql_param<char16_t*>			{ public: using type = SQLWCHAR;	[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_C_WCHAR; }		[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_WCHAR; } };
-template<> class _sql_param<char32_t*>			{ public: using type = SQLCHAR;		[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_WLONGVARCHAR; }[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_WLONGVARCHAR; } };
 template<> class _sql_param<std::string>		{ public: using type = SQLCHAR;		[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_C_CHAR; }		[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_CHAR; } };
 template<> class _sql_param<std::wstring>		{ public: using type = SQLWCHAR;	[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_C_WCHAR; }		[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_WCHAR; } };
-template<> class _sql_param<std::u16string>		{ public: using type = SQLWCHAR;	[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_C_WCHAR; }		[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_WCHAR; } };
-template<> class _sql_param<std::u32string>		{ public: using type = SQLCHAR;		[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_WLONGVARCHAR; }[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_WLONGVARCHAR; } };
 template<> class _sql_param<std::string_view>	{ public: using type = SQLCHAR;		[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_C_CHAR; }		[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_CHAR; } };
 template<> class _sql_param<std::wstring_view>	{ public: using type = SQLWCHAR;	[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_C_WCHAR; }		[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_WCHAR; } };
-template<> class _sql_param<std::u16string_view>{ public: using type = SQLWCHAR;	[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_C_WCHAR; }		[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_WCHAR; } };
-template<> class _sql_param<std::u32string_view>{ public: using type = SQLCHAR;		[[nodiscard]] static SQLSMALLINT column_type() noexcept { return SQL_WLONGVARCHAR; }[[nodiscard]] static SQLSMALLINT data_type() noexcept { return SQL_WLONGVARCHAR; } };
 
 
 }

@@ -17,6 +17,7 @@
 //*****************************************************************************
 
 #pragma once
+#include <format>
 
 namespace CGDK
 {
@@ -33,13 +34,13 @@ namespace CGDK
 //       -> 기존 _log함수 사용 예 
 //			LOG(plogger, log_type_t::INFO) << "Test Log {} {}", x, t.c_str());
 //
-//       -> 기본 log_target을 사용시 log_target을 생략
+//       -> 기본 log_target을 사용 시 log_target을 생략
 //			LOG(log_type_t::info) << "Test Log";
 //
 //       -> fmt::format 사용예
 //			LOG(log_type_t::info) << fmt::format("Test Log {} {}", x, t.c_str());
 //
-//       -> defiontion을 사용
+//       -> definition을 사용
 //			LOG_INFO << "Test Log"sv;
 //          (LOG(log_type_t::info) << "Test Log"와 동일한다.
 //
@@ -47,6 +48,46 @@ namespace CGDK
 struct log_continue_t
 {
 };
+
+//-----------------------------------------------------------------------------
+// CGDK::format
+//
+//  - LOG_INFO << CGDK::format("{} {}", a, b);
+//    formats into the log buffer directly with std::format_to_n
+//    (std::format makes a temporary std::string and it is copied again)
+//  - the format string is checked at compile time like std::format
+//  - holds references to the arguments : use it only in the same expression
+//-----------------------------------------------------------------------------
+template <class... TARGS>
+struct log_format_t
+{
+	std::format_string<TARGS...>	fmt;
+	std::tuple<TARGS&&...>			args;
+
+	// - expected size (format string + strings, 24 for others) : to format once
+	[[nodiscard]] std::size_t		estimate() const noexcept { return std::apply([this](const auto&... _a) { return fmt.get().size() + (_estimate(_a) + ... + 0); }, args); }
+
+	template <class T>
+	[[nodiscard]] static std::size_t _estimate(const T& _value) noexcept
+	{
+		if constexpr (std::is_convertible_v<const T&, std::string_view> && !std::is_pointer_v<std::decay_t<T>>)
+			return std::string_view(_value).size();
+		else
+			return 24;
+	}
+
+	template <std::size_t... I>
+	[[nodiscard]] std::format_to_n_result<char*> _format_to_n(char* _dest, std::size_t _size, std::index_sequence<I...>)
+	{
+		return std::format_to_n<char*, TARGS...>(_dest, static_cast<std::ptrdiff_t>(_size), fmt, std::forward<TARGS>(std::get<I>(args))...);
+	}
+};
+
+template <class... TARGS>
+[[nodiscard]] inline log_format_t<TARGS...> format(std::format_string<TARGS...> _format, TARGS&&... _args)
+{
+	return { _format, std::forward_as_tuple(std::forward<TARGS>(_args)...) };
+}
 
 class _log_stream
 {
@@ -57,80 +98,94 @@ public:
 	~_log_stream() noexcept		{ CGASSERT_ERROR(plog_record.empty()); }
 
 public:
-	_log_stream&				operator << (char _rhs) { process_stream_in<char>(_rhs); return *this; }
-	_log_stream&				operator << (int8_t _rhs) { process_stream_in<int8_t>(_rhs); return *this; }
-	_log_stream&				operator << (uint8_t _rhs) { process_stream_in<uint8_t>(_rhs); return *this; }
-	_log_stream&				operator << (int16_t _rhs) { process_stream_in<int16_t>(_rhs); return *this; }
-	_log_stream&				operator << (uint16_t _rhs) { process_stream_in<uint16_t>(_rhs); return *this; }
-	_log_stream&				operator << (int32_t _rhs) { process_stream_in<int32_t>(_rhs); return *this; }
-	_log_stream&				operator << (uint32_t _rhs) { process_stream_in<uint32_t>(_rhs); return *this; }
-	_log_stream&				operator << (int64_t _rhs) { process_stream_in<int64_t>(_rhs); return *this; }
-	_log_stream&				operator << (uint64_t _rhs) { process_stream_in<uint64_t>(_rhs); return *this; }
+	_log_stream&				operator << (char _rhs);
+	_log_stream&				operator << (int8_t _rhs);
+	_log_stream&				operator << (uint8_t _rhs);
+	_log_stream&				operator << (int16_t _rhs);
+	_log_stream&				operator << (uint16_t _rhs);
+	_log_stream&				operator << (int32_t _rhs);
+	_log_stream&				operator << (uint32_t _rhs);
+	_log_stream&				operator << (int64_t _rhs);
+	_log_stream&				operator << (uint64_t _rhs);
 #if defined(_MSC_VER)
-	_log_stream&				operator << (long _rhs) { process_stream_in<long>(_rhs); return *this; }
-	_log_stream&				operator << (unsigned long _rhs) { process_stream_in<unsigned long>(_rhs); return *this; }
+	_log_stream&				operator << (long _rhs);
+	_log_stream&				operator << (unsigned long _rhs);
 #else
-	_log_stream&				operator << (long long _rhs) { process_stream_in<long long>(_rhs); return *this; }
-	_log_stream&				operator << (unsigned long long _rhs) { process_stream_in<unsigned long long>(_rhs); return *this; }
+	_log_stream&				operator << (long long _rhs);
+	_log_stream&				operator << (unsigned long long _rhs);
 #endif
-	_log_stream&				operator << (log_continue_t /*_rhs*/) { CGASSERT_ERROR(plog_record != nullptr); if(plog_record == nullptr) return *this; plog_record->type = (plog_record->type | log_type_t::continue_); return *this; }
-	_log_stream&				operator << (log_level_t _rhs) { CGASSERT_ERROR(plog_record != nullptr); if(plog_record == nullptr) return *this; plog_record->level = _rhs; return *this; }
-	_log_stream&				operator << (log_attribute_t _rhs) { CGASSERT_ERROR(plog_record != nullptr); if(plog_record == nullptr) return *this; plog_record->attribute = _rhs; return *this; }
-	_log_stream&				operator << (log_origin_t _rhs) { CGASSERT_ERROR(plog_record != nullptr); if(plog_record == nullptr) return *this; plog_record->origin = _rhs; return *this; }
-	_log_stream&				operator << (log_source_t _rhs) { CGASSERT_ERROR(plog_record != nullptr); if(plog_record == nullptr) return *this; plog_record->source = _rhs; return *this; }
-	_log_stream&				operator << (log_destination_t _rhs) { CGASSERT_ERROR(plog_record != nullptr); if(plog_record == nullptr) return *this; plog_record->destination = _rhs; return *this; }
+	_log_stream&				operator << (float _rhs);
+	_log_stream&				operator << (double _rhs);
+	_log_stream&				operator << (const char* _rhs);
+	_log_stream&				operator << (const std::string& _rhs);
+	_log_stream&				operator << (std::string&& _rhs);
+	_log_stream&				operator << (std::string_view _rhs);
+	_log_stream&				operator << (const wchar_t* _rhs);
+	_log_stream&				operator << (const std::wstring& _rhs);
+	_log_stream&				operator << (std::wstring&& _rhs);
+	_log_stream&				operator << (std::wstring_view _rhs);
+	_log_stream&				operator << (void(*_pfunction)(_log_stream&));
 
-	_log_stream&				operator << (float _rhs) { process_stream_in<float>(_rhs); return *this; }
-	_log_stream&				operator << (double _rhs) { process_stream_in<double>(_rhs); return *this; }
-	_log_stream&				operator << (const std::string_view _rhs);
-	_log_stream&				operator << (const std::wstring_view _rhs);
-	_log_stream&				operator << (void(*_pfunction)(_log_stream&)) { _pfunction(*this); return *this; }
+	_log_stream&				operator << (log_continue_t /*_rhs*/);
+	_log_stream&				operator << (log_level_t _rhs);
+	_log_stream&				operator << (log_attribute_t _rhs);
+	_log_stream&				operator << (log_origin_t _rhs);
+	_log_stream&				operator << (log_source_t _rhs);
+	_log_stream&				operator << (Ilog_source* _rhs);
+	_log_stream&				operator << (log_destination_t _rhs);
 
+	template <class... TARGS>
+	_log_stream&				operator << (log_format_t<TARGS...>&& _rhs);
 public:
 			object_ptr<LOG_RECORD> plog_record;
-			object_ptr<Ilogger>	plogger;
-			Ilogger*			plogger_source {nullptr};
+	// - not referenced : the caller (or the cache of the default logger on this thread) keeps the logger alive
+			Ilogger*			plogger{ nullptr };
 			int64_t				pos{ 0 };
 protected:
 			template <class T>
 			void				process_stream_in(T _rhs);
-};
-
-template <class T>
-void _log_stream::process_stream_in(T _rhs)
-{
-	// check) 
-	RETURN_IF(plogger.empty());
-
-	// check) 
-	RETURN_IF(plog_record.empty());
-
-	// 1) set 
-	auto dest_strlen	 = plog_record->buf_message.front<COUNT_T>(pos);
-	auto dest_remained	 = plog_record->buf_message.get_remained_size();
-	auto dest_ptr		 = plog_record->buf_message.data<char>() + pos + dest_strlen - sizeof(char) + sizeof(COUNT_T);
-
-	// 2) write to string
-	auto temp_result = __to_string(dest_ptr, dest_remained, _rhs);
-
-	// 3) 크기 써넣기
-	plog_record->buf_message.front<COUNT_T&>(pos) = static_cast<COUNT_T>(dest_strlen + temp_result.size());
-	plog_record->buf_message.add_size(temp_result.size());
-}
-
-
-//-----------------------------------------------------------------------------
-// _log_endl
-//-----------------------------------------------------------------------------
-void log_endl(_log_stream& _log_stream);
-
-struct _log_end
-{
 public:
-	void operator = (_log_stream&& _log) { _log_end::operator = (_log); }
-	void operator = (_log_stream& _log);
+	// - CGDK::format (log.stream.cpp)
+	//   process_format_prepare : tail pointer + writable bytes (terminator excluded), nullptr if not logged
+			std::pair<char*, std::size_t> process_format_prepare(std::size_t _size);
+			void				process_format_commit(char* _dest, std::size_t _written) noexcept;
 };
 
+template <class... TARGS>
+_log_stream& _log_stream::operator << (log_format_t<TARGS...>&& _rhs)
+{
+	try
+	{
+		// 1) room (expected size)
+		auto [dest, size] = this->process_format_prepare(_rhs.estimate());
+		if (dest == nullptr)
+			return *this;
+
+		// 2) format
+		auto result = _rhs._format_to_n(dest, size, std::index_sequence_for<TARGS...>{});
+
+		// 3) didn't fit : grow and format again
+		if (static_cast<std::size_t>(result.size) > size)
+		{
+			auto [dest_grown, size_grown] = this->process_format_prepare(static_cast<std::size_t>(result.size));
+			if (size_grown > size)
+			{
+				dest = dest_grown;
+				size = size_grown;
+				result = _rhs._format_to_n(dest, size, std::index_sequence_for<TARGS...>{});
+			}
+		}
+
+		// 4) terminator + size (cut to fit)
+		this->process_format_commit(dest, (static_cast<std::size_t>(result.size) < size) ? static_cast<std::size_t>(result.size) : size);
+	}
+	catch (...)
+	{
+	}
+
+	// return)
+	return *this;
+}
 
 //-----------------------------------------------------------------------------
 // LOG_MESSAGE_EMPTY
@@ -156,10 +211,34 @@ public:
 		#endif
 			LOG_MESSAGE_EMPTY&	operator << (float ) noexcept { return *this; }
 			LOG_MESSAGE_EMPTY&	operator << (double ) noexcept { return *this; }
-			LOG_MESSAGE_EMPTY&	operator << (const std::string_view ) noexcept { return *this; }
-			LOG_MESSAGE_EMPTY&	operator << (const std::wstring_view ) noexcept { return *this; }
-			LOG_MESSAGE_EMPTY&	operator << (_log_stream&(*)(_log_stream&)) { return *this; }
+			LOG_MESSAGE_EMPTY&	operator << (const char* ) noexcept { return *this; }
+			LOG_MESSAGE_EMPTY&	operator << (std::string_view ) noexcept { return *this; }
+			LOG_MESSAGE_EMPTY&	operator << (std::wstring_view ) noexcept { return *this; }
+			LOG_MESSAGE_EMPTY&	operator << (void(*)(_log_stream&)) { return *this; }
+
+			LOG_MESSAGE_EMPTY&	operator << (log_continue_t ) { return *this; }
+			LOG_MESSAGE_EMPTY&	operator << (log_level_t ) { return *this; }
+			LOG_MESSAGE_EMPTY&	operator << (log_attribute_t ) { return *this; }
+			LOG_MESSAGE_EMPTY&	operator << (log_origin_t ) { return *this; }
+			LOG_MESSAGE_EMPTY&	operator << (log_source_t ) { return *this; }
+			LOG_MESSAGE_EMPTY&	operator << (Ilog_source* ) { return *this; }
+			LOG_MESSAGE_EMPTY&	operator << (log_destination_t ) { return *this; }
+	template <class... TARGS>
+			LOG_MESSAGE_EMPTY&	operator << (log_format_t<TARGS...>&& ) noexcept { return *this; }
 };
 
+//-----------------------------------------------------------------------------
+// _log_endl
+//-----------------------------------------------------------------------------
+void log_endl(_log_stream& _log_stream);
+
+struct _log_end
+{
+public:
+	_log_stream&		operator = (_log_stream&& _log) { return _log_end::operator = (_log); }
+	_log_stream&		operator = (_log_stream& _log);
+	LOG_MESSAGE_EMPTY&	operator = (LOG_MESSAGE_EMPTY&& _log) { return _log; }
+	LOG_MESSAGE_EMPTY&	operator = (LOG_MESSAGE_EMPTY& _log) { return _log; }
+};
 
 }

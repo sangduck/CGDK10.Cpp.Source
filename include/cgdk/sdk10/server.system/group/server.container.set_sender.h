@@ -31,7 +31,7 @@ namespace CGDK
  @details	\n
  List형 Object Class 객체
  Group과 다른 점은 독점적이지 않다는 것이다.
- 여러개의 Object에도 붙어서 동작할 수 있다.
+ 여러 개의 Object에도 붙어서 동작할 수 있다.
 
 *///-----------------------------------------------------------------------------
 template <class _TOBJECT, class _TOBJECT_DATA=int, class _TOBJECTBASE=_TOBJECT>
@@ -40,7 +40,7 @@ class container::set_sender :
 	virtual public				container::set<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>,
 	virtual public				net::io::Isender
 {
-// definitnion)
+// definition)
 public:
 	using observable_bast_t = container::set<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>;
 	using object_t = _TOBJECT;
@@ -64,13 +64,14 @@ bool container::set_sender<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::process_send(
 	// check) _buffer가 empty면 리턴
 	RETURN_IF(_buffer.empty(), false)
 
+	// declare) object snapshot (copy-on-write. no lock while the published one is valid)
+	auto snapshot_send = this->get_object_snapshot();
+
+
 	// 1) 모두에게 전송한다.
-	scoped_lock(this->m_lockable_observable)
+	for (auto* iter : snapshot_send)
 	{
-		for(auto& iter: this->m_container_object)
-		{
-			iter.pobject->send({ _buffer, _count_message }, _option);
-		}
+		iter->send({ _buffer, _count_message }, _option);
 	}
 
 	// return)
@@ -80,29 +81,17 @@ bool container::set_sender<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::process_send(
 template <class _TOBJECT, class _TOBJECT_DATA, class _TOBJECTBASE>
 bool container::set_sender<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::send_except(object_t* _member_except, const shared_buffer& _buffer, uint64_t _option)
 {
-	scoped_lock(this->m_lockable_observable)
+	// declare) object snapshot (copy-on-write. no lock while the published one is valid)
+	auto snapshot_send = this->get_object_snapshot();
+
+
+	for (auto* iter : snapshot_send)
 	{
-		auto	iter	 = this->m_container_object.begin();
-		auto	iter_end	 = this->m_container_object.end();
+		// check) _member_except일 경우 다음...
+		CONTINUE_IF(iter == _member_except);
 
-		for(; iter!=iter_end; ++iter)
-		{
-			// check) _member_except일 경우 다음...
-			if(*iter==_member_except)
-			{
-				++iter;
-				break;
-			}
-
-			// - 전송한다.
-			iter.second.pobject->send(_buffer, _option);
-		}
-
-		for(; iter!=iter_end; ++iter)
-		{
-			// - 전송한다.
-			iter.pobject->send(_buffer, _option);
-		}
+		// - 전송한다.
+		iter->send(_buffer, _option);
 	}
 
 	// return)
@@ -112,16 +101,28 @@ bool container::set_sender<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::send_except(o
 template <class _TOBJECT, class _TOBJECT_DATA, class _TOBJECTBASE>
 bool container::set_sender<_TOBJECT, _TOBJECT_DATA, _TOBJECTBASE>::send_conditional(const shared_buffer& _buffer, const std::function<bool (const object_t*)>& _pred, uint64_t _option)
 {
-	scoped_lock(this->m_lockable_observable)
+	// declare)
+	std::vector<object_ptr<object_t>> vector_send;
+
+	SCOPED_LOCK(this->m_lockable_container)
 	{
-		for(auto& iter: this->m_container_object)
+		// - reserve
+		vector_send.reserve(this->m_container_object.size());
+
+		for(const auto& iter: this->m_container_object)
 		{
 			// check) _pred가 false면 전송하지 않는다.
-			CONTINUE_IF(_pred(iter)==false);
+			CONTINUE_IF(_pred(iter.pobject) == false);
 
-			// - 전송한다.
-			iter.pobject->send(_buffer, _option);
+			// - copy object
+			vector_send.push_back(iter.pobject);
 		}
+	}
+
+	for(auto& iter: vector_send)
+	{
+		// - 전송한다.
+		iter->send(_buffer, _option);
 	}
 
 	// return)

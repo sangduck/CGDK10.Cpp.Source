@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                               CGDK::buffer                                *
 //*                       ver 3.03 / release 2023.10.17                       *
@@ -26,9 +26,7 @@ class  _buffer_traits_mutable {};
 //-----------------------------------------------------------------------------
 // CGDK::buffer_traits
 //-----------------------------------------------------------------------------
-template <class T, class F=void>	class _buffer_traits {};
-template <class T>					class _buffer_traits <T, std::enable_if_t<std::is_const_v<T>>>	{ public: using type = _buffer_traits_const; };
-template <class T>					class _buffer_traits <T, std::enable_if_t<!std::is_const_v<T>>>	{ public: using type = _buffer_traits_mutable; };
+template <class T>					class _buffer_traits { public: using type = std::conditional_t<std::is_const_v<T>, _buffer_traits_const, _buffer_traits_mutable>; };
 
 template <class T> using _buffer_traits_t = typename _buffer_traits<T>::type;
 
@@ -36,9 +34,7 @@ template <class T> using _buffer_traits_t = typename _buffer_traits<T>::type;
 //-----------------------------------------------------------------------------
 // CGDK::const...
 //-----------------------------------------------------------------------------
-template <class T, class F=void>	class _element_void {};
-template <class T>					class _element_void <T, std::enable_if_t<std::is_const_v<T>>> { public: using type = const void; };
-template <class T>					class _element_void <T, std::enable_if_t<!std::is_const_v<T>>> { public: using type = void; };
+template <class T>					class _element_void { public: using type = std::conditional_t<std::is_const_v<T>, const void, void>; };
 
 template <class T> using _element_void_t = typename _element_void<T>::type;
 

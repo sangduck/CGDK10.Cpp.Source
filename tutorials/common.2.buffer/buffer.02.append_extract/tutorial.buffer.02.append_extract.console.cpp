@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -36,7 +36,7 @@ using namespace CGDK;
 int main()
 {
 	// ------------------------------------------------------------------
-	// 1. shared_buffer ë³µì‚¬í•˜ê¸°
+	// 1. shared_buffer º¹»çÇÏ±â
 	// ------------------------------------------------------------------
 	{
 		// - baz
@@ -45,33 +45,33 @@ int main()
 		baz.append<float>(3.14f);
 		baz.append<uint64_t>(1234);
 
-		// 1) bazê°’ì„ ë³µì‚¬í•˜ë©´? ë²„í¼ëŠ” ìŠ¤ë§ˆíŠ¸í¬ì¸í„°ë¡œ ê³µìœ ë˜ë©° ì–•ì€ ë³µì‚¬ê°€ ìˆ˜í–‰ëœë‹¤.
-		//    quxì™€ bazëŠ” ë²„í¼ë¥¼ ê³µìœ í•œí…Œ data_ì™€ size_ê°€ ë™ì¼í•œ ê°’ì„ ê°€ì§„ë‹¤.
+		// 1) baz°ªÀ» º¹»çÇÏ¸é? ¹öÆÛ´Â ½º¸¶Æ®Æ÷ÀÎÅÍ·Î °øÀ¯µÇ¸ç ¾èÀº º¹»ç°¡ ¼öÇàµÈ´Ù.
+		//    qux¿Í baz´Â ¹öÆÛ¸¦ °øÀ¯ÇÑÅ× data_¿Í size_°¡ µ¿ÀÏÇÑ °ªÀ» °¡Áø´Ù.
 		shared_buffer qux = baz;
 
-		// 2) quxì˜ ê°’ì„ ë³€ê²½ì‹œí‚¤ë©´?
-		//    quxì™€ bazëŠ” ë²„í¼ë¥¼ ê³µìœ í•˜ê³  ìˆê¸° ë•Œë¬¸ì— bazì˜ í•´ë‹¹ ê°’ ì—­ì‹œ ë³€ê²½ëœë‹¤.
+		// 2) quxÀÇ °ªÀ» º¯°æ½ÃÅ°¸é?
+		//    qux¿Í baz´Â ¹öÆÛ¸¦ °øÀ¯ÇÏ°í ÀÖ±â ¶§¹®¿¡ bazÀÇ ÇØ´ç °ª ¿ª½Ã º¯°æµÈ´Ù.
 		qux.front<int>(0) = 33;
 
-		//// check) quxì™€ bazì˜ ì œì¼ ì• intê°’ ì¶œë ¥
+		//// check) qux¿Í bazÀÇ Á¦ÀÏ ¾Õ int°ª Ãâ·Â
 		//std::cout << "baz: " << baz.front<int>(0) << "  qux: " << qux.front<int>(0) << '\n';
 
-		// 3) quxì— extractë¥¼ ìˆ˜í–‰í•˜ë©´? quxì˜ data_ê°’ê³¼ size_ê°’ë§Œ ë³€ê²½ë˜ë©°
-		//    bazì˜ data_ì™€ size_ê°’ì€ ë³€ê²½ë˜ì§€ ì•ŠëŠ”ë‹¤.
+		// 3) qux¿¡ extract¸¦ ¼öÇàÇÏ¸é? quxÀÇ data_°ª°ú size_°ª¸¸ º¯°æµÇ¸ç
+		//    bazÀÇ data_¿Í size_°ªÀº º¯°æµÇÁö ¾Ê´Â´Ù.
 		qux.extract<int>();
 
-		// 4) bazì— appendë¥¼ í•˜ë©´ bazì˜ size_ê°’ì€ ë³€ê²½ë˜ì§€ë§Œ quxì˜ ê°’ì€ ë³€í•˜ì§€ ì•ŠëŠ”ë‹¤.
+		// 4) baz¿¡ append¸¦ ÇÏ¸é bazÀÇ size_°ªÀº º¯°æµÇÁö¸¸ quxÀÇ °ªÀº º¯ÇÏÁö ¾Ê´Â´Ù.
 		baz.append<int>(100);
 
-		// ì„¤ëª…) ì¦‰ shared_bufferë¥¼ ë³µì‚¬í•˜ê²Œ ë˜ë©´ data_ì™€  size_ëŠ” ë…ë¦½ì ì¸ ê°’ì„ ê°€ì§€ë©°
-		//      ë©”ëª¨ë¦¬ ë²„í¼ ìì²´ëŠ” ê³µìœ í•œë‹¤ëŠ” ê²ƒì´ë‹¤.
+		// ¼³¸í) Áï shared_buffer¸¦ º¹»çÇÏ°Ô µÇ¸é data_¿Í  size_´Â µ¶¸³ÀûÀÎ °ªÀ» °¡Áö¸ç
+		//      ¸Ş¸ğ¸® ¹öÆÛ ÀÚÃ¼´Â °øÀ¯ÇÑ´Ù´Â °ÍÀÌ´Ù.
 
-		// check) bazì˜ data_ì™€ size_ê°’ì„ ì¶œë ¥í•œë‹¤.
+		// check) bazÀÇ data_¿Í size_°ªÀ» Ãâ·ÂÇÑ´Ù.
 		std::cout << "baz> " << "data_: "sv << (uint64_t)baz.data() << "  size_: "sv << baz.size() << '\n';
 		std::cout << "qux> " << "data_: "sv << (uint64_t)qux.data() << "  size_: "sv << qux.size() << '\n';
 
-		// 5) cloneì„ í•˜ë©´ ê¹Šì€ ë³µì‚¬ë¥¼ í•  ìˆ˜ ìˆë‹¤.
-		//    clonì„ í•˜ë©´ ë²„í¼ë¥¼ ì‹ ê·œ í• ë‹¹ë°›ì•„ ë³µì‚¬í•˜ê¸° ë•Œë¬¸ì— ë²„í¼ë¥¼ ì™„ì „íˆ ë¶„ë¦¬í•œë‹¤.
+		// 5) cloneÀ» ÇÏ¸é ±íÀº º¹»ç¸¦ ÇÒ ¼ö ÀÖ´Ù.
+		//    clonÀ» ÇÏ¸é ¹öÆÛ¸¦ ½Å±Ô ÇÒ´ç¹Ş¾Æ º¹»çÇÏ±â ¶§¹®¿¡ ¹öÆÛ¸¦ ¿ÏÀüÈ÷ ºĞ¸®ÇÑ´Ù.
 		auto zoo = baz.clone();
 	}
 
@@ -86,17 +86,17 @@ int main()
 		baz.append<float>(3.14f);
 		baz.append<uint64_t>(1234);
 
-		// 1) shared_bufferì—ì„œ buffer_viewë¡œ ëŒ€ì…ì´ ê°€ëŠ¥í•˜ë‹¤.
+		// 1) shared_buffer¿¡¼­ buffer_view·Î ´ëÀÔÀÌ °¡´ÉÇÏ´Ù.
 		buffer_view kiv = baz;
 
-		// 2) buffer_viewëŠ” extract<T>()ë‚˜ front<T>()ë§Œ ëœë‹¤.
+		// 2) buffer_view´Â extract<T>()³ª front<T>()¸¸ µÈ´Ù.
 		auto value1 = kiv.front<float>(4); // Ok
 		auto value2 = kiv.extract<int>(); // Ok
 
-		// 3) buffer_viewëŠ” appendëŠ” ë¶ˆê°€ëŠ¥í•˜ë‹¤
+		// 3) buffer_view´Â append´Â ºÒ°¡´ÉÇÏ´Ù
 		//kiv.append<int>(100); // error
 
-		// trace) bazì˜ data_ì™€ size_ê°’ì„ ì¶œë ¥í•œë‹¤.
+		// trace) bazÀÇ data_¿Í size_°ªÀ» Ãâ·ÂÇÑ´Ù.
 		std::cout << "value1: "sv << value1 << "  value2: "sv << value2 << '\n';
 	}
 
@@ -114,13 +114,13 @@ int main()
 		// 1) buffer
 		buffer val = baz;
 
-		// 2) buffer_viewëŠ” extract<T>()ë‚˜ front<T>()ì™€ append<T>()ê¹Œì§€ ëœë‹¤.
+		// 2) buffer_view´Â extract<T>()³ª front<T>()¿Í append<T>()±îÁö µÈ´Ù.
 		val.append<int>(100);
 
-		// 3) buffer_viewë¡œë„ ëŒ€ì…ì´ ëœë‹¤.
+		// 3) buffer_view·Îµµ ´ëÀÔÀÌ µÈ´Ù.
 		buffer_view kiv = val;
 
-		// 4) buffer_viewì—ì„œ basic_viewë¡œëŠ” ëŒ€ì…ë ìˆ˜ ì—†ë‹¤.(^ì—°ì‚°ì„ ì‚¬ìš©í•´ì•¼ í•œë‹¤.)
+		// 4) buffer_view¿¡¼­ basic_view·Î´Â ´ëÀÔµÉ ¼ö ¾ø´Ù.(^¿¬»êÀ» »ç¿ëÇØ¾ß ÇÑ´Ù.)
 		val = kiv; // error
 	}
 
@@ -131,14 +131,14 @@ int main()
 		baz.append<float>(3.14f);
 		baz.append<uint64_t>(1234);
 
-		// 1) shared_bufferì—ì„œ ë¶€ë¶„ ë²„í¼ë¥¼ í• ë‹¹ë°›ì•„ í•©ì¹˜ëŠ” ìš©ë„ë¡œ ë§ì´ ì‚¬ìš©ëœë‹¤.
+		// 1) shared_buffer¿¡¼­ ºÎºĞ ¹öÆÛ¸¦ ÇÒ´ç¹Ş¾Æ ÇÕÄ¡´Â ¿ëµµ·Î ¸¹ÀÌ »ç¿ëµÈ´Ù.
 		buffer kal = baz;
 
-		// 2) kalì— append<T>ë“± ë²„í¼ ì¡°ì‘ì„ ìˆ˜í–‰í•œë‹¤.
+		// 2) kal¿¡ append<T>µî ¹öÆÛ Á¶ÀÛÀ» ¼öÇàÇÑ´Ù.
 		kal.append<int>(100);
 		kal.append<float>(100);
 
-		// 3) ì²˜ë¦¬ë¥¼ ëë‚¸ í›„ bazì— ì ìš©í•œë‹¤.
+		// 3) Ã³¸®¸¦ ³¡³½ ÈÄ baz¿¡ Àû¿ëÇÑ´Ù.
 		baz ^= kal;
 	}
 
@@ -146,7 +146,7 @@ int main()
 	// ------------------------------------------------------------------
 	// 4. basic operator 
 	// ------------------------------------------------------------------
-	// 1) buffer + offset(VALUE) ì—°ì‚°
+	// 1) buffer + offset(VALUE) ¿¬»ê
 	{
 		// - baz
 		shared_buffer baz = alloc_shared_buffer(1000);
@@ -154,16 +154,16 @@ int main()
 		baz.append<float>(3.14f);
 		baz.append<uint64_t>(1234);
 
-		// - offset 8byteë¥¼ ì¤˜ì„œ ì–•ì€ ë³µì‚¬ë¥¼ í•œë‹¤.
-		//    - bazì—ì„œ offset(8byte) ë§Œí¼ extract í›„ quxì— ë„£ëŠ”ë‹¤.
+		// - offset 8byte¸¦ Áà¼­ ¾èÀº º¹»ç¸¦ ÇÑ´Ù.
+		//    - baz¿¡¼­ offset(8byte) ¸¸Å­ extract ÈÄ qux¿¡ ³Ö´Â´Ù.
 		auto qux = baz + offset(8);
 
-		// trace) bazì˜ data_ì™€ size_ê°’ì„ ì¶œë ¥í•œë‹¤.
+		// trace) bazÀÇ data_¿Í size_°ªÀ» Ãâ·ÂÇÑ´Ù.
 		std::cout << "baz> "sv << "data_: "sv << (uint64_t)baz.data() << "  size_: "sv << baz.size() << '\n';
 		std::cout << "qux> "sv << "data_: "sv << (uint64_t)qux.data() << "  size_: "sv << qux.size() << '\n';
 	}
 
-	// 2) buffer + size(VALUE) ì—°ì‚°
+	// 2) buffer + size(VALUE) ¿¬»ê
 	{
 		// - baz
 		shared_buffer baz = alloc_shared_buffer(1000);
@@ -171,15 +171,15 @@ int main()
 		baz.append<float>(3.14f);
 		baz.append<uint64_t>(1234);
 
-		// - size()ë¥¼ ì‚¬ìš©í•˜ë©´ ê¸¸ì´ë¥¼ ë³€ê²½í•  ìˆ˜ ìˆë‹¤.
+		// - size()¸¦ »ç¿ëÇÏ¸é ±æÀÌ¸¦ º¯°æÇÒ ¼ö ÀÖ´Ù.
 		auto tie = baz + size(4);
 
-		// trace) bazì˜ data_ì™€ size_ê°’ì„ ì¶œë ¥í•œë‹¤.
+		// trace) bazÀÇ data_¿Í size_°ªÀ» Ãâ·ÂÇÑ´Ù.
 		std::cout << "baz> "sv << "data_: "sv << (uint64_t)baz.data() << "  size_: "sv << baz.size() << '\n';
 		std::cout << "tie> "sv << "data_: "sv << (uint64_t)tie.data() << "  size_: "sv << tie.size() << '\n';
 	}
 
-	// 3) buffer ^ [int] ì—°ì‚°
+	// 3) buffer ^ [int] ¿¬»ê
 	{
 		// - baz
 		shared_buffer baz = alloc_shared_buffer(1000);
@@ -187,15 +187,15 @@ int main()
 		baz.append<float>(3.14f);
 		baz.append<uint64_t>(1234);
 
-		// - ê¸¸ì´ê°’ë§Œ ë³€ê²½í•˜ê¸° ^ ì—°ì‚°ìë¥¼ ì‚¬ìš©í•˜ë©´ size_ê°’ë§Œ 4ë¡œ ë³€ê²½í•˜ê²Œ ëœë‹¤.
+		// - ±æÀÌ°ª¸¸ º¯°æÇÏ±â ^ ¿¬»êÀÚ¸¦ »ç¿ëÇÏ¸é size_°ª¸¸ 4·Î º¯°æÇÏ°Ô µÈ´Ù.
 		auto koo = baz ^ 4;
 
-		// trace) bazì˜ data_ì™€ size_ê°’ì„ ì¶œë ¥í•œë‹¤.
+		// trace) bazÀÇ data_¿Í size_°ªÀ» Ãâ·ÂÇÑ´Ù.
 		std::cout << "baz> "sv << "data_: "sv << (uint64_t)baz.data() << "  size_: "sv << baz.size() << '\n';
 		std::cout << "koo> "sv << "data_: "sv << (uint64_t)koo.data() << "  size_: "sv << koo.size() << '\n';
 	}
 
-	// 4) buffer + offset ì—°ì‚°ê³¼ buffer ^ [int] ì—°ì‚° ê°™ì´ ì‚¬ìš©í•˜ê¸°
+	// 4) buffer + offset ¿¬»ê°ú buffer ^ [int] ¿¬»ê °°ÀÌ »ç¿ëÇÏ±â
 	{
 		// - baz
 		shared_buffer baz = alloc_shared_buffer(1000);
@@ -203,15 +203,15 @@ int main()
 		baz.append<float>(3.14f);
 		baz.append<uint64_t>(1234);
 
-		// - ^ ì—°ì‚°ìë¥¼ ì‚¬ìš©í•´ data_ëŠ” data_ + 2, ê¸¸ì´ëŠ” 4ë¡œ ë³€ê²½ (ì£¼ì˜! ì—°ì‚°ìì˜ ìš°ì„ ìˆœìœ„ì— ì£¼ì˜ ^ê°€ + ë³´ë‹¤ ìš°ì„ ì´ë‹¤)
+		// - ^ ¿¬»êÀÚ¸¦ »ç¿ëÇØ data_´Â data_ + 2, ±æÀÌ´Â 4·Î º¯°æ (ÁÖÀÇ! ¿¬»êÀÚÀÇ ¿ì¼±¼øÀ§¿¡ ÁÖÀÇ ^°¡ + º¸´Ù ¿ì¼±ÀÌ´Ù)
 		auto hoo = (baz + offset(2)) ^ 4;
 
-		// trace) bazì˜ data_ì™€ size_ê°’ì„ ì¶œë ¥í•œë‹¤.
+		// trace) bazÀÇ data_¿Í size_°ªÀ» Ãâ·ÂÇÑ´Ù.
 		std::cout << "baz> "sv << "data_: "sv << (uint64_t)baz.data() << "  size_: "sv << baz.size() << '\n';
 		std::cout << "hoo> "sv << "data_: "sv << (uint64_t)hoo.data() << "  size_: "sv << hoo.size() << '\n';
 	}
 
-	// 5) buffer ^ buffer_view() ì—°ì‚°
+	// 5) buffer ^ buffer_view() ¿¬»ê
 	{
 		// - baz
 		shared_buffer baz = alloc_shared_buffer(1000);
@@ -219,10 +219,10 @@ int main()
 		baz.append<float>(3.14f);
 		baz.append<uint64_t>(1234);
 
-		// - 4)ê³¼ ê°™ì€ ì²˜ë¦¬ë¥¼ ì´ë ‡ê²Œ í• ìˆ˜ë„ ìˆë‹¤.
+		// - 4)°ú °°Àº Ã³¸®¸¦ ÀÌ·¸°Ô ÇÒ ¼öµµ ÀÖ´Ù.
 		auto hol = baz ^ buffer_view{ baz.data() + 2, 4 };
 
-		// trace) bazì˜ data_ì™€ size_ê°’ì„ ì¶œë ¥í•œë‹¤.
+		// trace) bazÀÇ data_¿Í size_°ªÀ» Ãâ·ÂÇÑ´Ù.
 		std::cout << "baz> "sv << "data_: "sv << (uint64_t)baz.data() << "  size_: "sv << baz.size() << '\n';
 		std::cout << "hol> "sv << "data_: "sv << (uint64_t)hol.data() << "  size_: "sv << hol.size() << '\n';
 	}

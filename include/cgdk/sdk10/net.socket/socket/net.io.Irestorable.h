@@ -28,7 +28,7 @@ namespace CGDK
 class net::io::Irestorable :
 	virtual public				net::io::Iconnectable,
 	virtual public				net::io::Isender,
-	public						net::io::messageable::Nbase
+	virtual public				net::io::Imessageable
 {
 public:
 			bool				send_reliable (const shared_buffer& _buffer);
@@ -41,13 +41,13 @@ public:
 	[[nodiscard]] const auto&	get_restore_client_id () const noexcept { return m_id_restore_client;}
 
 protected:
-	virtual	void				process_request_io_restore (result_code _result, SEQUENCE_ID _ack_received) PURE;
-	virtual	void				process_response_io_restore (result_code _result, SEQUENCE_ID _ack_received) PURE;
+	virtual	void				process_request_io_restore (result_code _result, sequence_id_t _ack_received) PURE;
+	virtual	void				process_response_io_restore (result_code _result, sequence_id_t _ack_received) PURE;
 	virtual	void				process_complete_io_restore (result_code _result) PURE;
 
 public:
 			void				process_reset_io_restorable () noexcept;
-			result_code			process_get_restore_result (const RESTORE_SERVER_ID& _id_restoreserver, const RESTORE_CLIENT_ID& _id_restoreclient, SEQUENCE_ID _ack_received, SEQUENCE_ID _ack_sended);
+			result_code			process_get_restore_result (const restore_server_id_t& _id_restoreserver, const restore_client_io_t& _id_restoreclient, sequence_id_t _ack_received, sequence_id_t _ack_sent);
 
 	virtual	result_code			process_message (sMESSAGE& _msg) override;
 			result_code			process_message_SEND_MESSAGE_ACK_REQUIRED (sMESSAGE_NETWORK& _msg);
@@ -56,19 +56,20 @@ public:
 			result_code			process_message_COMPLETE_IO_RESTORE (sMESSAGE_NETWORK& _msg);
 
 	[[nodiscard]] shared_buffer	message_REQUEST_IO_RESTORE ();
-	[[nodiscard]] shared_buffer	message_SEND_ACK (SEQUENCE_ID _ack_received);
+	[[nodiscard]] shared_buffer	message_SEND_ACK (sequence_id_t _ack_received);
 	[[nodiscard]] shared_buffer	message_RESPONSE_IO_RESTORE (result_code _result);
 	[[nodiscard]] shared_buffer	message_RESTORE_COMPLETE (result_code _result);
 
 public:
-			RESTORE_SERVER_ID	m_id_restore_server;
-			RESTORE_CLIENT_ID	m_id_restore_client;
+			restore_server_id_t	m_id_restore_server;
+			restore_client_io_t	m_id_restore_client;
 
 			bool				m_flag_suspended = false;
 			chrono::tick::time_point m_tick_suspend;
-			SEQUENCE_ID			m_ack_received = 0;
-			SEQUENCE_ID			m_ack_sended = 0;
-			lockable<circular_list<shared_buffer>> m_list_sending;
+			sequence_id_t			m_ack_received = 0;
+			sequence_id_t			m_ack_sent = 0;
+	mutable	lock_object			m_lockable_list_sending;
+			circular_list<shared_buffer> m_list_sending;
 };
 
 

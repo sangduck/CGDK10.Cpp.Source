@@ -22,7 +22,7 @@ namespace CGDK
 {
 // ----------------------------------------------------------------------------
 //
-// server_admin:: factory
+// server_system:: factory
 //
 // ----------------------------------------------------------------------------
 class server_system::admin_info::factory
@@ -34,7 +34,7 @@ public:
 
 // implementation)
 public:
-			char					m_name[MAX_NAME_LENGTH];
+			char					m_name[MAX_NAME_LENGTH]{};
 			statistics::factory		m_statistics_factory;
 };
 

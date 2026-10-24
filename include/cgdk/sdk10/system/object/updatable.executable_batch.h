@@ -31,7 +31,7 @@ namespace CGDK
  @ref		
  @details	\n
  Update처리를 executor에 전달해 실행하기 위한 클래스이다.
- 일반적으로 Update처리를 비동기 처리해야할 때 사용된다.
+ 일반적으로 Update처리를 비동기 처리해야 할 때 사용된다.
 
 *///-----------------------------------------------------------------------------
 class updatable::executable_batch :
@@ -63,14 +63,15 @@ protected:
 			context				m_context;
 
 	// 3) Executable List
-			lockable<circular_list<object_ptr<object::Iupdatable>>> m_list_updatable;
+			lock_object			m_lockable_list_updatable;
+			circular_list<object_ptr<object::Iupdatable>> m_list_updatable;
 			
 	// 4) Thread...
 			size_t				m_max_thread_count;
 			std::atomic<size_t>	m_count;
 
 	// 5) Conditional_variable
-			std::unique_lock<std::mutex>	m_lock;
+			std::mutex						m_lockable_complete;	// - m_cv_complete (완료 대기 : m_count가 0이 될 때까지)
 			std::condition_variable			m_cv_complete;
 
 	// 6) 실행을 처리한다.

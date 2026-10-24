@@ -1,0 +1,28 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/windows/unit_test/" Id="4975836e-104e-430b-8966-d4e86031a30a">
+    <Project Path="unit_test\unit_test.object.context\unit_test.object.context.vs18.vcxproj" Id="7729c6ff-1b56-4fb1-bafd-ff3abc14bfef" />
+    <Project Path="unit_test\unit_test.log\unit_test.log.vs18.vcxproj" Id="e47a847a-4e69-4fce-b7f3-6b99ea34dbd2" />
+    <Project Path="unit_test\unit_test.object.bench.lock\unit_test.object.bench.lock.vs18.vcxproj" Id="a03cd05e-1375-4c57-98e2-526a305c0cb8" />
+    <Project Path="unit_test\unit_test.object.bench.mem_tcmalloc\unit_test.object.bench.mem_tcmalloc.vs18.vcxproj" Id="f2139dbd-9e53-469b-8f0a-1dd5cb74b140" />
+    <Project Path="unit_test\unit_test.object.bench.object_pool\unit_test.object.bench.object_pool.vs18.vcxproj" Id="72aad1d6-7a26-49ff-93e1-139dc608bd75" />
+    <Project Path="unit_test\unit_test.object.buffer\unit_test.object.buffer.vs18.vcxproj" Id="c2d0d0af-f7e6-410b-b1f3-46ee48280cbd" />
+    <Project Path="unit_test\unit_test.object.execute\unit_test.object.execute.vs18.vcxproj" Id="95bcc921-288f-40b4-a02b-0576c871102a" />
+    <Project Path="unit_test\unit_test.object.ptr\unit_test.object.ptr.vs18.vcxproj" Id="b912165b-759a-4d3f-a5aa-dcdb7ee24d9c" />
+    <Project Path="unit_test\unit_test.object.bench.new\unit_test.object.bench.new.vs18.vcxproj" Id="e76835b9-45f1-4f50-9bbc-ef4b828a2ae4" />
+    <Project Path="unit_test\unit_test.object.state\unit_test.object.state.vs18.vcxproj" Id="36c77a1e-ae55-4457-963a-abd1b933b4a3" />
+    <Project Path="unit_test\unit_test.object.dump\unit_test.object.dump.vs18.vcxproj" Id="3438055b-e26b-4c3d-9908-1f9369bb7434" />
+  </Folder>
+  <Folder Name="/windows/" Id="2c792199-f05e-415e-8b96-75683613110c">
+    <Project Path="object/CGDK10.system.object.vs18.vcxproj" Id="8e08592b-8d9c-4dd9-91cc-a018560da8ce" />
+    <Project Path="util.crypt/CGDK10.system.util.crypt.vs18.vcxproj" Id="708fa86b-0f99-473d-bd10-bd51819328dc" />
+    <Project Path="mfc_controls/CGDK10.system.mfc_controls.vs18.vcxproj" Id="3810221c-d6ce-4efd-a05f-97fb15d8ce61" />
+  </Folder>
+  <Project Path="object\CGDK10.system.object.shared.vcxitems" Id="5243603e-52c6-49cc-ad61-9ad7161cde57" />
+  <Project Path="mfc_controls\CGDK10.system.mfc_controls.shared.vcxitems" Id="dcbeb671-9c41-4641-859d-3598838cc10b" />
+  <Project Path="util.crypt\CGDK10.system.util.crypt.shared.vcxitems" Id="a8c1dcd6-2112-435f-9528-0922f66a1458" />
+  <Project Path="..\common\common.shared.vcxitems" Id="cb1ac3a7-19d0-4c1b-80a8-825abc3bdeb0" />
+  <Project Path="..\common\cgdk_info.shared.vcxitems" Id="f2b5df8c-26a7-4f26-bd80-933bb4870b0a" />
+</Solution>

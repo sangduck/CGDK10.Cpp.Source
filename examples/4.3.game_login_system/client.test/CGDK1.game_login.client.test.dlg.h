@@ -121,7 +121,7 @@ public:
 	// - Sockets.
 			SOCKADDR_IN			m_sockaddrServer;
 	static	CGPTR<CGNet::CConnector<ServerLogin::CSocket>>	m_pconnectorServerLogin;
-	static	CGPTR<CGNet::CConnector<ServerLobby::CSocket>>	m_pconnectorSerbverLobby;
+	static	CGPTR<CGNet::CConnector<ServerLobby::CSocket>>	m_pconnectorServerLobby;
 
 	// - Executor
 			CGPTR<CGExecutor::CCompletionPort>	m_pExecutor;

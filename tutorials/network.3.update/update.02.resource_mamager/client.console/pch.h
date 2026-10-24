@@ -11,6 +11,7 @@
 	#include <conio.h>
 #endif
 #include <iostream>
+#include <iomanip>
 
 // 3) CGDK
 #include "cgdk/sdk10/net.update.h"

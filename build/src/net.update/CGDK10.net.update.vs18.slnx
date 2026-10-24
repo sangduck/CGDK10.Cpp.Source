@@ -1,0 +1,11 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="..\common\cgdk_info.shared.vcxitems" Id="f2b5df8c-26a7-4f26-bd80-933bb4870b0a" />
+  <Project Path="update\CGDK10.net.update.vcxitems" Id="3f405de5-5202-46b7-af8b-7f5acefec1d6" />
+ <Folder Name="/windows/" Id="cea3f6de-4be5-4643-a529-60ec461d11d4">
+    <Project Path="mfc_controls/CGDK10.network.update.controls.mfc.vs18.vcxproj" Id="076481f8-9b35-4286-989c-9a48faa5a553" />
+    <Project Path="update\CGDK10.net.update.vs18.vcxproj" Id="230ccd34-cb6e-4c71-8b63-992c441d469e" />
+  </Folder>
+</Solution>

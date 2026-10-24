@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                           Server Query Classes                            *
+//*                               server.query                                *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -39,7 +39,7 @@ class wal::file :
 	public						object::Nnameable,
 	public                      object::Ninitializable_startable
 {
-// defintion) 
+// definition) 
 public:
 	typedef	typename TQUERIER::IQUERY	IQUERY;
 	typedef	typename TQUERIER::QUERIER	QUERIER;
@@ -47,7 +47,7 @@ public:
 	typedef	sQUERY<IQUERY>		QUERY;
 
 
-// contructor/destructor)
+// constructor/destructor)
 public:
 			file() noexcept;
 	virtual	~file() noexcept;
@@ -124,7 +124,7 @@ template <class TCHUNK, class TQUERIER>
 wal::file<TCHUNK, TQUERIER>::file() noexcept
 {
 	// 1) header file initialize
-	__strcpy(m_header.init_string, "CGCII wal file");
+	m_header.init_string[std::basic_string_view("CGCII wal file").copy(m_header.init_string, (std::size(m_header.init_string)) - 1)] = 0;
 	m_header.key[0] = (static_cast<uint64_t>(std::rand()) << 32) | static_cast<uint64_t>(rand());
 	m_header.key[1] = (static_cast<uint64_t>(std::rand()) << 32) | static_cast<uint64_t>(rand());
 	m_header.key[2] = (static_cast<uint64_t>(std::rand()) << 32) | static_cast<uint64_t>(rand());
@@ -210,7 +210,7 @@ void wal::file<TCHUNK, TQUERIER>::Cquery::process_execute_query()
 template <class TCHUNK, class TQUERIER>
 void wal::file<TCHUNK, TQUERIER>::Cquery::process_reset_session() noexcept
 {
-	scoped_lock(this->m_lockable_state_query)
+	SCOPED_LOCK(this->m_lockable_state_query)
 	{
 		// 1) reset query pointer
 		m_pwal.reset();
@@ -246,7 +246,7 @@ void wal::file<TCHUNK, TQUERIER>::request_wal(TCHUNK&& _chunk)
 	// check) 계산된 데이터 크기[size_data]와 저장된 데이터 크기[temp_buffer.size()]가 서로 동일해야 한다.
 	CGASSERT_ERROR(size_data == temp_buffer.size());
 
-	scoped_lock(this->m_lockable_lock)
+	SCOPED_LOCK(this->m_lockable_lock)
 	{
 		// check) 
 		CGASSERT_ERROR(this->m_pos_requested >= this->m_pos_completed);
@@ -330,7 +330,7 @@ void wal::file<TCHUNK, TQUERIER>::on_stopping()
 	// 2) 완료를 기다린다.
 	while(this->m_pos_requested > this->m_pos_completed)
 	{
-		scoped_lock(this->m_lockable_lock)
+		SCOPED_LOCK(this->m_lockable_lock)
 		{
 			if (this->m_pos_requested == this->m_pos_journaled)
 			{
@@ -362,7 +362,7 @@ void wal::file<TCHUNK, TQUERIER>::on_stopping()
 					temp_queue->m_pquery = data.pquery;
 
 					// - queuing query data
-					scoped_lock(this->m_lockable_lock)
+					SCOPED_LOCK(this->m_lockable_lock)
 					{
 						this->m_vector_query.push_back(std::move(data));
 					}
@@ -401,7 +401,7 @@ void wal::file<TCHUNK, TQUERIER>::on_stopping()
 	this->m_file.m_pwal.reset();
 
 	// 6) ...
-	scoped_lock(this->m_lockable_lock)
+	SCOPED_LOCK(this->m_lockable_lock)
 	{
 		this->m_queue_chunk_requested.clear();
 		this->m_vector_chunk_journaled.clear();
@@ -421,7 +421,7 @@ void wal::file<TCHUNK, TQUERIER>::process_restore_file(const std::string_view _j
 	// 1) 파일을 연다.
 	auto file_handle = api::file::open(_journaling_filename, eFILE_OPERATION::READ);
 
-	// check) return if file do not exsit
+	// check) return if file do not exist
 	RETURN_IF(file_handle == INVALID_FILE_HANDLE);
 
 	// 2) file header부분을 읽어들인다.
@@ -536,13 +536,13 @@ void wal::file<TCHUNK, TQUERIER>::process_recreate_file(const std::string_view _
 template <class TCHUNK, class TQUERIER>
 void wal::file<TCHUNK, TQUERIER>::process_write_complete(const shared_buffer& _buffer)
 {
-	// check) _buffer.size()이 0이면 안됀다.
+	// check) _buffer.size()이 0이면 안 된다.
 	CGASSERT_ERROR(_buffer.size() != 0);
 
 	// declare) 
 	std::size_t count_inserted  = 0;
 
-	scoped_lock(this->m_lockable_lock)
+	SCOPED_LOCK(this->m_lockable_lock)
 	{
 		// declare) 
 		std::size_t remained_bytes = _buffer.size();
@@ -556,7 +556,7 @@ void wal::file<TCHUNK, TQUERIER>::process_write_complete(const shared_buffer& _b
 			// - ...
 			auto& iter = this->m_queue_chunk_requested.front();
 
-			// check) transaction 하나의 크기보다 크면 안됀다.
+			// check) transaction 하나의 크기보다 크면 안 된다.
 			BREAK_IF(iter.size > remained_bytes);
 
 			// - 길이 줄이기
@@ -633,7 +633,7 @@ void wal::file<TCHUNK, TQUERIER>::process_complete_wal(IQUERY* _pquery, result_c
 		//return;
 	}
 	
-	scoped_lock(this->m_lockable_lock)
+	SCOPED_LOCK(this->m_lockable_lock)
 	{
 		// check) 
 		CGASSERT_ERROR(this->m_vector_query.empty() == false);
@@ -701,7 +701,7 @@ void wal::file<TCHUNK, TQUERIER>::process_generate_query(std::size_t /*_count_co
 		temp_queue->m_pquery = data.pquery;
 
 		// 6) queuing query data
-		scoped_lock(this->m_lockable_lock)
+		SCOPED_LOCK(this->m_lockable_lock)
 		{
 			this->m_vector_query.push_back(std::move(data));
 		}
@@ -740,7 +740,7 @@ void wal::file<TCHUNK, TQUERIER>::process_shrink_file()
 	// check) 복사할 크기가 파일크기보다 클 수는 없다.
 	CGASSERT_ERROR(size_copy <= this->m_file.get_file_length());
 
-	// check) 그냥 통채로 copy해야하면 진행하지 않는다
+	// check) 그냥 통째로 copy해야하면 진행하지 않는다
 	RETURN_IF(size_copy + sizeof(sHEADER) == this->m_file.get_file_length());
 
 	// 3) 기존 파일을 먼저 닫는다.

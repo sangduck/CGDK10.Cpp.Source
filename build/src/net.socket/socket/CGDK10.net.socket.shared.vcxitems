@@ -17,6 +17,8 @@
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)api.net.socket.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.definitions.socket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.emergency.acceptor.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.emergency.manager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.add_on.keep_alive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.add_on.manager_socket_sustain.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.add_on.socket_sustain.cpp" />
@@ -26,6 +28,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connectable.disconnect_manager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connectable.tcp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connective.acceptor_tcp.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connective.acceptor_tcp.parameters.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connective.acceptor_tcp.process.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connective.acceptor_tcp.uring.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connective.connector_tcp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connective.manager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connect_requestable.tcp.cpp" />
@@ -45,38 +50,34 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.executable_receive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream.epoll.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream.uring.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream.iocp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream.rio.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_crypt.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_crypt.epoll.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_crypt.iocp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_queue.epoll.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_queue.iocp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.receivable.stream_queue.rio.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.restorable.clinet.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.restorable.client.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.restorable.server.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.restore_manager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.retransferable.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.executable_send_buffer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.executable_send_buffer_list.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.gathering_queue.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.gathering_queue_bufferd.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.gathering_queue_buffered.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.Itcp_gather.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async.epoll.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather.epoll.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather.uring.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather_buffered.epoll.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather_buffered.uring.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather_buffered_raw.iocp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather_raw.iocp.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.executable_buffer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_sync.epoll.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_sync.iocp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async.rio.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather.iocp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather.rio.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async_gather_buffered.iocp.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.epoll.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_crypt.iocp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_async.iocp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_sync_buffered.epoll.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.sendable.tcp_sync_buffered.iocp.cpp" />
@@ -88,10 +89,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.socket.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.socket.tcp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.socket.udp.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.socket_secure.epoll.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.socket_secure.iocp.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.tcp_client_crypt.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.tcp_server_crypt.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.udp_resend.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.ip.address_v4.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.ip.address_v6.cpp" />
@@ -99,9 +96,22 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)net.ip.network_v6.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.message.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.send_queue.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.statistics.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.statistics.connective.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.statistics.socket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.statistics.traffic.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.io.connect_notify.Nbase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.io.Iconnect_notify.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.io.Iconnect_requestable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.io.Imessageable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.io.Itcp_socket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.socket.Itcp.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.socket.Itcp_crypt.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.socket.Nlambda.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_crypt.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_crypt_client.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_lambda.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project_CGDK\CGDK10.C++\include\cgdk\sdk10\net.socket\socket\net.send_queue.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\api.net.socket.h" />
@@ -115,6 +125,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.definitions.parameters.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.definitions.socket.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.definitions.socket.protocol.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.emergency.acceptor.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.emergency.manager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.address.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.add_on.keep_alive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.add_on.socket_sustain.h" />
@@ -138,7 +150,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Ibinder.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Iconnectable.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Iconnective.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Iconnect_requestable.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Ipacketable.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Ireceivable_datagram.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Ireceivable_stream.h" />
@@ -149,7 +160,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Isender.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Isend_request.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.Isocket.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.messageable.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.messageable.Nbase.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.messageable.proxy.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.messageable.queue.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.packetable.datagram.h" />
@@ -159,7 +170,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.receivable.datagram.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.receivable.stream.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.receivable.stream.rio.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.receivable.stream_crypt.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.receivable.stream_queue.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.restorable_client.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.restorable_server.h" />
@@ -167,7 +177,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.retransferable.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.executable_send_buffer_list.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.gathering_queue.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.gathering_queue_bufferd.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.gathering_queue_buffered.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.Itcp_gather.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_async_gather_buffered_raw.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_async_gather_raw.h" />
@@ -176,8 +186,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_async_gather.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_async_gather.rio.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_async_gather_buffered.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_crypt.executable_buffer.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_crypt.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_async.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.tcp_sync_buffered.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.sendable.udp.h" />
@@ -191,9 +199,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.socket.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.socket.tcp.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.socket.udp.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.socket_secure.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.tcp_client.crypt.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.tcp_server.crypt.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.io.udp_resend.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.ip.address.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.ip.address_v4.h" />
@@ -213,7 +218,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.sockaddr.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.socket.tcp.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_buffered.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_client.crypt.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_client.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_client_reconnect.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket\net.socket.tcp_no_gather.h" />

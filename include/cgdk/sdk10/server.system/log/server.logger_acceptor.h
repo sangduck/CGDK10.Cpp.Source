@@ -41,7 +41,6 @@ public:
 			};
 
 			logger_acceptor();
-			logger_acceptor(const std::string_view _name);
 	virtual ~logger_acceptor() noexcept;
 
 			result_code			initialize(const INITIALIZE_PARAMETER& _initialize_param);
@@ -54,17 +53,17 @@ public:
 	[[nodiscard]] virtual size_t count() const noexcept override;
 	
 protected:
-	virtual	void				process_log(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record) override;
+	virtual	void				process_log(object_ptr<LOG_RECORD>&& _plog_record) override;
 
 	virtual	result_code			_process_initializing(context& _context) override;
 	virtual	result_code			_process_destroying() noexcept;
 
-	virtual	object_ptr<net::io::Iconnectable> process_alloc_connectable() override;
+	virtual	auto				process_alloc_connectable() -> object_ptr<net::io::Iconnectable> override;
 
 	virtual	bool				add_connectable(net::io::Iconnectable* _pconnectable) noexcept override;
 	virtual	bool				remove_connectable(net::io::Iconnectable* _pconnectable) noexcept override;
 
-	virtual	object_ptr<net::io::Iconnectable_manager::CONNECTABLE_ITERATOR>	alloc_iterator() override;
+	virtual	auto				alloc_iterator() -> object_ptr<net::io::Iconnectable_manager::CONNECTABLE_ITERATOR> override;
 
 public:
 			class socket;

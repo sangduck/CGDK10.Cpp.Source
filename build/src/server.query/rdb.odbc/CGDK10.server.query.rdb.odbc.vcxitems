@@ -16,7 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.data_source.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.definitioins.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.definitions.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.Iquery.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.manager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)server.query.rdb.odbc.Nquery.cpp" />
@@ -42,5 +42,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.query_ODBC_SET_PARAM.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.session.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.odbc.transaction_guard.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\rdb.odbc\server.query.rdb.schema.h" />
   </ItemGroup>
 </Project>

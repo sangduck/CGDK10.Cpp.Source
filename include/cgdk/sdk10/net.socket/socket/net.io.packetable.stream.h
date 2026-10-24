@@ -37,17 +37,14 @@ namespace CGDK
  //-----------------------------------------------------------------------------
 template <class TMSG_HEAD = uint32_t>
 class net::io::packetable::Nstream :
-// inherited classes)
 	virtual public				net::io::Isocket,
 	virtual public				net::io::Ipacketable,
-	virtual public				Imessageable,
+	virtual public				CGDK::Imessageable,
 	virtual public				net::io::statistics::Nsocket
 {
-// definitions)
 public:
 			using TMESSAGE_HEAD = TMSG_HEAD;
 
-// implementation)
 protected:
 	virtual	void				process_pre_message(sMESSAGE_NETWORK& /*_msg*/) {}
 	virtual	std::size_t			process_packet(shared_buffer& _buffer, const net::sockaddr& _address_peer) override
@@ -81,7 +78,7 @@ protected:
 				((buffer_view&)message).set_size(message_size);
 
 				// check) 만약 tempNetBuffer.size_이 TMESSAGE_HEAD보다 작으면 잘못된 것이므로 Exception을 던진다.
-				//        (주의: message크기가 0Byte일 경우 Exception을 던지지 않으면 무한루프에 빠져버릴수 있다.)
+				//        (주의: message크기가 0Byte일 경우 Exception을 던지지 않으면 무한루프에 빠져버릴 수 있다.)
 				THROW_IF(message_size < sizeof(TMESSAGE_HEAD), throwable::failure(eRESULT::INVALID_MESSAGE_TOO_SHORT_LENGTH), LOG_DEBUG << "(err ) message size is too short. message size: "sv << message_size << " " __CGFUNCTION__ ""sv);
 
 				// check) MessageHead크기 보다 작으면 빠져나간다.
@@ -131,7 +128,7 @@ protected:
 		}
 		catch(...)
 		{
-			// statistiscs) 이때까지 처리된 Packet의 통계처리를 한다.
+			// statistics) 이때까지 처리된 Packet의 통계처리를 한다.
 			this->statistics_on_receive_message(count_message);
 
 			// reraise) 

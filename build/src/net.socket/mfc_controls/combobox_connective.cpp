@@ -26,14 +26,14 @@ void CComboBox_connective::OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimi
 	// 1) 부모 클래스의 Activate!!!
 	__super::OnActivate(nState, pWndOther, bMinimized);
 	
-	// 2) Updae한다.
+	// 2) Update한다.
 	UpdateConnectiveList();
 }
 
 // CComboBox_connective message handlers
 void CComboBox_connective::SetConnectiveManager(net::io::connective::manager* _pconnective_manager)
 {
-	scoped_lock(m_csmangerConnective)
+	SCOPED_LOCK(m_csmangerConnective)
 	{
 		// check) 같은 것이면 종료한다.
 		RETURN_IF(m_pmangerConnective==_pconnective_manager);
@@ -47,7 +47,7 @@ void CComboBox_connective::SetConnectiveManager(net::io::connective::manager* _p
 
 object_ptr<net::io::connective::manager> CComboBox_connective::get_connective_manager()
 {
-	scoped_lock(m_csmangerConnective)
+	SCOPED_LOCK(m_csmangerConnective)
 	{
 		// return) 
 		return	m_pmangerConnective;
@@ -78,7 +78,7 @@ void CComboBox_connective::UpdateConnectiveList()
 	//-----------------------------------------------------------------
 	// 2. xxx
 	//-----------------------------------------------------------------
-	scoped_lock(pmanger_connective->get_lockable())
+	SCOPED_LOCK(pmanger_connective->get_lockable())
 	{
 		auto iter = pmanger_connective->begin();
 		auto iter_end = pmanger_connective->end();
@@ -117,7 +117,7 @@ void CComboBox_connective::UpdateConnectiveList()
 void CComboBox_connective::OnDestroy()
 {
 	// 1) 파괴한다~~
-	scoped_lock(m_csmangerConnective)
+	SCOPED_LOCK(m_csmangerConnective)
 	{
 		m_pmangerConnective.reset();
 	}
@@ -131,7 +131,7 @@ void CComboBox_connective::OnCbnSelchange()
 	// declare) 
 	object_ptr<net::io::Iconnective> pconnective;
 
-	scoped_lock(m_csmangerConnective)
+	SCOPED_LOCK(m_csmangerConnective)
 	{
 		// check) 
 		RETURN_IF(m_pmangerConnective.empty());
@@ -179,7 +179,7 @@ BOOL CComboBox_connective::create(uint32_t dwStyle, const RECT& rect, CWnd* pPar
 
 void CComboBox_connective::AddTargetWnd(CWnd* _pwnd)
 {
-	scoped_lock(m_cslistWndTarget)
+	SCOPED_LOCK(m_cslistWndTarget)
 	{
 		// 1) Target을 찾는다.
 		circular_list<CWnd*>::iterator iter	 = std::find(m_listWndTarget.begin(), m_listWndTarget.end(), _pwnd);
@@ -194,7 +194,7 @@ void CComboBox_connective::AddTargetWnd(CWnd* _pwnd)
 
 void CComboBox_connective::RemoveTargetWnd(CWnd* _pwnd)
 {
-	scoped_lock(m_cslistWndTarget)
+	SCOPED_LOCK(m_cslistWndTarget)
 	{
 		// 1) Target을 찾는다.
 		auto iter	 = std::find(m_listWndTarget.begin(), m_listWndTarget.end(), _pwnd);
@@ -219,7 +219,7 @@ void CComboBox_connective::SendMessageToTarget(WPARAM p_dwMessage, LPARAM _lpara
 	vectorTempTarget.reserve(m_listWndTarget.size());
 
 	// 2) Assign
-	scoped_lock(m_cslistWndTarget)
+	SCOPED_LOCK(m_cslistWndTarget)
 	{
 		auto iter = m_listWndTarget.begin();
 		auto iter_end = m_listWndTarget.end();
@@ -286,7 +286,7 @@ LRESULT CComboBox_connective::OnCGMessageNotify(WPARAM _wparam, LPARAM /*_lparam
 
 object_ptr<net::io::Iconnective> CComboBox_connective::GetCurrentConnective()
 {
-	scoped_lock(m_csmangerConnective)
+	SCOPED_LOCK(m_csmangerConnective)
 	{
 		// 1) 현재 선택된 Acceptor의 Index를 얻는다.
 		int	selected	 = GetCurSel();

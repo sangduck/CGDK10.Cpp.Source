@@ -8,6 +8,6 @@
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="echo_client.h" />
-    <ClInclude Include="..\..\common\packatable.h" />
+    <ClInclude Include="..\..\common\packetable.h" />
   </ItemGroup>
 </Project>

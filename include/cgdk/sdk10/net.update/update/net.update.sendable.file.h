@@ -56,8 +56,8 @@ class CGDK::update::sendable::file :
 //
 //			vector<CCGBuffer>	m_vectorBufferBlock;	// File Block
 //
-//			ATOMIC<int>			m_statisticsSendedByte;
-//			ATOMIC<int>			m_statisticsSendedTime;
+//			ATOMIC<int>			m_statisticsSentByte;
+//			ATOMIC<int>			m_statisticsSentTime;
 //
 //			bool				ProcessInitializeInstance	(const _CHAR* _strFileName, const _CHAR* _strPathName=nullptr, uint32_t _BlockSize=32768, bool _bCalcuateMD5=false);
 //			bool				ProcessInitializeStatic		(const _CHAR* _strFileName, const _CHAR* _strPathName=nullptr, uint32_t _BlockSize=32768);

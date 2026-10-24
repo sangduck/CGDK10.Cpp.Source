@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log system · CGDK10 기술 문서</title>
+<meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - 소스 기준 기술 설명·빌드·릴리즈 노트">
+<link rel="icon" href="assets/CGCII_logo.PNG">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
+  <div class="ver">Game Server Engine</div>
+  <ul>
+    <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
+    <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
+    <li class="sub"><a href="pool.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Pool system</a></li>
+    <li class="sub"><a href="object.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l6 3v7l-6 3-6-3v-7z"/><path d="M2 4.5l6 3 6-3M8 7.5v7"/></svg>Object system</a></li>
+    <li class="sub"><a href="log.html" class="cur"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h6l3 3v10H4z"/><path d="M6.5 8h4M6.5 10.5h4M6.5 5.5h2"/></svg>Log system</a></li>
+    <li class="sub"><a href="socket.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1.5v3.5M10 1.5v3.5"/><path d="M3.5 5h9v3.5a4.5 4.5 0 0 1-9 0z"/><path d="M8 13v1.5"/></svg>Socket system</a></li>
+    <li class="sub"><a href="socket.io_uring.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 1.5L3.5 9h4.5l-1 5.5L12.5 7H8z"/></svg>io_uring</a></li>
+    <li class="sub"><a href="socket.uds.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.6-1.6a2.8 2.8 0 0 1 4 4L11 8.5"/><path d="M9 11.5l-1.6 1.6a2.8 2.8 0 0 1-4-4L5 7.5"/></svg>UDS (같은 host 접속)</a></li>
+    <li class="sub"><a href="socket.send.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 1.5L7 9"/><path d="M14.5 1.5l-4.5 13-2.2-5.3L2.5 6z"/></svg>send 최적화</a></li>
+    <li class="sub"><a href="socket.recv.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9.5v4h12v-4"/><path d="M8 2v8M5 7.5l3 3 3-3"/></svg>Receive 최적화</a></li>
+    <li class="sub"><a href="p2p.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="8" cy="12" r="2"/><path d="M5.6 5.2l1.6 5.2M10.4 5.2l-1.6 5.2M6 4h4"/></svg>P2P system</a></li>
+    <li class="sub"><a href="update.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5V5.2h-2.7"/></svg>Update system</a></li>
+    <li class="sub"><a href="server.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="4.5" rx="1"/><rect x="2" y="9.5" width="12" height="4.5" rx="1"/><path d="M4.5 4.25h.01M4.5 11.75h.01"/></svg>Server system</a></li>
+    <li class="sub"><a href="group.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 2.8a2.3 2.3 0 0 1 0 4.4M13.5 14c0-1.8-1-3.1-2.5-3.6"/></svg>Group system</a></li>
+    <li class="sub"><a href="query.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Query system</a></li>
+    <li class="head"><a href="build.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-3.8 3.8L2.8 12.2a1.4 1.4 0 0 0 2 2l5.9-3.9a3 3 0 0 0 3.8-3.8l-2 2-2-2z"/></svg>빌드 · 플랫폼</a></li>
+    <li class="head"><a href="tests.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5.5 8.2l2 2 3.2-4"/></svg>단위 테스트 · CI</a></li>
+    <li class="head"><a href="benchmarks.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V9M8 13.5V4M13 13.5V7"/><path d="M1.5 13.5h13"/></svg>벤치마크</a></li>
+    <li class="sub"><a href="benchmarks.push.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4 3 3 6-6"/><path d="M10.5 5.5h4v4"/></svg>큰 묶음 push 처리량</a></li>
+    <li class="sub"><a href="benchmarks.cork.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h8M2 11.5h5"/><path d="M12 9.5l2 2-2 2"/></svg>send cork · 서버 push</a></li>
+    <li class="head"><a href="samples.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4"/></svg>예제 · 튜토리얼</a></li>
+    <li class="head"><a href="releases.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h5.5l6.5 6.5-5.5 5.5L2 8z"/><circle cx="5.2" cy="5.2" r=".9"/></svg>릴리즈 노트</a></li>
+    <li class="head"><a href="status.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3M8 11.5h.01"/></svg>미구현 · 알려진 문제</a></li>
+  </ul>
+</aside>
+<main>
+<h1 id="log">Log system <small>system/object/log.*, server.log.h, server.system/log/</small></h1>
+<h3>기록 (system)</h3>
+<ul>
+  <li>스트림 매크로 <code>LOG_INFO &lt;&lt; "..."sv;</code>, <code>LOG_ERROR</code>, <code>LOG_WARNING</code>, <code>LOG_DEBUG</code>, <code>LOG_FATAL</code>, <code>LOG_SYSTEM</code>, <code>LOG_PROGRESS</code>, <code>LOG_USER</code>, <code>LOG_INFO_LOW</code>. 포맷형 <code>LOG_FMT(target, type, level, ...)</code>, <code>LOG_STREAM</code>, <code>LOG_IF</code> / <code>LOG_FMT_IF</code>. 각 매크로는 <code>_ENABLE_LOG_*</code> 로 컴파일 제외 가능.</li>
+  <li>기본 대상 <code>get_default_logger() / set_default_logger() / reset_default_logger()</code>, <code>DEFAULT_LOGGER</code>. 서비스는 <code>Nstatic_service_logger::get_logger()</code>(<code>logger_hub</code>).</li>
+  <li>인터페이스 <code>Ilogger::process_log(object_ptr&lt;LOG_RECORD&gt;&amp;&amp;)</code>, <code>Ilog_filter::process_filtering()</code>, <code>Ilog_source / log_source</code>. <code>log_type_t</code> {info, progress, debug, fatal, error, warning, user, system}, <code>log_level_t</code>(int: lower -256, normal 0, higher/important 256).</li>
+</ul>
+<h3>로거 (server.log)</h3>
+<table>
+<tr><th>클래스</th><th>설명</th></tr>
+<tr><td><code>Nlogger</code></td><td>필터 지원 기본 로거</td></tr>
+<tr><td><code>Nlogger_async</code></td><td>락프리 큐에 쌓고 <code>process_log_batch()</code> 로 배치 기록. 호출자는 대기하지 않음</td></tr>
+<tr><td><code>logger_hub</code></td><td>자식 로거에 분배. <code>register_log_targetable() / unregister_log_targetable()</code>, <code>clear()</code>. 락프리 MPSC·자식 스냅샷(r11332)</td></tr>
+<tr><td><code>logger_hub_archive</code></td><td>일련번호가 붙은 ring 보관</td></tr>
+<tr><td><code>logger_file</code></td><td>비동기. <code>INITIALIZE_PARAMETER{filename, path, backup_path, recreation_interval, origin_time_type, limit_bytes, limit_lines, char_code, eol_type, is_instant_open, instant_close_delay}</code>. 시간·바이트·줄 수로 파일 재생성</td></tr>
+<tr><td><code>logger_console</code>, <code>logger_buffer</code></td><td>콘솔 / 메모리</td></tr>
+<tr><td><code>logger_socket</code>, <code>logger_acceptor</code></td><td>원격 로거로 배치 전송 / 수신. 연결 전 로그는 유실</td></tr>
+<tr><td><code>logger_system</code>, <code>logger_syslog</code></td><td>Windows 이벤트 로그 또는 syslog(기본 fatal·error·warning 만, <code>all_types=false</code>)</td></tr>
+<tr><td><code>logger_slack</code></td><td>bot token+channel 또는 webhook. <code>types</code> 필터, <code>eANSI</code> format/raw/strip, <code>max_message_length</code> 3000, sent/failed/dropped 카운터</td></tr>
+</table>
+<ul>
+  <li>팩터리 <code>create_logger(type)</code> / <code>register_logger_creator()</code>: <code>"file"</code>(기본), <code>"console"</code>, <code>"system"</code>, <code>"socket"</code>, <code>"syslog"</code>. <code>server.log.slack.h</code> 를 포함하면 <code>"slack"</code> 이 등록되어 쓰지 않는 프로그램은 http/ssl 링크를 피한다.</li>
+  <li><code>log_filter</code>(<code>server.log_filter.default.h</code>): 타입별 <code>FILTER_INFO</code>(level·origin·source·destination 범위). <code>enable_log</code>, <code>set_filtering_range_by_level</code>. 옛 필터 해제 금지(r11338).</li>
+  <li>파일 출력 <code>log.archive.h</code>, <code>archive::file / file_write</code>.</li>
+  <li>테스트 <code>unit_test.server_system.log</code> 25개(파일 재생성, hub 멀티스레드, 필터, slack/system/socket). 튜토리얼 <code>server.1.log</code>.</li>
+</ul>
+
+
+<h3 id="server-log-usage">server.log 사용</h3>
+<p><b>구성</b> : <code>server.log.h</code> 하나를 포함하면 <code>CGDK10.server.log</code> 라이브러리가 자동 링크된다(<code>net.socket</code> 포함). Slack 로거만 <code>server.log.slack.h</code> 를 따로 포함한다.</p>
+<p><b>로그 한 건의 흐름</b></p>
+<ul>
+  <li><code>LOG_INFO &lt;&lt; ...</code> 가 <code>LOG_RECORD</code>(풀 객체, trace 뒤 불변)를 만들어 <code>Ilogger::trace()</code> 로 넘긴다.</li>
+  <li>로거는 자기 <code>log_filter</code> 로 거른다. 통과하면 <code>process_log()</code>.</li>
+  <li>기본 로거는 <code>logger_hub_archive</code> 다. 락프리 MPSC 큐에 쌓고 executor 에서 한꺼번에 꺼내 자식 로거에 같은 record 를 전달한다. 호출 thread 는 기다리지 않는다.</li>
+  <li>자식(<code>logger_file</code>, <code>logger_console</code>, <code>logger_socket</code>, <code>logger_slack</code>)은 <code>Nlogger_async</code> 다. 자기 큐에 모았다가 <code>process_log_batch()</code> 로 배치 처리한다. 파일 로거는 배치마다 한 번의 동기 write.</li>
+  <li>완료는 <code>destroy()</code> 에서만 보장한다. 종료 때 <code>Nstatic_service_logger::reset_logger()</code> 가 기본 hub 를 destroy 해 자식까지 비운 뒤 서비스가 로거를 놓는다.</li>
+</ul>
+<p><b>코드로 만들기</b> (tutorials/server.1.log)</p>
+<pre><code>// log.01 : 파일 로거 하나
+auto plogger = make_own&lt;logger_file&gt;();
+plogger-&gt;initialize({ "./test_log_file.log"sv });          // INITIALIZE_PARAMETER{filename, path, backup_path, ...}
+LOG(plogger, log_type_t::info) &lt;&lt; "This paragraph is log"sv;
+
+// log.05 : hub 아래에 콘솔 + 파일
+auto pconsole = make_own&lt;logger_console&gt;();  pconsole-&gt;initialize();
+auto pfile    = make_own&lt;logger_file&gt;();     pfile-&gt;initialize({ "./test_log_hierarchy.log"sv });
+auto phub     = make_own&lt;logger_hub_archive&gt;();
+phub-&gt;register_log_targetable(pconsole);
+phub-&gt;register_log_targetable(pfile);
+phub-&gt;initialize();
+LOG(phub, log_type_t::info) &lt;&lt; "This paragraph is log"sv;
+
+// log.06 : 기본 로거로 등록하면 대상 없이 LOG_* 매크로만 쓴다
+set_default_logger(pconsole);
+LOG_INFO &lt;&lt; "This paragraph is log"sv;
+LOG(log_type_t::system) &lt;&lt; log_level_t::higher() &lt;&lt; "important"sv;
+reset_default_logger();</code></pre>
+<p><b>설정으로 만들기</b> : <code>Nservice</code> / <code>Nservice_application</code> 은 <code>"service"."logger"</code> 또는 최상위 <code>"logger"</code> 아래의 항목마다 <code>create_logger(type)</code> 로 만들어 기본 hub 에 붙인다. 이름은 키, 종류는 <code>"type"</code>. hub 도 <code>"child"</code> 로 자식을 설정으로 만든다.</p>
+<pre><code>"logger": {
+  "main": { "type": "file", "path": "./log", "filename": "server_{}{}{}.log",
+            "recreation": true, "interval": 60, "origin_time_type": "day_begin",
+            "create_new": false, "char_encoding": "utf8",
+            "filter": { "debug": { "range_level_min": 0 }, "info": { "range_level_min": -256 } } },
+  "con":  { "type": "console" },
+  "evt":  { "type": "system" }
+}</code></pre>
+<ul>
+  <li><code>"type"</code> : <code>"file"</code>(기본) · <code>"console"</code> · <code>"system"</code>(Windows 이벤트 로그 / Linux syslog) · <code>"socket"</code> · <code>"syslog"</code> · <code>"slack"</code>(<code>server.log.slack.h</code> 포함 시). <code>register_logger_creator()</code> 로 추가.</li>
+  <li>공통 <code>"filter"</code> : 타입(<code>info / progress / debug / fatal / error / warning / user / system</code>)마다 <code>range_level_min/max</code>, <code>range_origin_min/max</code>, <code>range_source_min/max</code>, <code>range_destination_min/max</code>.</li>
+  <li><code>logger_file</code> : <code>filename</code>(시간 자리 <code>{}</code>), <code>path</code>, <code>backup_path</code>, <code>recreation</code> / <code>interval</code>(분), <code>origin_time_type</code>(now · minute_begin · hour_begin · day_begin · week_begin · month_begin · year_begin · specified), <code>origin_time</code>, <code>create_new</code>, <code>char_encoding</code>, <code>limit_bytes</code> / <code>limit_lines</code>, <code>instant_open</code> / <code>instant_close_delay</code>.</li>
+  <li>서비스가 로거를 만들기 전에 쌓인 로그는 <code>logger_hub_archive</code> 가 보관했다가 새 로거에 다시 흘려 준다(<code>get_stored_log()</code>).</li>
+</ul>
+<p><b>규칙</b></p>
+<ul>
+  <li><code>LOG_RECORD</code> 는 trace 뒤 바꾸지 않는다. 고쳐야 하면 새 record 로 바꿔 끼운다.</li>
+  <li><code>set_filter()</code> 는 옛 필터를 로거가 죽을 때까지 보관한다. 로거가 락 없이 필터를 읽기 때문이다(r11338). 필터를 자주 바꾸는 코드는 피한다.</li>
+  <li>파일 재생성은 백업(<code>name_1.ext</code>…)을 덮어쓰지 않고, 쓰기 실패는 실패가 이어지는 동안 한 번만 기록한다.</li>
+  <li><code>logger_socket</code> 은 연결 전 로그를 버린다. 원격 로거가 필요하면 접속 뒤에 등록한다.</li>
+</ul>
+<p><b>비용</b> (Release) : 기본 구성(<code>logger_hub_archive</code> → <code>logger_file</code>)에서 첫 <code>LOG_INFO</code> 부터 hub·파일 로거 <code>destroy()</code> 로 파일 쓰기가 끝날 때까지의 시간을 로그 수로 나눈 값. 5회 중앙값의 두 실행 범위. Windows · Linux 8 코어는 HEAD r11463, Linux 32 코어는 r11478.</p>
+<table class="bench">
+<tr><th>기록 thread</th><th>Windows 24 코어 (ns/로그)</th><th>Linux 8 코어 (ns/로그)</th><th>Linux 32 코어 (ns/로그)</th></tr>
+<tr><td>1</td><td>181 ~ 208</td><td>280 ~ 290</td><td>102 ~ 139</td></tr>
+<tr><td>4</td><td>262 ~ 285</td><td>371 ~ 374</td><td>174 ~ 188</td></tr>
+<tr><td>16</td><td>349</td><td>399</td><td>222 ~ 228</td></tr>
+</table>
+<p>16 thread 는 전체 처리량이 거의 늘지 않는다. thread 하나로 보면 로그 한 건에 5.6 µs(Windows) · 6.4 µs(Linux 8 코어) · 3.6 µs(Linux 32 코어)가 걸리는 셈이다. 공유 카운터와 큐 head 경합이 원인이며 남은 과제다. 측정 코드와 조건은 <a href="benchmarks.html">벤치마크</a> 문서.</p>
+<p><b>튜토리얼</b> : <code>log.01.logger_file</code>, <code>log.02.logger_console</code>, <code>log.03.logger_mfc</code>, <code>log.04.log_filter</code>, <code>log.05.logger_hierarchy</code>, <code>log.06.default_logger</code>, <code>log.07.logger_slack</code>, <code>log.ex01.logger_archive</code>. 소켓 로거는 <code>network.1.socket/socket.ex08.socket_logger</code>.</p>
+
+<footer>CGDK10 · 소스 기준 정리 (r11415, 2026-10-22) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+</main>
+</div>
+</body>
+</html>

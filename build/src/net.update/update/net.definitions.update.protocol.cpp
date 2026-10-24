@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 using namespace CGDK;
 
@@ -73,10 +73,10 @@ CGDK::shared_buffer _message_UPDATE_UPDATABLE_REQUEST(CGDK::update::RECEIVER_ID 
 	return buf_temp;
 }
 
-CGDK::shared_buffer _message_UPDATE_UPDATABLE_BEGIN(CGDK::update::RECEIVER_ID _receiver_id, CGDK::update::SENDER_ID _sender_id, CGDK::update::UPDATABLE_ID _updatable_id, uint64_t _pos_begin)
+CGDK::shared_buffer _message_UPDATE_UPDATABLE_BEGIN(CGDK::update::RECEIVER_ID _receiver_id, CGDK::update::SENDER_ID _sender_id, CGDK::update::UPDATABLE_ID _updatable_id, uint64_t _pos_begin, CGDK::resource::eFILE_FLAG _file_flag)
 {
 	// declare)
-	const auto MESSAGE_SIZE = 8 + CGDK::get_size_of(_receiver_id) + CGDK::get_size_of(_sender_id) + CGDK::get_size_of(_updatable_id) + CGDK::get_size_of(_pos_begin);
+	const auto MESSAGE_SIZE = 8 + CGDK::get_size_of(_receiver_id) + CGDK::get_size_of(_sender_id) + CGDK::get_size_of(_updatable_id) + CGDK::get_size_of(_pos_begin) + CGDK::get_size_of(_file_flag);
 
 	// 2) alloc buffer
 	auto buf_temp = alloc_shared_buffer(MESSAGE_SIZE);
@@ -89,6 +89,7 @@ CGDK::shared_buffer _message_UPDATE_UPDATABLE_BEGIN(CGDK::update::RECEIVER_ID _r
 	buf_temp.append<CGDK::update::SENDER_ID>(_sender_id);
 	buf_temp.append<CGDK::update::UPDATABLE_ID>(_updatable_id);
 	buf_temp.append<uint64_t>(_pos_begin);
+	buf_temp.append<CGDK::resource::eFILE_FLAG>(_file_flag);
 
 	// 4) write message size
 	CGASSERT_ERROR(buf_temp.size() == MESSAGE_SIZE);

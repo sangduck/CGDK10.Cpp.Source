@@ -1,0 +1,33 @@
+{
+  "service": {
+    "setting": {
+      "name": "admin_server"
+    }
+  },
+
+  "service_instance_manager": {
+    "auto_start": false,
+    "--desired_file": "config/admin_server.desired_state.json"
+  },
+
+  "acceptor_host_agent": {
+    "local_endpoint": {
+      "port": 21887
+    },
+    "--certify_key": "change-me (or set CGDK_ADMIN_CERTIFY_KEY)",
+    "--allowed_addresses": [ "127.0.0.1" ],
+    "prepare_on_start": 2,
+    "must_prepare": 2
+  },
+
+  "acceptor_control": {
+    "local_endpoint": {
+      "address": "127.0.0.1",
+      "port": 21888
+    },
+    "--certify_key": "change-me (http header X-CGDK-Key)",
+    "--allowed_addresses": [ "127.0.0.1" ],
+    "prepare_on_start": 2,
+    "must_prepare": 2
+  }
+}

@@ -19,19 +19,19 @@
 #-----------------------------------------------------------------------------
 # setting
 #-----------------------------------------------------------------------------
-# 1) project name
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY( VERSION 3.20 )
+
+# 2) project name
 PROJECT ( "CGDK10.example.tcp_echo.server" )
 
-# 2) project version
+# 3) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 SET ( DEFAULT_BUILD_TYPE Debug )
-
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
 
 
 #-----------------------------------------------------------------------------
@@ -40,7 +40,7 @@ CMAKE_POLICY( VERSION 3.20 )
 # 1) tcp echo server - CGCII
 ADD_SUBDIRECTORY (console)
 
-FIND_PACKAGE(Boost 1.71.0)
+FIND_PACKAGE(Boost 1.71.0 REQUIRED CONFIG)
 IF(Boost_FOUND)
 
 # 2) tcp echo server - boost.asio

@@ -1,28 +1,28 @@
-ï»¿
-// chatting_client_dlg.h: í—¤ë” íŒŒì¼
+
+// chatting_client_dlg.h: Çì´õ ÆÄÀÏ
 //
 
 #pragma once
 
 
-// Cchatting_client_mfc_dlg ëŒ€í™” ìƒì
+// Cchatting_client_mfc_dlg ´ëÈ­ »óÀÚ
 class Cchatting_client_mfc_dlg : public CDialogEx
 {
-// ìƒì„±ì…ë‹ˆë‹¤.
+// »ı¼ºÀÔ´Ï´Ù.
 public:
-	Cchatting_client_mfc_dlg(CWnd* pParent = nullptr);	// í‘œì¤€ ìƒì„±ìì…ë‹ˆë‹¤.
+	Cchatting_client_mfc_dlg(CWnd* pParent = nullptr);	// Ç¥ÁØ »ı¼ºÀÚÀÔ´Ï´Ù.
 
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_CHATTING_CLIENTMFC_DIALOG };
 #endif
 
-// êµ¬í˜„ì…ë‹ˆë‹¤.
+// ±¸ÇöÀÔ´Ï´Ù.
 protected:
 			HICON				m_hIcon;
 
 // 3) MFC Virtual Functions
 protected:
-	virtual void				DoDataExchange(CDataExchange* pDX);	// DDX/DDV ì§€ì›ì…ë‹ˆë‹¤.
+	virtual void				DoDataExchange(CDataExchange* pDX);	// DDX/DDV Áö¿øÀÔ´Ï´Ù.
 	virtual BOOL				OnInitDialog();
 	virtual BOOL				PreTranslateMessage(MSG* pMsg);
 

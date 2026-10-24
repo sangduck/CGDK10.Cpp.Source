@@ -1,0 +1,40 @@
+#-----------------------------------------------------------------------------
+# CGDK10 host agent (systemd unit)
+#
+#  install)
+#    1) copy files to /opt/cgdk/host_agent
+#         CGDK10.server.admin.host_agent_linux.Release
+#         host_agent_setting.json
+#         host_agent_server_list.json
+#         (host_agent_info.json is created at the first run : host iid)
+#    2) (optional) /etc/cgdk/host_agent.env : CGDK_ADMIN_CERTIFY_KEY=<key>
+#    3) sudo cp cgdk-host-agent.service /etc/systemd/system/
+#       sudo systemctl daemon-reload
+#       sudo systemctl enable --now cgdk-host-agent
+#
+#  notes)
+#    - foreground process (no '--daemon'). systemd stop sends SIGTERM -> destroyed gracefully.
+#    - KillMode=process : services started by host agent keep running when host agent restarts.
+#      (host agent finds them again by pid/rank when they reconnect)
+#-----------------------------------------------------------------------------
+[Unit]
+Description=CGDK10 host agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cgdk
+Group=cgdk
+WorkingDirectory=/opt/cgdk/host_agent
+EnvironmentFile=-/etc/cgdk/host_agent.env
+ExecStart=/opt/cgdk/host_agent/CGDK10.server.admin.host_agent_linux.Release
+KillSignal=SIGTERM
+KillMode=process
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

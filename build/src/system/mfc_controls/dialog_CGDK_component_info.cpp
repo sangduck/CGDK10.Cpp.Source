@@ -99,7 +99,7 @@ BOOL CDialog_CGDK_component_info::OnInitDialog()
 	this->m_listctrl_components.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
 
 	// 2) 
-	if(m_pvector_components != nullptr)
+	if(this->m_pvector_components != nullptr)
 	{
 		// declare) 
 		TCHAR* text = reinterpret_cast<TCHAR*>(malloc(MAX_STRING_LENGTH * sizeof(TCHAR)));
@@ -109,7 +109,7 @@ BOOL CDialog_CGDK_component_info::OnInitDialog()
 		list_item.state = 0;
 		list_item.cchTextMax = 256;
 
-		for(auto& iter: *m_pvector_components)
+		for(auto& iter: *this->m_pvector_components)
 		{
 			// - 
 			list_item.iItem = this->m_listctrl_components.GetItemCount();
@@ -130,24 +130,27 @@ BOOL CDialog_CGDK_component_info::OnInitDialog()
 			this->m_listctrl_components.SetItem(&list_item);
 
 			// - build Time
-			auto strBuildTime = to_string<TCHAR>(iter.component_info.time_build);
 			list_item.iSubItem = 2;
-			list_item.pszText = const_cast<TCHAR*>(strBuildTime.data());
+			wsprintf(text, TEXT("%hs"), to_string(iter.component_info.time_build).data());
+			list_item.pszText = text;
 			this->m_listctrl_components.SetItem(&list_item);
 
 			// - configuration
 			list_item.iSubItem = 3;
-			list_item.pszText = const_cast<TCHAR*>(to_string<TCHAR>(iter.component_info.configuration).data());
+			wsprintf(text, TEXT("%hs"), to_string(iter.component_info.configuration).data());
+			list_item.pszText = text;
 			this->m_listctrl_components.SetItem(&list_item);
 
 			// - compiler
 			list_item.iSubItem = 4;
-			list_item.pszText = const_cast<TCHAR*>(to_string<TCHAR>(iter.component_info.compiler).data());
+			wsprintf(text, TEXT("%hs"), to_string(iter.component_info.compiler).data());
+			list_item.pszText = text;
 			this->m_listctrl_components.SetItem(&list_item);
 
 			// - platform
 			list_item.iSubItem = 5;
-			list_item.pszText = const_cast<TCHAR*>(to_string<TCHAR>(iter.component_info.platform).data());
+			wsprintf(text, TEXT("%hs"), to_string(iter.component_info.platform).data());
+			list_item.pszText = text;
 			this->m_listctrl_components.SetItem(&list_item);
 
 			// - Expire time

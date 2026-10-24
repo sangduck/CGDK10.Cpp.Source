@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 #include "../../define_message.h"
 
 #include <iostream>
@@ -9,60 +9,60 @@
 using namespace CGDK;
 
 // 
-// ì„¤ëª…) ì ‘ì†ì„ ì¢…ë£Œì²˜ë¦¬í•˜ëŠ” ë¶€ë¶„ì€ client(tut.socket.ex01.tcp_graceful_close.client)ìª½ í™•ì¸
+// ¼³¸í) Á¢¼ÓÀ» Á¾·áÃ³¸®ÇÏ´Â ºÎºĞÀº client(tut.socket.ex01.tcp_graceful_close.client)ÂÊ È®ÀÎ
 //       
-//       graceful close -> ì •ìƒì ì¸ ì ‘ì† ì¢…ë£Œ. 
-//                         ë°ì´í„°ë¥¼ ëª¨ë‘ ì†¡ìˆ˜ì‹ í›„ ì •ìƒì ì¸ ì ‘ì† ì¢…ë£Œ ì²˜ë¦¬ë¥¼ í•œë‹¤.
-//                         ì†Œì¼“ì˜ ì ‘ì† ì¢…ë£Œë¥¼ ìš”ì²­í•˜ë”ë¼ë„ ì¦‰ì‹œ ì²˜ë¦¬ë˜ì§€ ì•Šì„ ìˆ˜ ìˆë‹¤. 
+//       graceful close -> Á¤»óÀûÀÎ Á¢¼Ó Á¾·á. 
+//                         µ¥ÀÌÅÍ¸¦ ¸ğµÎ ¼Û¼ö½Å ÈÄ Á¤»óÀûÀÎ Á¢¼Ó Á¾·á Ã³¸®¸¦ ÇÑ´Ù.
+//                         ¼ÒÄÏÀÇ Á¢¼Ó Á¾·á¸¦ ¿äÃ»ÇÏ´õ¶óµµ Áï½Ã Ã³¸®µÇÁö ¾ÊÀ» ¼ö ÀÖ´Ù. 
 //
 //                         psocket->disconnect();
 //
 //
-//       abortive close -> ë¹„ì •ìƒì ‘ì† ì¢…ë£Œ ì²˜ë¦¬. 
-//                         ì†¡ìˆ˜ì‹ ì¤‘ì´ ë°ì´í„°ê°€ ìˆë‹¤í•´ë„ ì¦‰ê° ì ‘ì† ì¢…ë£Œì²˜ë¦¬ë¥¼ í•œë‹¤.
-//                         ì†Œì¼“ì€ ì¦‰ê° í•´ì œëœë‹¤.
+//       abortive close -> ºñÁ¤»óÁ¢¼Ó Á¾·á Ã³¸®. 
+//                         ¼Û¼ö½ÅÁßÀÌ µ¥ÀÌÅÍ°¡ ÀÖ´ÙÇØµµ Áï°¢ Á¢¼Ó Á¾·áÃ³¸®¸¦ ÇÑ´Ù.
+//                         ¼ÒÄÏÀº Áï°¢ ÇØÁ¦µÈ´Ù.
 //
 //                         psocket->closesocket();
 //
 //
-//  í…ŒìŠ¤íŠ¸ ë‚´ìš©)
+//  Å×½ºÆ® ³»¿ë)
 //
-//    A => ì ‘ì†ëœ ì†Œì¼“ì— eMESSAGE_Aë¥¼ 10ë²ˆ ì „ì†¡í•˜ê³  abortive close í•œë‹¤.
-//         ì„œë²„ìª½ì—ì„œëŠ” eMESSAGE_Aë¥¼ 10ë²ˆì„ ëª¨ë‘ ë°›ì§€ ëª»í•˜ê±°ë‚˜ ì „í˜€ ë°›ì§€ ëª»í•˜ê³  ì ‘ì†ì¢…ë£Œê°€ ëœë‹¤.
+//    A => Á¢¼ÓµÈ ¼ÒÄÏ¿¡ eMESSAGE_A¸¦ 10¹ø Àü¼ÛÇÏ°í abortive close ÇÑ´Ù.
+//         ¼­¹öÂÊ¿¡¼­´Â eMESSAGE_A¸¦ 10¹øÀ» ¸ğµÎ ¹ŞÁö ¸øÇÏ°Å³ª ÀüÇô ¹ŞÁö ¸øÇÏ°í Á¢¼ÓÁ¾·á°¡ µÈ´Ù.
 //
-//    B =? ì ‘ì†ëœ ì†Œì¼“ì— eMESSAGE_Aë¥¼ 10ë²ˆ ì „ì†¡í•˜ê³  graceful close í•œë‹¤.
-//         ì„œë²„ìª½ì—ì„œëŠ” eMESSAGE_Aë¥¼ 10ë²ˆì„ ëª¨ë‘ ë°›ê³  ë‚œ í›„ì— ì ‘ì†ì¢…ë£Œê°€ ëœë‹¤.
+//    B =? Á¢¼ÓµÈ ¼ÒÄÏ¿¡ eMESSAGE_A¸¦ 10¹ø Àü¼ÛÇÏ°í graceful close ÇÑ´Ù.
+//         ¼­¹öÂÊ¿¡¼­´Â eMESSAGE_A¸¦ 10¹øÀ» ¸ğµÎ ¹Ş°í ³­ ÈÄ¿¡ Á¢¼ÓÁ¾·á°¡ µÈ´Ù.
 //
 //
 
-// 1) socket í´ë˜ìŠ¤ë¥¼ ì •ì˜í•œë‹¤.
+// 1) socket Å¬·¡½º¸¦ Á¤ÀÇÇÑ´Ù.
 class socket_tcp_client : public net::socket::tcp_client<>
 {
-	// (v) ì ‘ì† ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_connect() override
 	{
 		std::cout << " @ connected"sv << '\n';
 	}
 
-	// (v) ì ‘ì† ì‹¤íŒ¨ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½ÇÆĞ ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_fail_connect(uint64_t /*_disconnect_reason*/) override
 	{
 		std::cout << " @ fail to connecting"sv << '\n';
 	}
 
-	// (v) ì ‘ì† ì¢…ë£Œ ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó Á¾·á ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_disconnect(uint64_t) override
 	{
 		std::cout << " @ disconnected"sv << '\n';
 	}
 
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜.
+	// (v) ¸Ş½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö.
 	virtual result_code on_message(sMESSAGE_NETWORK& _msg) override
 	{
-		// 1) message headë¥¼ ì½ìŠµë‹ˆë‹¤.
+		// 1) message head¸¦ ÀĞ½À´Ï´Ù.
 		auto msg_header = _msg.buf_message.front<sMESSAGE_HEADER>();
 
-		// 2) message ì¢…ë¥˜ì— ë”°ë¥¸ ì²˜ë¦¬ë¥¼ í•œë‹¤.
+		// 2) message Á¾·ù¿¡ µû¸¥ Ã³¸®¸¦ ÇÑ´Ù.
 		switch (msg_header.type)
 		{
 		case	eMESSAGE_TYPE::SEND_A:
@@ -105,7 +105,7 @@ int main()
 	// trace) 
 	std::cout << "start client [tut.socket.01.tcp_simple.client]..."sv << '\n';
 
-	// 2) ì ‘ì†ì„ ì‹œë„í•  'socket_tcp_client' ì†Œì¼“ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 2) Á¢¼ÓÀ» ½ÃµµÇÒ 'socket_tcp_client' ¼ÒÄÏ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto psocket = make_own<socket_tcp_client>();
 
 	// comment)
@@ -114,19 +114,19 @@ int main()
 	std::cout << " 'C' key: connnect"sv << '\n' << '\n';
 	std::cout << " 'ESC' key: terminate"sv << '\n' << '\n';
 
-	// 3) 20000ë²ˆ í¬íŠ¸ì—ì„œ ì ‘ì†ì„ ì‹œë„í•œë‹¤. (ip::addressë‚˜ resolverë¡œ ì„¤ì •ì´ ê°€ëŠ¥í•˜ë‹¤.)
+	// 3) 20000¹ø Æ÷Æ®¿¡¼­ Á¢¼ÓÀ» ½ÃµµÇÑ´Ù. (ip::address³ª resolver·Î ¼³Á¤ÀÌ °¡´ÉÇÏ´Ù.)
 	psocket->start({{ net::ip::address_v4::loopback(), 20000 }});
 
-	// 4) ë©”ì‹œì§€ ë¬´í•œ ë£¨í”„~
+	// 4) ¸Ş½ÃÁö ¹«ÇÑ ·çÇÁ~
 	for(;;)
 	{
-		// - key ëˆŒë €ë‚˜?
+		// - key ´­·¶³ª?
 		if (_kbhit())
 		{
-			// - Keyë¥¼ ì½ëŠ”ë‹¤.
+			// - Key¸¦ ÀĞ´Â´Ù.
 			int	ch = _getch();
 
-			// - ESCí‚¤ë¥¼ ëˆ„ë¥´ë©´ ì ‘ì†ì„ ì¢…ë£Œí•œë‹¤.
+			// - ESCÅ°¸¦ ´©¸£¸é Á¢¼ÓÀ» Á¾·áÇÑ´Ù.
 			if (ch == 27)
 			{
 				break;
@@ -175,13 +175,13 @@ int main()
 			}
 		}
 
-		// - 1ms ìŠ¬ë¦½í•œë‹¤. (CPUë¥¼ ë„ˆë¬´ ë§ì´ ë¨¹ìœ¼ë¯€ë¡œ...)
+		// - 1ms ½½¸³ÇÑ´Ù. (CPU¸¦ ³Ê¹« ¸¹ÀÌ ¸ÔÀ¸¹Ç·Î...)
 		std::this_thread::sleep_for(1ms);
 	}
 
 	// trace) 
 	std::cout << "stop client [tut.socket.01.tcp_simple.client]..."sv << '\n';
 
-	// end) ì¢…ë£Œ
+	// end) Á¾·á
 	return 0;
 }

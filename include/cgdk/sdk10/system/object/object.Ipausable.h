@@ -29,7 +29,6 @@ class CGDK::object::Ipausable : virtual public Ireferenceable
 public:
 	virtual ~Ipausable() noexcept {}
 
-public:
 	virtual	result_code			pause() PURE;
 	virtual	result_code			resume() PURE;
 

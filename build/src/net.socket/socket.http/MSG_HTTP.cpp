@@ -6,14 +6,6 @@ const std::string_view STRING_TAG_CONTEX_TYPE{ "Content-Type: " };
 const std::string_view STRING_TAG_CONTEX_LENGTH{ "Content-Length: " };
 const std::string_view STRING_DEFAULT_CONTENT_TYPE{ "text/html; charset=utf-8" };
 
-buffer_view CGDK::prepend_MESSAGE_HTTP(buffer& _buffer, const sMESSAGE_HTTP_RESPONSE& /*_data*/)
-{
-	// 1) get...
-	auto l = _buffer.size();
-
-	// return) 
-	return buffer_view(_buffer.data() + _buffer.size(), _buffer.size() - l);
-}
 
 buffer_view CGDK::append_MESSAGE_HTTP(buffer& _buffer, const sMESSAGE_HTTP_RESPONSE& _data)
 {
@@ -28,7 +20,7 @@ buffer_view CGDK::append_MESSAGE_HTTP(buffer& _buffer, const sMESSAGE_HTTP_RESPO
 	_buffer.append_text(static_cast<uint32_t>(_data.status_code));
 	_buffer.append_text(" ");
 	// - status message
-	_buffer.append_text((_data.status_message.empty() == false) ? _data.status_message : to_string<char>(_data.status_code));
+	_buffer.append_text((_data.status_message.empty() == false) ? _data.status_message : to_string(_data.status_code));
 	_buffer.append_text("\r\n");
 
 	// 2) append headers
@@ -44,9 +36,7 @@ buffer_view CGDK::append_MESSAGE_HTTP(buffer& _buffer, const sMESSAGE_HTTP_RESPO
 
 	// 3) get contents length
 	for (auto& iter : _data.contents)
-	{
 		size_contents += iter.size();
-	}
 
 	// 3) append 'Content-Type'
 	_buffer.append_text(STRING_TAG_CONTEX_TYPE);
@@ -67,9 +57,7 @@ buffer_view CGDK::append_MESSAGE_HTTP(buffer& _buffer, const sMESSAGE_HTTP_RESPO
 	if (size_contents != 0)
 	{
 		for (auto& iter : _data.contents)
-		{
 			_buffer.append(iter.size(), iter.data());
-		}
 	}
 
 	// check)
@@ -107,7 +95,7 @@ std::size_t GET_NUMBER_SIZE(uint64_t _number)
 	else if (_number < 100000000000)
 		value = 11;
 	else
-		throw	throwable::failure(eRESULT::OVERFLOW_ERROR);
+		throw throwable::failure(eRESULT::OVERFLOW_ERROR);
 
 	// return) 
 	return value;
@@ -129,21 +117,17 @@ std::size_t CGDK::get_size_of_MESSAGE_HTTP(const sMESSAGE_HTTP_RESPONSE& _data)
 		 + GET_NUMBER_SIZE(static_cast<uint32_t>(_data.status_code))
 		 + 1;
 	// - status message
-	size += (_data.status_message.empty() == false) ? _data.status_message.size() : to_string<char>(_data.status_code).size();
+	size += (_data.status_message.empty() == false) ? _data.status_message.size() : to_string(_data.status_code).size();
 	size += 2;
 
 	// 3) headers
 	for (auto& iter : _data.headers)
-	{
 		size += iter.key.size() + 2 + iter.value.size() + 2;
-	}
 
 	// 4) get context_isze
 	size_t size_contents = 0;
 	for (auto iter : _data.contents)
-	{
 		size_contents += iter.size();
-	}
 
 	// 3) add size of 'Content-Type'
 	size += STRING_TAG_CONTEX_TYPE.size();

@@ -22,8 +22,8 @@
 enum class eTRANSACTION_OPTION : uint64_t
 {
 	EXCLUSIVE_CHECKIN		  = 0,	// 독점적 checkin() - 하나의 entity에 단하나의 checkin만 허용한다. 기존의 checkin을 제거한다.
-	REJECT_IF_ALEADY_EXIST,			// 기존 checkin 유지 - 기존에 checkin이 있으면 신규 checkin을 거부한다.
-	ALLOW_DUPLICATED_CHECKIN,		// 중복 checkin 허용 - 하나의 entity에 여러개의 checkin을 허용한다.(EXCLUSIVE_CHECKIN와 반대다.)
+	REJECT_IF_ALREADY_EXIST,			// 기존 checkin 유지 - 기존에 checkin이 있으면 신규 checkin을 거부한다.
+	ALLOW_DUPLICATED_CHECKIN,		// 중복 checkin 허용 - 하나의 entity에 여러 개의 checkin을 허용한다.(EXCLUSIVE_CHECKIN와 반대다.)
 	TRANSFER_CHECKIN				// checkin의 이전 - 이미 checkin한 checkin을 대체한다. 따라서 동일한 checkin_id가 이미 존재해야 허용된다.
 };
 
@@ -50,7 +50,7 @@ enum class eTRANSACTION_TYPE : uint32_t
 //    - repository의 id다.
 //
 //      * sOBJECT_ID	id_object;
-//        - 생성시 부유되는 repository의 id이다.
+//        - 생성 시 부유되는 repository의 id이다.
 //      
 //      * uint64_t		key_certify;
 //        - repository가 초기화될 때 마다 랜덤하게 부여주는 값이다.
@@ -349,7 +349,7 @@ protected:
 			sSESSION_ID			id_session;
 			uint64_t			index_request = 0;
 
-	[[nodiscard]] static uint64_t generate_tid() noexcept { static std::atomic<uint64_t> index_request(0); uint64_t temp = ++index_request; if (temp == 0) temp = ++index_request; return temp; }
+	[[nodiscard]] static uint64_t generate_tid() noexcept { static std::atomic<uint64_t> index_request(0); uint64_t temp = (index_request.fetch_add(1, std::memory_order_relaxed) + 1); if (temp == 0) temp = (index_request.fetch_add(1, std::memory_order_relaxed) + 1); return temp; }
 };
 [[nodiscard]] constexpr bool operator == (const sREQUEST_ID& _lhs, const sREQUEST_ID& _rhs) noexcept { return _lhs.request_index() == _rhs.request_index() && _lhs.session_id() == _rhs.session_id(); }
 [[nodiscard]] constexpr bool operator >  (const sREQUEST_ID& _lhs, const sREQUEST_ID& _rhs) noexcept

@@ -29,9 +29,9 @@ namespace CGDK
  @ref		
  @details	\n
 
- 가장 기본적인 형태인 블록킹 전송을 수행한다.
- Overlapped를 사용한 비동기 송수신의 경우 적은 데이터를 빈번하지 않게 전송할 경우 오히려 오버헤드가 더 클수 있다.
- 이 sendable 클래스는 전송 과정에서 복잡한 처리 과정이 일절 없기 때문에 전송 트래픽이 높지 않다면 오히려 더 좋은 효율을 낼수 있다.
+ 가장 기본적인 형태인 블로킹 전송을 수행한다.
+ Overlapped를 사용한 비동기 송수신의 경우 적은 데이터를 빈번하지 않게 전송할 경우 오히려 오버헤드가 더 클 수 있다.
+ 이 sendable 클래스는 전송 과정에서 복잡한 처리 과정이 일절 없기 때문에 전송 트래픽이 높지 않다면 오히려 더 좋은 효율을 낼 수 있다.
  전송 상태에 대한 아무런 동작도 처리하지 않기 때문에 대용량의 전송에는 비효율적일 수 있으며 전송량이 많으면 접속이 끊어질 수도 있다.
  
 */
@@ -69,6 +69,7 @@ protected:
 	virtual	void				process_complete_sendable(uintptr_t _result, std::size_t _transferred_bytes, std::size_t _transferred_message) override;
 	virtual	void				process_close_sender() override;
 	virtual	void				process_reset_sendable() noexcept override;
+	virtual	lock_object*		process_get_lockable_sending() noexcept override { return &this->m_lockable_sending; }
 	virtual	std::size_t			process_get_sending_queued_bytes() const noexcept override;
 
 #if defined(_WINSOCK2API_)
@@ -83,7 +84,7 @@ protected:
 			QUEUE_SEND			m_queue_sending;
 			bool				m_flag_sending = false;
 #endif
-			lockable<>			m_lockable_sending;
+	mutable	lock_object			m_lockable_sending;
 };
 
 

@@ -30,6 +30,10 @@ namespace CGDK
 //       peer Address : 立加等 惑措狼 林家
 //
 //-----------------------------------------------------------------------------
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvirtual-move-assign"
+#endif
 class net::io::Iaddress : 
 	virtual public				Ireferenceable
 {
@@ -43,6 +47,9 @@ protected:
 	[[nodiscard]] virtual net::sockaddr process_get_socket_address(std::error_code& _error_code) const noexcept PURE;
 	[[nodiscard]] virtual net::sockaddr process_get_peer_address(std::error_code& _error_code) const noexcept PURE;
 };
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 
 }

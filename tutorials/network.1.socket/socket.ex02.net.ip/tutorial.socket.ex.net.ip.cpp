@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -8,11 +8,11 @@
 using namespace CGDK;
 
 // 
-// ì„¤ëª…) Network TSì˜ net.ip ì²´ê³„
+// ¼³¸í) Network TSÀÇ net.ip Ã¼°è
 //       
-//  ì§€ê¸ˆ í˜„ì¬ í‘œì¤€í™” ì¤‘ì¸ Network TSì˜ ipì— ëŒ€í•œ êµ¬ì¡°ì²´ì™€ í•¨ìˆ˜ë“¤ì„ êµ¬í˜„í•œ ê²ƒì´ë‹¤.
+//  Áö±İ ÇöÀç Ç¥ÁØÈ­ ÁßÀÎ Network TSÀÇ ip¿¡ ´ëÇÑ ±¸Á¶Ã¼¿Í ÇÔ¼öµéÀ» ±¸ÇöÇÑ °ÍÀÌ´Ù.
 //  
-//  ì œê°•ë˜ëŠ” í•µì‹¬ classì™€ í•¨ìˆ˜ëŠ” ë‹¤ìŒê³¼ ê°™ë‹¤.
+//  Á¦°­µÇ´Â ÇÙ½É class¿Í ÇÔ¼ö´Â ´ÙÀ½°ú °°´Ù.
 //  
 //    1) net::ip::address_v4
 //       net::ip::address_v6
@@ -25,13 +25,13 @@ int main()
 {
     // 1. ip::address
     {
-        // 1) ip address ìˆ«ìë¥¼ ì‚¬ìš©í•´ ì´ˆê¸°í™”í•˜ê¸°
+        // 1) ip address ¼ıÀÚ¸¦ »ç¿ëÇØ ÃÊ±âÈ­ÇÏ±â
         [[maybe_unused]] net::ip::address_v4 temp_0{ {127,0,0,1} };
 
-        // 2) ip address ë¬¸ìì—´ë¥¼ ì‚¬ìš©í•´ ì´ˆê¸°í™”í•˜ê¸°
+        // 2) ip address ¹®ÀÚ¿­¸¦ »ç¿ëÇØ ÃÊ±âÈ­ÇÏ±â
         [[maybe_unused]] auto temp1 = net::ip::make_address_v4("127.0.0.1"sv);
 
-        // 3) any, loopback, boradcastì™€ ê°™ì€ì´ ì˜ˆì•½ëœ address
+        // 3) any, loopback, boradcast¿Í °°ÀºÀÌ ¿¹¾àµÈ address
         [[maybe_unused]] auto temp2 = net::ip::address_v4::any();       // 0.0.0.0
         [[maybe_unused]] auto temp3 = net::ip::address_v4::loopback();  // 127.0.0.1
         [[maybe_unused]] auto temp4 = net::ip::address_v4::broadcast(); // 255.255.255.255
@@ -41,20 +41,20 @@ int main()
     }
 
     // 2. ip::endpoint
-    //    - endpointëŠ” addressì™€ port ì •ë³´ë¥¼ í•©í•œ ê²ƒì´ë‹¤.
-    //    - ip::tcp::endpointëŠ” tcpìš© ì£¼ì†Œë¥¼ ì§€ëª©í•˜ëŠ” ìš©ë„ë¡œ ì‚¬ìš©ëœë‹¤.
-    //    - ipì£¼ì†Œì™€ port ì •ë³´ê°€ í•„ìš”í•œ ê³³ ëŒ€í‘œì ìœ¼ë¡œ socketì˜ acceptì™€ connect ë“±ì— ì‚¬ìš©ëœë‹¤.
+    //    - endpoint´Â address¿Í port Á¤º¸¸¦ ÇÕÇÑ °ÍÀÌ´Ù.
+    //    - ip::tcp::endpoint´Â tcp¿ë ÁÖ¼Ò¸¦ Áö¸ñÇÏ´Â ¿ëµµ·Î »ç¿ëµÈ´Ù.
+    //    - ipÁÖ¼Ò¿Í port Á¤º¸°¡ ÇÊ¿äÇÑ °÷ ´ëÇ¥ÀûÀ¸·Î socketÀÇ accept¿Í connect µî¿¡ »ç¿ëµÈ´Ù.
     {
-        // 1) ip addressë¥¼ ìˆ«ìë¡œ ì…ë ¥
+        // 1) ip address¸¦ ¼ıÀÚ·Î ÀÔ·Â
         net::ip::tcp::endpoint temp_0{ net::ip::address_v4 {{127,0,0,1}}, 100 };
 
-        // 2) ip addressë¥¼ ë¬¸ìì—´ë¡œ ì…ë ¥
-        //    make_address_v4 í˜¹ì€ make_address_v6ë¡œ ë¬¸ìì—´ ip addressë¥¼ addressë¡œ ë°”ê¿”ì¤€ë‹¤.
-        //    make_adddressë¥¼ ì‚¬ìš©í•˜ë©´ ë¬¸ìì—´ì— ë”°ë¼ ìë™ì ìœ¼ë¡œ ip v4 í˜¹ì€ ip v6ë¥¼ êµ¬ë¶„í•´ ì¤€ë‹¤.
+        // 2) ip address¸¦ ¹®ÀÚ¿­·Î ÀÔ·Â
+        //    make_address_v4 È¤Àº make_address_v6·Î ¹®ÀÚ¿­ ip address¸¦ address·Î ¹Ù²ãÁØ´Ù.
+        //    make_adddress¸¦ »ç¿ëÇÏ¸é ¹®ÀÚ¿­¿¡ µû¶ó ÀÚµ¿ÀûÀ¸·Î ip v4 È¤Àº ip v6¸¦ ±¸ºĞÇØ ÁØ´Ù.
         net::ip::tcp::endpoint temp_1{ net::ip::make_address_v4("127.0.0.1"sv), 100 };
         net::ip::tcp::endpoint temp_2{ net::ip::make_address_v6("::1"sv), 100 };
 
-        // 3) any, loopback, broadcastì™€ ê°™ì´ ì˜ˆì•½ëœ addressë¡œ ì„¤ì •í• ë•Œ.
+        // 3) any, loopback, broadcast¿Í °°ÀÌ ¿¹¾àµÈ address·Î ¼³Á¤ÇÒ ¶§.
         net::ip::tcp::endpoint temp_3{ net::ip::address_v4::any(), 100 };
         net::ip::tcp::endpoint temp_4{ net::ip::address_v4::loopback(), 100 };
         net::ip::tcp::endpoint temp_5{ net::ip::address_v4::broadcast(), 100 };
@@ -62,9 +62,9 @@ int main()
         net::ip::tcp::endpoint temp_6{ net::ip::address_v6::any(), 100 };
         net::ip::tcp::endpoint temp_7{ net::ip::address_v6::loopback(), 100 };
 
-        // 4) DNSë¡œ endpoint ì–»ì–´ì˜¤ê¸°
-        //    DNSëŠ” DNS serverë¥¼ í†µí•´ í•´ë‹¹ addressê°’ì„ ë°›ì•„ì™€ì•¼ í•œë‹¤. ë”°ë¼ì„œ resolverë¥¼ ì‚¬ìš©í•´ì•¼ í•œë‹¤.
-        //    resolve()ëŠ” ì°¾ì€ ëª¨ë“  ipì— ëŒ€í•œ ê²°ê³¼ë¥¼ ëŒë ¤ì¤€ë‹¤.
+        // 4) DNS·Î endpoint ¾ò¾î¿À±â
+        //    DNS´Â DNS server¸¦ ÅëÇØ ÇØ´ç address°ªÀ» ¹Ş¾Æ¿Í¾ß ÇÑ´Ù. µû¶ó¼­ resolver¸¦ »ç¿ëÇØ¾ß ÇÑ´Ù.
+        //    resolve()´Â Ã£Àº ¸ğµç ip¿¡ ´ëÇÑ °á°ú¸¦ µ¹·ÁÁØ´Ù.
         {
             std::cout << "4) www.cgcii.co.kr : 100"sv << std::endl;
 
@@ -74,64 +74,64 @@ int main()
             {
                 net::ip::tcp::endpoint temp_endpoint = iter.endpoint();
 
-                std::cout << "ip address: "sv << to_string<char>(temp_endpoint) << " port:"sv << temp_endpoint.port() << std::endl;
+                std::cout << "ip address: "sv << to_string(temp_endpoint) << " port:"sv << temp_endpoint.port() << std::endl;
             }
         }
 
-        // 5) resultì˜ ê²°ê³¼ë¬¼ì€ ì—¬ëŸ¬ ê°œê°€ ì „ë‹¬ë˜ì–´ ì˜¬ìˆ˜ ìˆì§€ë§Œ ê·¸ëƒ¥ endpontë¡œ ë°›ê²Œ ë˜ë©´ ì£¼ì†Œì¤‘ ì²«ë²ˆì§¸ê°€ ì„ íƒë˜ì–´ì§„ë‹¤.
+        // 5) resultÀÇ °á°ú¹°Àº ¿©·¯ °³°¡ Àü´ŞµÇ¾î ¿Ã ¼ö ÀÖÁö¸¸ ±×³É endpont·Î ¹Ş°Ô µÇ¸é ÁÖ¼ÒÁß Ã¹ ¹øÂ°°¡ ¼±ÅÃµÇ¾îÁø´Ù.
         {
             std::cout << "5) www.cgcii.co.kr : 100"sv << std::endl;
 
             net::ip::tcp::endpoint temp = net::ip::tcp::resolver().resolve("www.cgcii.co.kr"sv, "100");
 
-            std::cout << "ip address: "sv << to_string<char>(temp) << " port:"sv << temp.port() << std::endl;
+            std::cout << "ip address: "sv << to_string(temp) << " port:"sv << temp.port() << std::endl;
         }
 
-        // 6) DNSë¡¤ ip v4 ì£¼ì†Œë¥¼ ì–»ê¸°
-        //   ì²«ë²ˆì§¸ ì¸ìë¡œ í”„ë¡œí† ì½œì„ net::ip::tcp::v4()ë¡œ ëª…ì‹œí•´ì¤€ë‹¤.
+        // 6) DNS·Ñ ip v4 ÁÖ¼Ò¸¦ ¾ò±â
+        //   Ã¹ ¹øÂ° ÀÎÀÚ·Î ÇÁ·ÎÅäÄİÀ» net::ip::tcp::v4()·Î ¸í½ÃÇØÁØ´Ù.
         {
             std::cout << "6) www.cgcii.co.kr : 100"sv << std::endl;
 
             net::ip::tcp::endpoint temp = net::ip::tcp::resolver().resolve(net::ip::tcp::v4(), "www.cgcii.co.kr"sv, "100"sv);
 
-            std::cout << "ip address: "sv << to_string<char>(temp) << " port:"sv << temp.port() << std::endl;
+            std::cout << "ip address: "sv << to_string(temp) << " port:"sv << temp.port() << std::endl;
         }
 
-        // 7) DNSë¡¤ ip v6 ì£¼ì†Œë¥¼ ì–»ê¸°
-        //   ì²«ë²ˆì§¸ ì¸ìë¡œ í”„ë¡œí† ì½œì„ net::ip::tcp::v6()ë¡œ ëª…ì‹œí•´ì¤€ë‹¤.
+        // 7) DNS·Ñ ip v6 ÁÖ¼Ò¸¦ ¾ò±â
+        //   Ã¹ ¹øÂ° ÀÎÀÚ·Î ÇÁ·ÎÅäÄİÀ» net::ip::tcp::v6()·Î ¸í½ÃÇØÁØ´Ù.
         {
             std::cout << "7) www.cgcii.co.kr : 100"sv << std::endl;
 
             net::ip::tcp::endpoint temp = net::ip::tcp::resolver().resolve(net::ip::tcp::v6(), "www.cgcii.co.kr"sv, "100"sv);
 
-            std::cout << "ip address: "sv << to_string<char>(temp) << " port:"sv << temp.port() << std::endl;
+            std::cout << "ip address: "sv << to_string(temp) << " port:"sv << temp.port() << std::endl;
         }
 
-        // 8) ì£¼ì†ŒëŠ” BIND_ANY í˜¹ì€ 0ìœ¼ë¥´ ë„£ê³  í¬íŠ¸ë²ˆí˜¸ë§Œ 100ìœ¼ë¡œ ì„¤ì •í•˜ê³  ì‹¶ì„ ë•Œ
-        //   tcpì¸ì§€ udpì¸ì§€ í”„ë¡œí† ì½œê³¼ ipv4ì¸ì§€ ipv6ì¼ì§€ ì •ë³´ë¥¼ ë„£ê³  í¬íŠ¸ë²ˆí˜¸ 100ì„ ë„£ëŠ”ë‹¤. 
+        // 8) ÁÖ¼Ò´Â BIND_ANY È¤Àº 0À¸¸£ ³Ö°í Æ÷Æ®¹øÈ£¸¸ 100À¸·Î ¼³Á¤ÇÏ°í ½ÍÀ» ¶§
+        //   tcpÀÎÁö udpÀÎÁö ÇÁ·ÎÅäÄİ°ú ipv4ÀÎÁö ipv6ÀÏÁö Á¤º¸¸¦ ³Ö°í Æ÷Æ®¹øÈ£ 100À» ³Ö´Â´Ù. 
         {
             std::cout << "8) ipv4 : 100"sv << std::endl;
 
             net::ip::tcp::endpoint temp{ net::ip::tcp::v4(), 100 };
 
-            std::cout << "ip address: "sv << to_string<char>(temp) << " port:"sv << temp.port() << std::endl;
+            std::cout << "ip address: "sv << to_string(temp) << " port:"sv << temp.port() << std::endl;
         }
 
-        // 9) ê¸°íƒ€ í•¨ìˆ˜ë“¤
+        // 9) ±âÅ¸ ÇÔ¼öµé
         {
             net::ip::tcp::endpoint temp{ net::ip::address_v4 {{127,0,0,1}}, 100 };
 
-            // - ip_v4()ì¸ì§€ ip_v6()ì¸ì§€ë¥¼ ì–»ì„ ìˆ˜ ìˆë‹¤.
+            // - ip_v4()ÀÎÁö ip_v6()ÀÎÁö¸¦ ¾òÀ» ¼ö ÀÖ´Ù.
             [[maybe_unused]] auto temp1 = temp.protocol();
 
-            // - address í¬ê¸°ë¥¼ ì–»ì„ ìˆ˜ ìˆë‹¤. (ip_v4ì¸ì§€ ip_v6ì¸ì§€ì— ë”°ë¼ ë°ì´í„°ì˜ í¬ê¸°ê°€ ë‹¤ë¥´ë‹¤.)
+            // - address Å©±â¸¦ ¾òÀ» ¼ö ÀÖ´Ù. (ip_v4ÀÎÁö ip_v6ÀÎÁö¿¡ µû¶ó µ¥ÀÌÅÍÀÇ Å©±â°¡ ´Ù¸£´Ù.)
             [[maybe_unused]] auto temp2 = temp.size();
 
-            // - addressì™€ portë¥¼ ì–»ì„ ìˆ˜ ìˆëŠ” í•¨ìˆ˜.
+            // - address¿Í port¸¦ ¾òÀ» ¼ö ÀÖ´Â ÇÔ¼ö.
             [[maybe_unused]] auto temp3 = temp.address();
             [[maybe_unused]] auto temp4 = temp.port();
 
-            // - ip_v4ì¸ì§€ ip_v6()ì¸ì§€ í™•ì´ë‹ˆí•˜ëŠ” í•¨ìˆ˜
+            // - ip_v4ÀÎÁö ip_v6()ÀÎÁö È®ÀÌ´ÏÇÏ´Â ÇÔ¼ö
             [[maybe_unused]] auto temp5 = temp.is_v4();
             [[maybe_unused]] auto temp6 = temp.is_v6();
         }

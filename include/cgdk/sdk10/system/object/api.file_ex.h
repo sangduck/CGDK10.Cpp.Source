@@ -37,12 +37,13 @@ namespace api
 {
 namespace file
 {
-	buffer_view		read(FILE_HANDLE _handle_file, buffer_view _buffer) noexcept;
+	buffer_view		read(FILE_HANDLE _handle_file, const buffer_view& _buffer) noexcept;
 	buffer_view		write(FILE_HANDLE _handle_file, buffer_view _buffer) noexcept;
 	shared_buffer	read (std::string_view _filename, eFILE_LOCATION _file_location = eFILE_LOCATION::DEFAULT) noexcept;
 	buffer_view		write(std::string_view _filename, buffer_view _buffer, eFILE_LOCATION _file_location = eFILE_LOCATION::DEFAULT) noexcept;
 
 	[[nodiscard]] std::string make_full_path(std::string_view _path, std::string_view _file_name);
+	bool		create_parent_directories(std::string_view _file_path) noexcept;
 }
 }
 

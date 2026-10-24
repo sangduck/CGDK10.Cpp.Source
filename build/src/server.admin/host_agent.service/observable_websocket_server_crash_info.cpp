@@ -32,7 +32,7 @@ void _append_crash_entity(buffer& /*_buf_dest*/, const DUMP_INFO& /*_crash_info*
 shared_buffer _make_webmessage_crash_info(const DUMP_INFO& _crash_info)
 {
 	// 1) get instance 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -53,7 +53,7 @@ shared_buffer _make_webmessage_crash_info(const DUMP_INFO& _crash_info)
 		buf_result.append<char>('A');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("cr{}", _crash_info.id);
+		auto tr_element_id = CGDK::stream_string("cr", _crash_info.id);
 
 		// - append element_id
 		buf_result.append_text<char>(tr_element_id);
@@ -74,7 +74,7 @@ shared_buffer _make_webmessage_crash_info(const DUMP_INFO& _crash_info)
 shared_buffer _make_webmessage_crash_update(const DUMP_INFO& _crash_info, uint64_t /*_flag*/)
 {
 	// 1) get instance 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -95,7 +95,7 @@ shared_buffer _make_webmessage_crash_update(const DUMP_INFO& _crash_info, uint64
 		buf_result.append<char>('U');
 
 		// - th element id
-		auto tr_element_id = NFMT::format("cr{}", _crash_info.id);
+		auto tr_element_id = CGDK::stream_string("cr", _crash_info.id);
 
 		// - append element_id
 		buf_result.append_text<char>(tr_element_id);
@@ -116,7 +116,7 @@ shared_buffer _make_webmessage_crash_update(const DUMP_INFO& _crash_info, uint64
 shared_buffer _make_webmessage_crash_remove(const DUMP_INFO& _crash_info)
 {
 	// 1) get instance 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -131,7 +131,7 @@ shared_buffer _make_webmessage_crash_remove(const DUMP_INFO& _crash_info)
 		buf_result.append<char>('D');
 
 		// - th node name
-		auto tr_element_id = NFMT::format("cr{}", _crash_info.id);
+		auto tr_element_id = CGDK::stream_string("cr", _crash_info.id);
 
 		// - append tr_element_id
 		buf_result.append_text<char>(tr_element_id);
@@ -142,12 +142,10 @@ shared_buffer _make_webmessage_crash_remove(const DUMP_INFO& _crash_info)
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-observable_websocket_peer_crash_info::observable_websocket_peer_crash_info(const std::string_view _name)
+observable_websocket_peer_crash_info::observable_websocket_peer_crash_info()
 {
-	set_name(_name);
-
-	m_webpage_str_target = "webpage_server_crash_info.htm";
-	m_webpage_index = 'F';
+	this->m_webpage_str_target = "webpage_server_crash_info.htm";
+	this->m_webpage_index = 'F';
 }
 
 observable_websocket_peer_crash_info::~observable_websocket_peer_crash_info()
@@ -157,9 +155,9 @@ observable_websocket_peer_crash_info::~observable_websocket_peer_crash_info()
 result_code observable_websocket_peer_crash_info::on_observer_registering(socket_websocket* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/)
 {
 	// 1) register schedulable
-	if (empty())
+	if (this->empty())
 	{
-		execute_interval(2s);
+		this->execute_interval(2s);
 		system_executor::register_schedulable(this);
 	}
 
@@ -181,7 +179,7 @@ uintptr_t observable_websocket_peer_crash_info::on_observer_unregistering(socket
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);
 
-	// 2) uregister _pmenber
+	// 2) unregister _pmenber
 	_pobserver->unregister_messageable(this);
 
 	// 3) unregister schedulable
@@ -217,7 +215,7 @@ void observable_websocket_peer_crash_info::on_execute()
 shared_buffer observable_websocket_peer_crash_info::make_webmessage_crash_info_list_add()
 {
 	// 1) 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -236,7 +234,7 @@ shared_buffer observable_websocket_peer_crash_info::make_webmessage_crash_info_l
 		buffer buf_text = buf_temp;
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("cr{}", iter.id);
+		auto tr_element_id = CGDK::stream_string("cr", iter.id);
 
 		// - append tr data
 		_append_crash_entity(buf_text, iter);
@@ -263,7 +261,7 @@ shared_buffer observable_websocket_peer_crash_info::make_webmessage_crash_info_l
 shared_buffer observable_websocket_peer_crash_info::make_webmessage_crash_info_list_update()
 {
 	// 1) 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -282,7 +280,7 @@ shared_buffer observable_websocket_peer_crash_info::make_webmessage_crash_info_l
 		buffer buf_text = buf_temp;
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("cr{}", iter.id);
+		auto tr_element_id = CGDK::stream_string("cr", iter.id);
 
 		// - append tr data
 		_append_crash_entity(buf_text, iter);

@@ -26,7 +26,7 @@ namespace CGDK
 //
 // 1. net::io::send_request::CBase란!
 //    1) send의 수행 과정중 전달역할을 하는 Class임.
-//    2) send과정 중 변경하거나 처리해야할 것이 있으면 이 Class를 상속받아 변경
+//    2) send과정 중 변경하거나 처리해야 할 것이 있으면 이 Class를 상속받아 변경
 //       시킨다.
 //
 // 2. CGDK.net.socket의 핵심! Function의 기능 설명

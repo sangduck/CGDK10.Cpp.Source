@@ -17,6 +17,8 @@
 //*****************************************************************************
 
 #pragma once
+
+#include "cgdk/sdk10/lib_path.h"
 //----------------------------------------------------------------------------
 //  definitions
 //----------------------------------------------------------------------------
@@ -102,15 +104,13 @@ namespace CGDK
 		// WinSDK 10
 		#if WDK_NTDDI_VERSION >= NTDDI_WIN10
 			#ifdef NDEBUG
-				#pragma message("[CGDK10] 'CGDK10.net.p2p.turn.server_Windows10.0_x64_Release.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/CGDK10.net.p2p.turn.server_Windows10.0_x64_Release.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.net.p2p.turn.server_Windows10.0_x64_Release.lib")
 			#else
-				#pragma message("[CGDK10] 'CGDK10.net.p2p.turn.server_Windows10.0_x64_Debug.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/CGDK10.net.p2p.turn.server_Windows10.0_x64_Debug.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.net.p2p.turn.server_Windows10.0_x64_Debug.lib")
 			#endif
 		// Error - No supported
 		#else
-			#error "[CGDK10] Not supported Windonws SDK version (Need Windows SDK 10.0 or higher)"
+			#error "[CGDK10] Not supported Windows SDK version (Need Windows SDK 10.0 or higher)"
 		#endif
 
 	#else

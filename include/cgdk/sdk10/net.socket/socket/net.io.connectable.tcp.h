@@ -39,38 +39,22 @@
 //
 //-----------------------------------------------------------------------------
 class CGDK::net::io::connectable::Ntcp :
-// inherited classes)
 	virtual public				net::io::Iconnectable,
+	virtual public				net::io::Iconnect_notify,
 	virtual public				net::io::Ireceivable_stream
 {
-// publics) 
-// - 사용자가 이 socket을 사용자가 조작하기 위한 함수.
 public:
-	// 1) disconnect(graceful close)
 	virtual	bool				disconnect (uint64_t _disconnect_reason = DISCONNECT_REASON_NONE) noexcept override;
 
-// frameworks)
-// - 이 함수들을 재정의 함으로써 프로그래밍을 한다.
-// - 어떠한 작업이 수행되었을 때 불려지는 함수이다.
 protected:
-	//! @brief 접속이 되었을 때 호출된다. @param _pconnective 접속을 요청한 connective
-	virtual void				on_request_connect (const net::sockaddr& /*_address*/) {}
-	virtual void				on_connect () {}
-	virtual void				on_disconnect (uint64_t /*_disconnect_reason*/) {}
-	virtual void				on_fail_connect (uint64_t /*_disconnect_reason*/) {}
-
-// implementation) 
-protected:
-	// 1) connect관련
 	virtual	void				process_request_connect (const net::sockaddr& _address) override;
 	virtual bool				process_complete_connect (uintptr_t _result) override;// 1) 접속되었을 때의 처리 절차를 정의하는 함수.
 	virtual bool				process_complete_disconnect () override;// 2) 종료되었을 때의 처리 절차를 정의하는 함수.
 
-	virtual void				process_on_connect () { on_connect(); }
-	virtual	void				process_on_disconnect (uint64_t _disconnect_reason, eSOCKET_STATE /*_socket_state*/) { on_disconnect(_disconnect_reason); }
-	virtual	void				process_on_fail_connect (uint64_t _disconnect_reason) { on_fail_connect(_disconnect_reason); }
+	virtual void				process_on_connect () { this->on_connect(); }
+	virtual	void				process_on_disconnect (uint64_t _disconnect_reason, eSOCKET_STATE /*_socket_state*/) { this->on_disconnect(_disconnect_reason); }
+	virtual	void				process_on_fail_connect (uint64_t _disconnect_reason) { this->on_fail_connect(_disconnect_reason); }
 
-	// 3) reset할때 호출하는 함수.
 	virtual	void				process_reset_connectable () noexcept override;
 			void				process_disconnect () noexcept;
 
@@ -85,5 +69,5 @@ public:
 	#endif
 
 private:
-			bool				m_enable_tcp_nodelay = DEFAULT_ENABLE_TCP_NODELAY;
+			std::atomic<eSOCKET_STATE> m_socket_state_disconnect{ eSOCKET_STATE::CLOSED };	// - the state when disconnect() is called
 };

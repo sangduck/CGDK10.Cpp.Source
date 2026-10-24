@@ -22,7 +22,7 @@
 // instance::instance
 //
 // ----------------------------------------------------------------------------
-class server_admin::Iinstance :
+class server_system::Iinstance :
 	public observable::list_sender<socket_websocket>,
 	public net::io::messageable::Nbase,
 	public Ibuffer_serializable,
@@ -33,21 +33,21 @@ public:
 
 			auto&				socket() 
 			{
-				scoped_lock(this->m_cs_instance)
+				SCOPED_LOCK(this->m_lockable_instance)
 				{
 					return this->m_psocket;
 				}
 			}
 			auto&&				move_out_socket()
 			{
-				scoped_lock(this->m_cs_instance)
+				SCOPED_LOCK(this->m_lockable_instance)
 				{
 					return std::move(this->m_psocket);
 				}
 			}
 			object_ptr<socket_peer> set_socket(object_ptr<socket_peer>&& _psocket) noexcept
 			{
-				scoped_lock(this->m_cs_instance)
+				SCOPED_LOCK(this->m_lockable_instance)
 				{
 					object_ptr<socket_peer> psocket_old = std::move(this->m_psocket);
 					this->m_psocket = std::move(_psocket);
@@ -64,6 +64,6 @@ public:
 public:
 	virtual	bool				process_send(shared_buffer&& _buffer, std::size_t _count_message, uint64_t _option) override;
 
-			lockable<>			m_cs_instance;
+			lock_object			m_lockable_instance;
 			object_ptr<socket_peer> m_psocket;
 };

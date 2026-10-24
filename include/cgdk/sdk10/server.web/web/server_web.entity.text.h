@@ -73,7 +73,7 @@ protected:
 
 // implementation)
 protected:
-	// Defintion) 
+	// Definition) 
 			struct PARTIAL
 			{
 			public:

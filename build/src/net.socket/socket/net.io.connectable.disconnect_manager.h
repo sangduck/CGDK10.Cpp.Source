@@ -31,14 +31,15 @@
 class CGDK::net::io::connectable::manager_disconnect :
 	public						schedulable::Iexecutable,
 	public						object::Nnameable,
-	virtual public				object::Idestroyable
+	virtual public				object::Idestroyable,
+	private						non_copyable
 {
 protected:
 			manager_disconnect();
 	virtual	~manager_disconnect() noexcept;
 
 public:
-	static 	auto				instance() { if (m_pinstance.empty()) { initialize_instance(); } return object_ptr<manager_disconnect>(m_pinstance); }
+	static 	auto				instance() { auto p = m_pinstance.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_pinstance.get_acquire(); } return object_ptr<manager_disconnect>(p); }
 	static	void				initialize_instance();
 	static	void				set_instance(own_ptr<manager_disconnect>&& _pinstance);
 	static	void				reset_instance() noexcept;
@@ -51,7 +52,8 @@ protected:
 	virtual	intptr_t			process_execute( intptr_t _result, std::size_t _param) override;
 
 private:
-			lockable<circular_list<net::io::Iconnectable*>>	m_list_connectable;
+	mutable	lock_object			m_lockable_list_connectable;
+			circular_list<net::io::Iconnectable*> m_list_connectable;
 
 	static std::mutex			m_lockable_create;
 	static own_ptr<manager_disconnect> m_pinstance;

@@ -48,15 +48,15 @@ BOOL CChild_binder_control::OnInitDialog()
 	// 1. 설정
 	//-----------------------------------------------------------------
 	// 1) Local IP Address setting
-	m_comboBindAddress.AddString(TEXT("ADDR_ANY"));
+	this->m_comboBindAddress.AddString(TEXT("ADDR_ANY"));
 
 	{
 		// - alloc sockaddr
 		net::sockaddr* psock_addr = new net::sockaddr(net::ip::address_v4::loopback(), 0);
 
 		// - ..
-		int index = m_comboBindAddress.AddString(TEXT("localhost"));
-		m_comboBindAddress.SetItemData(index, reinterpret_cast<DWORD_PTR>(psock_addr));
+		int index = this->m_comboBindAddress.AddString(TEXT("localhost"));
+		this->m_comboBindAddress.SetItemData(index, reinterpret_cast<DWORD_PTR>(psock_addr));
 	}
 
 	for(int i=0; i<api::socket::instance().get_local_address_count(); ++i)
@@ -66,13 +66,13 @@ BOOL CChild_binder_control::OnInitDialog()
 		*psock_addr = api::socket::instance().get_local_address(i);
 
 		TCHAR temp_string[256];
-		psock_addr->to_string<TCHAR>(temp_string, 256);
+		wsprintf(temp_string, TEXT("%hs"), psock_addr->to_string().c_str());
 
 		int index = m_comboBindAddress.AddString(temp_string);
-		m_comboBindAddress.SetItemData(index, reinterpret_cast<DWORD_PTR>(psock_addr));
+		this->m_comboBindAddress.SetItemData(index, reinterpret_cast<DWORD_PTR>(psock_addr));
 	}
-	m_comboBindAddress.SetCurSel(0);
-	SetDefaultPort(m_port_default);
+	this->m_comboBindAddress.SetCurSel(0);
+	this->SetDefaultPort(m_port_default);
 
 
 	//-----------------------------------------------------------------
@@ -131,10 +131,10 @@ void CChild_binder_control::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// 1) Update한다.
@@ -154,7 +154,7 @@ void CChild_binder_control::OnEnable(BOOL is_enable)
 void CChild_binder_control::OnDestroy()
 {
 	// 1) Acceptor를 Reset한다.
-	scoped_lock(m_csBinder)
+	SCOPED_LOCK(m_csBinder)
 	{
 		m_pBinder.reset();
 	}
@@ -203,7 +203,7 @@ void CChild_binder_control::SetDefaultPort(uint16_t _port)
 void CChild_binder_control::SetBinder(net::io::Ibinder* _pbinder)
 {
 	// 1) Acceptor를 설정한다.
-	scoped_lock(m_csBinder)
+	SCOPED_LOCK(m_csBinder)
 	{
 		m_pBinder = _pbinder;
 	}
@@ -217,7 +217,7 @@ void CChild_binder_control::SetBinder(net::io::Ibinder* _pbinder)
 
 void CChild_binder_control::UpdateBinderStatus()
 {
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 	// check) 윈도우가 생성되지 않았다면 여기서 끝낸다.
@@ -231,7 +231,7 @@ void CChild_binder_control::UpdateBinderStatus()
 	object_ptr<net::io::Ibinder> pbind;
 
 	// 1) m_pBinder를 얻는다.
-	scoped_lock(m_csBinder)
+	SCOPED_LOCK(m_csBinder)
 	{
 		pbind	 = m_pBinder;
 	}
@@ -348,7 +348,7 @@ bool CChild_binder_control::Bind()
 	object_ptr<net::io::Ibinder> pbind;
 
 	// 1) m_pBinder를 얻는다.
-	scoped_lock(m_csBinder)
+	SCOPED_LOCK(m_csBinder)
 	{
 		pbind = m_pBinder;
 	}

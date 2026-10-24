@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/server.time_event.h"
+#include "cgdk/sdk10/server.time_event.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -9,20 +9,20 @@ using namespace CGDK;
 
 
 // ----------------------------------------------------------------------------
-// 1. time_event::entityë€?
+// 1. time_event::entity¶õ?
 //
-//    1) ì´ì „ì˜ ë‹¤ë¥¸ Event ê°ì²´ë“¤ì€ ì‹œì‘ì‹œê°„ê³¼ ì¢…ë£Œì‹œê°„ í˜¹ì€ ì¼ì •ì‹œê°„ë§ˆë‹¤ ë°˜ë³µë˜ëŠ”
-//       ê²½ìš°ì—ë§Œ ì‚¬ìš©ê°€ëŠ¥í•œ Event ê°ì²´ì˜€ë‹¤.
-//       í•˜ì§€ë§Œ ì •í•´ì§„ ì‹œê°„ì— ì‹¤í–‰ë˜ì–´ì•¼ í•˜ëŠ” Eventê°€ ìˆì„ ê²½ìš° ê·¸ ì‚¬ìš©ì´ í˜ë“¤ì—ˆë‹¤.
-//       ì´ schedule Event ê°ì²´ëŠ” ì„ì˜ì˜ ì‹œê°„ì„ ë“±ë¡í•˜ì—¬ ë“±ë¡ëœ ì‹œê°„ì— ìŠ¤ì¼€ì¥´ì—
-//       ë”°ë¼ ì‹¤í–‰ë  ìˆ˜ ìˆë„ë¡ í•˜ëŠ” Event ê°ì²´ì´ë‹¤.
+//    1) ÀÌÀüÀÇ ´Ù¸¥ Event °´Ã¼µéÀº ½ÃÀÛ½Ã°£°ú Á¾·á½Ã°£ È¤Àº ÀÏÁ¤½Ã°£¸¶´Ù ¹İº¹µÇ´Â
+//       °æ¿ì¿¡¸¸ »ç¿ë°¡´ÉÇÑ Event °´Ã¼¿´´Ù.
+//       ÇÏÁö¸¸ Á¤ÇØÁø ½Ã°£¿¡ ½ÇÇàµÇ¾î¾ß ÇÏ´Â Event°¡ ÀÖÀ» °æ¿ì ±× »ç¿ëÀÌ Èûµé¾ú´Ù.
+//       ÀÌ schedule Event °´Ã¼´Â ÀÓÀÇÀÇ ½Ã°£À» µî·ÏÇÏ¿© µî·ÏµÈ ½Ã°£¿¡ ½ºÄÉÁì¿¡
+//       µû¶ó ½ÇÇàµÉ ¼ö ÀÖµµ·Ï ÇÏ´Â Event °´Ã¼ÀÌ´Ù.
 //
-//    2) time_event::entityì˜ ì£¼ìš” ì‚¬í•­
-//       - ì‹¤í–‰ì‹œê°„ì€ EVENT_SCHEDULE êµ¬ì¡°ì²´ë¥¼ ì‚¬ìš©í•˜ì—¬ ë“±ë¡í•œë‹¤.
-//       - EVENT_SCHEDULEì„ ì‚¬ìš©í•˜ì—¬ ë‹¤ìŒ ì‹¤í–‰ë  ì‹œê°„ (ì„¤ì •ë  ë•Œ ê¸°ì¤€ìœ¼ë¡œëŠ” ìµœì´ˆ
-//         ì‹¤í–‰ ì‹œê°„)ê³¼ ë°˜ë³µì‹¤í–‰í•  ê²½ìš° ë°˜ë³µí•  ê°„ê²©ê³¼ íšŸìˆ˜ë¥¼ ì„¤ì •í•´ ì¤„ìˆ˜ ìˆë‹¤.
-//       - 1íšŒë§Œ ì‹¤í–‰ë  ê²½ìš° ë°˜ë³µíšŸìˆ˜ë¥¼ 1ë¡œ ì„¤ì •í•´ ì£¼ë©´ ëœë‹¤.
-//       - ì„¤ì •ëœ EVENT_SCHEDULEë¥¼ add_schedule()í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•˜ì—¬ ì„¤ì •í•  ìˆ˜ ìˆë‹¤.
+//    2) time_event::entityÀÇ ÁÖ¿ä »çÇ×
+//       - ½ÇÇà½Ã°£Àº EVENT_SCHEDULE ±¸Á¶Ã¼¸¦ »ç¿ëÇÏ¿© µî·ÏÇÑ´Ù.
+//       - EVENT_SCHEDULEÀ» »ç¿ëÇÏ¿© ´ÙÀ½ ½ÇÇàµÉ ½Ã°£ (¼³Á¤µÉ ¶§ ±âÁØÀ¸·Î´Â ÃÖÃÊ
+//         ½ÇÇà ½Ã°£)°ú ¹İº¹½ÇÇàÇÒ °æ¿ì ¹İº¹ÇÒ °£°İ°ú È½¼ö¸¦ ¼³Á¤ÇØ ÁÙ ¼ö ÀÖ´Ù.
+//       - 1È¸¸¸ ½ÇÇàµÉ °æ¿ì ¹İº¹È½¼ö¸¦ 1·Î ¼³Á¤ÇØ ÁÖ¸é µÈ´Ù.
+//       - ¼³Á¤µÈ EVENT_SCHEDULE¸¦ add_schedule()ÇÔ¼ö¸¦ »ç¿ëÇÏ¿© ¼³Á¤ÇÒ ¼ö ÀÖ´Ù.
 //
 //
 // ----------------------------------------------------------------------------
@@ -35,18 +35,18 @@ int main()
 	// ------------------------------------------------------------------
 	// 1. entity event (1)
 	//
-	//    - ì •í•´ì§„ ì‹œê°„ì— í•œë²ˆë§Œ ì‹¤í–‰ë˜ëŠ” Eventê°ì²´ì´ë‹¤.
-	//    - set_event_time()ìœ¼ë¡œ ì„¤ì •ëœ ì‹œê°„ì— process_event()í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œë‹¤.
-	//    - ë”°ë¼ì„œ Eventì˜ ë™ì‘ ì‹œ ì²˜ë¦¬í•´ì•¼í•  ë‚´ìš©ì„ process_event()ì—
-	//      ì‘ì„±í•˜ë©´ ëœë‹¤.
-	//    - ì‹œì‘í›„ 7ì´ˆí›„ ì‹¤í–‰ë˜ë„ë¡ ì„¤ì •í–ˆë‹¤.
+	//    - Á¤ÇØÁø ½Ã°£¿¡ ÇÑ¹ø¸¸ ½ÇÇàµÇ´Â Event°´Ã¼ÀÌ´Ù.
+	//    - set_event_time()À¸·Î ¼³Á¤µÈ ½Ã°£¿¡ process_event()ÇÔ¼ö¸¦ È£ÃâÇÑ´Ù.
+	//    - µû¶ó¼­ EventÀÇ µ¿ÀÛ ½Ã Ã³¸®ÇØ¾ß ÇÒ ³»¿ëÀ» process_event()¿¡
+	//      ÀÛ¼ºÇÏ¸é µÈ´Ù.
+	//    - ½ÃÀÛ ÈÄ 7ÃÊÈÄ ½ÇÇàµÇµµ·Ï ¼³Á¤Çß´Ù.
 	//
 	// ------------------------------------------------------------------
 	{
 		// 1) create event entity
 		auto pentity = make_own<time_event::entity>("event_0"sv);
 
-		// 2) 2020ë…„ 10ì›” 9ì¼ 7ì‹œ 51ë¶„ 0ì´ˆì— ì‹¤í–‰í•œë‹¤.
+		// 2) 2020³â 10¿ù 9ÀÏ 7½Ã 51ºĞ 0ÃÊ¿¡ ½ÇÇàÇÑ´Ù.
 		{
 			time_event::sEVENT_SETTING setting;
 			setting.name		  = "A"sv;
@@ -59,14 +59,14 @@ int main()
 				[=](chrono::time::utc::time_point /*_time_now*/)
 			{
 				std::cout << "event_0 executed A ("sv
-					<< to_string<char>(chrono::time::utc::now()) << ")"sv
+					<< to_string(chrono::time::utc::now()) << ")"sv
 					<< '\n';
 
 				return eRESULT::SUCCESS;
 			});
 		}
 
-		// 3) 2020ë…„ 10ì›” 9ì¼ 7ì‹œ 51ë¶„ 5ì´ˆì— ì‹¤í–‰í•œë‹¤.
+		// 3) 2020³â 10¿ù 9ÀÏ 7½Ã 51ºĞ 5ÃÊ¿¡ ½ÇÇàÇÑ´Ù.
 		{
 			time_event::sEVENT_SETTING setting;
 			setting.name = "A"sv;
@@ -79,14 +79,14 @@ int main()
 				[=](chrono::time::utc::time_point /*_time_now*/)
 			{
 				std::cout << "event_0 executed B ("sv
-					<< to_string<char>(chrono::time::utc::now()) << ")"sv
+					<< to_string(chrono::time::utc::now()) << ")"sv
 					<< '\n';
 
 				return eRESULT::SUCCESS;
 			});
 		}
 
-		// 4) 2020ë…„ 10ì›” 9ì¼ 7ì‹œ 52ë¶„ 0ì´ˆì— ì‹¤í–‰í•œë‹¤.
+		// 4) 2020³â 10¿ù 9ÀÏ 7½Ã 52ºĞ 0ÃÊ¿¡ ½ÇÇàÇÑ´Ù.
 		{
 			time_event::sEVENT_SETTING setting;
 			setting.name = "A"sv;
@@ -99,17 +99,17 @@ int main()
 				[=](chrono::time::utc::time_point /*_time_now*/)
 			{
 				std::cout << "event_0 executed C ("sv
-					<< to_string<char>(chrono::time::utc::now()) << ")"sv
+					<< to_string(chrono::time::utc::now()) << ")"sv
 					<< '\n';
 
 				return eRESULT::SUCCESS;
 			});
 		}
 
-		// 5) ì‹œì‘í•œë‹¤.
+		// 5) ½ÃÀÛÇÑ´Ù.
 		pentity->start();
 
-		// 6) ESCë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
+		// 6) ESC¸¦ ´©¸¦ ¶§±îÁö ±â´Ù¸°´Ù.
 		while (_getch() != 27);
 	}
 
@@ -117,18 +117,18 @@ int main()
 	// ------------------------------------------------------------------
 	// 2. entity event (2)
 	//
-	//    - ì •í•´ì§„ ì‹œê°„ì— í•œë²ˆë§Œ ì‹¤í–‰ë˜ëŠ” Eventê°ì²´ì´ë‹¤.
-	//    - set_event_time()ìœ¼ë¡œ ì„¤ì •ëœ ì‹œê°„ì— process_event()í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œë‹¤.
-	//    - ë”°ë¼ì„œ Eventì˜ ë™ì‘ ì‹œ ì²˜ë¦¬í•´ì•¼í•  ë‚´ìš©ì„ process_event()ì—
-	//      ì‘ì„±í•˜ë©´ ëœë‹¤.
-	//    - ì‹œì‘í›„ 7ì´ˆí›„ ì‹¤í–‰ë˜ë„ë¡ ì„¤ì •í–ˆë‹¤.
+	//    - Á¤ÇØÁø ½Ã°£¿¡ ÇÑ¹ø¸¸ ½ÇÇàµÇ´Â Event°´Ã¼ÀÌ´Ù.
+	//    - set_event_time()À¸·Î ¼³Á¤µÈ ½Ã°£¿¡ process_event()ÇÔ¼ö¸¦ È£ÃâÇÑ´Ù.
+	//    - µû¶ó¼­ EventÀÇ µ¿ÀÛ ½Ã Ã³¸®ÇØ¾ß ÇÒ ³»¿ëÀ» process_event()¿¡
+	//      ÀÛ¼ºÇÏ¸é µÈ´Ù.
+	//    - ½ÃÀÛ ÈÄ 7ÃÊÈÄ ½ÇÇàµÇµµ·Ï ¼³Á¤Çß´Ù.
 	//
 	// ------------------------------------------------------------------
 	{
 		// 1) create event entity
 		auto pentity = make_own<time_event::entity>("event_1"sv);
 
-		// 2) iteration ì²˜ë¦¬ë˜ë„ë¡ eventë¥¼ ì„¤ì •í•´ ì¶”ê°€í•œë‹¤.
+		// 2) iteration Ã³¸®µÇµµ·Ï event¸¦ ¼³Á¤ÇØ Ãß°¡ÇÑ´Ù.
 		{
 			time_event::sEVENT_SETTING setting;
 			setting.name		  = "iteration"sv;
@@ -141,17 +141,17 @@ int main()
 				[=](chrono::time::utc::time_point /*_time_now*/)
 				{
 					std::cout << "event_1 executed ITERATION ("sv
-							  << to_string<char>(chrono::time::utc::now()) << ")"sv
+							  << to_string(chrono::time::utc::now()) << ")"sv
 							  << '\n';
 
 					return eRESULT::SUCCESS;
 				});
 		}
 
-		// 4) ì‹œì‘í•œë‹¤.
+		// 4) ½ÃÀÛÇÑ´Ù.
 		pentity->start();
 
-		// 4) ESCë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
+		// 4) ESC¸¦ ´©¸¦ ¶§±îÁö ±â´Ù¸°´Ù.
 		while (_getch() != 27);
 	}
 
@@ -159,18 +159,18 @@ int main()
 	// ------------------------------------------------------------------
 	// 3. entity event (3)
 	//
-	//    - ì •í•´ì§„ ì‹œê°„ì— í•œë²ˆë§Œ ì‹¤í–‰ë˜ëŠ” Eventê°ì²´ì´ë‹¤.
-	//    - set_event_time()ìœ¼ë¡œ ì„¤ì •ëœ ì‹œê°„ì— process_event()í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œë‹¤.
-	//    - ë”°ë¼ì„œ Eventì˜ ë™ì‘ ì‹œ ì²˜ë¦¬í•´ì•¼í•  ë‚´ìš©ì„ process_event()ì—
-	//      ì‘ì„±í•˜ë©´ ëœë‹¤.
-	//    - ì‹œì‘í›„ 7ì´ˆí›„ ì‹¤í–‰ë˜ë„ë¡ ì„¤ì •í–ˆë‹¤.
+	//    - Á¤ÇØÁø ½Ã°£¿¡ ÇÑ¹ø¸¸ ½ÇÇàµÇ´Â Event°´Ã¼ÀÌ´Ù.
+	//    - set_event_time()À¸·Î ¼³Á¤µÈ ½Ã°£¿¡ process_event()ÇÔ¼ö¸¦ È£ÃâÇÑ´Ù.
+	//    - µû¶ó¼­ EventÀÇ µ¿ÀÛ ½Ã Ã³¸®ÇØ¾ß ÇÒ ³»¿ëÀ» process_event()¿¡
+	//      ÀÛ¼ºÇÏ¸é µÈ´Ù.
+	//    - ½ÃÀÛ ÈÄ 7ÃÊÈÄ ½ÇÇàµÇµµ·Ï ¼³Á¤Çß´Ù.
 	//
 	// ------------------------------------------------------------------
 	{
 		// 1) create event entity
 		auto pentity = make_own<time_event::entity>("event_2"sv);
 
-		// 2) start eventë¥¼ ìƒì„±í•´ì„œ ì¶”ê°€í•œë‹¤.
+		// 2) start event¸¦ »ı¼ºÇØ¼­ Ãß°¡ÇÑ´Ù.
 		{
 			time_event::sEVENT_SETTING setting;
 			setting.name		  = "start"sv;
@@ -182,14 +182,14 @@ int main()
 				[=](chrono::time::utc::time_point /*_time_now*/)
 				{
 					std::cout << "event_2 executed START ("sv
-							  << to_string<char>(chrono::time::utc::now()) << ")"sv
+							  << to_string(chrono::time::utc::now()) << ")"sv
 							  << '\n';
 
 					return eRESULT::SUCCESS;
 				});
 		}
 
-		// 3) end eventë¥¼ ìƒì„±í•´ì„œ ì¶”ê°€í•œë‹¤.
+		// 3) end event¸¦ »ı¼ºÇØ¼­ Ãß°¡ÇÑ´Ù.
 		{
 			time_event::sEVENT_SETTING setting;
 			setting.name		  = "end"sv;
@@ -201,17 +201,17 @@ int main()
 				[=](chrono::time::utc::time_point /*_time_now*/)
 				{
 					std::cout << "event_2 executed END ("sv
-							  << to_string<char>(chrono::time::utc::now()) << ")"sv
+							  << to_string(chrono::time::utc::now()) << ")"sv
 							  << '\n';
 
-					return eRESULT::COMPLETE; // eRESULT::COMPLETEë¥¼ ë¦¬í„´í•˜ë©´ time_event entityë¥¼ ì¢…ë£Œí•œë‹¤.
+					return eRESULT::COMPLETE; // eRESULT::COMPLETE¸¦ ¸®ÅÏÇÏ¸é time_event entity¸¦ Á¾·áÇÑ´Ù.
 				});
 		}
 
-		// 4) ì‹œì‘í•œë‹¤.
+		// 4) ½ÃÀÛÇÑ´Ù.
 		pentity->start();
 
-		// 4) ESCë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
+		// 4) ESC¸¦ ´©¸¦ ¶§±îÁö ±â´Ù¸°´Ù.
 		while (_getch() != 27);
 	}
 
@@ -219,18 +219,18 @@ int main()
 	// ------------------------------------------------------------------
 	// 4. entity event (4)
 	//
-	//    - ì •í•´ì§„ ì‹œê°„ì— í•œë²ˆë§Œ ì‹¤í–‰ë˜ëŠ” Eventê°ì²´ì´ë‹¤.
-	//    - set_event_time()ìœ¼ë¡œ ì„¤ì •ëœ ì‹œê°„ì— process_event()í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œë‹¤.
-	//    - ë”°ë¼ì„œ Eventì˜ ë™ì‘ ì‹œ ì²˜ë¦¬í•´ì•¼í•  ë‚´ìš©ì„ process_event()ì—
-	//      ì‘ì„±í•˜ë©´ ëœë‹¤.
-	//    - ì‹œì‘í›„ 7ì´ˆí›„ ì‹¤í–‰ë˜ë„ë¡ ì„¤ì •í–ˆë‹¤.
+	//    - Á¤ÇØÁø ½Ã°£¿¡ ÇÑ¹ø¸¸ ½ÇÇàµÇ´Â Event°´Ã¼ÀÌ´Ù.
+	//    - set_event_time()À¸·Î ¼³Á¤µÈ ½Ã°£¿¡ process_event()ÇÔ¼ö¸¦ È£ÃâÇÑ´Ù.
+	//    - µû¶ó¼­ EventÀÇ µ¿ÀÛ ½Ã Ã³¸®ÇØ¾ß ÇÒ ³»¿ëÀ» process_event()¿¡
+	//      ÀÛ¼ºÇÏ¸é µÈ´Ù.
+	//    - ½ÃÀÛ ÈÄ 7ÃÊÈÄ ½ÇÇàµÇµµ·Ï ¼³Á¤Çß´Ù.
 	//
 	// ------------------------------------------------------------------
 	{
 		// 1) create event entity
 		auto pentity = make_own<time_event::entity>("event_3"sv);
 
-		// 2) start eventë¥¼ ìƒì„±í•´ì„œ ì¶”ê°€í•œë‹¤.
+		// 2) start event¸¦ »ı¼ºÇØ¼­ Ãß°¡ÇÑ´Ù.
 		{
 			time_event::sEVENT_SETTING setting;
 			setting.name		  = "start"sv;
@@ -242,14 +242,14 @@ int main()
 				[=](chrono::time::utc::time_point /*_time_now*/)
 				{
 					std::cout << "event_3 executed START ("sv
-							  << to_string<char>(chrono::time::utc::now()) << ")"sv
+							  << to_string(chrono::time::utc::now()) << ")"sv
 							  << '\n';
 
 					return eRESULT::SUCCESS;
 				});
 		}
 
-		// 3) iteration eventë¥¼ ìƒì„±í•´ì„œ ì¶”ê°€í•œë‹¤.
+		// 3) iteration event¸¦ »ı¼ºÇØ¼­ Ãß°¡ÇÑ´Ù.
 		{
 			time_event::sEVENT_SETTING setting;
 			setting.name		  = "iteration"sv;
@@ -261,14 +261,14 @@ int main()
 				[=](chrono::time::utc::time_point /*_time_now*/)
 			{
 				std::cout << "event_3 executed ITERATION ("sv
-					<< to_string<char>(chrono::time::utc::now()) << ")"sv
+					<< to_string(chrono::time::utc::now()) << ")"sv
 					<< '\n';
 
 				return eRESULT::SUCCESS;
 			});
 		}
 
-		// 4) end eventë¥¼ ìƒì„±í•´ì„œ ì¶”ê°€í•œë‹¤.
+		// 4) end event¸¦ »ı¼ºÇØ¼­ Ãß°¡ÇÑ´Ù.
 		{
 			time_event::sEVENT_SETTING setting;
 			setting.name		  = "end"sv;
@@ -280,17 +280,17 @@ int main()
 				[=](chrono::time::utc::time_point /*_time_now*/)
 				{
 					std::cout << "event_3 executed END ("sv
-							  << to_string<char>(chrono::time::utc::now()) << ")"sv
+							  << to_string(chrono::time::utc::now()) << ")"sv
 							  << '\n';
 
-					return eRESULT::COMPLETE; // eRESULT::COMPLETEë¥¼ ë¦¬í„´í•˜ë©´ time_event entityë¥¼ ì¢…ë£Œí•œë‹¤.
+					return eRESULT::COMPLETE; // eRESULT::COMPLETE¸¦ ¸®ÅÏÇÏ¸é time_event entity¸¦ Á¾·áÇÑ´Ù.
 				});
 		}
 
-		// 5) ì‹œì‘í•œë‹¤.
+		// 5) ½ÃÀÛÇÑ´Ù.
 		pentity->start();
 
-		// 6) ESCë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
+		// 6) ESC¸¦ ´©¸¦ ¶§±îÁö ±â´Ù¸°´Ù.
 		while (_getch() != 27);
 	}
 
@@ -298,35 +298,35 @@ int main()
 	// ------------------------------------------------------------------
 	// 5. entity event (5)
 	//
-	//    - ì •í•´ì§„ ì‹œì‘ ì‹œê°„ê³¼ ì¢…ë£Œì‹œê°„ì— ê°ê° í•œë²ˆì”© process_event_start()
-	//      ì™€ process_event_end()ë¥¼ í˜¸ì¶œí•˜ëŠ” Event ê°ì²´ì´ë‹¤.
-	//    - ì •í•´ì§„ ì‹œì‘ ì‹œê°„ì— process_event_start()ë¥¼ í˜¸ì¶œí•˜ê³  
-	//    - ì •í•´ì§„ ì¢…ë£Œ ì‹œê°„ì— process_event_end()ë¥¼ í˜¸ì¶œí•œë‹¤.
-	//    - ì‹œì‘í›„ 5ì´ˆ í›„ process_event_start()ê°€ í˜¸ì¶œë˜ë©°
-	//      ì‹œì‘í›„ 20ì´ˆí›„ process_event_end()ê°€ í˜¸ì¶œëœë‹¤.
+	//    - Á¤ÇØÁø ½ÃÀÛ ½Ã°£°ú Á¾·á½Ã°£¿¡ °¢°¢ ÇÑ¹ø¾¿ process_event_start()
+	//      ¿Í process_event_end()¸¦ È£ÃâÇÏ´Â Event °´Ã¼ÀÌ´Ù.
+	//    - Á¤ÇØÁø ½ÃÀÛ ½Ã°£¿¡ process_event_start()¸¦ È£ÃâÇÏ°í 
+	//    - Á¤ÇØÁø Á¾·á ½Ã°£¿¡ process_event_end()¸¦ È£ÃâÇÑ´Ù.
+	//    - ½ÃÀÛ ÈÄ 5ÃÊ ÈÄ process_event_start()°¡ È£ÃâµÇ¸ç
+	//      ½ÃÀÛ ÈÄ 20ÃÊÈÄ process_event_end()°¡ È£ÃâµÈ´Ù.
 	//
 	// ------------------------------------------------------------------
 	{
 		// 1) create event entity
 		auto pentity = make_own<time_event::entity>("event_4"sv);
 
-		// 2) ì‹œì‘í•œ í›„ 3ì´ˆ ì‹¤í–‰í•˜ëŠ” event ê°ì²´ë¥¼ ì¶”ê°€í•œë‹¤.
+		// 2) ½ÃÀÛÇÑ ÈÄ 3ÃÊ ½ÇÇàÇÏ´Â event °´Ã¼¸¦ Ãß°¡ÇÑ´Ù.
 		*pentity += CGDK::time_event::make_event_once(chrono::time::utc::now() + chrono::seconds(3),
 			[=](chrono::time::utc::time_point /*_time_now*/)
 			{
 				std::cout << "event_4 executed ONCE ("sv
-						  << to_string<char>(chrono::time::utc::now()) << ")"sv
+						  << to_string(chrono::time::utc::now()) << ")"sv
 						  << '\n';
 
 				return result_code(eRESULT::SUCCESS);
 			});
 
-		// 3) ì‹œì‘í•œ ì§í›„ 5ì´ˆë§ˆë‹¤ 5ë²ˆ ì‹í–‰í•˜ëŠ” event ê°ì²´ë¥¼ ì¶”ê°€í•œë‹¤.
+		// 3) ½ÃÀÛÇÑ Á÷ÈÄ 5ÃÊ¸¶´Ù 5¹ø ½ÄÇàÇÏ´Â event °´Ã¼¸¦ Ãß°¡ÇÑ´Ù.
 		*pentity += CGDK::time_event::make_event_iteration(chrono::time::utc::now(), chrono::seconds(5), 5,
 			[=](chrono::time::utc::time_point /*_time_now*/)
 			{
 				std::cout << "event_4 executed ITERATION ("sv
-						  << to_string<char>(chrono::time::utc::now()) << ")"sv
+						  << to_string(chrono::time::utc::now()) << ")"sv
 						  << '\n';
 
 				return result_code(eRESULT::SUCCESS);
@@ -334,13 +334,13 @@ int main()
 
 		pentity->start();
 
-		// 4) ESCë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
+		// 4) ESC¸¦ ´©¸¦ ¶§±îÁö ±â´Ù¸°´Ù.
 		while (_getch() != 27);
 	}
 
 
 	// ------------------------------------------------------------------
-	// 4. ë’·ë§ˆë¬´ë¦¬ & ëë‚´ê¸°
+	// 4. µŞ¸¶¹«¸® & ³¡³»±â
 	// ------------------------------------------------------------------
 	// trace) 
 	std::cout << "end tutorial..."sv << std::endl;

@@ -37,31 +37,29 @@ public:
 			result_code			leave(member_base_t* _pmember) noexcept;
 			result_code			leave(member_base_t* _pmember, uintptr_t _param) noexcept;
 
-	[[nodiscard]] object_ptr<group_t> parent_group() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_group)); return this->m_pgroup_parent; }
-			void				parent_group(group_t* _pgroup_parent) noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_group)); this->m_pgroup_parent = _pgroup_parent; }
+	[[nodiscard]] object_ptr<group_t> parent_group() const noexcept { std::lock_guard lock(this->m_lockable_group); return this->m_pgroup_parent; }
+			void				parent_group(group_t* _pgroup_parent) noexcept { std::lock_guard lock(this->m_lockable_group); this->m_pgroup_parent = _pgroup_parent; }
 
 			void				lock_group() { add_ref(); this->m_lockable_group.lock();}
 			void				unlock_group() noexcept { this->m_lockable_group.unlock(); release();}
-	[[nodiscard]] lockable<>&	get_group_lockable() noexcept { return this->m_lockable_group;}
-	[[nodiscard]] const lockable<>&	get_group_lockable() const noexcept { return this->m_lockable_group;}
-	[[nodiscard]] 				operator lockable<>&() noexcept { return this->m_lockable_group;}
-	[[nodiscard]] 				operator const lockable<>&() const noexcept { return this->m_lockable_group;}
+	[[nodiscard]] auto&			get_group_lockable() noexcept { return this->m_lockable_group;}
+	[[nodiscard]] const auto&	get_group_lockable() const noexcept { return this->m_lockable_group;}
+	[[nodiscard]] 				operator lock_object&() noexcept { return this->m_lockable_group;}
+	[[nodiscard]] 				operator const lock_object&() const noexcept { return this->m_lockable_group;}
 
 protected:
 	virtual	void				process_leave(member_base_t* _pmember, uintptr_t _param) noexcept PURE;
 
-protected:
-			lockable<>			m_lockable_group;
+	mutable	group_lock_object	m_lockable_group;
 			object_ptr<group_t>	m_pgroup_parent;
  
-protected:
 	template <class group_t>
 	static	void				member_group_as(group_t* _pgroup, member_base_t* _pmember) noexcept	{ _pmember->_set_group(_pgroup);}
 	static	void				reset_member_group(member_base_t* _pmember) noexcept { _pmember->_reset_group();}
-	[[nodiscard]] static lockable<>& member_group_lock(member_base_t* _pmember) noexcept { return _pmember->m_lockable_group;}
+	[[nodiscard]] static auto&	member_group_lock(member_base_t* _pmember) noexcept { return _pmember->m_lockable_group;}
 
 public:
-	static	void				request_leave(group_t* _pgroup, member_base_t* _pmember, uintptr_t _param) noexcept;
+	static	void				request_leave(Igroup<_TMEMBERBASE>* _pgroup, member_base_t* _pmember, uintptr_t _param) noexcept;
 };
 
 template <class _TMEMBERBASE>
@@ -80,7 +78,7 @@ result_code Igroup<_TMEMBERBASE>::leave(member_base_t* _pmember, uintptr_t _para
 	// check)
 	RETURN_IF(_pmember == nullptr, eRESULT::INVALID_ARGUMENT);
 
-	scoped_lock(_pmember->m_lockable_group)
+	SCOPED_LOCK(_pmember->m_lockable_group)
 	{
 		// check) 아에 Group에 속해 있지 않으면 그냥 끝낸다.
 		RETURN_IF(_pmember->_get_group() != this, eRESULT::INVALID_ARGUMENT);
@@ -94,7 +92,7 @@ result_code Igroup<_TMEMBERBASE>::leave(member_base_t* _pmember, uintptr_t _para
 }
 
 template <class _TMEMBERBASE>
-void Igroup<_TMEMBERBASE>::request_leave(group_t* _pgroup, member_base_t* _pmember, uintptr_t _param) noexcept
+void Igroup<_TMEMBERBASE>::request_leave(Igroup<_TMEMBERBASE>* _pgroup, member_base_t* _pmember, uintptr_t _param) noexcept
 {
 	// check)
 	CGASSERT_ERROR(_pgroup != nullptr); 
@@ -103,7 +101,7 @@ void Igroup<_TMEMBERBASE>::request_leave(group_t* _pgroup, member_base_t* _pmemb
 	RETURN_IF(_pgroup == nullptr);
 
 	// 1) Process...
-	((Igroup<_TMEMBERBASE>*)_pgroup)->process_leave(_pmember, _param);
+	_pgroup->process_leave(_pmember, _param);
 }
 
 

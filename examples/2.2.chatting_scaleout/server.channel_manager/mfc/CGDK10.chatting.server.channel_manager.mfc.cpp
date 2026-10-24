@@ -1,5 +1,5 @@
-ï»¿
-// channel_manager_server.mfc.cpp: ì• í”Œë¦¬ì¼€ì´ì…˜ì— ëŒ€í•œ í´ëž˜ìŠ¤ ë™ìž‘ì„ ì •ì˜í•©ë‹ˆë‹¤.
+
+// channel_manager_server.mfc.cpp: ¾ÖÇÃ¸®ÄÉÀÌ¼Ç¿¡ ´ëÇÑ Å¬·¡½º µ¿ÀÛÀ» Á¤ÀÇÇÕ´Ï´Ù.
 //
 
 #include "pch.h"
@@ -8,7 +8,7 @@
 #include "CGDK10.chatting.server.channel_manager.dlg.h"
 
 #if defined(_DEBUG) && !defined(NDEBUG)
-#define new DEBUG_make_object
+	#define new DEBUG_NEW
 #endif
 
 
@@ -19,34 +19,34 @@ BEGIN_MESSAGE_MAP(channel_manager_serve_app, CWinApp)
 END_MESSAGE_MAP()
 
 
-// channel_manager_serve_app ìƒì„±
+// channel_manager_serve_app »ý¼º
 
 channel_manager_serve_app::channel_manager_serve_app()
 {
-	// ë‹¤ì‹œ ì‹œìž‘ ê´€ë¦¬ìž ì§€ì›
+	// ´Ù½Ã ½ÃÀÛ °ü¸®ÀÚ Áö¿ø
 	m_dwRestartManagerSupportFlags = AFX_RESTART_MANAGER_SUPPORT_RESTART;
 
-	// TODO: ì—¬ê¸°ì— ìƒì„± ì½”ë“œë¥¼ ì¶”ê°€í•©ë‹ˆë‹¤.
-	// InitInstanceì— ëª¨ë“  ì¤‘ìš”í•œ ì´ˆê¸°í™” ìž‘ì—…ì„ ë°°ì¹˜í•©ë‹ˆë‹¤.
+	// TODO: ¿©±â¿¡ »ý¼º ÄÚµå¸¦ Ãß°¡ÇÕ´Ï´Ù.
+	// InitInstance¿¡ ¸ðµç Áß¿äÇÑ ÃÊ±âÈ­ ÀÛ¾÷À» ¹èÄ¡ÇÕ´Ï´Ù.
 }
 
 
-// ìœ ì¼í•œ channel_manager_serve_app ê°œì²´ìž…ë‹ˆë‹¤.
+// À¯ÀÏÇÑ channel_manager_serve_app °³Ã¼ÀÔ´Ï´Ù.
 
 channel_manager_serve_app theApp;
 
 
-// channel_manager_serve_app ì´ˆê¸°í™”
+// channel_manager_serve_app ÃÊ±âÈ­
 
 BOOL channel_manager_serve_app::InitInstance()
 {
-	// ì• í”Œë¦¬ì¼€ì´ì…˜ ë§¤ë‹ˆíŽ˜ìŠ¤íŠ¸ê°€ ComCtl32.dll ë²„ì „ 6 ì´ìƒì„ ì‚¬ìš©í•˜ì—¬ ë¹„ì£¼ì–¼ ìŠ¤íƒ€ì¼ì„
-	// ì‚¬ìš©í•˜ë„ë¡ ì§€ì •í•˜ëŠ” ê²½ìš°, Windows XP ìƒì—ì„œ ë°˜ë“œì‹œ InitCommonControlsEx()ê°€ í•„ìš”í•©ë‹ˆë‹¤.
-	// InitCommonControlsEx()ë¥¼ ì‚¬ìš©í•˜ì§€ ì•Šìœ¼ë©´ ì°½ì„ ë§Œë“¤ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.
+	// ¾ÖÇÃ¸®ÄÉÀÌ¼Ç ¸Å´ÏÆä½ºÆ®°¡ ComCtl32.dll ¹öÀü 6 ÀÌ»óÀ» »ç¿ëÇÏ¿© ºñÁÖ¾ó ½ºÅ¸ÀÏÀ»
+	// »ç¿ëÇÏµµ·Ï ÁöÁ¤ÇÏ´Â °æ¿ì, Windows XP »ó¿¡¼­ ¹Ýµå½Ã InitCommonControlsEx()°¡ ÇÊ¿äÇÕ´Ï´Ù.
+	// InitCommonControlsEx()¸¦ »ç¿ëÇÏÁö ¾ÊÀ¸¸é Ã¢À» ¸¸µé ¼ö ¾ø½À´Ï´Ù.
 	INITCOMMONCONTROLSEX InitCtrls;
 	InitCtrls.dwSize = sizeof(InitCtrls);
-	// ì‘ìš© í”„ë¡œê·¸ëž¨ì—ì„œ ì‚¬ìš©í•  ëª¨ë“  ê³µìš© ì»¨íŠ¸ë¡¤ í´ëž˜ìŠ¤ë¥¼ í¬í•¨í•˜ë„ë¡
-	// ì´ í•­ëª©ì„ ì„¤ì •í•˜ì‹­ì‹œì˜¤.
+	// ÀÀ¿ë ÇÁ·Î±×·¥¿¡¼­ »ç¿ëÇÒ ¸ðµç °ø¿ë ÄÁÆ®·Ñ Å¬·¡½º¸¦ Æ÷ÇÔÇÏµµ·Ï
+	// ÀÌ Ç×¸ñÀ» ¼³Á¤ÇÏ½Ê½Ã¿À.
 	InitCtrls.dwICC = ICC_WIN95_CLASSES;
 	InitCommonControlsEx(&InitCtrls);
 
@@ -55,42 +55,42 @@ BOOL channel_manager_serve_app::InitInstance()
 
 	AfxEnableControlContainer();
 
-	// ëŒ€í™” ìƒìžì— ì…¸ íŠ¸ë¦¬ ë·° ë˜ëŠ”
-	// ì…¸ ëª©ë¡ ë·° ì»¨íŠ¸ë¡¤ì´ í¬í•¨ë˜ì–´ ìžˆëŠ” ê²½ìš° ì…¸ ê´€ë¦¬ìžë¥¼ ë§Œë“­ë‹ˆë‹¤.
+	// ´ëÈ­ »óÀÚ¿¡ ¼Ð Æ®¸® ºä ¶Ç´Â
+	// ¼Ð ¸ñ·Ï ºä ÄÁÆ®·ÑÀÌ Æ÷ÇÔµÇ¾î ÀÖ´Â °æ¿ì ¼Ð °ü¸®ÀÚ¸¦ ¸¸µì´Ï´Ù.
 	CShellManager *pShellManager = new CShellManager;
 
-	// MFC ì»¨íŠ¸ë¡¤ì˜ í…Œë§ˆë¥¼ ì‚¬ìš©í•˜ê¸° ìœ„í•´ "Windows ì›í˜•" ë¹„ì£¼ì–¼ ê´€ë¦¬ìž í™œì„±í™”
+	// MFC ÄÁÆ®·ÑÀÇ Å×¸¶¸¦ »ç¿ëÇÏ±â À§ÇØ "Windows ¿øÇü" ºñÁÖ¾ó °ü¸®ÀÚ È°¼ºÈ­
 	CMFCVisualManager::SetDefaultManager(RUNTIME_CLASS(CMFCVisualManagerWindows));
 
-	// í‘œì¤€ ì´ˆê¸°í™”
-	// ì´ë“¤ ê¸°ëŠ¥ì„ ì‚¬ìš©í•˜ì§€ ì•Šê³  ìµœì¢… ì‹¤í–‰ íŒŒì¼ì˜ í¬ê¸°ë¥¼ ì¤„ì´ë ¤ë©´
-	// ì•„ëž˜ì—ì„œ í•„ìš” ì—†ëŠ” íŠ¹ì • ì´ˆê¸°í™”
-	// ë£¨í‹´ì„ ì œê±°í•´ì•¼ í•©ë‹ˆë‹¤.
-	// í•´ë‹¹ ì„¤ì •ì´ ì €ìž¥ëœ ë ˆì§€ìŠ¤íŠ¸ë¦¬ í‚¤ë¥¼ ë³€ê²½í•˜ì‹­ì‹œì˜¤.
-	// TODO: ì´ ë¬¸ìžì—´ì„ íšŒì‚¬ ë˜ëŠ” ì¡°ì§ì˜ ì´ë¦„ê³¼ ê°™ì€
-	// ì ì ˆí•œ ë‚´ìš©ìœ¼ë¡œ ìˆ˜ì •í•´ì•¼ í•©ë‹ˆë‹¤.
-	SetRegistryKey(_T("ë¡œì»¬ ì• í”Œë¦¬ì¼€ì´ì…˜ ë§ˆë²•ì‚¬ì—ì„œ ìƒì„±ëœ ì• í”Œë¦¬ì¼€ì´ì…˜"));
+	// Ç¥ÁØ ÃÊ±âÈ­
+	// ÀÌµé ±â´ÉÀ» »ç¿ëÇÏÁö ¾Ê°í ÃÖÁ¾ ½ÇÇà ÆÄÀÏÀÇ Å©±â¸¦ ÁÙÀÌ·Á¸é
+	// ¾Æ·¡¿¡¼­ ÇÊ¿ä ¾ø´Â Æ¯Á¤ ÃÊ±âÈ­
+	// ·çÆ¾À» Á¦°ÅÇØ¾ß ÇÕ´Ï´Ù.
+	// ÇØ´ç ¼³Á¤ÀÌ ÀúÀåµÈ ·¹Áö½ºÆ®¸® Å°¸¦ º¯°æÇÏ½Ê½Ã¿À.
+	// TODO: ÀÌ ¹®ÀÚ¿­À» È¸»ç ¶Ç´Â Á¶Á÷ÀÇ ÀÌ¸§°ú °°Àº
+	// ÀûÀýÇÑ ³»¿ëÀ¸·Î ¼öÁ¤ÇØ¾ß ÇÕ´Ï´Ù.
+	SetRegistryKey(_T("·ÎÄÃ ¾ÖÇÃ¸®ÄÉÀÌ¼Ç ¸¶¹ý»ç¿¡¼­ »ý¼ºµÈ ¾ÖÇÃ¸®ÄÉÀÌ¼Ç"));
 
 	channel_manager_server_dlg dlg;
 	m_pMainWnd = &dlg;
 	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == IDOK)
 	{
-		// TODO: ì—¬ê¸°ì— [í™•ì¸]ì„ í´ë¦­í•˜ì—¬ ëŒ€í™” ìƒìžê°€ ì—†ì–´ì§ˆ ë•Œ ì²˜ë¦¬í• 
-		//  ì½”ë“œë¥¼ ë°°ì¹˜í•©ë‹ˆë‹¤.
+		// TODO: ¿©±â¿¡ [È®ÀÎ]À» Å¬¸¯ÇÏ¿© ´ëÈ­ »óÀÚ°¡ ¾ø¾îÁú ¶§ Ã³¸®ÇÒ
+		//  ÄÚµå¸¦ ¹èÄ¡ÇÕ´Ï´Ù.
 	}
 	else if (nResponse == IDCANCEL)
 	{
-		// TODO: ì—¬ê¸°ì— [ì·¨ì†Œ]ë¥¼ í´ë¦­í•˜ì—¬ ëŒ€í™” ìƒìžê°€ ì—†ì–´ì§ˆ ë•Œ ì²˜ë¦¬í• 
-		//  ì½”ë“œë¥¼ ë°°ì¹˜í•©ë‹ˆë‹¤.
+		// TODO: ¿©±â¿¡ [Ãë¼Ò]¸¦ Å¬¸¯ÇÏ¿© ´ëÈ­ »óÀÚ°¡ ¾ø¾îÁú ¶§ Ã³¸®ÇÒ
+		//  ÄÚµå¸¦ ¹èÄ¡ÇÕ´Ï´Ù.
 	}
 	else if (nResponse == -1)
 	{
-		TRACE(traceAppMsg, 0, "ê²½ê³ : ëŒ€í™” ìƒìžë¥¼ ë§Œë“¤ì§€ ëª»í–ˆìœ¼ë¯€ë¡œ ì• í”Œë¦¬ì¼€ì´ì…˜ì´ ì˜ˆê¸°ì¹˜ ì•Šê²Œ ì¢…ë£Œë©ë‹ˆë‹¤.\n");
-		TRACE(traceAppMsg, 0, "ê²½ê³ : ëŒ€í™” ìƒìžì—ì„œ MFC ì»¨íŠ¸ë¡¤ì„ ì‚¬ìš©í•˜ëŠ” ê²½ìš° #define _AFX_NO_MFC_CONTROLS_IN_DIALOGSë¥¼ ìˆ˜í–‰í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.\n");
+		TRACE(traceAppMsg, 0, "°æ°í: ´ëÈ­ »óÀÚ¸¦ ¸¸µéÁö ¸øÇßÀ¸¹Ç·Î ¾ÖÇÃ¸®ÄÉÀÌ¼ÇÀÌ ¿¹±âÄ¡ ¾Ê°Ô Á¾·áµË´Ï´Ù.\n");
+		TRACE(traceAppMsg, 0, "°æ°í: ´ëÈ­ »óÀÚ¿¡¼­ MFC ÄÁÆ®·ÑÀ» »ç¿ëÇÏ´Â °æ¿ì #define _AFX_NO_MFC_CONTROLS_IN_DIALOGS¸¦ ¼öÇàÇÒ ¼ö ¾ø½À´Ï´Ù.\n");
 	}
 
-	// ìœ„ì—ì„œ ë§Œë“  ì…¸ ê´€ë¦¬ìžë¥¼ ì‚­ì œí•©ë‹ˆë‹¤.
+	// À§¿¡¼­ ¸¸µç ¼Ð °ü¸®ÀÚ¸¦ »èÁ¦ÇÕ´Ï´Ù.
 	if (pShellManager != nullptr)
 	{
 		delete pShellManager;
@@ -100,8 +100,8 @@ BOOL channel_manager_serve_app::InitInstance()
 	ControlBarCleanUp();
 #endif
 
-	// ëŒ€í™” ìƒìžê°€ ë‹«í˜”ìœ¼ë¯€ë¡œ ì‘ìš© í”„ë¡œê·¸ëž¨ì˜ ë©”ì‹œì§€ íŽŒí”„ë¥¼ ì‹œìž‘í•˜ì§€ ì•Šê³   ì‘ìš© í”„ë¡œê·¸ëž¨ì„ ëë‚¼ ìˆ˜ ìžˆë„ë¡ FALSEë¥¼
-	// ë°˜í™˜í•©ë‹ˆë‹¤.
+	// ´ëÈ­ »óÀÚ°¡ ´ÝÇûÀ¸¹Ç·Î ÀÀ¿ë ÇÁ·Î±×·¥ÀÇ ¸Þ½ÃÁö ÆßÇÁ¸¦ ½ÃÀÛÇÏÁö ¾Ê°í  ÀÀ¿ë ÇÁ·Î±×·¥À» ³¡³¾ ¼ö ÀÖµµ·Ï FALSE¸¦
+	// ¹ÝÈ¯ÇÕ´Ï´Ù.
 	return FALSE;
 }
 

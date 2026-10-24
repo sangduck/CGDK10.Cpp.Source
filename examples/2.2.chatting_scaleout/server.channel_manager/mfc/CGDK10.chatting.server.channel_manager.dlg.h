@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 class channel_manager_server_dlg : public CDialogEx
 {

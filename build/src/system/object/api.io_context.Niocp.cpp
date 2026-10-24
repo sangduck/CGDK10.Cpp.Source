@@ -1,5 +1,5 @@
 #include "pch.h"
-
+#include "platform.h"
 
 #if defined(_IO_APISET_H_)
 
@@ -20,7 +20,7 @@ api::io_context_Niocp::~io_context_Niocp() noexcept
 
 bool api::io_context_Niocp::create() noexcept
 {
-	// check) aleady exist?
+	// check) already exist?
 	RETURN_IF(this->m_handle_iocp != INVALID_CGHANDLE_VALUE || this->m_handle_iocp_created != INVALID_CGHANDLE_VALUE, false);
 
 	// 1) create iocp
@@ -46,7 +46,7 @@ CGHANDLE api::io_context_Niocp::dispose() noexcept
 	// check) return if iocp handle is not exist
 	RETURN_IF(h_iocp == INVALID_CGHANDLE_VALUE, h_iocp);
 
-	// 2) cancle i/o
+	// 2) cancel i/o
 	cancel_io(h_iocp);
 
 	// return)
@@ -55,15 +55,9 @@ CGHANDLE api::io_context_Niocp::dispose() noexcept
 
 result_code api::io_context_Niocp::destroy() noexcept
 {
-	// 1) dispose first
-	{
-		// - m_handle_iocp을 NULL로 바꾼다.
-		auto h_iocp = this->m_handle_iocp.exchange(INVALID_CGHANDLE_VALUE);
-
-		// check)
-		if (h_iocp != INVALID_CGHANDLE_VALUE)
-			this->dispose();
-	}
+	// 1) dispose first (m_handle_iocp를 INVALID로 바꾸고 진행 중인 i/o를 취소한다)
+	//    (이전 : 여기서 먼저 exchange해서 dispose()가 INVALID를 받아 cancel_io를 하지 않았다.)
+	this->dispose();
 
 	// 2) get handle created (m_handle_iocp을 INVALID_CGHANDLE_VALUE로 바꾼다.)
 	auto h_iocp_create = this->m_handle_iocp_created.exchange(INVALID_CGHANDLE_VALUE);
@@ -92,7 +86,7 @@ bool api::io_context_Niocp::attach(CGHANDLE _handle) noexcept
 	// check) 제대로 연결되었는지 확인한다.
 	RETURN_IF(result == INVALID_CGHANDLE_VALUE, false);
 
-	// 3) attach갯수를 증가시킴.
+	// 3) attach개수를 증가시킴.
 	++m_count_attached;
 
 	// return)
@@ -110,7 +104,7 @@ bool api::io_context_Niocp::detach(CGHANDLE _handle) noexcept
 	// check) 제대로 연결되었는지 확인한다.
 	RETURN_IF(result == INVALID_CGHANDLE_VALUE, false);
 
-	// 2) attach갯수를 감소시킴.
+	// 2) attach개수를 감소시킴.
 	--m_count_attached;
 
 	// return) 성공!!!

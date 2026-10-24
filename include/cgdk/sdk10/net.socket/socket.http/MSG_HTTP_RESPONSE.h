@@ -51,19 +51,10 @@ public:
 
 
 // 2) shared_buffer functions
-buffer_view	prepend_MESSAGE_HTTP(buffer& _buffer, const sMESSAGE_HTTP_RESPONSE& _data);
 buffer_view	append_MESSAGE_HTTP(buffer& _buffer, const sMESSAGE_HTTP_RESPONSE& _data);
 std::size_t get_size_of_MESSAGE_HTTP(const sMESSAGE_HTTP_RESPONSE& _data);
 
-// 3) definiions shared_buffer operation 
-template<class B>
-class serializer_prepend<B, sMESSAGE_HTTP_RESPONSE, void>
-{
-public: using type = buffer_view;
-	template<class S> static type _do_prepend(S& _s, const sMESSAGE_HTTP_RESPONSE& _data) { return prepend_MESSAGE_HTTP(_s, _data); }
-};
-
-
+// 3) definitions shared_buffer operation 
 template<class B>
 class serializer_append<B, sMESSAGE_HTTP_RESPONSE, void>
 {

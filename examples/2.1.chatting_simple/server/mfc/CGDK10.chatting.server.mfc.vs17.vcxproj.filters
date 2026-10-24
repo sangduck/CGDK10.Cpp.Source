@@ -7,7 +7,6 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="CGDK10.chatting.server.mfc.h" />
     <ClInclude Include="CGDK10.chatting.server.mfc.dlg.h" />
-    <ClInclude Include="CGDK10.chatting.server_definition.h" />
     <ClInclude Include="channel_setting_dlg.h" />
   </ItemGroup>
   <ItemGroup>

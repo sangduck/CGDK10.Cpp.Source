@@ -24,7 +24,7 @@ namespace CGDK
 ////
 //// VAR
 ////
-//// - Repository의 대상 객체가 될수 있는 Interface
+//// - Repository의 대상 객체가 될 수 있는 Interface
 //// 
 ////-----------------------------------------------------------------------------
 //enum class FIELD_STATE : int
@@ -721,14 +721,11 @@ namespace CGDK
 //};
 //
 //template <int ICOUNT>
-//class VAR<char16_t[ICOUNT]> : public IValue
 //{
 //public:
-//	using TYPE = char16_t*;
 //public:
 //	VAR() noexcept : IValue(), m_value() { m_value[0] = L'\0'; }
 //public:
-//	VAR<char16_t[ICOUNT]>& operator=(const char16_t* _rhs)
 //	{
 //		//if(m_value!=_rhs) 
 //		{
@@ -744,7 +741,6 @@ namespace CGDK
 //	}
 //
 //	template<size_t IICOUNT>
-//	VAR<char16_t[ICOUNT]>& operator=(const char16_t(&_rhs)[IICOUNT])
 //	{
 //		//if(m_value!=_rhs) 
 //		{
@@ -759,18 +755,14 @@ namespace CGDK
 //	}
 //
 //	//template <int IDEST_COUNT, int IDEST_INDEX>
-//	//VAR<char16_t[ICOUNT]>& operator=(const VAR<char16_t[IDEST_COUNT], IDEST_INDEX>& _rhs)	{	/*if(m_value!=_rhs)*/ {m_value=_rhs; m_state.iState=FIELD_STATE::UPDATE;} /*else ;*/ return *this;}
 //
-//	operator const char16_t*() const noexcept { return m_value; }
 //	operator const FIELD&() const noexcept { return m_state; }
 //
-//	const char16_t*		get() const noexcept { return m_value; }
 //
 //	bool				IsNormal() const noexcept { return m_state.iState != FIELD_STATE::NORMAL; }
 //	FIELD_STATE			GetFieldState() const noexcept { return m_state.iState; }
 //
 //public:
-//			char16_t			m_value[ICOUNT];
 //
 //public:
 //	virtual	int					process_append(shared_buffer& _buffer, uint32_t _Condition) override
@@ -788,7 +780,6 @@ namespace CGDK
 //				if (_Condition & static_cast<uint32_t>(FIELD_STATE::UPDATE))
 //				{
 //					_buffer.append<FIELD>(m_state);
-//					_buffer.append<const char16_t*>(m_value);
 //					value = 1;
 //				}
 //				break;
@@ -797,7 +788,6 @@ namespace CGDK
 //				if (_Condition & static_cast<uint32_t>(FIELD_STATE::UPDATE))
 //				{
 //					_buffer.append<FIELD>(m_state);
-//					_buffer.append<const char16_t*>(m_value);
 //					value = 1;
 //				}
 //				break;
@@ -828,7 +818,6 @@ namespace CGDK
 //		case	FIELD_STATE::NONE:
 //		case	FIELD_STATE::NORMAL:
 //				{
-//					char16_t* pstring = _buffer.extract<char16_t*>();
 //					//wcscpy_s(m_value, ICOUNT, pstring);
 //					memcpy(m_value, pstring, ICOUNT * 2);
 //
@@ -837,7 +826,6 @@ namespace CGDK
 //
 //		case	FIELD_STATE::UPDATE:
 //				{
-//						char16_t* pstring = _buffer.extract< char16_t*>();
 //					//wcscpy_s(m_value, ICOUNT, pstring);
 //					memcpy(m_value, pstring, ICOUNT * 2);
 //				}

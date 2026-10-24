@@ -48,7 +48,8 @@ public:
 	[[nodiscard]] auto			get_reconnect_interval() const noexcept { return this->m_tick_reconnection_interval;}
 
 protected:
-			lockable<circular_list<net::sockaddr>> m_list_peer_adddress;
+	mutable	lock_object			m_lockable_list_peer_address;
+			circular_list<net::sockaddr> m_list_peer_address;
 			circular_list<net::sockaddr>::const_iterator m_iter_now_peer_address;
 
 			bool				m_enable_reconnect;
@@ -57,7 +58,7 @@ protected:
 			chrono::tick::time_point m_tick_disconnected;
 
 			bool				m_flag_reconnecting;
-			lockable<>			m_lockable_reconnector;
+	mutable	lock_object			m_lockable_reconnector;
 
 			friend class net::io::connective::connector::Ntcp;
 };

@@ -44,9 +44,6 @@ class net::socket::udp_resend :
 	public						net::io::receivable::Ndatagram,
 	public						net::io::messageable::Nbase
 {
-public:
-			udp_resend() {}
-			udp_resend(std::string_view _name) : net::io::binder::Nudp{ _name } {}
 };
 
 

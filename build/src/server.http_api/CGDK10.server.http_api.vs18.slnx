@@ -1,0 +1,20 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/windows/" Id="e930dcfb-ced3-4a8e-bb3e-b0f48257b2bd">
+    <Project Path="bank\CGDK10.server.http_api.bank.vs18.vcxproj" Id="22cebbde-7a00-4c72-9c57-803b50085849" />
+    <Project Path="kakao\CGDK10.server.http_api.kakao.vs18.vcxproj" Id="fe497e37-60af-45f5-8192-9281cb48cbdf" />
+    <Project Path="line\CGDK10.server.http_api.line.vs18.vcxproj" Id="24f279b8-d3c2-41b7-9e45-451e79c40768" />
+    <Project Path="naver\CGDK10.server.http_api.naver.vs18.vcxproj" Id="7946334a-e25d-42bf-a29b-2c1378d5e91e" />
+    <Project Path="apple\CGDK10.server.http_api.apple.vs18.vcxproj" Id="973d24ce-1811-4fd2-9d0e-9d260286bfb2" />
+    <Project Path="google\CGDK10.server.http_api.google.vs18.vcxproj" Id="c42be74d-0906-44b6-838c-692c0a470674" />
+  </Folder>
+  <Project Path="..\common\cgdk_info.shared.vcxitems" Id="f2b5df8c-26a7-4f26-bd80-933bb4870b0a" />
+  <Project Path="bank\CGDK10.server.http_api.bank.vcxitems" Id="b7fe28b5-9886-4c1d-a316-6c456d817258" />
+  <Project Path="kakao\CGDK10.server.http_api.kakao.vcxitems" Id="9992c880-7ab1-405e-bc12-2666252e95d7" />
+  <Project Path="line\CGDK10.server.http_api.line.vcxitems" Id="3f3b5fa9-cda7-49ea-840f-260834d180f2" />
+  <Project Path="naver\CGDK10.server.http_api.naver.vcxitems" Id="bafe9667-efd1-4259-b26a-2c05421a4d02" />
+  <Project Path="apple\CGDK10.server.http_api.apple.vcxitems" Id="bcc2a5e9-5174-4334-aff0-2582e8858200" />
+  <Project Path="google\CGDK10.server.http_api.google.vcxitems" Id="91a9b58c-de0e-455b-a276-2a2e2e06c616" />
+</Solution>

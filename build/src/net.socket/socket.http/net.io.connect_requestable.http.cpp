@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 
 using namespace CGDK;
 
@@ -18,37 +18,38 @@ bool net::io::connect_requestable::Nhttp::connect(const std::string_view _url)
 void net::io::connect_requestable::Nhttp::set_request(Ihttp_request* _prequest) noexcept
 {
 	// lock) 
-	std::lock_guard<lockable<>> cs(m_prequest);
+	std::lock_guard cs(this->m_lock_prequest);
 
 	// check)
-	CGASSERT_ERROR(m_prequest.empty());
+	CGASSERT_ERROR(this->m_prequest.empty());
 
 	// 1) set ssl context (m_flag == true -> set ssl_context, m_flag == false -> reset ssl_context)
-	prepare_ssl(_prequest->m_is_crypt);
+	prepare_ssl(_prequest->m_is_crypt, _prequest->m_host_name);
 
-	// 1) HTTPRequestê°ì²´ë¥¼ Set í•œë‹¤.
-	m_prequest = _prequest;
+	// 1) HTTPRequest°´Ã¼¸¦ Set ÇÑ´Ù.
+	this->m_prequest = _prequest;
 }
 void net::io::connect_requestable::Nhttp::reset_request() noexcept
 {
 	// lock) 
-	std::lock_guard<lockable<>> cs(m_prequest);
+	std::lock_guard cs(this->m_lock_prequest);
 
 	// check)
-	RETURN_IF(m_prequest.empty());
+	if(this->m_prequest.empty())
+		return;
 
 	// 1) reset Ihttp_request object
-	m_prequest.reset();
+	this->m_prequest.reset();
 
 	// 2) reset ssl context 
-	m_pssl_context.reset();
+	this->m_pssl_context.reset();
 }
 object_ptr<net::Ihttp_request> net::io::connect_requestable::Nhttp::move_request() noexcept
 {
 	// lock) 
-	std::lock_guard<lockable<>> cs(m_prequest);
+	std::lock_guard cs(this->m_lock_prequest);
 
-	return std::move(m_prequest);
+	return std::move(this->m_prequest);
 }
 
 bool net::io::connect_requestable::Nhttp::connect(Ihttp_request* _prequest)
@@ -57,43 +58,44 @@ bool net::io::connect_requestable::Nhttp::connect(Ihttp_request* _prequest)
 	CGASSERT_ERROR(_prequest != nullptr);
 
 	// check) _prequest must not be nullptr
-	THROW_IF(_prequest == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT));
+	if(_prequest == nullptr)
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
 	// check) check address validation.
 	CGASSERT_ERROR(_prequest->m_address_host.address().is_unspecified() == false);
 
 	// check) throw exception on invalid address
-	THROW_IF(_prequest->m_address_host.address().is_unspecified(), throwable::failure(eRESULT::INVALID_ARGUMENT));
+	if(_prequest->m_address_host.address().is_unspecified())
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
 	// declare) 
 	bool result = false;
 
 	try
 	{
-		// 1) HTTP Request ê°ì²´ë¥¼ Setí•œë‹¤.
+		// 1) HTTP Request °´Ã¼¸¦ SetÇÑ´Ù.
 		set_request(_prequest);
 
-		// 2) binderë¥¼ ë¨¼ì € ì–»ëŠ”ë‹¤.
+		// 2) binder¸¦ ¸ÕÀú ¾ò´Â´Ù.
 		auto pbinder = dynamic_cast<net::io::Ibinder*>(this);
 		
 		// 3) bind socket
 		if (pbinder != nullptr)
-		{
 			pbinder->bind();
-		}
 		
-		// 4) connectí•œë‹¤.
+		// 4) connectÇÑ´Ù.
 		result = process_request_connecting(_prequest->m_address_host);
 
 		// check) throw exception on failed
-		THROW_IF(result==false, throwable::failure(eRESULT::FAIL_TO_CONNECT))
+		if(result == false)
+			throw throwable::failure(eRESULT::FAIL_TO_CONNECT);
 	}
 	catch(...)
 	{
 		// - reset Ihttp_reques object
 		reset_request();
 
-		// - socketì„ ë‹«ëŠ”ë‹¤.
+		// - socketÀ» ´İ´Â´Ù.
 		closesocket();
 	}
 

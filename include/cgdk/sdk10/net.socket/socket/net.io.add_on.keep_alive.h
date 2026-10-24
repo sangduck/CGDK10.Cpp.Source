@@ -36,22 +36,19 @@ namespace CGDK
 //    2) stop_keep_alive()
 //        이 함수를 수행하면 keep Alive 동작을 중지한다.
 //    3) Ping을 날리게 되면 다시 돌아오는 Turn-Around-Time이 구해진다.
-//    4) Ping을 날리는 간격을 설정할수 있다.
+//    4) Ping을 날리는 간격을 설정할 수 있다.
 //
 //
 //-----------------------------------------------------------------------------
 class net::io::add_on::Nkeep_alive :
-// inherited classes)
 	virtual public				net::io::Isendable,
 	virtual	public				net::io::Ipacketable,
 	virtual	public				net::io::statistics::Nsocket
 {
-// constructor/destructor)
 protected:
 			Nkeep_alive() noexcept;
 	virtual ~Nkeep_alive() noexcept { stop_keep_alive();}
 
-// publics)
 public:
 			bool				start_keep_alive();
 			bool				stop_keep_alive() noexcept;
@@ -64,14 +61,11 @@ public:
 			void				time_out(chrono::tick::duration _tick) noexcept { this->m_nested.m_tick_timeout = _tick; }
 	[[nodiscard]] auto			time_out() const noexcept { return this->m_nested.m_tick_timeout;}
 
-// frameworks)
 private:
 	virtual	void				on_keep_alive_time_out();
 
-// implementation)
-private:
 	class	nested : 
-		public					Imessageable,
+		public					CGDK::Imessageable,
 		public					schedulable::Iexecutable
 	{
 	public:
@@ -90,11 +84,9 @@ private:
 	};
 	friend	nested;
 
-private:
 			OBJ<nested>			m_nested;
 			uint32_t			m_ping_key[2];
 
-private:
 			result_code			nested_process_message(sMESSAGE& _msg);
 			intptr_t			nested_update();
 

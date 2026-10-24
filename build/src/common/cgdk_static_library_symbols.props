@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Keep Release library symbols with their object files. Consumers can
+       generate executable PDBs without depending on a mutable compiler PDB. -->
+  <ItemDefinitionGroup Condition="'$(ConfigurationType)' == 'StaticLibrary' and '$(PlatformToolset)' == 'v143' and '$(Configuration)' == 'Release'">
+    <ClCompile>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

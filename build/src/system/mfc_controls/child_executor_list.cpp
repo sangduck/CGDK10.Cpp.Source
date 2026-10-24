@@ -2,6 +2,7 @@
 //
 
 #include "pch.h"
+#include <cinttypes>
 
 #if defined(_DEBUG) && !defined(NDEBUG)
 	#define new DEBUG_NEW
@@ -31,8 +32,8 @@ void CChild_executor_list::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(CChild_executor_list, CChildDialog)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_LIST_THREAD, OnLvnItemchangedListExecutor)
-	//ON_BN_CLICKED(IDC_BUTTON_FORCE_EXCEPTION, &CChild_executor_list::OnBnClickedForceException)
-	//ON_BN_CLICKED(IDC_BUTTON_SNAP_DUMP, &CChild_executor_list::OnBnClickedSnapDump)
+	ON_BN_CLICKED(IDC_BUTTON_FORCE_EXCEPTION, &CChild_executor_list::OnBnClickedForceException)
+	ON_BN_CLICKED(IDC_BUTTON_SNAP_DUMP, &CChild_executor_list::OnBnClickedSnapDump)
 	ON_WM_TIMER()
 	ON_WM_ENABLE()
 	ON_WM_DESTROY()
@@ -152,7 +153,7 @@ void CChild_executor_list::OnEnable(BOOL _is_enable)
 	// 1) control 버튼
 	GetDlgItem(IDC_BUTTON_FORCE_EXCEPTION)->EnableWindow(_is_enable & m_is_enable_control);
 
-	// 2) executor 갯수
+	// 2) executor 개수
 	GetDlgItem(IDC_STATIC_T1)->EnableWindow(_is_enable);
 	GetDlgItem(IDC_STATIC_THREAD_COUNT)->EnableWindow(_is_enable);
 
@@ -171,14 +172,16 @@ void CChild_executor_list::OnDestroy()
 
 void CChild_executor_list::SetExecutorManager(executor::manager* _pexecutor_manager)
 {
-	// 1) executor Manager를 설정한다.
-	scoped_lock(m_lockable_manager_executor)
 	{
+		// lock)
+		std::lock_guard lock(m_lockable_manager_executor);
+
+		// 1) executor Manager를 설정한다.
 		m_pmanager_executor = _pexecutor_manager;
 	}
 
 	// 2) Update한다.
-	if(m_hWnd!=nullptr)
+	if(m_hWnd != nullptr)
 	{
 		PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);
 	}
@@ -186,10 +189,11 @@ void CChild_executor_list::SetExecutorManager(executor::manager* _pexecutor_mana
 
 void CChild_executor_list::ClearExecutorList()
 {
-	scoped_lock(m_lockable_manager_executor)
-	{
-		m_pmanager_executor.reset();
-	}
+	// lock)
+	std::lock_guard lock(m_lockable_manager_executor);
+
+	// 1) reset한다.
+	m_pmanager_executor.reset();
 }
 
 void CChild_executor_list::UpdateExecutorList()
@@ -197,7 +201,7 @@ void CChild_executor_list::UpdateExecutorList()
 	// check) 윈도우가 생성되어 있지 않으면 끝낸다.
 	RETURN_IF(m_hWnd == nullptr)
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 
@@ -208,8 +212,11 @@ void CChild_executor_list::UpdateExecutorList()
 	object_ptr<executor::manager> pmanager_executor;
 
 	// 1) executor Manager를 설정한다.
-	scoped_lock(m_lockable_manager_executor)
 	{
+		// lock) 
+		std::lock_guard lock(m_lockable_manager_executor);
+
+		// - set
 		pmanager_executor = m_pmanager_executor;
 	}
 
@@ -237,7 +244,7 @@ void CChild_executor_list::UpdateExecutorList()
 
 	auto tick_now = chrono::tick::now();
 
-	scoped_unique_lock(pmanager_executor->get_lockable())
+	SCOPED_UNIQUE_LOCK(pmanager_executor->get_lockable())
 	{
 		// 2) executor list Iterator의 begin과 end를 얻는다.
 		auto iter = pmanager_executor->begin();
@@ -283,7 +290,7 @@ void CChild_executor_list::UpdateExecutorList()
 		m_listctrl_executor.DeleteItem(index);
 	}
 
-	// 8) Thread의 갯수를 표시한다.
+	// 8) Thread의 개수를 표시한다.
 	SetDlgItemInt(IDC_STATIC_THREAD_COUNT, static_cast<int>(pmanager_executor->size()));
 
 	// 9) Redraw On
@@ -326,7 +333,15 @@ void CChild_executor_list::UpdateExecutorList(int _index, chrono::tick::time_poi
 
 	// 1."type"
 	list_item.iSubItem = 1;
-	list_item.pszText = const_cast<TCHAR*>((pnameable !=nullptr) ? to_string<TCHAR>(pobject_identifiable->object_type()).data() : const_cast<LPWSTR>(TEXT("N/A")));
+	if (pnameable != nullptr)
+	{
+		wsprintf(text, TEXT("%hs"), to_string(pobject_identifiable->object_type()).data());
+		list_item.pszText = text;
+	}
+	else
+	{
+		list_item.pszText = const_cast<LPWSTR>(TEXT("N/A"));
+	}
 	m_listctrl_executor.SetItem(&list_item);
 
 	// - get statistics
@@ -336,7 +351,7 @@ void CChild_executor_list::UpdateExecutorList(int _index, chrono::tick::time_poi
 	list_item.iSubItem = 2;
 	if (statistics.now.thread_count != 0)
 	{
-		__sprintf(text, 1024, TEXT("%I64u"), statistics.now.thread_count);
+		std::swprintf(text, 1024, L"%" PRIu64, static_cast<uint64_t>(statistics.now.thread_count.load()));
 		list_item.pszText = text;
 	}
 	else
@@ -347,7 +362,7 @@ void CChild_executor_list::UpdateExecutorList(int _index, chrono::tick::time_poi
 	
 	// 3."executed"
 	list_item.iSubItem = 3;
-	__sprintf(text, 1024, TEXT("%I64u"), statistics.now.count_execute.load());
+	std::swprintf(text, 1024, L"%" PRIu64, static_cast<uint64_t>(statistics.now.count_execute.load()));
 	list_item.pszText = text;
 	m_listctrl_executor.SetItem(&list_item);
 
@@ -357,7 +372,7 @@ void CChild_executor_list::UpdateExecutorList(int _index, chrono::tick::time_poi
 
 	if (pqueue != nullptr)
 	{
-		__sprintf(text, 1024, TEXT("%I64u"), pqueue->pended_count());
+		std::swprintf(text, 1024, L"%" PRIu64, static_cast<uint64_t>(pqueue->pended_count()));
 		list_item.pszText = text;
 	}
 	else
@@ -408,11 +423,13 @@ void CChild_executor_list::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
-		RETURN_IF(IsWindowEnabled() == FALSE)
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
+		if(IsWindowEnabled() == FALSE)
+			return;
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
-		RETURN_IF(IsWindowVisible() == FALSE)
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
+		if(IsWindowVisible() == FALSE)
+			return;
 
 		UpdateExecutorList();
 	}
@@ -423,75 +440,74 @@ void CChild_executor_list::OnTimer(UINT_PTR nIDEvent)
 	CChildDialog::OnTimer(nIDEvent);
 }
 
-//void CChild_executor_list::OnBnClickedForceException()
-//{
-//	// declare) 
-//	object_ptr<api::manager_thread>	pmanager_executor;
-//
-//	// 1) Thread Manager를 설정한다.
-//	scoped_lock(m_lockable_manager_executor)
-//	{
-//		pmanager_executor	 = m_pmanager_executor;
-//	}
-//
-//	// check) 
-//	RETURN_IF(pmanager_executor.empty());
-//
-//	// 2) 선택된 것을 raise_exception한다.
-//	scoped_lock(*pmanager_executor)
-//	{
-//		POSITION	pos	 = m_listctrl_executor.GetFirstSelectedItemPosition();
-//		while(pos)
-//		{
-//			auto	nItem	 = m_listctrl_executor.GetNextSelectedItem(pos);
-//
-//			// 1) Connectable을 얻는다.
-//			auto	pexecutor	 = reinterpret_cast<Iexecutor*>(m_listctrl_executor.GetItemData(nItem));
-//
-//			// check) pConnectable이 nullptr일 수는 없다.
-//			CGASSERT_ERROR(pexecutor!=nullptr);
-//		
-//			// 2) Thread를 강재로 raise_exception한다.
-//			pexecutor->raise_exception();
-//		}
-//	}
-//}
-//
-//void CChild_executor_list::OnBnClickedSnapDump()
-//{
-//	//-----------------------------------------------------------------
-//	// 1. Save할 File이름 얻어오기
-//	//-----------------------------------------------------------------
-//	// declare) 
-//	INT_PTR		presult;
-//	TCHAR		tempFileName[MAX_STRING_LENGTH]	 = {NULL, };
-//
-//	CFileDialog	dlg(FALSE, TEXT("Save Dump"), NULL, OFN_OVERWRITEPROMPT | OFN_EXPLORER | OFN_ENABLESIZING | OFN_EXPLORER, TEXT("Dump File (*.dmp)|*.dmp|All Files (*.*)|*.*||"));
-//	dlg.m_ofn.lpstrTitle		= TEXT("Save Dump");
-//	dlg.m_ofn.lpstrFile			= tempFileName;
-//
-//	// 2) Do Modal해서 창을 띄운다.
-//	presult	 = dlg.DoModal();
-//
-//	// check) IDOK가 아니면 그냥 끝낸다.
-//	RETURN_IF(presult!=IDOK);
-//
-//
-//	//-----------------------------------------------------------------
-//	// 2. Dump를 남긴다.
-//	//-----------------------------------------------------------------
-//	// declare) 
-//	bool	bResult;
-//
-//	// 1) Dump를 남긴다.
-//	bResult	 = CGException::snap_dump(tempFileName);
-//
-//	// check) 
-//	if(bResult==false)
-//	{
-//		AfxMessageBox(TEXT("Fail to snap Mini dump"), MB_OK);
-//	}
-//}
+void CChild_executor_list::OnBnClickedForceException()
+{
+	// declare) 
+	object_ptr<executor::manager> pmanager_executor;
+
+	// 1) Thread Manager를 설정한다.
+	SCOPED_LOCK(m_lockable_manager_executor)
+	{
+		pmanager_executor = m_pmanager_executor;
+	}
+
+	// check) 
+	RETURN_IF(pmanager_executor.empty());
+
+	// 2) 선택된 것을 force_raise_exception한다.
+	SCOPED_LOCK(pmanager_executor->get_lockable())
+	{
+		POSITION pos = m_listctrl_executor.GetFirstSelectedItemPosition();
+		while(pos)
+		{
+			auto nItem = this->m_listctrl_executor.GetNextSelectedItem(pos);
+
+			// 1) Connectable을 얻는다.
+			auto pexecutor = reinterpret_cast<Iexecutor*>(this->m_listctrl_executor.GetItemData(nItem));
+
+			// check) pConnectable이 nullptr일 수는 없다.
+			CGASSERT_FATAL(pexecutor != nullptr);
+		
+			// 2) Thread를 강재로 force_raise_exception한다.
+			SCOPED_LOCK(pexecutor->get_lockable())
+			{
+				for (auto& iter : pexecutor->get_threads())
+					iter->force_raise_exception("Force raise exception");
+			}
+		}
+	}
+}
+
+void CChild_executor_list::OnBnClickedSnapDump()
+{
+	//-----------------------------------------------------------------
+	// 1. Save할 File이름 얻어오기
+	//-----------------------------------------------------------------
+	// declare) 
+	INT_PTR presult;
+	TCHAR tempFileName[MAX_STRING_LENGTH] {NULL, };
+
+	CFileDialog	dlg(FALSE, TEXT("Save Dump"), NULL, OFN_OVERWRITEPROMPT | OFN_EXPLORER | OFN_ENABLESIZING | OFN_EXPLORER, TEXT("Dump File (*.dmp)|*.dmp|All Files (*.*)|*.*||"));
+	dlg.m_ofn.lpstrTitle = TEXT("Save Dump");
+	dlg.m_ofn.lpstrFile = tempFileName;
+
+	// 2) Do Modal해서 창을 띄운다.
+	presult = dlg.DoModal();
+
+	// check) IDOK가 아니면 그냥 끝낸다.
+	if(presult!=IDOK)
+		return;
+	
+	//-----------------------------------------------------------------
+	// 1. Dump를 남긴다.
+	//-----------------------------------------------------------------
+	// 1) Snap Dump를 남긴다.
+	auto result = CGDK::snap_dump(std::string(CT2A(tempFileName)));
+
+	// check) 
+	if(result==false)
+		AfxMessageBox(TEXT("Fail to snap Mini dump"), MB_OK);
+}
 
 
 }

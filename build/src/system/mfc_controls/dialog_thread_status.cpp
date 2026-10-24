@@ -11,7 +11,7 @@ IMPLEMENT_DYNAMIC(CDialog_thread_status, CDialogEx)
 
 CDialog_thread_status::CDialog_thread_status(api::manager_thread* _pthread_manager, executor::manager* _pexecutor_manager, system_executor* _pDefaultExecutor, CWnd* pnode_parent)
 	: CDialogEx(IDD_DIALOG_THREAD_STATUS, pnode_parent),
-	m_pmanager_thead(_pthread_manager),
+	m_pmanager_thread(_pthread_manager),
 	m_pmanager_executor(_pexecutor_manager),
 	m_pdefault_executor(_pDefaultExecutor)
 {
@@ -21,10 +21,11 @@ CDialog_thread_status::~CDialog_thread_status()
 {
 	try
 	{
-		scoped_lock(m_pmanager_thead)
-		{
-			CGASSERT_ERROR(m_pmanager_thead.empty());
-		}
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager_thread);
+
+		// check) 
+		CGASSERT_ERROR(m_pmanager_thread.empty());
 	}
 	catch(...)
 	{
@@ -55,13 +56,15 @@ END_MESSAGE_MAP()
 
 
 // CDialog_thread_status message handlers
-int	CDialog_thread_status::m_update_inverval = 2;
+int	CDialog_thread_status::m_update_interval = 2;
 
 BOOL CDialog_thread_status::CreateModaless(api::manager_thread* _pthread_manager, executor::manager* _pexecutor_manager, system_executor* _pDefaultExecutor, CWnd* _pparent)
 {
-	scoped_lock(m_pmanager_thead)
 	{
-		m_pmanager_thead = _pthread_manager;
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager_thread);
+
+		m_pmanager_thread = _pthread_manager;
 		m_pmanager_executor = _pexecutor_manager;
 		m_pdefault_executor = _pDefaultExecutor;
 	}
@@ -86,7 +89,7 @@ BOOL CDialog_thread_status::OnInitDialog()
 	// 1. control 초기화.
 	//-----------------------------------------------------------------
 	// 1) Thread List를 생성한다.
-	m_child_thread_list.CreateChild(m_pmanager_thead, this);
+	m_child_thread_list.CreateChild(m_pmanager_thread, this);
 	m_child_thread_list.Resize(0,0);
 	m_child_thread_list.Move(20, 90);
 
@@ -116,10 +119,10 @@ BOOL CDialog_thread_status::OnInitDialog()
 	// 2. start
 	//-----------------------------------------------------------------
 	// 1) Update Combo의 값을 설정하고 타이머를 설정한다.
-	m_combo_update_interval.SetCurSel(m_update_inverval);
+	m_combo_update_interval.SetCurSel(m_update_interval);
 
 	// 2) Timer를 설정한다.
-	SetUpdateInterval(m_update_inverval);
+	SetUpdateInterval(m_update_interval);
 
 	// 3) Thread Manager를 설정한다.
 	PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);
@@ -160,9 +163,11 @@ void CDialog_thread_status::OnBnClickedCancel()
 void CDialog_thread_status::SetManager(api::manager_thread* _pthread_manager, executor::manager* _pexecutor_manager, system_executor* _pDefaultExecutor)
 {
 	// 1) 설정한다.
-	scoped_lock(m_pmanager_thead)
 	{
-		m_pmanager_thead = _pthread_manager;
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager_thread);
+
+		m_pmanager_thread = _pthread_manager;
 		m_pmanager_executor = _pexecutor_manager;
 		m_pdefault_executor = _pDefaultExecutor;
 	}
@@ -191,11 +196,13 @@ void CDialog_thread_status::UpdateThreadStatus()
 	size_t countSingleExecution = 0;
 
 	// 1) 값 얻기
-	scoped_lock(m_pmanager_thead)
 	{
-		if(m_pmanager_thead.exist())
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager_thread);
+
+		if(m_pmanager_thread.exist())
 		{
-			countThread = m_pmanager_thead->size();
+			countThread = m_pmanager_thread->size();
 		}	
 
 		if(m_pmanager_executor.exist())
@@ -251,10 +258,10 @@ void CDialog_thread_status::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// - 상태를 Update한다.
@@ -267,10 +274,10 @@ void CDialog_thread_status::OnTimer(UINT_PTR nIDEvent)
 void CDialog_thread_status::SetUpdateInterval(int _interval)
 {
 	// 1) Interval 값을 저장한다.
-	m_update_inverval	 = _interval;
+	m_update_interval = _interval;
 
 	// 2) Interval에 따라 Timer를 설정한다.
-	switch(m_update_inverval)
+	switch(m_update_interval)
 	{
 	// No Update
 	case	0:
@@ -346,13 +353,15 @@ void CDialog_thread_status::OnActivate(UINT nState, CWnd* pwnd_other, BOOL bMini
 	CDialogEx::OnActivate(nState, pwnd_other, bMinimized);
 
 	// 1) Connective를 List에 다시 추가한다.
-	scoped_lock(m_pmanager_thead)
 	{
-		SetManager(m_pmanager_thead, m_pmanager_executor, m_pdefault_executor);
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager_thread);
+
+		SetManager(m_pmanager_thread, m_pmanager_executor, m_pdefault_executor);
 	}
 
 	// 2) Timer를 설정한다.
-	SetUpdateInterval(m_update_inverval);
+	SetUpdateInterval(m_update_interval);
 
 	// 3) Update한다.
 	PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);
@@ -372,9 +381,11 @@ void CDialog_thread_status::OnDestroy()
 	KillTimer(0);
 
 	// 3) Thread Manager를 reset한다.
-	scoped_lock(m_pmanager_thead)
 	{
-		m_pmanager_thead.reset();
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager_thread);
+
+		m_pmanager_thread.reset();
 		m_pmanager_executor.reset();
 		m_pdefault_executor	 = nullptr;
 	}

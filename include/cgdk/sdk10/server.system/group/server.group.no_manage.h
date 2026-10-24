@@ -44,7 +44,7 @@ public:
 public:
 			void				lock_member_enter() noexcept { Ireferenceable::add_ref(); m_lockable_enter.lock();}
 			void				unlock_member_enter() noexcept { m_lockable_enter.unlock(); Ireferenceable::release();}
-	[[nodiscard]] lockable<>&	member_enter_lock() noexcept { return m_lockable_enter;}
+	[[nodiscard]] lock_object&	member_enter_lock() noexcept { return m_lockable_enter;}
 
 protected:
 	virtual	void				on_enable_enter () {}
@@ -69,7 +69,7 @@ private:
 
 private:
 			bool				m_enable_enter;
-			lockable<>			m_lockable_enter;
+	mutable	lock_object			m_lockable_enter;
 };
 
 

@@ -20,18 +20,12 @@
 
 //----------------------------------------------------------------------------
 //
-//  1) windows -> oledb, odbc
+//  1) windows -> odbc
 //  2) linux   -> odbc only
 //
 //----------------------------------------------------------------------------
 #if defined(_MSC_VER)
-	#if defined (_USE_ODBC)
-		#include "cgdk/sdk10/server.query.rdb.odbc.h"
-	#elif defined(_USE_OLEDB)
-		#include "cgdk/sdk10/server.query.rdb.oledb.h"
-	#else
-		#include "cgdk/sdk10/server.query.rdb.oledb.h"
-	#endif
+	#include "cgdk/sdk10/server.query.rdb.odbc.h"
 #elif defined(__ANDROID__)
 	#include "cgdk/sdk10/server.query.rdb.odbc.h"
 #elif defined(__APPLE__)

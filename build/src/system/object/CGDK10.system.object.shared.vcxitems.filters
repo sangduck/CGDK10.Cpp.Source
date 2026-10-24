@@ -25,35 +25,11 @@
     <Filter Include="rapid_json\internal">
       <UniqueIdentifier>{9d5e4c4f-3315-4b7b-9f69-d74b2a9dbe13}</UniqueIdentifier>
     </Filter>
-    <Filter Include="fmt">
-      <UniqueIdentifier>{43f8f3f1-4df7-4d3a-8304-97c19601c641}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="fmt\include">
-      <UniqueIdentifier>{27399e36-6987-4f60-8869-aa26681ff810}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="fmt\src">
-      <UniqueIdentifier>{83e05bbe-c84d-4df0-a100-95c5da3b9d08}</UniqueIdentifier>
-    </Filter>
     <Filter Include="util">
       <UniqueIdentifier>{746b85d9-39a4-4378-9953-e3a027deb6e8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="util\compression">
-      <UniqueIdentifier>{de951504-a823-4a51-8545-33805826165e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="util\compression\zlib">
-      <UniqueIdentifier>{de502351-257d-4d1d-b5fa-554caabdd3a6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="util\cryption">
-      <UniqueIdentifier>{0c3bef70-0360-4807-b177-1d934d25ffbf}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="util\edc">
-      <UniqueIdentifier>{b8b26d51-eb65-4882-a8fa-cbec2e2563af}</UniqueIdentifier>
-    </Filter>
     <Filter Include="util\etc">
       <UniqueIdentifier>{6d3ddd8e-3799-4258-baa9-cd653b9dfbdc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="util\compression\zlib\header files">
-      <UniqueIdentifier>{663dd707-1eb5-4189-80b0-b05b5b392b96}</UniqueIdentifier>
     </Filter>
     <Filter Include="factory">
       <UniqueIdentifier>{064d6116-6537-4407-b038-f7a7dba17bd6}</UniqueIdentifier>
@@ -112,6 +88,27 @@
     <Filter Include="execution\schedulable">
       <UniqueIdentifier>{c94757cc-7490-4427-b8b5-9513cd9c37ad}</UniqueIdentifier>
     </Filter>
+    <Filter Include="execution\coroutine">
+      <UniqueIdentifier>{3f6c2a51-8d47-4e0b-9a1c-6b2e7d4f8c03}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util\endcode">
+      <UniqueIdentifier>{ef8fdc36-b9dd-415c-ac97-2777fffb329c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util\endcode\edc">
+      <UniqueIdentifier>{b8b26d51-eb65-4882-a8fa-cbec2e2563af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util\endcode\compression">
+      <UniqueIdentifier>{de951504-a823-4a51-8545-33805826165e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util\endcode\cryption">
+      <UniqueIdentifier>{0c3bef70-0360-4807-b177-1d934d25ffbf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="class">
+      <UniqueIdentifier>{249ff530-4f3b-4357-a67a-a1af2874db26}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="object\context">
+      <UniqueIdentifier>{548c74a9-6ef9-4ca2-b648-64dcf7fb8fe2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)api.file.cpp">
@@ -165,9 +162,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)throwable.cpp">
       <Filter>execution</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)context.cpp">
-      <Filter>object</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)api.file.linux.cpp">
       <Filter>api</Filter>
     </ClCompile>
@@ -187,61 +181,16 @@
       <Filter>api</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)util.edc.md5.cpp">
-      <Filter>util\edc</Filter>
+      <Filter>util\endcode\edc</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)util.edc.check_sum.cpp">
-      <Filter>util\edc</Filter>
+      <Filter>util\endcode\edc</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)util.edc.crc.cpp">
-      <Filter>util\edc</Filter>
+      <Filter>util\endcode\edc</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)util.compress_zip.cpp">
-      <Filter>util\compression</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\adler32.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\compress.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\crc32.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\deflate.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\gzclose.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\gzlib.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\gzread.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\gzwrite.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\infback.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\inffast.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\inflate.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\inftrees.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\trees.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\uncompr.c">
-      <Filter>util\compression\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)zlib\zutil.c">
-      <Filter>util\compression\zlib</Filter>
+      <Filter>util\endcode\compression</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)schedulable.Iexecutable.cpp">
       <Filter>execution\schedulable</Filter>
@@ -282,17 +231,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)api.queue_executable.cpp">
       <Filter>api</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)util.crypt.base64.cpp">
-      <Filter>util\cryption</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)executor.io_context.cpp">
       <Filter>execution\executor</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\src\format.cc">
-      <Filter>fmt\src</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\src\os.cc">
-      <Filter>fmt\src</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Ilogger.cpp">
       <Filter>log</Filter>
@@ -305,6 +245,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)executor_system.cpp">
       <Filter>execution\executor</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)coroutine.cpp">
+      <Filter>execution\coroutine</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Nmessage_transmitter.cpp">
       <Filter>object\message</Filter>
@@ -357,10 +300,10 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)definitions.string_function.cpp">
       <Filter>definitions</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)api.file.windows_native.cpp">
-      <Filter>api</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)string_functions.cpp">
+      <Filter>definitions</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)api.io_context.epoll.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)api.file.windows_native.cpp">
       <Filter>api</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)api.io_context.iocp_direct.cpp">
@@ -387,41 +330,60 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)executor.strand.cpp">
       <Filter>execution\executor</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)log.record.process.cpp">
+      <Filter>log</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)executor.queue_list_threads.cpp">
+      <Filter>execution\executor</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)api.io_context.epoll_direct.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)api.io_context.uring.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)api.io_context.uring_cq.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)api.io_context.epoll_queued.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)api.io_context.Nepoll.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)factory.manager.print.cpp">
+      <Filter>factory</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)definitions.admin.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Ireferenceable.cpp">
+      <Filter>object\object creation</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)chrono.cpp">
+      <Filter>chrono</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)factory.manager.print_sub.cpp">
+      <Filter>factory</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)signal_handler.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)util.base64.cpp">
+      <Filter>util\endcode\cryption</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)allocator_manager.cpp">
+      <Filter>class</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)log_source.cpp">
+      <Filter>log</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)context.json.cpp">
+      <Filter>object\context</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)context.cpp">
+      <Filter>object\context</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)zlib\crc32.h">
-      <Filter>util\compression\zlib\header files</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)zlib\deflate.h">
-      <Filter>util\compression\zlib\header files</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)zlib\gzguts.h">
-      <Filter>util\compression\zlib\header files</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)zlib\inffast.h">
-      <Filter>util\compression\zlib\header files</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)zlib\inffixed.h">
-      <Filter>util\compression\zlib\header files</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)zlib\inflate.h">
-      <Filter>util\compression\zlib\header files</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)zlib\inftrees.h">
-      <Filter>util\compression\zlib\header files</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)zlib\trees.h">
-      <Filter>util\compression\zlib\header files</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)zlib\zconf.h">
-      <Filter>util\compression\zlib\header files</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)zlib\zlib.h">
-      <Filter>util\compression\zlib\header files</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)zlib\zutil.h">
-      <Filter>util\compression\zlib\header files</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)TLOG_RECORD.h">
       <Filter>log</Filter>
     </ClInclude>
@@ -473,9 +435,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\executable.h">
       <Filter>execution\executable</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\executable.list.h">
-      <Filter>execution\executable</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\executor.Iio_context.h">
       <Filter>execution\executor</Filter>
     </ClInclude>
@@ -483,9 +442,6 @@
       <Filter>execution\executor</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\executor.Iqueue.h">
-      <Filter>execution\executor</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\executor.list.h">
       <Filter>execution\executor</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\executor.list_priority.h">
@@ -502,6 +458,24 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\executor_system.h">
       <Filter>execution\executor</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\definitions.coroutine.h">
+      <Filter>execution\coroutine</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\coroutine.task.h">
+      <Filter>execution\coroutine</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\coroutine.post.h">
+      <Filter>execution\coroutine</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\coroutine.function.h">
+      <Filter>execution\coroutine</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\coroutine.sleep.h">
+      <Filter>execution\coroutine</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\coroutine.async_result.h">
+      <Filter>execution\coroutine</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\dump_manager.h">
       <Filter>execution\dump</Filter>
@@ -546,9 +520,6 @@
       <Filter>factory</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\factory.object.h">
-      <Filter>factory</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\factory.object.pool.h">
       <Filter>factory</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\factory.object.pool_tls.h">
@@ -621,64 +592,22 @@
       <Filter>updatable</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.compress.h">
-      <Filter>util\compression</Filter>
+      <Filter>util\endcode\compression</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.Icryptable.h">
-      <Filter>util\cryption</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.crypt.base64.h">
-      <Filter>util\cryption</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.cpu_feature.h">
+      <Filter>util\etc</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.edc.md5.h">
-      <Filter>util\edc</Filter>
+      <Filter>util\endcode\edc</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.edc.crc.h">
-      <Filter>util\edc</Filter>
+      <Filter>util\endcode\edc</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.edc.check_sum.h">
-      <Filter>util\edc</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.Icrypt.h">
-      <Filter>util\cryption</Filter>
+      <Filter>util\endcode\edc</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.query_performance.h">
       <Filter>util\etc</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\chrono.h">
-      <Filter>fmt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\color.h">
-      <Filter>fmt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\compile.h">
-      <Filter>fmt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\core.h">
-      <Filter>fmt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\format.h">
-      <Filter>fmt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\format-inl.h">
-      <Filter>fmt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\locale.h">
-      <Filter>fmt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\os.h">
-      <Filter>fmt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\ostream.h">
-      <Filter>fmt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\posix.h">
-      <Filter>fmt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\printf.h">
-      <Filter>fmt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\fmt\ranges.h">
-      <Filter>fmt\include</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\Nmessageable.h">
       <Filter>object\message</Filter>
@@ -751,9 +680,6 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\Idisposable.h">
       <Filter>object\object creation</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\object.Nattachable.h">
-      <Filter>object\object hierarchy</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\own_ptr.h">
       <Filter>object\object creation</Filter>
@@ -957,9 +883,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\definitions.string_function.h">
       <Filter>definitions</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\api.io_context.epoll.h">
-      <Filter>api</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\api.io_context.iocp_direct.h">
       <Filter>api</Filter>
     </ClInclude>
@@ -971,9 +894,6 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\api.io_context.Niocp.h">
       <Filter>api</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\context.h">
-      <Filter>object</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\object.Inameable.h">
       <Filter>object\object attribute</Filter>
@@ -1002,28 +922,71 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\Iserializable.h">
       <Filter>archive</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\non_copyable.h">
+      <Filter>object</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\system\object\definitions.admin.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\system\object\executor.queue_list_threads.h">
+      <Filter>execution\executor</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\api.io_context.epoll_direct.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\api.io_context.uring.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\api.io_context.uring_cq.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\api.io_context.epoll_queued.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)platform.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)signal_handler.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.base64.h">
+      <Filter>util\endcode\cryption</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.Ichecker.h">
+      <Filter>util\endcode</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.Icompressor.h">
+      <Filter>util\endcode</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.Icryptable.h">
+      <Filter>util\endcode</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\util.Icryptor.h">
+      <Filter>util\endcode</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\VALUE.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\executable.Iiterative.h">
+      <Filter>execution\executable</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\allocator_manager.h">
+      <Filter>class</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\system\object\log_source.h">
+      <Filter>log</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\context.h">
+      <Filter>object\context</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK10.C++\include\cgdk\sdk10\system\object\api.io_context.Nepoll.h">
+      <Filter>api</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)zlib\zlibvc.def">
-      <Filter>util\compression\zlib</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\executable.list.inl">
-      <Filter>execution\executable</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\executor.list.inl">
-      <Filter>execution\executor</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\schedulable.Nexecutable_list.inl">
       <Filter>execution\schedulable</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\factory.memory_block.inl">
       <Filter>factory</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="$(MSBuildThisFileDirectory)zlib\zlib.rc">
-      <Filter>util\compression\zlib</Filter>
-    </ResourceCompile>
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\executor.threads.inl">
+      <Filter>execution\executor</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\read_me.txt" />

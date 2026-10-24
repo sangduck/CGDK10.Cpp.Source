@@ -30,11 +30,12 @@ namespace CGDK
  @details	\n
  
 *///-----------------------------------------------------------------------------
-class executor::manager :
+class executor::manager:
 	public						object::Nnameable,
 	public						Nmessage_transmitter,
 	virtual public				object::Idestroyable,
-	public						factory::_traits_system
+	public						factory::_traits_system,
+	private						non_copyable
 {
 public:
 		using ITERATOR = circular_list<Iexecutor*>::iterator;
@@ -56,7 +57,7 @@ public:
 	[[nodiscard]] 				operator std::shared_mutex&() noexcept{ return this->m_lockable_list_executor;}
 	[[nodiscard]] 				operator const std::shared_mutex&() const noexcept{ return this->m_lockable_list_executor;}
 
-	static 	auto				instance() { if(m_s_pinstance.empty()) { initialize_instance(); } return object_ptr<manager>(m_s_pinstance); }
+	static 	auto				instance() { auto p = m_s_pinstance.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_s_pinstance.get_acquire(); } return object_ptr<manager>(p); }
 	static	void				initialize_instance();
 	static	void				set_instance(own_ptr<manager>&& _pinstance) noexcept;
 	static	void				reset_instance() noexcept;
@@ -72,7 +73,7 @@ private:
 
 			std::shared_mutex	m_lockable_list_executor;
 			circular_list<Iexecutor*> m_list_executor;
-			int					m_executor_serial;
+			int					m_executor_serial{ 0 };
 
 	static std::mutex			m_s_lockable_create;
 	static own_ptr<manager>		m_s_pinstance;

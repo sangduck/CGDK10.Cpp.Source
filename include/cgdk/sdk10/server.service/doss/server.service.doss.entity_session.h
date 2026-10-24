@@ -29,9 +29,13 @@ namespace CGDK
 template <class TSESSION>
 struct doss::sCOMMAND
 {
-	uint32_t		command = 0;
+	uint32_t		command{ 0 };
 	shared_buffer	buf_command;
 	object_ptr<TSESSION> psession;
+	chrono::time::utc::time_point time_request;
+	chrono::time::utc::time_point time_begin;
+	chrono::time::utc::time_point time_complete;
+	int				process{ 0 };
 };
 
 template <class TSESSION_ID = uint64_t>
@@ -41,12 +45,16 @@ struct doss::sSESSION
 
 	session_id_t	session_id{ 0 };
 	chrono::time::utc::time_point time_checkin;
+	chrono::time::utc::time_point time_last_request;
+	chrono::time::utc::time_point time_last_complete;
 
 	auto			get_session_id() const noexcept { return session_id; }
 	void			reset() noexcept
 	{
 		this->session_id = 0;
 		this->time_checkin = chrono::time::utc::time_point();
+		this->time_last_request = chrono::time::utc::time_point();
+		this->time_last_complete = chrono::time::utc::time_point();
 	}
 };
 

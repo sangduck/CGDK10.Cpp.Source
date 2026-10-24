@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -27,7 +27,7 @@ using namespace CGDK;
 
 //-----------------------------------------------------------------------------
 //
-// step 1) CGDK::Idestroyable, CGDK::Iinitializable, CGDK::Istartable ì¸í„°í˜ì´ìŠ¤
+// step 1) CGDK::Idestroyable, CGDK::Iinitializable, CGDK::Istartable ÀÎÅÍÆäÀÌ½º
 //
 // 
 // 
@@ -56,11 +56,11 @@ class goo : virtual public object::Iinitializable
 public:
 	virtual	result_code initialize(context& _context) override
 	{
-		// - param_1ê°’ì„ ì½ì–´ë‚¸ë‹¤.
+		// - param_1°ªÀ» ÀĞ¾î³½´Ù.
 		int			value_1 = _context["param_1"sv];
 		std::string value_2 = _context["param_2"sv];
 
-		// - paramê°’ì„ ì¶œë ¥í•œë‹¤.
+		// - param°ªÀ» Ãâ·ÂÇÑ´Ù.
 		std::cout << "initialized "  << value_1 << " " << value_2 << '\n';
 
 		// return)
@@ -81,11 +81,11 @@ class xoo : public goo, virtual public object::Istartable
 public:
 	virtual	result_code start(context& _context) override
 	{
-		// - param_1ê°’ì„ ì½ì–´ë‚¸ë‹¤.
+		// - param_1°ªÀ» ÀĞ¾î³½´Ù.
 		int			value_1 = _context["param_1"sv];
 		std::string value_2 = _context["param_2"sv];
 
-		// - paramê°’ì„ ì¶œë ¥í•œë‹¤.
+		// - param°ªÀ» Ãâ·ÂÇÑ´Ù.
 		std::cout << "stared "sv << value_1 << " "sv << value_2 << '\n';
 
 		// return)
@@ -105,41 +105,41 @@ void tutorial_object_interface_2_step_1_interfaces()
 {
 	// 1) Idestroyable
 	{
-		// - own_ptr<T>ë¥¼ ì‚¬ìš©í•˜ë©´ ê°ì²´ê°€ ì†Œë©¸ì‹œ destroy()í•¨ìˆ˜ë¥¼ ìë™ìœ¼ë¡œ ë¶ˆëŸ¬ì¤€ë‹¤.
+		// - own_ptr<T>¸¦ »ç¿ëÇÏ¸é °´Ã¼°¡ ¼Ò¸ê ½Ã destroy()ÇÔ¼ö¸¦ ÀÚµ¿À¸·Î ºÒ·¯ÁØ´Ù.
 		auto pobject = make_own<foo>();
 	}
 
 	// 2) Iinitializable
 	{
-		// - own_ptr<T>ë¥¼ ì‚¬ìš©í•´ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// - own_ptr<T>¸¦ »ç¿ëÇØ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pobject = make_own<goo>();
 
-		// * initializeì— ì „ë‹¬í•  contextë¥¼ ì„¤ì •í•œë‹¤.
+		// * initialize¿¡ Àü´ŞÇÒ context¸¦ ¼³Á¤ÇÑ´Ù.
 		context context_setting;
 		context_setting["param_1"sv] = 100;
 		context_setting["param_2"sv] = "hahaha"sv;
 
-		// * initializeë¥¼ í˜¸ì¶œí•œë‹¤.
+		// * initialize¸¦ È£ÃâÇÑ´Ù.
 		pobject->initialize(context_setting);
 
 	}
 
 	// 3) Iinitializable & Istartable
 	{
-		// - own_ptr<T>ë¥¼ ì‚¬ìš©í•´ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// - own_ptr<T>¸¦ »ç¿ëÇØ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pobject = make_own<xoo>();
 
-		// - initializeì— ì „ë‹¬í•  contextë¥¼ ì„¤ì •í•œë‹¤.
+		// - initialize¿¡ Àü´ŞÇÒ context¸¦ ¼³Á¤ÇÑ´Ù.
 		context context_setting;
 		context_setting["param_1"sv] = 100;
 		context_setting["param_2"sv] = "hahaha"sv;
 
-		// - initializeë¥¼ í˜¸ì¶œí•œë‹¤.
+		// - initialize¸¦ È£ÃâÇÑ´Ù.
 		pobject->initialize(context_setting);
 
-		// * startí•œë‹¤.
+		// * startÇÑ´Ù.
 		pobject->start(context_setting);
 
-		// *own_ptr<T>ëŠ” ì†Œë©¸ë  ë•Œ stopê³¼ destroyë¥¼ í˜¸ì¶œí•´ ì¤€ë‹¤.
+		// *own_ptr<T>´Â ¼Ò¸êµÉ ¶§ stop°ú destroy¸¦ È£ÃâÇØ ÁØ´Ù.
 	}
 }

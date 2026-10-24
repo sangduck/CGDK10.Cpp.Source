@@ -1,0 +1,13 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="log.01.logger_file\tutorial.server.logger_file.vs18.vcxproj" Id="1f505806-4528-4cc4-a016-07246b6135db" />
+  <Project Path="log.02.logger_console\tutorial.server.logger_console.vs18.vcxproj" Id="53f8974d-b0e3-4ee1-9aaa-9a7fd5a75757" />
+  <Project Path="log.03.logger_mfc\tutorial.server.logger.mfc.vs18.vcxproj" Id="f7ac3daf-ef81-4bfe-a937-efc6632e428d" />
+  <Project Path="log.04.log_filter\tutorial.server.log_filter.vs18.vcxproj" Id="a7a6e346-bfc7-46f6-bcaa-4b327b8f7fb4" />
+  <Project Path="log.05.logger_hierarchy\tutorial.server.logger_hierarchy.vs18.vcxproj" Id="39a94646-6003-4a7b-acff-0a4c78ce9e36" />
+  <Project Path="log.06.default_logger\tutorial.server.default_logger.vs18.vcxproj" Id="0a84d0eb-cd29-434b-96a9-76bb5d8d7e31" />
+  <Project Path="log.07.logger_slack\tutorial.server.logger_slack.vs18.vcxproj" Id="a1909a56-2fe3-487d-a55b-3bbd663ee7e2" />
+  <Project Path="log.ex01.logger_archive\tutorial.server.logger_archive.vs18.vcxproj" Id="77f5cafb-947a-42cc-8a55-b03d3957052a" />
+</Solution>

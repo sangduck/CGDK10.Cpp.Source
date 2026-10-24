@@ -22,9 +22,11 @@ namespace CGDK
 {
 namespace server_system
 {
+namespace admin_info
+{
 // ----------------------------------------------------------------------------
 //
-// server_admin
+// server_system
 //
 // 1. 
 //    1) 
@@ -32,19 +34,20 @@ namespace server_system
 //
 //
 // ----------------------------------------------------------------------------
-class admin_info::binder
+class binder
 {
 // constructor/destructor)
 public:
 			binder();
-	virtual ~binder();
+	virtual ~binder() noexcept;
 
 // implementation)
 public:
-			server_admin::socket_info		m_socket_info;
-			server_admin::socket_status		m_socket_status;
+			server_system::socket_info m_socket_info;
+			server_system::socket_status m_socket_status;
 };
 
 
+}
 }
 }

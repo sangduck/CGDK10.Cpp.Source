@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  CGDK10 build/src : imported by every project under this directory (MSBuild Directory.Build.targets)
+
+  1) keeps the dlls copied by vcpkg (VcpkgApplocalDeps : libssl, libcrypto, gtest ...)
+     - the dlls copied by 'AppLocalFromInstalled' are not added to FileWrites. 'IncrementalClean' deletes them
+       when they were in the file list of a previous build (ex. a build without linking, vs17/vs18 projects sharing an output directory)
+       -> the executable does not run (missing dll)
+     - adds the files of $(IntDir)vcpkg.applocal.log (written by vcpkg when it copies) to FileWrites before 'IncrementalClean'
+-->
+<Project>
+  <Target Name="_CgdkKeepVcpkgAppLocalDlls" AfterTargets="AppLocalFromInstalled" BeforeTargets="IncrementalClean"
+          Condition="Exists('$(IntDir)vcpkg.applocal.log')">
+    <ReadLinesFromFile File="$(IntDir)vcpkg.applocal.log">
+      <Output TaskParameter="Lines" ItemName="_CgdkVcpkgAppLocalFiles" />
+    </ReadLinesFromFile>
+    <ItemGroup>
+      <FileWrites Include="@(_CgdkVcpkgAppLocalFiles)" Condition="Exists('%(_CgdkVcpkgAppLocalFiles.Identity)')" />
+    </ItemGroup>
+  </Target>
+</Project>

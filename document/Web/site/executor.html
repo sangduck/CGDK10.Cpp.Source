@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Executor system · CGDK10 기술 문서</title>
+<meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - 소스 기준 기술 설명·빌드·릴리즈 노트">
+<link rel="icon" href="assets/CGCII_logo.PNG">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
+  <div class="ver">Game Server Engine</div>
+  <ul>
+    <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
+    <li class="sub"><a href="executor.html" class="cur"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
+    <li class="sub"><a href="pool.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Pool system</a></li>
+    <li class="sub"><a href="object.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l6 3v7l-6 3-6-3v-7z"/><path d="M2 4.5l6 3 6-3M8 7.5v7"/></svg>Object system</a></li>
+    <li class="sub"><a href="log.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h6l3 3v10H4z"/><path d="M6.5 8h4M6.5 10.5h4M6.5 5.5h2"/></svg>Log system</a></li>
+    <li class="sub"><a href="socket.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1.5v3.5M10 1.5v3.5"/><path d="M3.5 5h9v3.5a4.5 4.5 0 0 1-9 0z"/><path d="M8 13v1.5"/></svg>Socket system</a></li>
+    <li class="sub"><a href="socket.io_uring.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 1.5L3.5 9h4.5l-1 5.5L12.5 7H8z"/></svg>io_uring</a></li>
+    <li class="sub"><a href="socket.uds.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.6-1.6a2.8 2.8 0 0 1 4 4L11 8.5"/><path d="M9 11.5l-1.6 1.6a2.8 2.8 0 0 1-4-4L5 7.5"/></svg>UDS (같은 host 접속)</a></li>
+    <li class="sub"><a href="socket.send.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 1.5L7 9"/><path d="M14.5 1.5l-4.5 13-2.2-5.3L2.5 6z"/></svg>send 최적화</a></li>
+    <li class="sub"><a href="socket.recv.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9.5v4h12v-4"/><path d="M8 2v8M5 7.5l3 3 3-3"/></svg>Receive 최적화</a></li>
+    <li class="sub"><a href="p2p.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="8" cy="12" r="2"/><path d="M5.6 5.2l1.6 5.2M10.4 5.2l-1.6 5.2M6 4h4"/></svg>P2P system</a></li>
+    <li class="sub"><a href="update.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5V5.2h-2.7"/></svg>Update system</a></li>
+    <li class="sub"><a href="server.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="4.5" rx="1"/><rect x="2" y="9.5" width="12" height="4.5" rx="1"/><path d="M4.5 4.25h.01M4.5 11.75h.01"/></svg>Server system</a></li>
+    <li class="sub"><a href="group.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 2.8a2.3 2.3 0 0 1 0 4.4M13.5 14c0-1.8-1-3.1-2.5-3.6"/></svg>Group system</a></li>
+    <li class="sub"><a href="query.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Query system</a></li>
+    <li class="head"><a href="build.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-3.8 3.8L2.8 12.2a1.4 1.4 0 0 0 2 2l5.9-3.9a3 3 0 0 0 3.8-3.8l-2 2-2-2z"/></svg>빌드 · 플랫폼</a></li>
+    <li class="head"><a href="tests.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5.5 8.2l2 2 3.2-4"/></svg>단위 테스트 · CI</a></li>
+    <li class="head"><a href="benchmarks.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V9M8 13.5V4M13 13.5V7"/><path d="M1.5 13.5h13"/></svg>벤치마크</a></li>
+    <li class="sub"><a href="benchmarks.push.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4 3 3 6-6"/><path d="M10.5 5.5h4v4"/></svg>큰 묶음 push 처리량</a></li>
+    <li class="sub"><a href="benchmarks.cork.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h8M2 11.5h5"/><path d="M12 9.5l2 2-2 2"/></svg>send cork · 서버 push</a></li>
+    <li class="head"><a href="samples.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4"/></svg>예제 · 튜토리얼</a></li>
+    <li class="head"><a href="releases.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h5.5l6.5 6.5-5.5 5.5L2 8z"/><circle cx="5.2" cy="5.2" r=".9"/></svg>릴리즈 노트</a></li>
+    <li class="head"><a href="status.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3M8 11.5h.01"/></svg>미구현 · 알려진 문제</a></li>
+  </ul>
+</aside>
+<main>
+<h1 id="executor">Executor system <small>system/object/executor.*, executable.*, schedulable.*, api.io_context.*</small></h1>
+<h3>인터페이스</h3>
+<ul>
+  <li><code>Iexecutor</code> — <code>post(object_ptr&lt;Iexecutable&gt;)</code>, <code>execute(tick_duration, option)</code>, <code>thread_blocked() / thread_unblocked()</code>, <code>statistics()</code>. 코루틴이 켜지면(<code>__cpp_impl_coroutine</code>) <code>post(callable[, on_complete])</code> / <code>execute(callable)</code> 이 <code>coroutine::task</code> 와 람다를 받으며, 소유자 <code>Ireferenceable*</code> 를 붙일 수 있다. executor 자체를 소유자로 넘기면 컴파일 오류.</li>
+  <li><code>Iexecutable</code> — 가상 함수 하나 <code>intptr_t process_execute(intptr_t result, size_t param)</code>. <code>make_executable(lambda)</code> / <code>make_executable(this, &amp;fn, args...)</code>(<code>executable.make.h</code>).</li>
+</ul>
+<h3>system_executor (정적 싱글턴)</h3>
+<ul>
+  <li><code>initialize_instance(int threads = CGEXECUTOR_AUTO)</code> 또는 <code>initialize_instance(context&amp;)</code>(키 <code>"thread_count"</code>, <code>"enable_thread_observer"</code>), <code>destroy_instance()</code>, <code>run_executor()</code>.</li>
+  <li><code>executor()</code>(<code>Iio_context</code>), <code>scheduler()</code>, <code>schedulable_manager()</code>.</li>
+  <li><code>post(exec)</code>, <code>post(exec, tick::time_point)</code>, <code>post(exec, tick::duration)</code>(<code>scheduler()-&gt;post_at</code> 경유).</li>
+  <li>반복 작업 <code>register_schedulable() / unregister_schedulable()</code>. 종료 훅 <code>register_destroy_handler(name, fn)</code> — 정상 destroy 때만 등록 역순으로 1회.</li>
+  <li><code>start_factory_garbage_collection()</code>(풀 GC 스케줄), <code>start_thread_observer()</code>(<code>schedulable::system::exception_observer</code> 워치독).</li>
+</ul>
+<h3>구현체 (<code>executor::</code>)</h3>
+<table>
+<tr><th>클래스</th><th>설명</th></tr>
+<tr><td><code>io_context</code></td><td>Linux <code>api::io_context_Nepoll</code>, Windows <code>api::io_context_Niocp</code> 를 감싼다</td></tr>
+<tr><td><code>io_context_threads</code></td><td>자체 thread 풀. thread 가 블로킹되면 추가 thread 자동 확장. <code>START_PARAMETER{int thread_count; int cpu_affinity = -1;}</code>(context 키 <code>"cpu_affinity"</code>). <code>make_io_context_threads(name, n[, cpu_affinity])</code></td></tr>
+<tr><td><code>queue_list</code>, <code>queue_list_threads</code></td><td>큐 기반. <code>START_PARAMETER{int thread_count;}</code></td></tr>
+<tr><td><code>list_priority</code></td><td>우선순위 리스트</td></tr>
+<tr><td><code>scheduler</code></td><td>priority queue 타이머. 시간이 되면 다른 executor 로 넘김. <code>START_PARAMETER{object_ptr&lt;Iexecutor&gt; pexecutor;}</code></td></tr>
+<tr><td><code>strand</code></td><td>하위 executor 위에서 실행을 직렬화. <code>post_at</code> 지원. lock·wait 없는 비동기 처리용(r9654)</td></tr>
+<tr><td><code>manager</code></td><td>executor 등록·<code>print_statistics()</code></td></tr>
+</table>
+<p><code>schedulable::executable {tick::duration tick;}</code>, <code>schedulable::executable_function&lt;F&gt; {F function; tick::duration tick;}</code> 로 주기 실행을 등록한다.</p>
+<h3>i/o 백엔드</h3>
+<ul>
+  <li><code>executor::io_backend {epoll, io_uring}</code>, <code>set_default_io_backend()</code>, <code>default_io_backend()</code>, <code>is_io_uring_available()</code>(<code>executor.Iio_context.h</code>). Windows 는 항상 IOCP.</li>
+  <li>Linux 기본은 epoll. 환경변수 <code>CGDK_IO_URING=1</code>(true/on) 로 io_uring 선택. io_uring 은 raw syscall(<code>io_uring_setup/enter</code> + mmap, liburing 불필요)이고 <code>IORING_FEAT_EXT_ARG</code>, <code>IORING_POLL_ADD_MULTI</code>, <code>IORING_POLL_UPDATE_EVENTS</code> 가 필요(커널 5.13+). 불가 시 epoll fallback 후 로그.</li>
+  <li>io_uring 백엔드는 epoll 과 같은 준비 이벤트 의미: EPOLLONESHOT ↔ 1회 POLL_ADD, 재무장은 <code>IORING_POLL_UPDATE_EVENTS</code>, listen/UDP/post eventfd 는 multishot. worker thread 가 처리 중 모은 SQE 를 <code>pop_events()/flush_pending()</code> 에서 한 번의 <code>io_uring_enter</code> 로 제출. CQ 는 한 thread 가 소유(<code>m_lockable_cq</code>). 현재는 POLL_ADD 만 쓰므로 syscall 수는 epoll 과 같다(완료 모드는 남은 일).</li>
+  <li>그 밖의 백엔드 파일: <code>api.io_context.{epoll_direct, epoll_queued, iocp_direct, iocp_queued, rio}.h</code>.</li>
+  <li>thread affinity: <code>api::set_current_thread_affinity()</code>(pthread_setaffinity_np / SetThreadAffinityMask)를 <code>io_context_threads</code> thread 진입에서 호출. thread 는 <code>std::jthread</code> 기반 <code>api::thread / threads</code>.</li>
+</ul>
+<h3>코루틴</h3>
+<p><code>coroutine.task.h</code>, <code>coroutine.post.h</code>, <code>coroutine.sleep.h</code>, <code>coroutine.async_result.h</code>, <code>coroutine.function.h</code>. query 의 <code>co_execute_query</code>, doss 의 <code>co_checkin</code> 등이 이 위에서 동작한다.</p>
+<h3>통계</h3>
+<p><code>statistics::thread</code>(실행 수, 오류 수, 마지막 실행 tick, <code>is_executing</code>), <code>statistics::executor / unit_executor</code>(thread 수, 실행 수). <code>Ireferenceable::statistics_on_execute_elapsed_time()</code> 이 실행 시간을 객체의 팩터리로 되돌린다.</p>
+
+
+<footer>CGDK10 · 소스 기준 정리 (r11415, 2026-10-22) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+</main>
+</div>
+</body>
+</html>

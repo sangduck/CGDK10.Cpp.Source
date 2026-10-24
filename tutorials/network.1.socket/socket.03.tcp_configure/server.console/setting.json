@@ -14,20 +14,9 @@
   },
 
   "taz": {
-    "connection": {
-      "x1": {
-        "remote_endpoint": {
-          "address": "127.0.0.1",
-          "port": 22030
-        }
-      },
-
-      "x2": {
-        "remote_endpoint": {
-          "address": "127.0.0.1",
-          "port": 22040
-        }
-      }
+    "remote_endpoint": {
+      "address": "127.0.0.1",
+      "port": 22020
     }
   }
 }

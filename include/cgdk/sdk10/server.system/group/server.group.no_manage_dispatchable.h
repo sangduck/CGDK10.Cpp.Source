@@ -54,7 +54,7 @@ void group::no_manage_dispatchable<_TMEMBER, _TPARAM, _TMEMBERBASE>::_process_me
 	}
 	catch(...)
 	{
-		// - Unreigster 
+		// - Unregister 
 		_pmember->unregister_messageable(this);
 
 		// reraise) 

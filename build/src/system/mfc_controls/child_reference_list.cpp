@@ -135,7 +135,7 @@ void CChild_reference_list::OnEnable(BOOL is_enable)
 	// 1) Default
 	CChildDialog::OnEnable(is_enable);
 
-	// 2) Thread 갯수
+	// 2) Thread 개수
 	GetDlgItem(IDC_STATIC_T1)->EnableWindow(is_enable);
 	GetDlgItem(IDC_STATIC_T2)->EnableWindow(is_enable);
 	GetDlgItem(IDC_STATIC_REFERENCE_COUNT)->EnableWindow(is_enable);
@@ -156,8 +156,10 @@ void CChild_reference_list::OnDestroy()
 void CChild_reference_list::set_object(Ireferenceable* _object)
 {
 	// 1) Thread Manager를 설정한다.
-	scoped_lock(m_lockable_object)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_object);
+
 		m_pobject = _object;
 	}
 
@@ -170,10 +172,11 @@ void CChild_reference_list::set_object(Ireferenceable* _object)
 
 void CChild_reference_list::ClearReferenceList()
 {
-	scoped_lock(m_lockable_object)
-	{
-		m_pobject.reset();
-	}
+	// lock)
+	std::lock_guard lock(this->m_lockable_object);
+
+	// 1) reset한다.
+	m_pobject.reset();
 }
 
 void CChild_reference_list::UpdateReferenceList()
@@ -181,7 +184,7 @@ void CChild_reference_list::UpdateReferenceList()
 	// check) 윈도우가 생성되어 있지 않으면 끝낸다.
 	RETURN_IF(m_hWnd == nullptr)
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 
@@ -192,9 +195,11 @@ void CChild_reference_list::UpdateReferenceList()
 	object_ptr<Ireferenceable> pobject;
 
 	// 1) Thread Manager를 설정한다.
-	scoped_lock(m_lockable_object)
 	{
-		pobject	 = m_pobject;
+		// lock)
+		std::lock_guard lock(this->m_lockable_object);
+
+		pobject = m_pobject;
 	}
 
 
@@ -222,7 +227,7 @@ void CChild_reference_list::UpdateReferenceList()
 	int countReferenceCount = pobject->reference_count();
 	int countReferenceObject = 0;
 
-	// 9) Thread의 갯수를 표시한다.
+	// 9) Thread의 개수를 표시한다.
 	SetDlgItemInt(IDC_STATIC_REFERENCE_COUNT, countReferenceCount);
 	SetDlgItemInt(IDC_STATIC_REFERENCE_LIST_COUNT, countReferenceObject);
 
@@ -264,10 +269,10 @@ void CChild_reference_list::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		UpdateReferenceList();

@@ -37,12 +37,10 @@ namespace CGDK
 //
 //-----------------------------------------------------------------------------
 class net::io::binder::Ntcp :
-// inherited classes)
 	virtual public				net::io::Isocket,
 	virtual public				net::io::Ibinder,
 	virtual public				net::io::statistics::Nsocket
 {
-// publics)
 public:
 	virtual	bool				process_request_bind(const net::sockaddr& _address) override;
 	virtual	void				process_reset_binder() override {}

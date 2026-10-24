@@ -25,7 +25,7 @@ namespace CGDK
 // CChild_connective_connector_control
 //
 // 1. CChild_connective_connector_control란!
-//    1) Connective Connector의 기본 조작용 콘트롤
+//    1) Connective Connector의 기본 조작용 컨트롤
 // 
 // 
 //-----------------------------------------------------------------------------
@@ -62,7 +62,7 @@ public:
 			BOOL				CreateChild(net::io::connective::connector::Ntcp* _pconnective_connector=nullptr, CWnd* _pwnd=nullptr);
 
 			void				ConnectN(int p_n);
-			void				disconnect(uint64_t _disconnect_reason = DISCONNECT_REASON_NONE) noexcept;
+			void				disconnect(disconnect_reason_t _disconnect_reason = DISCONNECT_REASON_NONE) noexcept;
 			void				DisconnectAll();
 			void				SetConnectiveConnector(net::io::connective::connector::Ntcp* _pconnective_connector);
 
@@ -71,7 +71,8 @@ public:
 
 // implementation) 
 protected:
-			lockable<object_ptr<net::io::connective::connector::Ntcp>>	m_pconnectiveConnector;
+	mutable	lock_object			m_lockable_pconnectiveConnector;
+			object_ptr<net::io::connective::connector::Ntcp> m_pconnectiveConnector;
 		#ifdef _UNICODE
 			std::wstring		m_str_address;
 		#else

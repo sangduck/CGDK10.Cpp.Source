@@ -1,4 +1,4 @@
-﻿#include "cgdk/sdk10/server.service.doss.h"
+#include "cgdk/sdk10/server.service.doss.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -10,32 +10,31 @@ using namespace CGDK;
 class simple_repository : public CGDK::doss::repository::rdb<>
 {
 public:
-	explicit simple_repository(std::string_view _name) : CGDK::doss::repository::rdb<>(_name) {}
-
-public:
-	virtual	CGDK::result_code	on_request_checkin(CGDK::doss::Itransactable* _ptransactable)
+	// - the transaction handlers are coroutines : 'co_await' the db queries / other servers inside them,
+	//   set the result with _ptransactable->set_result() and 'co_return' the result code.
+	virtual	CGDK::coroutine::task<CGDK::result_code>	on_request_checkin(CGDK::object_ptr<CGDK::doss::Itransactable> _ptransactable) override
 	{
 		//std::cout << "[repository] on_checkin"sv << '\n';
 		_ptransactable->set_result(eRESULT::SUCCESS);
-		return eRESULT::SUCCESS;
+		co_return eRESULT::SUCCESS;
 	}
-	virtual	CGDK::result_code	on_request_checkout(CGDK::doss::Itransactable* _ptransactable)
+	virtual	CGDK::coroutine::task<CGDK::result_code>	on_request_checkout(CGDK::object_ptr<CGDK::doss::Itransactable> _ptransactable) override
 	{
 		//std::cout << "[repository] on_checkout"sv << '\n';
 		_ptransactable->set_result(eRESULT::SUCCESS);
-		return eRESULT::SUCCESS;
+		co_return eRESULT::SUCCESS;
 	}
-	virtual	CGDK::result_code	on_request_command(CGDK::doss::Itransactable* _ptransactable)
+	virtual	CGDK::coroutine::task<CGDK::result_code>	on_request_command(CGDK::object_ptr<CGDK::doss::Itransactable> _ptransactable) override
 	{
 		//std::cout << "[repository] on_transaction"sv << '\n';
 		_ptransactable->set_result(eRESULT::SUCCESS);
-		return eRESULT::SUCCESS;
+		co_return eRESULT::SUCCESS;
 	}
-	virtual	CGDK::result_code	on_request_update(CGDK::doss::Itransactable* _ptransactable)
+	virtual	CGDK::coroutine::task<CGDK::result_code>	on_request_update(CGDK::object_ptr<CGDK::doss::Itransactable> _ptransactable) override
 	{
 		//std::cout << "[repository] on_update"sv << '\n';
 		_ptransactable->set_result(eRESULT::SUCCESS);
-		return eRESULT::SUCCESS;
+		co_return eRESULT::SUCCESS;
 	}
 };
 
@@ -77,21 +76,27 @@ void print_status(doss::Nrepository<>* _prepository)
 int main()
 {
 	// 1) create repository
-	auto prepository = make_own<simple_repository>(std::string_view("test_repository"sv));
+	auto prepository = make_own<simple_repository>();
 
-	// 2) start repository
+	// 2) set name
+	prepository->name("test_repository"sv);
+
+	// 3) start repository
 	prepository->start();
 
-	// 3) create depot
-	auto pdepot_remote = make_own<doss::depot>(std::string_view("test_remote_repository"sv));
+	// 4) create depot
+	auto pdepot_remote = make_own<doss::depot>();
 
-	// 4) ...
+	// 5) set name
+	pdepot_remote->name("test_remote_repository"sv);
+
+	// 6) ...
 	pdepot_remote->set_repository(prepository);
 
-	// 5) start
+	// 7) start
 	pdepot_remote->start();
 
-	// 6) wait util press 'esc'
+	// 8) wait util press 'esc'
 	while (_getch() != 0x1b)
 	{
 		print_status(prepository);

@@ -13,9 +13,9 @@ CChild_traffic_info_mini::CChild_traffic_info_mini(const statistics::unit_traffi
 {
 	m_pstatistics = _pinfo;
 
-	m_count_sended = 0;
+	m_count_sent = 0;
 	m_count_received = 0;
-	m_count_sendedByte = 0;
+	m_count_sentByte = 0;
 	m_count_receivedByte = 0;
 }
 
@@ -115,10 +115,10 @@ void CChild_traffic_info_mini::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent==0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// 1) Update한다.
@@ -137,7 +137,7 @@ void CChild_traffic_info_mini::UpdateTrafficInfo()
 	// check) 
 	RETURN_IF(m_pstatistics == nullptr);
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 
@@ -150,23 +150,23 @@ void CChild_traffic_info_mini::UpdateTrafficInfo()
 
 
 	//-----------------------------------------------------------------
-	// 1. Traffice Info 계산하기.
+	// 1. Traffic Info 계산하기.
 	//-----------------------------------------------------------------
 	// 1) 이전과 현재의 차이를 구한다. (Overflow가 났을 경우를 대비하여 계산해야 한다.)
-	LONGLONG	countSended					 = m_pstatistics->count_sended_message;
-	LONGLONG	countSendedByte				 = m_pstatistics->count_sended_bytes;
+	LONGLONG	countSent					 = m_pstatistics->count_sent_message;
+	LONGLONG	countSentByte				 = m_pstatistics->count_sent_bytes;
 	LONGLONG	countReceived				 = m_pstatistics->count_received_message;
 	LONGLONG	countReceivedByte			 = m_pstatistics->count_received_bytes;
 
 	// 2) 초당 전송률을 구한다.
-	float		totalSended_Message_PerSec	 = ((float)(countSended-m_count_sended))*1000/tick_differ.count();
-	float		totalSended_Byte_PerSec		 = ((float)(countSendedByte-m_count_sendedByte))*1000/tick_differ.count();
+	float		totalSent_Message_PerSec	 = ((float)(countSent-m_count_sent))*1000/tick_differ.count();
+	float		totalSent_Byte_PerSec		 = ((float)(countSentByte-m_count_sentByte))*1000/tick_differ.count();
 	float		totalReceive_Message_PerSec	 = ((float)(countReceived-m_count_received))*1000/tick_differ.count();
 	float		totalReceive_Byte_PerSec	 = ((float)(countReceivedByte-m_count_receivedByte))*1000/tick_differ.count();
 
 	// 3) 이전 값을 현재 값으로 Update한다.(다음 Frame에서의 계산을 위해)
-	m_count_sended							 = countSended;
-	m_count_sendedByte						 = countSendedByte;
+	m_count_sent							 = countSent;
+	m_count_sentByte						 = countSentByte;
 	m_count_received						 = countReceived;
 	m_count_receivedByte					 = countReceivedByte;
 
@@ -178,21 +178,21 @@ void CChild_traffic_info_mini::UpdateTrafficInfo()
 	TCHAR	tempString[256];
 
 	// 1) 초당 전송률 표시.
-	__sprintf(tempString, TEXT("%.2f"), totalSended_Message_PerSec);	SetDlgItemText(IDC_STATIC_SENDEDPACKET_PERSEC,	tempString);
-	SetDlgItemText(IDC_STATIC_SENDEDDATA_PERSEC,to_string_scaled_byte(tempString, 256, totalSended_Byte_PerSec).data());
-	__sprintf(tempString, TEXT("%.2f"), totalReceive_Message_PerSec);SetDlgItemText(IDC_STATIC_RECEIVEDPACKET_PERSEC,tempString);
-	SetDlgItemText(IDC_STATIC_RECEIVEDDATA_PERSEC, to_string_scaled_byte(tempString, 256, totalReceive_Byte_PerSec).data());
+	std::swprintf(tempString, std::size(tempString), std::wstring_view(TEXT("%.2f")).data(), totalSent_Message_PerSec);	SetDlgItemText(IDC_STATIC_SENTPACKET_PERSEC,	tempString);
+	SetDlgItemText(IDC_STATIC_SENTDATA_PERSEC, CString(to_string_scaled_byte(totalSent_Byte_PerSec).c_str()));
+	std::swprintf(tempString, std::size(tempString), std::wstring_view(TEXT("%.2f")).data(), totalReceive_Message_PerSec);SetDlgItemText(IDC_STATIC_RECEIVEDPACKET_PERSEC,tempString);
+	SetDlgItemText(IDC_STATIC_RECEIVEDDATA_PERSEC, CString(to_string_scaled_byte(totalReceive_Byte_PerSec).c_str()));
 
 	// 2) 초당 I/O량 표시.(send+Receie)
-	__sprintf(tempString, TEXT("%.2f"),	totalSended_Message_PerSec+totalReceive_Message_PerSec);	SetDlgItemText(IDC_STATIC_IO_PACKET_PERSEC,tempString);
-	SetDlgItemText(IDC_STATIC_IO_BYTE_PERSEC,	to_string_scaled_byte(tempString, 256, totalSended_Byte_PerSec+totalReceive_Byte_PerSec).data());
+	std::swprintf(tempString, std::size(tempString), std::wstring_view(TEXT("%.2f")).data(), totalSent_Message_PerSec+totalReceive_Message_PerSec);	SetDlgItemText(IDC_STATIC_IO_PACKET_PERSEC,tempString);
+	SetDlgItemText(IDC_STATIC_IO_BYTE_PERSEC, CString(to_string_scaled_byte(totalSent_Byte_PerSec+totalReceive_Byte_PerSec).c_str()));
 
 
 	//-----------------------------------------------------------------
 	// 3. Graph처리
 	//-----------------------------------------------------------------
 	// 1) Traffic Data
-	m_graph_traffic.AppendData(0, static_cast<int>(totalSended_Message_PerSec));
+	m_graph_traffic.AppendData(0, static_cast<int>(totalSent_Message_PerSec));
 	m_graph_traffic.AppendData(1, static_cast<int>(totalReceive_Message_PerSec));
 	m_graph_traffic.Scroll(1);
 }
@@ -205,11 +205,11 @@ void CChild_traffic_info_mini::OnEnable(BOOL is_enable)
 	GetDlgItem(IDC_CUSTOM_TRAFFIC)->EnableWindow(is_enable);
 	GetDlgItem(IDC_SLIDER_TRAFFIC)->EnableWindow(is_enable);
 
-	GetDlgItem(IDC_STATIC_SENDEDPACKET_PERSEC)->EnableWindow(is_enable);
+	GetDlgItem(IDC_STATIC_SENTPACKET_PERSEC)->EnableWindow(is_enable);
 	GetDlgItem(IDC_STATIC_RECEIVEDPACKET_PERSEC)->EnableWindow(is_enable);
 	GetDlgItem(IDC_STATIC_IO_PACKET_PERSEC)->EnableWindow(is_enable);
 
-	GetDlgItem(IDC_STATIC_SENDEDDATA_PERSEC)->EnableWindow(is_enable);
+	GetDlgItem(IDC_STATIC_SENTDATA_PERSEC)->EnableWindow(is_enable);
 	GetDlgItem(IDC_STATIC_RECEIVEDDATA_PERSEC)->EnableWindow(is_enable);
 	GetDlgItem(IDC_STATIC_IO_BYTE_PERSEC)->EnableWindow(is_enable);
 

@@ -8,8 +8,8 @@ namespace CGDK
 //	// 1) set object type
 //	this->set_object_type(eOBJECT_TYPE::EXECUTOR_LIST_PRIORITY);
 //
-//	// 2) prepare periority queue
-//	scoped_lock(this->m_priorityqueue_executable)
+//	// 2) prepare priority queue
+//	SCOPED_LOCK(this->m_priorityqueue_executable)
 //	{
 //		this->m_priorityqueue_executable.clear();
 //		this->m_priorityqueue_executable.reserve(8192);
@@ -25,8 +25,8 @@ namespace CGDK
 //	// 1) set object type
 //	this->set_object_type(eOBJECT_TYPE::EXECUTOR_LIST_PRIORITY);
 //
-//	// 2) prepare periority queue
-//	scoped_lock(this->m_priorityqueue_executable)
+//	// 2) prepare priority queue
+//	SCOPED_LOCK(this->m_priorityqueue_executable)
 //	{
 //		this->m_priorityqueue_executable.clear();
 //		this->m_priorityqueue_executable.reserve(8192);
@@ -54,7 +54,7 @@ namespace CGDK
 //result_code executor::list_priority::stop() noexcept
 //{
 //	// 1) 모두 할당해제해준다.(이건 소멸자에서 반드시 해줘야 한다. 아니면 소멸의 순서 때문에 뻑날 수 있다.)
-//	scoped_lock(this->m_priorityqueue_executable)
+//	SCOPED_LOCK(this->m_priorityqueue_executable)
 //	{
 //		this->m_priorityqueue_executable.clear();
 //
@@ -71,7 +71,7 @@ namespace CGDK
 //	RETURN_IF(_pexecutable == nullptr, false);
 //
 //	// 1) List에 추가한다.
-//	scoped_lock(this->m_priorityqueue_executable)
+//	SCOPED_LOCK(this->m_priorityqueue_executable)
 //	{
 //		// 1) 위치 저장해 놓음.
 //		size_t position = this->m_priorityqueue_executable.size();
@@ -112,7 +112,7 @@ namespace CGDK
 //	RETURN_IF(_pexecutable.empty(), false);
 //
 //	// 1) List에 추가한다.
-//	scoped_lock(this->m_priorityqueue_executable)
+//	SCOPED_LOCK(this->m_priorityqueue_executable)
 //	{
 //		// 1) 위치 저장해 놓음.
 //		size_t position = this->m_priorityqueue_executable.size();
@@ -152,7 +152,7 @@ namespace CGDK
 //	// check) 
 //	RETURN_IF(_pexecutable==nullptr, false);
 //
-//	scoped_lock(this->m_priorityqueue_executable)
+//	SCOPED_LOCK(this->m_priorityqueue_executable)
 //	{
 //		// 1) 해당 객체를 찾는다.
 //		auto iter_end = this->m_priorityqueue_executable.end();
@@ -246,7 +246,7 @@ namespace CGDK
 //	// locked) 
 //	{
 //		// lock) 
-//		std::lock_guard< lockable<>> cs(const_cast<lockable<std::vector<object_ptr<Iexecutable>>>&>(this->m_priorityqueue_executable));
+//		std::lock_guard< lock_object> cs(const_cast<lock_object>(this->m_priorityqueue_executable));
 //
 //		// 1) clear
 //		this->m_priorityqueue_executable.clear();
@@ -273,7 +273,7 @@ namespace CGDK
 //	// 2) 현재 tick을 구한다.
 //	auto tick_now = chrono::tick::now();
 //
-//	scoped_lock(this->m_priorityqueue_executable)
+//	SCOPED_LOCK(this->m_priorityqueue_executable)
 //	{
 //		while(this->m_priorityqueue_executable.size()>1)
 //		{
@@ -303,7 +303,7 @@ namespace CGDK
 //	// locked) 
 //	{
 //		// lock) 
-//		std::lock_guard<lockable<>> cs(const_cast<lockable<std::vector<object_ptr<Iexecutable>>>&>(this->m_priorityqueue_executable));
+//		std::lock_guard cs(this->m_lockable_priorityqueue_executable);
 //
 //		return this->m_priorityqueue_executable.size();
 //	}
@@ -314,7 +314,7 @@ namespace CGDK
 //	// locked) 
 //	{
 //		// lock)
-//		std::lock_guard< lockable<>> cs(const_cast<lockable<std::vector<object_ptr<Iexecutable>>>&>(this->m_priorityqueue_executable));
+//		std::lock_guard< lock_object> cs(this->m_lockable_priorityqueue_executable);
 //
 //		// check) 
 //		RETURN_IF(this->m_priorityqueue_executable.size() < 2)

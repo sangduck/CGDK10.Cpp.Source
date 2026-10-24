@@ -1,0 +1,6 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="server.lobby\CGDK1.game_login.server.lobby.vs18.vcxproj" Id="9e1736da-9674-472d-8a5c-a6b841ed0f92" />
+</Solution>

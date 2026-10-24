@@ -43,10 +43,10 @@ public:
 	class RESULT
 	{
 	public:
-		uintptr_t				completion_key {};
-		Iexecutable*			pexecutable = nullptr;
-		intptr_t				result_{};
-		uint32_t				bytes_transfered{};
+		uintptr_t				completion_key {0};
+		Iexecutable*			pexecutable {nullptr};
+		intptr_t				result_{0};
+		uint32_t				bytes_transfered{0};
 	public:
 		[[nodiscard]] bool			is_valid() const noexcept { return pexecutable != nullptr;}
 		[[nodiscard]] intptr_t		result() const noexcept { return result_; }
@@ -64,7 +64,7 @@ public:
 // implementation)
 private:
 			CGDK::circular_list<RESULT>	m_queue_executable;
-			std::mutex				m_lock_complete;
+			std::mutex				m_lockable_complete;
 			std::condition_variable	m_cv_complete;
 };
 

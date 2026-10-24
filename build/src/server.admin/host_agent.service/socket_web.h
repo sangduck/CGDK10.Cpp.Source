@@ -29,6 +29,7 @@
 // ----------------------------------------------------------------------------
 class socket_web :
 	public						net::socket::http_server,
+	public						net::io::add_on::Nsocket_sustain,
 	public						Nmessage_transmitter,
 	public						Igroupable<socket_web>,
 	public						Npoolable<socket_web>
@@ -43,4 +44,10 @@ private:
 	virtual result_code			on_message(sMESSAGE_HTTP_REQUEST& _msg) override;
 	virtual result_code			on_message(sMESSAGE_HTTP_WEBSOCKET& _msg) override;
 	virtual result_code			on_message(sMESSAGE_NETWORK& _msg) override;
+
+			void				process_send_response(const sMESSAGE_HTTP_REQUEST& _msg, eHTTP_STATUS_CODE _status_code, const shared_buffer& _buf_body);
+			void				process_send_redirect(const sMESSAGE_HTTP_REQUEST& _msg, std::string_view _location, std::string_view _set_cookie = {});
+			bool				process_login(const sMESSAGE_HTTP_REQUEST& _msg, std::string_view _path);
+
+			std::atomic<bool>	m_is_rejected{ false };
 };

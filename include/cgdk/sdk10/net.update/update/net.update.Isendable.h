@@ -30,11 +30,11 @@ public:
 //	// 1) Sending Object를 할당하는 함수.
 //	virtual	CGPTR<ICGNetUpdateSending>	AllocUpdateSending(const _CHAR* _strPath) PURE;
 //
-//	// 2) Attribue
+//	// 2) Attribute
 //	virtual	uint32_t			GetAttribute(uint32_t _Mask) const PURE;
 //	virtual	const edc::md5&		GetMD5() const PURE;
 //
-//	// 3) 전송해야할 Bytes수
+//	// 3) 전송해야 할 Bytes수
 //			uint32_t			GetSendingBytes() const { return m_bytesSending;}
 //			void				SetSendingBytes(uint32_t _bytesSending)	{ m_bytesSending=_bytesSending;}
 //

@@ -29,7 +29,7 @@ class net::io::connective::Iconnector :
 // inherited classes)
 	virtual	public				net::io::Iconnective
 {
-// defintions)
+// definitions)
 public:
 			using end_point_type = net::ip::tcp::endpoint;
 

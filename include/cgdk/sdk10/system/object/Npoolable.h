@@ -25,7 +25,7 @@
  @todo		
  @ref		
  @details	\n
- IPoolable<TOBJECT>를 상속받아 풀의 대상이 됨과 동시에 자신의 풀을 자체적으로 정적 멤버 변수로 가진 것이다.
+ IPoolable<T>를 상속받아 풀의 대상이 됨과 동시에 자신의 풀을 자체적으로 정적 멤버 변수로 가진 것이다.
  따라서 풀에서 할당을 받을 때 자체적으로 가진 풀에서 할당받을 수 있고 할당이 해제되면 그 풀로 다시 돌아간다.
  또 이 Npoolable<T>을 상속받으면 make_object<T>()를 사용해 간단히 풀에서 할당받을 수 있다.
 
@@ -69,23 +69,23 @@
 
 */
 //-----------------------------------------------------------------------------
-template <class TOBJECT>
+template <class T>
 class CGDK::Npoolable :
-	public						Ipoolable<TOBJECT>,
+	public						Ipoolable<T>,
 	public						factory::_traits_has_pool
 {
 public:
-			using factory_t = default_factory_pool_t<TOBJECT>;
-			using object_t = TOBJECT;
+			using factory_t = default_factory_pool_t<T>;
+			using object_t = T;
 
 protected:
 	virtual	~Npoolable() noexcept {}
 
 public:
-	[[nodiscard]] static own_ptr<factory_t>& get_factory() noexcept { return m_s_ppool_object;}
-	[[nodiscard]] static TOBJECT* alloc(CGNEW_DEBUG_INFO_PARAMETERS_WITH_DEFAULT)
+	[[nodiscard]] static own_ptr<factory_t>& get_factory() { static own_ptr<factory_t> pool_object = _make_own_raw<factory_t>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL CGNEW_DEBUG_INFO_COMMA std::string_view(), eFACTORY_TYPE::DEFAULT); return pool_object;}
+	[[nodiscard]] static T* alloc(CGNEW_DEBUG_INFO_PARAMETERS_WITH_DEFAULT)
 	{
-		auto* ppool = m_s_ppool_object.get();
+		auto* ppool = get_factory().get();
 	
 		if (ppool != nullptr)
 		{
@@ -95,35 +95,32 @@ public:
 		{
 		#ifdef _ENABLE_DEBUG_NEW
 			#if defined(_WIN32)
-				return new(_NORMAL_BLOCK, CGNEW_DEBUG_INFO_PARAMETERS_PASSING) TOBJECT();
+				return new(_NORMAL_BLOCK, CGNEW_DEBUG_INFO_PARAMETERS_PASSING) T();
 			#else
-				return new TOBJECT();
+				return new T();
 			#endif
 		#else
-			return new TOBJECT();
+			return new T();
 		#endif
 		}
 	}
-	static	void				dealloc(TOBJECT* _pitem) noexcept { CGASSERT_ERROR(_pitem != nullptr); m_s_ppool_object->dealloc(_pitem);}
+	static	void				dealloc(T* _pitem) noexcept { CGASSERT_ERROR(_pitem != nullptr); get_factory()->dealloc(_pitem);}
 
 protected:
-	virtual	void				process_dispose() noexcept override { if (this->m_ppool.exist()) { if (this->m_this == nullptr) { this->m_this = dynamic_cast<TOBJECT*>(this); } this->m_ppool->dealloc(this->m_this); } else { delete this; } }
+	virtual	void				process_dispose() noexcept override { if (this->m_ppool.exist()) { if (this->m_this == nullptr) { this->m_this = dynamic_cast<T*>(this); } this->m_ppool->dealloc(this->m_this); } else { delete this; } }
 
 private:
-	static	own_ptr<factory_t>	m_s_ppool_object;
 
 			object_ptr<factory_t> m_ppool;
-			TOBJECT*			m_this = nullptr;
+			T*					m_this = nullptr;
 
 			friend	factory_t;
 };
 
-template <class TOBJECT>
-CGDK::own_ptr<CGDK::default_factory_pool_t<TOBJECT>> __ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL1 + 4) CGDK::Npoolable<TOBJECT>::m_s_ppool_object = _make_own_raw<default_factory_pool_t<TOBJECT>>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL CGNEW_DEBUG_INFO_COMMA std::string_view(), eFACTORY_TYPE::DEFAULT);
 
 // poolable template
-template <class TOBJECT>
-class CGDK::POOLABLE : public TOBJECT, public CGDK::Npoolable<POOLABLE<TOBJECT>>
+template <class T>
+class CGDK::POOLABLE : public T, public CGDK::Npoolable<POOLABLE<T>>
 {
 public:
 	virtual ~POOLABLE() noexcept {}
@@ -135,30 +132,30 @@ namespace CGDK
 	template <class X> class is_base_of_Nreferenceable<Nreferenceable<X>> : public std::true_type {};
 
 	// case) 'Npoolable<T>' inherited
-	template <class TOBJECT>
-	[[nodiscard]] std::enable_if_t<std::is_base_of_v<Npoolable<TOBJECT>, TOBJECT> && !is_base_of_Nreferenceable<TOBJECT>::value, object_ptr<TOBJECT>>
+	template <class T>
+	[[nodiscard]] std::enable_if_t<std::is_base_of_v<Npoolable<T>, T> && !is_base_of_Nreferenceable<T>::value, object_ptr<T>>
 		_alloc_object()
 	{
-		return TOBJECT::alloc();
+		return T::alloc();
 	}
 
 	// case) No 'Npoolable<T>' inherited
-	template <class TOBJECT>
-	[[nodiscard]] std::enable_if_t<!std::is_base_of_v<Npoolable<TOBJECT>, TOBJECT>&& is_base_of_Nreferenceable<TOBJECT>::value, object_ptr<TOBJECT>>
+	template <class T>
+	[[nodiscard]] std::enable_if_t<!std::is_base_of_v<Npoolable<T>, T>&& is_base_of_Nreferenceable<T>::value, object_ptr<T>>
 		_alloc_object()
 	{
-		return _make_object_raw<TOBJECT>();
+		return _make_object_raw<T>();
 	}
 
 	// case) No 'Npoolable<T>' inherited
-	template <class TOBJECT>
-	[[nodiscard]] std::enable_if_t<!std::is_base_of_v<Npoolable<TOBJECT>, TOBJECT> && !is_base_of_Nreferenceable<TOBJECT>::value, object_ptr<TOBJECT>>
+	template <class T>
+	[[nodiscard]] std::enable_if_t<!std::is_base_of_v<Npoolable<T>, T> && !is_base_of_Nreferenceable<T>::value, object_ptr<T>>
 		_alloc_object()
 	{
-		// check) TOBJECT must inherite class'Ireferenceable'
-		static_assert(std::is_base_of_v<Ireferenceable, TOBJECT>, "CGObj: TOBJECT must inherite 'Ireferenceable' class");
+		// check) T must inherit class'Ireferenceable'
+		static_assert(std::is_base_of_v<Ireferenceable, T>, "CGObj: T must inherit 'Ireferenceable' class");
 
-		return POOLABLE<TOBJECT>::alloc();
+		return POOLABLE<T>::alloc();
 	}
 
 }

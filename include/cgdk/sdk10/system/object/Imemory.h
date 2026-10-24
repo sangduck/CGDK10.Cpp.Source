@@ -38,9 +38,9 @@ public:
 			Imemory(const _buffer_view<char>& _buffer) noexcept : _buffer_view<char>(_buffer) {}
 	virtual	~Imemory() noexcept {}
 
-	[[nodiscard]] auto get_lower_bound() const noexcept { return data_;};
-	[[nodiscard]] auto get_upper_bound() const noexcept { return data_ + size_;};
-	[[nodiscard]] auto get_bound() const noexcept { return buffer_bound{ get_lower_bound(), get_upper_bound() }; };
+	[[nodiscard]] auto	get_lower_bound() const noexcept { return data_;};
+	[[nodiscard]] auto	get_upper_bound() const noexcept { return data_ + size_;};
+	[[nodiscard]] auto	get_bound() const noexcept { return buffer_bound{ get_lower_bound(), get_upper_bound() }; };
 };
 
 

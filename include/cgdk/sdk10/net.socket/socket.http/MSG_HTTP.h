@@ -77,10 +77,10 @@ inline bool __icompare(std::string_view _rhs, std::string_view _lhs)
 		auto b = *iter_lhs++;
 
 		if (a >= 'A' && a <= 'Z')
-			a -= 'A';
+			a += ('a' - 'A');
 
 		if (b >= 'A' && b <= 'Z')
-			b -= 'A';
+			b += ('a' - 'A');
 
 		if (a != b)
 			return	false;

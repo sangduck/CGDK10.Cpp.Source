@@ -1,4 +1,4 @@
-﻿#include "asio.ex/asio.h"
+#include "asio.ex/asio.h"
 #include <iostream>
 #include <sstream>
 #if defined(_WIN32)

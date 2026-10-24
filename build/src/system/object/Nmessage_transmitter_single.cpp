@@ -8,16 +8,20 @@ bool Nmessage_transmitter_single::process_attach(object_ptr<Imessageable>&& _pme
 	// check) 
 	CGASSERT_ERROR(_pmessageable.exist());
 
-	// check) _pmessageable이 nullptr이면 안됀다!
-	RETURN_IF(_pmessageable.empty(), false);
+	// check) _pmessageable이 nullptr이면 안 된다!
+	if(_pmessageable.empty())
+		return false;
 
 	// declare) 
 	object_ptr<Imessageable> pmessageable_pre;
 
-	scoped_lock(this->m_pmessageable)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_pmessageable);
+
 		// check) 
-		RETURN_IF(this->m_pmessageable == _pmessageable, false); 
+		if(this->m_pmessageable == _pmessageable)
+			return false;
 
 		// 1) Pre
 		pmessageable_pre = std::move(this->m_pmessageable);
@@ -34,18 +38,18 @@ bool Nmessage_transmitter_single::process_detach(Imessageable* _pmessageable) no
 {
 	// check) 
 	if(_pmessageable == nullptr)
-	{
-		// - 모두 다 제거한다.
 		return this->reset_message_transmitter() != 0;
-	}
 	
 	// declare) 
 	object_ptr<Imessageable> pmessageable;
 
-	scoped_lock(this->m_pmessageable)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_pmessageable);
+
 		// check) 
-		RETURN_IF(this->m_pmessageable != _pmessageable, false);
+		if(this->m_pmessageable != _pmessageable)
+			return false;
 
 		// 2) reset
 		pmessageable = std::move(this->m_pmessageable);
@@ -60,10 +64,13 @@ int Nmessage_transmitter_single::process_reset_message_transmitter() noexcept
 	// declare) 
 	object_ptr<Imessageable> pmessageable;
 
-	scoped_lock(this->m_pmessageable)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_pmessageable);
+
 		// check) 
-		RETURN_IF(this->m_pmessageable.empty(), 0);
+		if(this->m_pmessageable.empty())
+			return 0;
 
 		// 1) 값을 임시로 복사
 		pmessageable = std::move(this->m_pmessageable);
@@ -79,13 +86,17 @@ result_code Nmessage_transmitter_single::process_transmit_message(sMESSAGE& _msg
 	object_ptr<Imessageable> pmessageable;
 
 	// 2) 복사
-	scoped_lock(this->m_pmessageable)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_pmessageable);
+
+		// - copy
 		pmessageable = this->m_pmessageable;
 	}
 
 	// check) pmessageable이 nullptr이면 그냥 끝낸다.
-	RETURN_IF(pmessageable.empty(), result_code(eRESULT::BYPASS));
+	if(pmessageable.empty())
+		return result_code(eRESULT::BYPASS);
 
 	// 3) Message를 transmit_message한다.
 	return pmessageable->request_process_message(_msg);

@@ -1,18 +1,18 @@
-ï»¿
-// tcp_echo.h: PROJECT_NAME ì• í”Œë¦¬ì¼€ì´ì…˜ì— ëŒ€í•œ ì£¼ í—¤ë” íŒŒì¼ìž…ë‹ˆë‹¤.
+
+// tcp_echo.h: PROJECT_NAME ¾ÖÇÃ¸®ÄÉÀÌ¼Ç¿¡ ´ëÇÑ ÁÖ Çì´õ ÆÄÀÏÀÔ´Ï´Ù.
 //
 
 #pragma once
 
 #ifndef __AFXWIN_H__
-	#error "PCHì— ëŒ€í•´ ì´ íŒŒì¼ì„ í¬í•¨í•˜ê¸° ì „ì— 'pch.h'ë¥¼ í¬í•¨í•©ë‹ˆë‹¤."
+	#error "PCH¿¡ ´ëÇØ ÀÌ ÆÄÀÏÀ» Æ÷ÇÔÇÏ±â Àü¿¡ 'pch.h'¸¦ Æ÷ÇÔÇÕ´Ï´Ù."
 #endif
 
-#include "resource.h"		// ì£¼ ê¸°í˜¸ìž…ë‹ˆë‹¤.
+#include "resource.h"		// ÁÖ ±âÈ£ÀÔ´Ï´Ù.
 
 
 // Ctcp_echo_client_app:
-// ì´ í´ëž˜ìŠ¤ì˜ êµ¬í˜„ì— ëŒ€í•´ì„œëŠ” tcp_echo.cppì„(ë¥¼) ì°¸ì¡°í•˜ì„¸ìš”.
+// ÀÌ Å¬·¡½ºÀÇ ±¸Çö¿¡ ´ëÇØ¼­´Â tcp_echo.cppÀ»(¸¦) ÂüÁ¶ÇÏ¼¼¿ä.
 //
 
 class Ctcp_echo_client_app : public CWinApp
@@ -20,11 +20,11 @@ class Ctcp_echo_client_app : public CWinApp
 public:
 	Ctcp_echo_client_app();
 
-// ìž¬ì •ì˜ìž…ë‹ˆë‹¤.
+// ÀçÁ¤ÀÇÀÔ´Ï´Ù.
 public:
 	virtual BOOL InitInstance();
 
-// êµ¬í˜„ìž…ë‹ˆë‹¤.
+// ±¸ÇöÀÔ´Ï´Ù.
 
 	DECLARE_MESSAGE_MAP()
 };

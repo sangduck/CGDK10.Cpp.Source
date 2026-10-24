@@ -38,19 +38,19 @@ public:
 			void				leave(TSENDER* _psender) noexcept;
 			void				leave_all() noexcept;
 			bool				exist(TSENDER* _psender) noexcept;
-			lockable<>& get_lockable() noexcept { return this->m_cs_map_sender; }
+			lock_object&		get_lockable() noexcept { return this->m_lockable_set_sender; }
 protected:
-			lockable<>			m_cs_set_sender;
+	mutable	lock_object			m_lockable_set_sender;
 			std::set<object_ptr<TSENDER>> m_set_sender;
 };
 
 template<class TSENDER>
 void net::io::sender::Igroup_set<TSENDER>::join(TSENDER* _psender)
 {
-	// check) _psender가 nullptr이면 안됀다.
+	// check) _psender가 nullptr이면 안 된다.
 	THROW_IF(_psender == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	scoped_lock(this->m_cs_set_sender)
+	SCOPED_LOCK(this->m_lockable_set_sender)
 	{
 		// 1) 먼저 찾는다
 		auto iter_find = this->m_set_sender.find(_psender);
@@ -66,10 +66,10 @@ void net::io::sender::Igroup_set<TSENDER>::join(TSENDER* _psender)
 template<class TSENDER>
 void net::io::sender::Igroup_set<TSENDER>::join(object_ptr<TSENDER>&& _psender)
 {
-	// check) _psender가 nullptr이면 안됀다.
+	// check) _psender가 nullptr이면 안 된다.
 	THROW_IF(_psender == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	scoped_lock(this->m_cs_set_sender)
+	SCOPED_LOCK(this->m_lockable_set_sender)
 	{
 		// 1) 먼저 찾는다
 		auto iter_find = this->m_set_sender.find(_psender);
@@ -85,7 +85,7 @@ void net::io::sender::Igroup_set<TSENDER>::join(object_ptr<TSENDER>&& _psender)
 template<class TSENDER>
 void net::io::sender::Igroup_set<TSENDER>::leave(TSENDER* _psender) noexcept
 {
-	scoped_lock(this->m_cs_set_sender)
+	SCOPED_LOCK(this->m_lockable_set_sender)
 	{
 		// 1) 먼저 찾는다
 		auto iter_find = this->m_set_sender.find(_psender);
@@ -101,7 +101,7 @@ void net::io::sender::Igroup_set<TSENDER>::leave(TSENDER* _psender) noexcept
 template<class TSENDER>
 void net::io::sender::Igroup_set<TSENDER>::leave_all() noexcept
 {
-	scoped_lock(this->m_cs_set_sender)
+	SCOPED_LOCK(this->m_lockable_set_sender)
 	{
 		this->m_set_sender.clear();
 	}
@@ -110,7 +110,7 @@ void net::io::sender::Igroup_set<TSENDER>::leave_all() noexcept
 template<class TSENDER>
 bool net::io::sender::Igroup_set<TSENDER>::exist(TSENDER* _psender) noexcept
 {
-	scoped_lock(this->m_cs_set_sender)
+	SCOPED_LOCK(this->m_lockable_set_sender)
 	{
 		return this->m_set_sender.find(_psender) != this->m_set_sender.end();
 	}
@@ -130,13 +130,25 @@ class net::io::sender::group_set : public net::io::sender::Igroup_set<TSENDER>
 		// check) 버퍼가 Overflow되었는가?
 		CGASSERT_ERROR(_buffer._is_buffer_overflow() == false);
 
-		// 1) 전송한다.
-		scoped_lock(this->m_cs_set_sender)
+		// declare)
+		std::vector<object_ptr<TSENDER>> vector_send;
+
+		SCOPED_LOCK(this->m_lockable_set_sender)
 		{
-			for (auto iter = this->m_set_sender.begin(), iterEnd = this->m_set_sender.end(); iter != iterEnd; ++iter)
+			// - reserve
+			vector_send.reserve(this->m_set_sender.size());
+
+			// - copy sender
+			for (const auto& iter : this->m_set_sender)
 			{
-				(*iter)->send(shared_buffer(_buffer, _count_message), _option);
+				vector_send.push_back(iter);
 			}
+		}
+
+		// 1) 전송한다.
+		for (auto& iter : vector_send)
+		{
+			iter->send({ shared_buffer(_buffer), _count_message }, _option);
 		}
 
 		// return)

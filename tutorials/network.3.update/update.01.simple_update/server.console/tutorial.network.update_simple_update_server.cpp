@@ -1,4 +1,4 @@
-ï»¿#if defined(_WIN32)
+#if defined(_WIN32)
 	#include <conio.h>
 #endif
 
@@ -71,8 +71,8 @@ result_code socket_tcp_server::on_message_UPDATE_REQUEST(sMESSAGE_NETWORK& /*_ms
 		// - set on~ functions 
 		psender->set_function_update_end([=](update::sender_lambda* _psender, eRESULT /*_result*/) {
 			std::cout << "@ update complete" << std::endl;
-			std::cout << "  - total transfered files: " << NFMT::format("{}", _psender->get_total_transfered_files()) << std::endl;
-			std::cout << "  - total transfered bytes: " << NFMT::format("{}", _psender->get_total_transfered_bytes()) << std::endl;
+			std::cout << "  - total transfered files: " << _psender->get_total_transfered_files() << std::endl;
+			std::cout << "  - total transfered bytes: " << _psender->get_total_transfered_bytes() << std::endl;
 			});
 		psender->set_function_updatable_begin([=](update::sender_lambda* /*_psender*/, const resource::Iupdatable* /*_resource*/, const resource::sUPDATABLE_FILE_META_INFO& _updatable_info) {
 			std::cout << "  [send] updating file: " << _updatable_info.filename << std::endl;
@@ -99,64 +99,64 @@ int main()
 	{
 		std::cout << "load resource..."sv << std::endl;
 
-		// 1) updateí•´ì¤„ íŒŒì¼ë“¤ì½ì–´ ì˜¤ê¸°
-		//    - update ìì›ì¸ resource::updatae::fileì„ ìƒì„±í•´ ì´ˆê¸°í™”í•©ë‹ˆë‹¤.
-		//      resource::updatae::file ê°ì²´ë¥¼ ë¨¼ì € ìƒì„±í•œ í›„ì— fileì  pathì™€ fileëª…ì„ ì„¤ì •í•˜ë©´ í•´ë‹¹ íŒŒì¼ì„ ì½ì–´ ë“œë¦½ë‹ˆë‹¤.
-		//      ë‹¤ì–‘í•œ ì˜µì…˜ì„ ì‚¬ìš©í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.
-		//		ì´ë ‡ê²Œ ì´ˆê¸°í™” í•œ resource íŒŒì¼ë“¤ì„ g_vector_resource_updatableì— ëª¨ì•„ ë†“ì•˜ë‹¤ê°€ update sender('update::sender_lambda')ë¥¼ 
-		//		ìƒì„±í•´ ì „ì†¡ì„ í•˜ê¸°ì „ ì¶”ê°€í•´ ì¤ë‹ˆë‹¤.
-		//		í•œë²ˆ ìƒì„±ëœ resourceëŠ” ê³„ì† update senderì— ì¶”ê°€í•´ ì‚¬ìš©ì´ ê°€ëŠ¥í•©ë‹ˆë‹¤.
+		// 1) updateÇØÁÙ ÆÄÀÏµéÀĞ¾î ¿À±â
+		//    - update ÀÚ¿øÀÎ resource::updatae::fileÀ» »ı¼ºÇØ ÃÊ±âÈ­ÇÕ´Ï´Ù.
+		//      resource::updatae::file °´Ã¼¸¦ ¸ÕÀú »ı¼ºÇÑ ÈÄ¿¡ fileÀÉ path¿Í file¸íÀ» ¼³Á¤ÇÏ¸é ÇØ´ç ÆÄÀÏÀ» ÀĞ¾î µå¸³´Ï´Ù.
+		//      ´Ù¾çÇÑ ¿É¼ÇÀ» »ç¿ëÇÒ ¼ö ÀÖ½À´Ï´Ù.
+		//		ÀÌ·¸°Ô ÃÊ±âÈ­ ÇÑ resource ÆÄÀÏµéÀ» g_vector_resource_updatable¿¡ ¸ğ¾Æ ³õ¾Ò´Ù°¡ update sender('update::sender_lambda')¸¦ 
+		//		»ı¼ºÇØ Àü¼ÛÀ» ÇÏ±âÀü Ãß°¡ÇØ Áİ´Ï´Ù.
+		//		ÇÑ¹ø »ı¼ºµÈ resource´Â °è¼Ó update sender¿¡ Ãß°¡ÇØ »ç¿ëÀÌ °¡´ÉÇÕ´Ï´Ù.
 		//
 		// 
-		//   - ì˜µì…˜ ì„¤ì •í•˜ê¸°
+		//   - ¿É¼Ç ¼³Á¤ÇÏ±â
 		// 
-		//      (1) ì••ì¶• ì˜µì…˜ - resource::eOPTION::BLOCK_COMPRESSED
-		//          ì••ì¶• ì˜µì…˜ì€ íŒŒì¼ì„ ì½ì–´ ë“¤ì¸ í›„ ì••ì¶•ì„ í•˜ì—¬ ì €ì¥í•˜ê¸° ë•Œë¬¸ì— ì´ˆê¸°í™”ì— ë” ë§ì€ ì‹œê°„ì´ í•„ìš”í•©ë‹ˆë‹¤.
-		//          ì´ë¯¸ ì••ì¶•ëœ íŒŒì¼ì¸ ê²½ìš° ì••ì¶• íš¨ìœ¨ì´ ë‚®ì„ ìˆ˜ ìˆê¸° ë•Œë¬¸ì— ì„ íƒì  ì‚¬ìš©ì´ í•„ìš”í•©ë‹ˆë‹¤.
-		//          ì••ì¶• ì˜µì…˜ì„ ì‚¬ìš©í–ˆë‹¤ í•˜ë”ë¼ë„ ì••ì¶•ëœ íŒŒì¼ì´ ì›ë³¸í¬ê¸°ì˜ 95%ê°€ ë„˜ì„ ê²½ìš° ì••ì¶•í•˜ì§€ ì•Šì€ ì›ë³¸ì„ ì‚¬ìš©í•©ë‹ˆë‹¤.
+		//      (1) ¾ĞÃà ¿É¼Ç - resource::eOPTION::BLOCK_COMPRESSED
+		//          ¾ĞÃà ¿É¼ÇÀº ÆÄÀÏÀ» ÀĞ¾î µéÀÎ ÈÄ ¾ĞÃàÀ» ÇÏ¿© ÀúÀåÇÏ±â ¶§¹®¿¡ ÃÊ±âÈ­¿¡ ´õ ¸¹Àº ½Ã°£ÀÌ ÇÊ¿äÇÕ´Ï´Ù.
+		//          ÀÌ¹Ì ¾ĞÃàµÈ ÆÄÀÏÀÎ °æ¿ì ¾ĞÃà È¿À²ÀÌ ³·À» ¼ö ÀÖ±â ¶§¹®¿¡ ¼±ÅÃÀû »ç¿ëÀÌ ÇÊ¿äÇÕ´Ï´Ù.
+		//          ¾ĞÃà ¿É¼ÇÀ» »ç¿ëÇß´Ù ÇÏ´õ¶óµµ ¾ĞÃàµÈ ÆÄÀÏÀÌ ¿øº»Å©±âÀÇ 95%°¡ ³ÑÀ» °æ¿ì ¾ĞÃàÇÏÁö ¾ÊÀº ¿øº»À» »ç¿ëÇÕ´Ï´Ù.
 		// 
-		//      (2) ìŠ¤íŠ¸ë¦¼ ì˜µì…˜ - resource::eOPTION::STREAMS
-		//          íŒŒì¼ì„ í•œêº¼ë²ˆì— ì½ì–´ì„œ ì¤€ë¹„í•˜ëŠ” ê²ƒì´ ì•„ë‹ˆë¼ ì—…ë°ì´íŠ¸ë¥¼ ì§„í–‰í•  ë•Œ í•„ìš”í•œ ë¶€ë¶„ë§Œ ì½ì–´ ë“¤ì¸ í›„ ì—…ë°ì´íŠ¸ë¥¼ ì§„í–‰í•˜ëŠ” ì˜µì…˜ì…ë‹ˆë‹¤.
-		//          ì´ˆê¸°í™” ì‹œê°„ì´ ë§ì´ ê±¸ë¦¬ì§€ ì•Šìœ¼ë©° ë©”ëª¨ë¦¬ë¥¼ ë§ì´ ì‚¬ìš©í•˜ì§€ ì•ŠëŠ”ë‹¤ëŠ” ì¥ì ì´ ìˆì”ë‹ˆë‹¤.
-		//          ë”°ë¼ì„œ ì´ ì˜µì…˜ì€ ë‹¤ìŒê³¼ ê°™ì€ ê²½ìš° ìœ ë¦¬í•©ë‹ˆë‹¤.
+		//      (2) ½ºÆ®¸² ¿É¼Ç - resource::eOPTION::STREAMS
+		//          ÆÄÀÏÀ» ÇÑ²¨¹ø¿¡ ÀĞ¾î¼­ ÁØºñÇÏ´Â °ÍÀÌ ¾Æ´Ï¶ó ¾÷µ¥ÀÌÆ®¸¦ ÁøÇàÇÒ ¶§ ÇÊ¿äÇÑ ºÎºĞ¸¸ ÀĞ¾î µéÀÎ ÈÄ ¾÷µ¥ÀÌÆ®¸¦ ÁøÇàÇÏ´Â ¿É¼ÇÀÔ´Ï´Ù.
+		//          ÃÊ±âÈ­ ½Ã°£ÀÌ ¸¹ÀÌ °É¸®Áö ¾ÊÀ¸¸ç ¸Ş¸ğ¸®¸¦ ¸¹ÀÌ »ç¿ëÇÏÁö ¾Ê´Â´Ù´Â ÀåÁ¡ÀÌ ÀÖ¾¹´Ï´Ù.
+		//          µû¶ó¼­ ÀÌ ¿É¼ÇÀº ´ÙÀ½°ú °°Àº °æ¿ì À¯¸®ÇÕ´Ï´Ù.
 		// 
-		//          - ì´ˆê¸°í™” ì‹œê°„ì´ ì§§ì„ í•„ìš”ê°€ ìˆì„ ê²½ìš°
-		//          - íŒŒì¼ í¬ê¸°ê°€ ë§¤ìš° ì»¤ì„œ í•œêº¼ë²ˆì— ë©”ëª¨ë¦¬ì— ì˜¬ë ¤ ë†“ê¸° ë¶€ë‹´ìŠ¤ëŸ¬ìš´ ê²½ìš°.
-		//          - í•œë²ˆì˜ ì—…ë°ì´íŠ¸ë§Œ í•„ìš”í•  ê²½ìš° í˜¹ì€ ì—…ë°ì´íŠ¸ê°€ ë¹ˆë²ˆí•˜ì§€ ì•Šì€ ê²½ìš°.
+		//          - ÃÊ±âÈ­ ½Ã°£ÀÌ ÂªÀ» ÇÊ¿ä°¡ ÀÖÀ» °æ¿ì
+		//          - ÆÄÀÏ Å©±â°¡ ¸Å¿ì Ä¿¼­ ÇÑ²¨¹ø¿¡ ¸Ş¸ğ¸®¿¡ ¿Ã·Á ³õ±â ºÎ´ã½º·¯¿î °æ¿ì.
+		//          - ÇÑ¹øÀÇ ¾÷µ¥ÀÌÆ®¸¸ ÇÊ¿äÇÒ °æ¿ì È¤Àº ¾÷µ¥ÀÌÆ®°¡ ºó¹øÇÏÁö ¾ÊÀº °æ¿ì.
 		//
-		//      (3) ì¬ê·€ ì˜µì…˜ - resource::eOPTION::RECURSIVE
-		//			folderì—ë§Œ í•´ë‹¹í•˜ëŠ” ì˜µì…˜ìœ¼ë¡œ í•˜ìœ„ folderê¹Œì§€ ëª¨ë‘ ì½ì–´ ë“¤ì´ë„ë¡ í•˜ëŠ” ì˜µì…˜ì…ë‹ˆë‹¤.
+		//      (3) Àç±Í ¿É¼Ç - resource::eOPTION::RECURSIVE
+		//			folder¿¡¸¸ ÇØ´çÇÏ´Â ¿É¼ÇÀ¸·Î ÇÏÀ§ folder±îÁö ¸ğµÎ ÀĞ¾î µéÀÌµµ·Ï ÇÏ´Â ¿É¼ÇÀÔ´Ï´Ù.
 		//
-		//		(4) ì‚­ì œ ì˜µì…˜ - resource::eOPTION::REMOVE
-		//          í•´ë‹¹ íŒŒì¼ì„ ì°¾ì•„ ì‚­ì œí•˜ëŠ” ì˜µì…˜ì…ë‹ˆë‹¤. 
-		//          í´ë¼ì´ì–¸íŠ¸ì˜ í•´ë‹¹ pathì™€ fileì˜ íŒŒì¼ì„ ì°¾ì•„ ì‚­ì œí•´ì¤ë‹ˆë‹¤.
-		//			í•„ìš”ì—†ì–´ì§„ íŒŒì¼ì„ ì •ë¦¬í•´ì£¼ëŠ” ìš©ë„ë¡œ ì‚¬ìš©ë˜ëŠ” ì˜µì…˜ì…ë‹ˆë‹¤.
-		//          ë‹¹ì—°íˆ serverì¸¡ì—ëŠ” í•´ë‹¹ íŒŒì¼ì´ ì¡´ì¬í•  í•„ìš”ê°€ ì—†ìŠµë‹ˆë‹¤.
-		//          ì™€ì¼ë“œ ì¹´ë“œ(* í˜¹ì€ ?)ë¥¼ íŒŒì¼ëª…ìœ¼ë¡œ ì‚¬ìš©ì´ ê°€ëŠ¥í•˜ë©° í•´ë‹¹í•˜ëŠ” íŒŒì¼ì„ ëª¨êµ¬ ì‚­ì œí•´ì¤ë‹ˆë‹¤.
-		//			ë‹¤ë§Œ ì‚­ì œ í´ë¼ì´ì–¸íŠ¸ íŒŒì¼ì˜ ì†ì„±ì— ë”°ë¼ ì‹¤íŒ¨í•  ìˆ˜ë„ ìˆìŠµë‹ˆë‹¤. 
+		//		(4) »èÁ¦ ¿É¼Ç - resource::eOPTION::REMOVE
+		//          ÇØ´ç ÆÄÀÏÀ» Ã£¾Æ »èÁ¦ÇÏ´Â ¿É¼ÇÀÔ´Ï´Ù. 
+		//          Å¬¶óÀÌ¾ğÆ®ÀÇ ÇØ´ç path¿Í fileÀÇ ÆÄÀÏÀ» Ã£¾Æ »èÁ¦ÇØÁİ´Ï´Ù.
+		//			ÇÊ¿ä¾ø¾îÁø ÆÄÀÏÀ» Á¤¸®ÇØÁÖ´Â ¿ëµµ·Î »ç¿ëµÇ´Â ¿É¼ÇÀÔ´Ï´Ù.
+		//          ´ç¿¬È÷ serverÃø¿¡´Â ÇØ´ç ÆÄÀÏÀÌ Á¸ÀçÇÒ ÇÊ¿ä°¡ ¾ø½À´Ï´Ù.
+		//          ¿ÍÀÏµå Ä«µå(* È¤Àº ?)¸¦ ÆÄÀÏ¸íÀ¸·Î »ç¿ëÀÌ °¡´ÉÇÏ¸ç ÇØ´çÇÏ´Â ÆÄÀÏÀ» ¸ğ±¸ »èÁ¦ÇØÁİ´Ï´Ù.
+		//			´Ù¸¸ »èÁ¦ Å¬¶óÀÌ¾ğÆ® ÆÄÀÏÀÇ ¼Ó¼º¿¡ µû¶ó ½ÇÆĞÇÒ ¼öµµ ÀÖ½À´Ï´Ù. 
 		//
-		//		(5) í´ë” ì‚­ì œ ì˜µì…˜ - resource::eOPTION::REMOVE_FOLDER
-		//          í´ë”ë¥¼ ì‚­ì œí•˜ëŠ” ì˜µì…˜ì…ë‹ˆë‹¤.
+		//		(5) Æú´õ »èÁ¦ ¿É¼Ç - resource::eOPTION::REMOVE_FOLDER
+		//          Æú´õ¸¦ »èÁ¦ÇÏ´Â ¿É¼ÇÀÔ´Ï´Ù.
 		// 
-		//		(6) ì°¾ê¸° ì˜µì…˜ - resource::eOPTION::FIND
-		//			í•´ë‹¹ íŒŒì¼ì˜ ì¡´ì¬ ì—¬ë¶€ë¥¼ ì„œë²„ì¸¡ì— í†µë³´í•´ì¤ë‹ˆë‹¤. 
-		//			ì—…ë°ì´íŠ¸ ì¢…ë£Œ í›„ í•´ë‹¹ íŒŒì¼ì˜ ì¡´ì¬ ì—¬ë¶€ê°€ ì„œë²„ì¸¡ì— í†µë³´ë˜ì„œ ê°ì¢… ì²˜ë¦¬ì— ì´ìš©ë ìˆ˜ ìˆìŠµë‹ˆë‹¤.
-		//			íŠ¹ì • í´ë”ë‚˜ íŒŒì¼ ì •ë³´ë¥¼ í™œìš©í•´ ì—…ë°ì´íŠ¸ë¥¼ ê²°ì •í•˜ê±°ë‚˜ í˜¹ì€ í•˜ì§€ ì•Šì„ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+		//		(6) Ã£±â ¿É¼Ç - resource::eOPTION::FIND
+		//			ÇØ´ç ÆÄÀÏÀÇ Á¸Àç ¿©ºÎ¸¦ ¼­¹öÃø¿¡ Åëº¸ÇØÁİ´Ï´Ù. 
+		//			¾÷µ¥ÀÌÆ® Á¾·á ÈÄ ÇØ´ç ÆÄÀÏÀÇ Á¸Àç ¿©ºÎ°¡ ¼­¹öÃø¿¡ Åëº¸µÇ¼­ °¢Á¾ Ã³¸®¿¡ ÀÌ¿ëµÉ ¼ö ÀÖ½À´Ï´Ù.
+		//			Æ¯Á¤ Æú´õ³ª ÆÄÀÏ Á¤º¸¸¦ È°¿ëÇØ ¾÷µ¥ÀÌÆ®¸¦ °áÁ¤ÇÏ°Å³ª È¤Àº ÇÏÁö ¾ÊÀ» ¼ö ÀÖ½À´Ï´Ù.
 		// 
-		// 		(7) ì´ë™ ì˜µë³€ - resource::eOPTION::MOVE
-		//			í•´ë‹¹íŒŒì¼ì„ í•´ë‹¹ ìœ„ì¹˜ë¡œ ì´ë™ì‹œì¼œ ì¤ë‹ˆë‹¤.
-		//			ì¼ë°˜ì ìœ¼ë¡œ í´ë¼ì´ì–¸íŠ¸ ë‚´ì— ë°±ì—…ì´ í•„ìš”í•˜ë‚˜ ì´ë™ í›„ ì‹ ê·œ ìƒì„± ì²˜ë¦¬ë¥¼ í•´ì•¼í•  í•„ìš”ê°€ ìˆì„ ê²½ìš° ì‚¬ìš©ë©ë‹ˆë‹¤.
+		// 		(7) ÀÌµ¿ ¿Éº¯ - resource::eOPTION::MOVE
+		//			ÇØ´çÆÄÀÏÀ» ÇØ´ç À§Ä¡·Î ÀÌµ¿½ÃÄÑ Áİ´Ï´Ù.
+		//			ÀÏ¹İÀûÀ¸·Î Å¬¶óÀÌ¾ğÆ® ³»¿¡ ¹é¾÷ÀÌ ÇÊ¿äÇÏ³ª ÀÌµ¿ ÈÄ ½Å±Ô »ı¼º Ã³¸®¸¦ ÇØ¾ßÇÒ ÇÊ¿ä°¡ ÀÖÀ» °æ¿ì »ç¿ëµË´Ï´Ù.
 		//
 
-		// 2) ì¼ë°˜ì ì¸ íŒŒì¼ ì½ê¸°
+		// 2) ÀÏ¹İÀûÀÎ ÆÄÀÏ ÀĞ±â
 		{
 			std::cout << " > file > 'data_source/folder_1/999_girl_007.gif'"sv << std::endl;
 			auto presource_file = make_object<resource::updatable::file>();
-			presource_file->initialize({{ "data_source"s, "folder_1"s, "999_ì´í˜œì›_007.gif"s},{}, resource::eOPTION::BLOCK_COMPRESSED });
+			presource_file->initialize({{ "data_source"s, "folder_1"s, "999_\uC774\uD61C\uC6D0_007.gif"s},{}, resource::eOPTION::BLOCK_COMPRESSED });	// "999_ÀÌÇı¿ø_007.gif"
 			g_vector_resource_updatable.push_back(presource_file);
 		}
 
-		// 3) ìš©ëŸ‰ì´ í° íŒŒì¼ ì½ê¸°
+		// 3) ¿ë·®ÀÌ Å« ÆÄÀÏ ÀĞ±â
 		{
 			std::cout << " > file > 'data_source/folder_1/Mazinger.Z.TV.1972.DVDRip-Hi.x264.AC3.1024.EP01-nezumi.mkv'"sv << std::endl;
 			auto presource_file = make_object<resource::updatable::file>();
@@ -164,15 +164,15 @@ int main()
 			g_vector_resource_updatable.push_back(presource_file);
 		}
 
-		// 4) /data_source í´ë” ë°‘ íŒŒì¼ ì½ê¸°
+		// 4) /data_source Æú´õ ¹Ø ÆÄÀÏ ÀĞ±â
 		{
-			std::cout << " > file > './data_source/999_ì´í˜œì›_007.gif'"sv << std::endl;
+			std::cout << " > file > './data_source/999_\uC774\uD61C\uC6D0_007.gif'"sv << std::endl;	// " > file > './data_source/999_ÀÌÇı¿ø_007.gif'"
 			auto presource_file = make_object<resource::updatable::file>();
 			presource_file->initialize({ { "data_source"s, "."s, "iu_06.gif"s}, {}, resource::eOPTION::BLOCK_COMPRESSED });
 			g_vector_resource_updatable.push_back(presource_file);
 		}
 
-		// 5) /data_source í´ë” ë°‘ í° íŒŒì¼ ì½ê¸°
+		// 5) /data_source Æú´õ ¹Ø Å« ÆÄÀÏ ÀĞ±â
 		{
 			std::cout << " > file './data_source/Mazinger.Z.TV.1972.DVDRip-Hi.x264.AC3.1024.EP01-nezumi.mkv'"sv << std::endl;
 			auto presource_file = make_object<resource::updatable::file>();
@@ -180,7 +180,7 @@ int main()
 			g_vector_resource_updatable.push_back(presource_file);
 		}
 
-		// 6)  folder í†µì±„ë¡œ ì½ì–´ë“¤ì´ê¸°
+		// 6)  folder ÅëÂ°·Î ÀĞ¾îµéÀÌ±â
 		{
 			std::cout << " > folder './data_source/folder_2"sv << std::endl;
 			auto presource_folder = make_object<resource::updatable::folder>();
@@ -191,13 +191,13 @@ int main()
 		std::cout << std::endl;
 		std::cout << "start server [tut.update.01.tcp_simple.server]..."sv << std::endl;
 
-		// 2) acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 2) acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pacceptor = make_own<net::acceptor<socket_tcp_server>>();
 
-		// 3) acceptorë¥¼ ì‹œì‘í•œë‹¤.(20000ë²ˆ í¬íŠ¸ì—ì„œ listenì„ ì‹œì‘í•œë‹¤.)
+		// 3) acceptor¸¦ ½ÃÀÛÇÑ´Ù.(20000¹ø Æ÷Æ®¿¡¼­ listenÀ» ½ÃÀÛÇÑ´Ù.)
 		pacceptor->start({ { net::ip::make_address("any"sv), 31000 } });
 
-		// 3) ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+		// 3) ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 		while (_getch() != 27);
 	}
 	catch (...)
@@ -211,6 +211,6 @@ int main()
 	// trace) show cursor
 	std::cout << "\x1b[?25h"sv;
 
-	// end) ì„œë²„ ì¢…ë£Œ
+	// end) ¼­¹ö Á¾·á
 	return 0;
 }

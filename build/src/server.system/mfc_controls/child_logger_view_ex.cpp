@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <cstring>
 #include "log_filter_dlg.h"
 
 #pragma warning(disable:4407)
@@ -18,23 +19,23 @@ IMPLEMENT_DYNAMIC(CChild_logger_view_ex, CChildDialog)
 
 CChild_logger_view_ex::CChild_logger_view_ex(CWnd* pParent /*=NULL*/)
 	: CChildDialog(IDD_DIALOG_LOGVIEW_EX, pParent),
-	m_pqueue_log_record_queuing(),
-	m_pqueue_log_record_process(),
+	m_queue_log_record_queuing(),
+	m_queue_log_record_process(),
 	m_capacity(2048)
 {
 	// 2) 
-	__zero_memory(this->m_count_log, sizeof(this->m_count_log));
+	std::memset(this->m_count_log, 0, sizeof(this->m_count_log));
 
 	// declare) 
 	LOGLIST_INFO tempLogList;
 
 	// 3) 추가를 위해 값을 설정한다.
-	lstrcpy(tempLogList.stName.data(), TEXT("Total"));
+	tempLogList.stName[std::basic_string_view<TCHAR>(TEXT("Total")).copy(tempLogList.stName.data(), tempLogList.stName.size() - 1)] = 0;
 	tempLogList.plist_log = &this->m_list_log;
 	tempLogList.iCount = 0;
 
 	// 3) 추가한다.
-	scoped_lock(this->m_lockable_log_info)
+	SCOPED_LOCK(this->m_lockable_log_info)
 	{
 		this->m_vector_log_list.push_back(tempLogList);
 	}
@@ -68,19 +69,16 @@ CChild_logger_view_ex::CChild_logger_view_ex(CWnd* pParent /*=NULL*/)
 CChild_logger_view_ex::~CChild_logger_view_ex()
 {
 	// locked) 
+	std::lock_guard lock(this->m_lockable_log_info);
+
+	// 1) 생성된 모든 LogView를 제거한다.
+	for(auto iter=this->m_vector_log_list.begin()+1; iter!=this->m_vector_log_list.end(); ++iter)
 	{
-		// scoped_lock
-		std::lock_guard<lockable<>> cs(this->m_lockable_log_info);
-
-		// 1) 생성된 모든 LogView를 제거한다.
-		for(auto iter=this->m_vector_log_list.begin()+1; iter!=this->m_vector_log_list.end(); ++iter)
-		{
-			SAFE_DELETE((*iter).plist_log);
-		}
-
-		// 2) LogList를 clear한다.
-		this->m_vector_log_list.clear();
+		SAFE_DELETE((*iter).plist_log);
 	}
+
+	// 2) LogList를 clear한다.
+	this->m_vector_log_list.clear();
 }
 
 void CChild_logger_view_ex::DoDataExchange(CDataExchange* pDX)
@@ -104,7 +102,7 @@ result_code CChild_logger_view_ex::process_message(sMESSAGE& _msg)
 result_code CChild_logger_view_ex::on_message_Log(sMESSAGE_LOG& _msg)
 {
 	// 1) trace...
-	this->trace(_msg.plog_record);
+	this->trace(object_ptr<LOG_RECORD>(_msg.plog_record));
 
 	// return) 
 	return eRESULT::BYPASS;
@@ -140,12 +138,14 @@ BOOL CChild_logger_view_ex::OnInitDialog()
 {
 	CChildDialog::OnInitDialog();
 
+	this->m_count_post_message = 0;
+
 	// 1) 기본 Log의 위치를 구해 놓는다.
 	CRect tempRect;
 	this->m_list_log.GetWindowRect(tempRect);
 	ScreenToClient(tempRect);
 
-	scoped_lock(this->m_lockable_log_info)
+	SCOPED_LOCK(this->m_lockable_log_info)
 	{
 		for(std::vector<LOGLIST_INFO>::iterator iter=m_vector_log_list.begin(); iter!=m_vector_log_list.end(); ++iter)
 		{
@@ -166,7 +166,7 @@ BOOL CChild_logger_view_ex::OnInitDialog()
 
 			try
 			{
-				// 4) Log ListBox Cotrol을 생성한다.
+				// 4) Log ListBox Control을 생성한다.
 				auto result = plog_box->Create(WS_CHILD | WS_BORDER | WS_VSCROLL, tempRect, this, 0);
 		
 				// check) 제대로 생성했나?
@@ -232,7 +232,7 @@ void CChild_logger_view_ex::OnSize(UINT nType, int cx, int cy)
 		m_tabLog.MoveWindow(tempRect);
 
 		// 3) List들의 크기를 수정한다.
-		scoped_lock(m_lockable_log_info)
+		SCOPED_LOCK(m_lockable_log_info)
 		{
 			for(auto& iter:m_vector_log_list)
 			{
@@ -265,7 +265,7 @@ void CChild_logger_view_ex::OnEnable(BOOL is_enable)
 	GetDlgItem(IDC_STATIC_LOG_COUNT)->EnableWindow(is_enable);
 	
 	
-	scoped_lock(m_lockable_log_info)
+	SCOPED_LOCK(m_lockable_log_info)
 	{
 		for(std::vector<LOGLIST_INFO>::iterator iter=m_vector_log_list.begin(); iter!=m_vector_log_list.end(); ++iter)
 		{
@@ -310,14 +310,20 @@ void CChild_logger_view_ex::OnDestroy()
 
 LRESULT CChild_logger_view_ex::OnAddString(WPARAM /*_wParam*/, LPARAM /*_lParam*/)
 {
+	// 1) count
+	--this->m_count_post_message;
+
+	// check)
+	CGASSERT_ERROR(this->m_count_post_message >= 0)
+
 	// declare)
 	int	count_added[static_cast<size_t>(log_type_t::max_)];
 
 	// 1) clear
-	__zero_memory(count_added, sizeof(int) * static_cast<size_t>(log_type_t::max_));
+	std::memset(count_added, 0, sizeof(int) * static_cast<size_t>(log_type_t::max_));
 
 	// 2) add log record to listctrl
-	scoped_lock(m_lockable_log_info)
+	SCOPED_LOCK(m_lockable_log_info)
 	{
 		// Disable) 
 		{
@@ -326,22 +332,22 @@ LRESULT CChild_logger_view_ex::OnAddString(WPARAM /*_wParam*/, LPARAM /*_lParam*
 			iter_selected->plist_log->SetRedraw(0);
 		}
 
-		scoped_lock(m_lockable_queue_string)
+		SCOPED_LOCK(m_lockable_queue_string)
 		{
 			// check) Process Queue는 비어있어야만 한다.
-			CGASSERT_ERROR(m_pqueue_log_record_process.empty());
+			CGASSERT_ERROR(m_queue_log_record_process.empty());
 
 			// - swap
-			m_pqueue_log_record_process.swap(m_pqueue_log_record_queuing);
+			m_queue_log_record_process.swap(m_queue_log_record_queuing);
 		}
 
-		while(!m_pqueue_log_record_process.empty())
+		while(!m_queue_log_record_process.empty())
 		{
 			// 1) 제일 앞 MSG처리
-			ProcessAddString(m_pqueue_log_record_process.front(), count_added);
+			ProcessAddString(m_queue_log_record_process.front(), count_added);
 
 			// 2) 제일 앞 제거
-			m_pqueue_log_record_process.pop_front();
+			m_queue_log_record_process.pop_front();
 		}
 
 		// Enable) 
@@ -369,7 +375,7 @@ LRESULT CChild_logger_view_ex::OnAddString(WPARAM /*_wParam*/, LPARAM /*_lParam*
 		SetDlgItemInt(IDC_STATIC_LOG_INFO + i, m_count_log[i]);
 	}
 
-	// 3) 전체 Log 갯수를 표시한다.
+	// 3) 전체 Log 개수를 표시한다.
 	SetDlgItemInt(IDC_STATIC_LOG_TOTAL, static_cast<int>(m_count_log_total));
 	
 	// return) 
@@ -394,16 +400,10 @@ void CChild_logger_view_ex::ProcessAddString(LOG_RECORD* _plog_record, int (&_co
 	if ((uint32_t)(_plog_record->type & log_type_t::continue_) == 0)
 	{
 		// - convert to date_time_fraction
-		auto temp_dtf = chrono::to_date_time(_plog_record->time_occure);
+		auto temp_dtf = chrono::to_date_time(_plog_record->time_occurred);
 
 		// - make string
-		__sprintf(pitem->str_head, TEXT("[%4u-%02u-%02u %02u:%02u:%02u]"),
-			temp_dtf.t_year,
-			temp_dtf.t_month,
-			temp_dtf.t_day,
-			temp_dtf.t_hour,
-			temp_dtf.t_minute,
-			temp_dtf.t_second);
+		std::swprintf(pitem->str_head, std::size(pitem->str_head), std::wstring_view(TEXT("[%4u-%02u-%02u %02u:%02u:%02u]")).data(), temp_dtf.t_year, temp_dtf.t_month, temp_dtf.t_day, temp_dtf.t_hour, temp_dtf.t_minute, temp_dtf.t_second);
 
 		// - Type에 따라 View를 update한다.
 		if (log_type >= log_type_t::info && log_type < log_type_t::max_)
@@ -444,7 +444,7 @@ void CChild_logger_view_ex::ProcessAddString(LOG_RECORD* _plog_record, int (&_co
 	auto vector_string = buf_log.extract<std::vector<std::basic_string_view<TCHAR>>>();
 
 	// 6) PUSH!!
-	scoped_lock(m_lockable_log_info)
+	SCOPED_LOCK(m_lockable_log_info)
 	{
 		// - 
 		auto iter = vector_string.begin();
@@ -453,11 +453,11 @@ void CChild_logger_view_ex::ProcessAddString(LOG_RECORD* _plog_record, int (&_co
 		// - string을 설정한다.
 		pitem->str_message = iter->data();
 
-		// - 첫번째 줄을 추가한다.
+		// - 첫 번째 줄을 추가한다.
 		ProcessAddString(ITEM_LOG(pitem->plog_record, pitem));
 		++_count_added[static_cast<int>(log_type)];
 
-		// - 두번째 줄 이후를 추가한다.
+		// - 두 번째 줄 이후를 추가한다.
 		for (++iter; iter!=iter_end; ++iter)
 		{
 			// declare) 
@@ -470,7 +470,7 @@ void CChild_logger_view_ex::ProcessAddString(LOG_RECORD* _plog_record, int (&_co
 			pitem_next->color_text	 = pitem->color_text;
 			pitem_next->is_bold		 = pitem->is_bold;
 
-			// - 두번째 이후 줄을 추가한다.
+			// - 두 번째 이후 줄을 추가한다.
 			ProcessAddString(ITEM_LOG(pitem->plog_record, pitem_next));
 		}
 	}
@@ -478,29 +478,26 @@ void CChild_logger_view_ex::ProcessAddString(LOG_RECORD* _plog_record, int (&_co
 
 void CChild_logger_view_ex::ProcessAddString(ITEM_LOG&& _item_log)
 {
-	// locked) 
+	// lock) 
+	std::lock_guard lock(this->m_lockable_log_info);
+
+	for(auto& iter:m_vector_log_list)
 	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(this->m_lockable_log_info);
-
-		for(auto& iter:m_vector_log_list)
+		// - Filter가 있으면 Filtering검사를 수행한다.
+		if(iter.plog_filter.exist())
 		{
-			// - Filter가 있으면 Filtering검사를 수행한다.
-			if(iter.plog_filter.exist())
-			{
-				// - Filtering 검사를 수행한다.
-				auto result = iter.plog_filter->process_filtering(_item_log.plog_record);
+			// - Filtering 검사를 수행한다.
+			auto result = iter.plog_filter->process_filtering(_item_log.plog_record);
 
-				// check) Filtering되었다면 다음...
-				CONTINUE_IF(result == false);
-			}
-		
-			// - String을 추가한다.
-			AddString(iter.plist_log, _item_log.pitem);
-
-			// - 갯수를 증가시킨다.
-			++(iter.iCount);
+			// check) Filtering되었다면 다음...
+			CONTINUE_IF(result == false);
 		}
+		
+		// - String을 추가한다.
+		AddString(iter.plist_log, _item_log.pitem);
+
+		// - 개수를 증가시킨다.
+		++(iter.iCount);
 	}
 }
 
@@ -605,7 +602,7 @@ void CChild_logger_view_ex::OnBnClickedEditFilter()
 
 	LOGLIST_INFO rLogList;
 	
-	scoped_lock(m_lockable_log_info)
+	SCOPED_LOCK(m_lockable_log_info)
 	{
 		// check) 
 		RETURN_IF(iSel >= (int)m_vector_log_list.size());
@@ -622,7 +619,7 @@ void CChild_logger_view_ex::OnBnClickedEditFilter()
 	CLogFilterDlg dlg;
 
 	// 3) 값을 설정
-	lstrcpy(dlg.m_strName.data(), rLogList.stName.data());
+	dlg.m_strName[std::basic_string_view<TCHAR>(rLogList.stName.data()).copy(dlg.m_strName.data(), dlg.m_strName.size() - 1)] = 0;
 	dlg.m_pFilter = pFilter;
 
 	// 4) DoModal
@@ -632,7 +629,7 @@ void CChild_logger_view_ex::OnBnClickedEditFilter()
 	RETURN_IF(result != IDOK);
 
 	// 5) 값을 설정한다.
-	scoped_lock(m_lockable_log_info)
+	SCOPED_LOCK(m_lockable_log_info)
 	{
 		// check) 
 		RETURN_IF(iSel >= (int)m_vector_log_list.size());
@@ -714,7 +711,7 @@ void CChild_logger_view_ex::OnBnClickedLogSave()
 	#endif
 
 		// 3) 모든 Data를 저장한다.
-		scoped_lock(m_lockable_log_info)
+		SCOPED_LOCK(m_lockable_log_info)
 		{
 			// - 현재의 Selection을 얻는다.
 			int	iSel = m_tabLog.GetCurSel();
@@ -813,7 +810,7 @@ void CChild_logger_view_ex::OnBnClickedLogSaveSelected()
 	#endif
 
 		// 3) 모든 Data를 저장한다.
-		scoped_lock(m_lockable_log_info)
+		SCOPED_LOCK(m_lockable_log_info)
 		{
 			// - 현재의 Selection을 얻는다.
 			int	iSel = m_tabLog.GetCurSel();
@@ -824,7 +821,7 @@ void CChild_logger_view_ex::OnBnClickedLogSaveSelected()
 			// - 현재 선택된 LogList Info를 얻는다.
 			LOGLIST_INFO& rLogListInfo = m_vector_log_list.at(iSel);
 
-			// - 선택된 Text의 갯수를 얻는다.
+			// - 선택된 Text의 개수를 얻는다.
 			int iCountSelected = rLogListInfo.plist_log->GetSelCount();
 
 			// Case) 전혀 선택된 것이 없다면 전체를 저장한다.
@@ -937,7 +934,7 @@ void CChild_logger_view_ex::OnTcnSelchangeTabInfo(NMHDR* /*pNMHDR*/, LRESULT *pR
 
 	ShowList(iCurSel, SW_SHOW);
 
-	scoped_lock(m_lockable_log_info)
+	SCOPED_LOCK(m_lockable_log_info)
 	{
 		SetDlgItemInt(IDC_STATIC_LOG_COUNT, (m_vector_log_list.begin()+iCurSel)->iCount);
 	}
@@ -946,22 +943,19 @@ void CChild_logger_view_ex::OnTcnSelchangeTabInfo(NMHDR* /*pNMHDR*/, LRESULT *pR
 void CChild_logger_view_ex::ShowList(int _tab_index, int p_iCmdShow)
 {
 	// locked) 
-	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(this->m_lockable_log_info);
+	std::lock_guard lock(this->m_lockable_log_info);
 
-		// check) 
-		RETURN_IF(_tab_index < 0 || _tab_index >= (int)m_vector_log_list.size());
+	// check) 
+	RETURN_IF(_tab_index < 0 || _tab_index >= (int)m_vector_log_list.size());
 	
-		// 1) 해당 LogListInfo를 얻는다.
-		LOGLIST_INFO& rLogListInfo = m_vector_log_list.at(_tab_index);
+	// 1) 해당 LogListInfo를 얻는다.
+	LOGLIST_INFO& rLogListInfo = m_vector_log_list.at(_tab_index);
 
-		// check) 
-		RETURN_IF(rLogListInfo.plist_log == nullptr);
+	// check) 
+	RETURN_IF(rLogListInfo.plist_log == nullptr);
 
-		// 2) 
-		rLogListInfo.plist_log->ShowWindow(p_iCmdShow);
-	}
+	// 2) 
+	rLogListInfo.plist_log->ShowWindow(p_iCmdShow);
 }
 
 void CChild_logger_view_ex::AddLogList(const TCHAR* _name, Ilog_filter* _plog_filter, bool _bFocus)
@@ -1023,12 +1017,12 @@ void CChild_logger_view_ex::AddLogList(const TCHAR* _name, Ilog_filter* _plog_fi
 	// 7) 추가를 위해 값을 설정한다.
 	LOGLIST_INFO tempLogList;
 
-	lstrcpy(tempLogList.stName.data(), _name);
+	tempLogList.stName[std::basic_string_view<TCHAR>(_name).copy(tempLogList.stName.data(), tempLogList.stName.size() - 1)] = 0;
 	tempLogList.plist_log = plog_box;
 	tempLogList.plog_filter = _plog_filter;
 	tempLogList.iCount = 0;
 
-	scoped_lock(this->m_lockable_log_info)
+	SCOPED_LOCK(this->m_lockable_log_info)
 	{
 		this->m_vector_log_list.push_back(tempLogList);
 	}
@@ -1036,20 +1030,17 @@ void CChild_logger_view_ex::AddLogList(const TCHAR* _name, Ilog_filter* _plog_fi
 
 void CChild_logger_view_ex::RemoveLogList(const TCHAR* _name)
 {
-	// locked) 
+	// lock) 
+	std::lock_guard lock(this->m_lockable_log_info);
+
+	for(int i=0; i<(int)this->m_vector_log_list.size(); ++i)
 	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(this->m_lockable_log_info);
+		LOGLIST_INFO& rLogListInfo = this->m_vector_log_list.at(i);
 
-		for(int i=0; i<(int)this->m_vector_log_list.size(); ++i)
+		if(lstrcmp(rLogListInfo.stName.data(), _name)==0)
 		{
-			LOGLIST_INFO& rLogListInfo = this->m_vector_log_list.at(i);
-
-			if(lstrcmp(rLogListInfo.stName.data(), _name)==0)
-			{
-				this->RemoveLogList(i);
-				break;
-			}
+			this->RemoveLogList(i);
+			break;
 		}
 	}
 }
@@ -1057,47 +1048,41 @@ void CChild_logger_view_ex::RemoveLogList(const TCHAR* _name)
 void CChild_logger_view_ex::RemoveLogList(int _tab_index)
 {
 	// locked) 
+	std::lock_guard lock(this->m_lockable_log_info);
+
+	// check) 
+	ERROR_RETURN_IF(_tab_index <1 || _tab_index >= (int)this->m_vector_log_list.size(), , LOG_ERROR << "(err ) fail to removing log_view tab out of range["sv << _tab_index << "]"sv);
+
+	// 1) Tab을 제거한다.
+	this->m_tabLog.DeleteItem(_tab_index);
+
+	// 2) 해당 LogListInfo를 얻는다.
+	LOGLIST_INFO rLogListInfo = this->m_vector_log_list.at(_tab_index);
+
+	// 3) List에서 제거한다.
+	this->m_vector_log_list.erase(this->m_vector_log_list.begin()+ _tab_index);
+
+	// 4) 지운다.
+	if(rLogListInfo.plist_log != nullptr)
 	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(this->m_lockable_log_info);
-
-		// check) 
-		ERROR_RETURN_IF(_tab_index <1 || _tab_index >= (int)this->m_vector_log_list.size(), , LOG_ERROR << "(err ) fail to removing log_view tab out of range["sv << _tab_index << "]"sv);
-
-		// 1) Tab을 제거한다.
-		this->m_tabLog.DeleteItem(_tab_index);
-
-		// 2) 해당 LogListInfo를 얻는다.
-		LOGLIST_INFO rLogListInfo = this->m_vector_log_list.at(_tab_index);
-
-		// 3) List에서 제거한다.
-		this->m_vector_log_list.erase(this->m_vector_log_list.begin()+ _tab_index);
-
-		// 4) 지운다.
-		if(rLogListInfo.plist_log != nullptr)
-		{
-			rLogListInfo.plist_log->DestroyWindow();
-			delete rLogListInfo.plist_log;
-		}
+		rLogListInfo.plist_log->DestroyWindow();
+		delete rLogListInfo.plist_log;
 	}
 }
 
 void CChild_logger_view_ex::set_log_filter(const TCHAR* _name, Ilog_filter* _plog_filter)
 {
 	// locked) 
+	std::lock_guard lock(this->m_lockable_log_info);
+
+	for(int i=0; i<(int)this->m_vector_log_list.size(); ++i)
 	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(this->m_lockable_log_info);
+		LOGLIST_INFO& rLogListInfo = this->m_vector_log_list.at(i);
 
-		for(int i=0; i<(int)this->m_vector_log_list.size(); ++i)
+		if(lstrcmp(rLogListInfo.stName.data(), _name)==0)
 		{
-			LOGLIST_INFO& rLogListInfo = this->m_vector_log_list.at(i);
-
-			if(lstrcmp(rLogListInfo.stName.data(), _name)==0)
-			{
-				rLogListInfo.plog_filter = _plog_filter;
-				break;
-			}
+			rLogListInfo.plog_filter = _plog_filter;
+			break;
 		}
 	}
 }
@@ -1105,37 +1090,31 @@ void CChild_logger_view_ex::set_log_filter(const TCHAR* _name, Ilog_filter* _plo
 void CChild_logger_view_ex::set_log_filter(int _tab_index, Ilog_filter* _plog_filter)
 {
 	// locked) 
-	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(this->m_lockable_log_info);
+	std::lock_guard lock(this->m_lockable_log_info);
 
-		// check) 
-		ERROR_RETURN_IF(_tab_index <0 || _tab_index >= (int)this->m_vector_log_list.size(), , LOG_ERROR << "(err ) fail to removing log_view tab out of range["sv << _tab_index << "]"sv);
+	// check) 
+	ERROR_RETURN_IF(_tab_index <0 || _tab_index >= (int)this->m_vector_log_list.size(), , LOG_ERROR << "(err ) fail to removing log_view tab out of range["sv << _tab_index << "]"sv);
 
-		// 1) 해당 LogListInfo를 얻는다.
-		LOGLIST_INFO& rLogListInfo = this->m_vector_log_list.at(_tab_index);
+	// 1) 해당 LogListInfo를 얻는다.
+	LOGLIST_INFO& rLogListInfo = this->m_vector_log_list.at(_tab_index);
 
-		// 2) Log Filter를 재설정한다.
-		rLogListInfo.plog_filter = _plog_filter;
-	}
+	// 2) Log Filter를 재설정한다.
+	rLogListInfo.plog_filter = _plog_filter;
 }
 
 void CChild_logger_view_ex::reset_log_filter(const TCHAR* _name)
 {
 	// locked) 
+	std::lock_guard lock(this->m_lockable_log_info);
+
+	for(int i=0; i<(int)this->m_vector_log_list.size(); ++i)
 	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(this->m_lockable_log_info);
+		LOGLIST_INFO& rLogListInfo = this->m_vector_log_list.at(i);
 
-		for(int i=0; i<(int)this->m_vector_log_list.size(); ++i)
+		if(lstrcmp(rLogListInfo.stName.data(), _name)==0)
 		{
-			LOGLIST_INFO& rLogListInfo = this->m_vector_log_list.at(i);
-
-			if(lstrcmp(rLogListInfo.stName.data(), _name)==0)
-			{
-				rLogListInfo.plog_filter.reset();
-				break;
-			}
+			rLogListInfo.plog_filter.reset();
+			break;
 		}
 	}
 }
@@ -1147,19 +1126,16 @@ void CChild_logger_view_ex::Clear()
 void CChild_logger_view_ex::reset_log_filter(int _tab_index)
 {
 	// locked) 
-	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(this->m_lockable_log_info);
+	std::lock_guard lock(this->m_lockable_log_info);
 
-		// check) 
-		ERROR_RETURN_IF(_tab_index < 0 || _tab_index >= (int)m_vector_log_list.size(), , LOG_ERROR << "(err ) fail to removing log_view tab out of range["sv << _tab_index << "]"sv);
+	// check) 
+	ERROR_RETURN_IF(_tab_index < 0 || _tab_index >= (int)m_vector_log_list.size(), , LOG_ERROR << "(err ) fail to removing log_view tab out of range["sv << _tab_index << "]"sv);
 
-		// 1) 해당 LogListInfo를 얻는다.
-		LOGLIST_INFO& rLogListInfo = this->m_vector_log_list.at(_tab_index);
+	// 1) 해당 LogListInfo를 얻는다.
+	LOGLIST_INFO& rLogListInfo = this->m_vector_log_list.at(_tab_index);
 
-		// 2) Log Filter를 reset한다.
-		rLogListInfo.plog_filter.reset();
-	}
+	// 2) Log Filter를 reset한다.
+	rLogListInfo.plog_filter.reset();
 }
 
 void CChild_logger_view_ex::SetHorizontalExtent(int _cx)
@@ -1167,26 +1143,32 @@ void CChild_logger_view_ex::SetHorizontalExtent(int _cx)
 	this->m_list_log.SetHorizontalExtent(_cx);
 }
 
-void CChild_logger_view_ex::process_log(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record)
+void CChild_logger_view_ex::process_log(object_ptr<LOG_RECORD>&& _plog_record)
 {
-	// check) _vector_log_record must be not null
-	RETURN_IF(_vector_log_record.empty(),);
+	// check) _plog_record must be not null
+	RETURN_IF(_plog_record.empty(),);
 
-	scoped_lock(this->m_lockable_queue_string)
+	SCOPED_LOCK(this->m_lockable_queue_string)
 	{
 		// 1) insert LOG_RECORD
-		for (auto& iter : _vector_log_record)
+		if (auto& iter = _plog_record; true)
 		{
 			// check) 
-			CONTINUE_IF(iter->buf_message.empty());
+			RETURN_IF(iter->buf_message.empty());
 
 			// - queuing 
-			this->m_pqueue_log_record_queuing.push_back(iter);
+			this->m_queue_log_record_queuing.push_back(iter);
 		}
 
 		// check) queuing된 것이 있을 때면 PostMessage한다.
-		RETURN_IF(this->m_pqueue_log_record_queuing.size() > 1);
+		RETURN_IF(this->m_queue_log_record_queuing.size() > 1);
 	}
+
+	// check)
+	RETURN_IF(this->m_count_post_message.load() > 32);
+
+	// count
+	++this->m_count_post_message;
 
 	// 7) PostMessage
 	PostMessage(WM_ADD_STRING, 0, 0);

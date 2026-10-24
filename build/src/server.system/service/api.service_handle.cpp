@@ -5,7 +5,8 @@ using namespace CGDK;
 
 #if defined (_WIN32)
 api::service_handle::service_handle() noexcept :
-	m_hService(NULL)
+	m_hService(NULL),
+	m_hCounter( 0 )
 {
 }
 
@@ -17,13 +18,13 @@ api::service_handle::~service_handle() noexcept
 
 void api::service_handle::open_SC_manager(uint32_t _desired_access)
 {
-	open_SC_manager((const wchar_t*)nullptr, (const wchar_t*)nullptr, _desired_access);
+	open_SC_manager(std::wstring_view(), std::wstring_view(), _desired_access);
 }
 
 void api::service_handle::open_SC_manager(std::string_view _lpMachineName, std::string_view _lpDatabaseName, uint32_t _dwDesiredAccess)
 {
 	// check) 
-	THROW_IF(m_hService != NULL, throwable::failure(eRESULT::NO_INITIALIZED), LOG_ERROR << "(err ) service handle is aleady created"sv);
+	THROW_IF(m_hService != NULL, throwable::failure(eRESULT::NO_INITIALIZED), LOG_ERROR << "(err ) service handle is already created"sv);
 
 	// declare) 
     SC_HANDLE hSCManager; 
@@ -41,7 +42,7 @@ void api::service_handle::open_SC_manager(std::string_view _lpMachineName, std::
 void api::service_handle::open_SC_manager(std::wstring_view _lpMachineName, std::wstring_view _lpDatabaseName, uint32_t _dwDesiredAccess)
 {
 	// check) 
-	THROW_IF(m_hService != NULL, throwable::failure(eRESULT::NO_INITIALIZED), LOG_ERROR << "(err ) service handle is aleady created"sv);
+	THROW_IF(m_hService != NULL, throwable::failure(eRESULT::NO_INITIALIZED), LOG_ERROR << "(err ) service handle is already created"sv);
 
 	// declare) 
     SC_HANDLE hSCManager; 
@@ -59,7 +60,7 @@ void api::service_handle::open_SC_manager(std::wstring_view _lpMachineName, std:
 void api::service_handle::open(SC_HANDLE p_hSCManager, std::string_view _lpServiceName, uint32_t _dwDesiredAccess)
 {
 	// check) 
-	THROW_IF(m_hService != NULL, throwable::failure(eRESULT::NO_INITIALIZED), LOG_ERROR << "(err ) service handle is aleady created"sv);
+	THROW_IF(m_hService != NULL, throwable::failure(eRESULT::NO_INITIALIZED), LOG_ERROR << "(err ) service handle is already created"sv);
 
 	// declare) 
     SC_HANDLE	hService; 
@@ -77,7 +78,7 @@ void api::service_handle::open(SC_HANDLE p_hSCManager, std::string_view _lpServi
 void api::service_handle::open(SC_HANDLE p_hSCManager, std::wstring_view _lpServiceName, uint32_t _dwDesiredAccess)
 {
 	// check) 
-	THROW_IF(m_hService != NULL, throwable::failure(eRESULT::NO_INITIALIZED), LOG_ERROR << "(err ) service handle is aleady created"sv);
+	THROW_IF(m_hService != NULL, throwable::failure(eRESULT::NO_INITIALIZED), LOG_ERROR << "(err ) service handle is already created"sv);
 
 	// declare) 
     SC_HANDLE	hService; 
@@ -108,7 +109,7 @@ void api::service_handle::create(
 	std::string_view		_lpPassword)
 {
 	// check) 
-	THROW_IF(m_hService != NULL, throwable::failure(eRESULT::NO_INITIALIZED), LOG_ERROR << "(err ) service Handle is aleady created"sv);
+	THROW_IF(m_hService != NULL, throwable::failure(eRESULT::NO_INITIALIZED), LOG_ERROR << "(err ) service Handle is already created"sv);
 
 	// 1) Service를 생성한다.
 	auto hService = ::CreateServiceA(
@@ -149,7 +150,7 @@ void api::service_handle::create(
 	std::wstring_view		_lpPassword)
 {
 	// check) 
-	THROW_IF(m_hService != NULL, throwable::failure(eRESULT::NO_INITIALIZED), LOG_ERROR << "(err ) service Handle is aleady created"sv);
+	THROW_IF(m_hService != NULL, throwable::failure(eRESULT::NO_INITIALIZED), LOG_ERROR << "(err ) service Handle is already created"sv);
 
 	// declare) 
     SC_HANDLE	hService; 
@@ -204,7 +205,7 @@ bool api::service_handle::control(uint32_t _dwControl, LPSERVICE_STATUS _lpServi
 	return ::ControlService(m_hService, _dwControl, _lpServiceStatus)!=FALSE;
 }
 
-bool api::service_handle::start(uint32_t _num_service_args, _In_reads_opt_(_num_service_args) const char** _lpServiceArgVectors) noexcept
+bool api::service_handle::start(uint32_t _num_service_args, const char** _lpServiceArgVectors) noexcept
 {
 	// check) 이미 생성되어 있으면 그냥 끝낸다.
 	RETURN_IF(m_hService == NULL, false);
@@ -213,7 +214,7 @@ bool api::service_handle::start(uint32_t _num_service_args, _In_reads_opt_(_num_
 	return ::StartServiceA(m_hService, _num_service_args, _lpServiceArgVectors)!=FALSE;
 }
 
-bool api::service_handle::start(uint32_t _num_service_args, _In_reads_opt_(_num_service_args) const wchar_t** _lpServiceArgVectors) noexcept
+bool api::service_handle::start(uint32_t _num_service_args, const wchar_t** _lpServiceArgVectors) noexcept
 {
 	// check) 이미 생성되어 있으면 그냥 끝낸다.
 	RETURN_IF(m_hService == NULL, false);
@@ -381,12 +382,12 @@ bool api::service_handle::set_description(std::wstring_view _str_service_descrip
 	return true;
 }
 
-#elif defined(__linux)
-api::service_handle::service_handle()
+#elif defined(__linux__)
+api::service_handle::service_handle() noexcept
 {
 }
 
-api::service_handle::~service_handle()
+api::service_handle::~service_handle() noexcept
 {
 }
 

@@ -126,7 +126,7 @@ END_CGMESSAGE_MAP
 //	//pSocket->m_AliveTick	 = 	message.AliveTick;
 //
 //	//// View)
-//	//g_pService->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_GAMESERVER_UPDATE, (DWORD_PTR)pSocket));
+//	//g_pservice->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_GAMESERVER_UPDATE, (DWORD_PTR)pSocket));
 //
 //	// Return) 
 //	return	1;
@@ -147,7 +147,7 @@ END_CGMESSAGE_MAP
 //	//const PACKET_STATE&	message	 = _msg.Buffer.front<PACKET_STATE>();
 //
 //	//// 3) Game Server info를 써넣는다.
-//	//scoped_lock(pSocket->m_infoGameServer)
+//	//SCOPED_LOCK(pSocket->m_infoGameServer)
 //	//{
 //	//	pSocket->m_infoGameServer	 = message.m_infoGameServer;
 //	//}
@@ -156,7 +156,7 @@ END_CGMESSAGE_MAP
 //	//m_bServerInfoUpdated.store(true);
 //
 //	//// View)
-//	//g_pService->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_GAMESERVER_UPDATE, (DWORD_PTR)pSocket));
+//	//g_pservice->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_GAMESERVER_UPDATE, (DWORD_PTR)pSocket));
 //
 //	// Return) 
 //	return	1;
@@ -167,7 +167,7 @@ END_CGMESSAGE_MAP
 //	// Declare) 
 //	CCGBuffer	bufTemp;
 //
-//	scoped_lock(GetGroupLock())
+//	SCOPED_LOCK(GetGroupLock())
 //	{
 //		// 1) 버퍼를 할당받는다.
 //		bufTemp = MEM_POOL_ALLOC(sizeof(PACKET_SERVER_LIST) + GetMemberCount()*sizeof(SServerListInfo));
@@ -175,7 +175,7 @@ END_CGMESSAGE_MAP
 //		// 2) Message Headm를 써넣는다.
 //		auto&	messageHead = bufTemp.append<PACKET_SERVER_LIST>();
 //
-//		// 3) 갯수를 초기화
+//		// 3) 개수를 초기화
 //		messageHead.Page	 = 0;
 //
 //		// 2) 만들기..
@@ -187,7 +187,7 @@ END_CGMESSAGE_MAP
 //			// - 데이터를 추가한다.
 //			bufTemp.append<SServerListInfo>(iter->m_infoGameServer);
 //
-//			// - 갯수 증가
+//			// - 개수 증가
 //			++messageHead.Page;
 //		}
 //	}

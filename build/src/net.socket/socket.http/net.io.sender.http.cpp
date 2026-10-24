@@ -6,16 +6,19 @@ using namespace CGDK;
 bool net::io::sender::Nhttp::process_send( shared_buffer&& _buffer, std::size_t _count_message, uint64_t /*_Option*/)
 {
 	// check) is _buffer->size_ is 0
-	RETURN_IF(_buffer.size() == 0, false)
+	if(_buffer.size() == 0)
+		return false;
 
 	// check) is _buffer->data_ is nullptr
-	RETURN_IF(_buffer.data() == nullptr, false)
+	if(_buffer.data() == nullptr)
+		return false;
 
 	// check) is overflow
 	CGASSERT(_buffer._is_buffer_overflow() == false, false);
 
 	// check) return if socket is not ready
-	RETURN_IF(this->socket_state() < eSOCKET_STATE::ESTABLISHED, false);
+	if(this->socket_state() < eSOCKET_STATE::ESTABLISHED)
+		return false;
 
 	// declare)
 	net::sockaddr address_peer;

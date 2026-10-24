@@ -127,7 +127,7 @@ void CChild_connective_list::OnEnable(BOOL _bEnable)
 void CChild_connective_list::OnDestroy()
 {
 	// 1) Connective를 Reset한다.
-	scoped_lock(m_lockable_manager_connective)
+	SCOPED_LOCK(m_lockable_manager_connective)
 	{
 		m_pmanager_connective.reset();
 	}
@@ -139,7 +139,7 @@ void CChild_connective_list::OnDestroy()
 void CChild_connective_list::SetConnectiveManager(net::io::connective::manager* _pconnective_manager)
 {
 	// 1) Connective Manager를 설정한다.
-	scoped_lock(m_lockable_manager_connective)
+	SCOPED_LOCK(m_lockable_manager_connective)
 	{
 		m_pmanager_connective = _pconnective_manager;
 	}
@@ -157,7 +157,7 @@ object_ptr<net::io::Iconnective>	CChild_connective_list::VarifyConnective(net::i
 	object_ptr<net::io::connective::manager> pmanager;
 
 	// 1) Connective Manager를 설정한다.
-	scoped_lock(m_lockable_manager_connective)
+	SCOPED_LOCK(m_lockable_manager_connective)
 	{
 		pmanager = m_pmanager_connective;
 	}
@@ -166,7 +166,7 @@ object_ptr<net::io::Iconnective>	CChild_connective_list::VarifyConnective(net::i
 	RETURN_IF(pmanager.empty(),	object_ptr<net::io::Iconnective>());
 
 	// 2) 해당하는 Connective를 찾는다.
-	scoped_lock(pmanager->get_lockable())
+	SCOPED_LOCK(pmanager->get_lockable())
 	{
 		// - 해당하는 Connective를 얻는다.
 		auto iter = std::find(pmanager->begin(), pmanager->end(), _pconnective);
@@ -187,13 +187,13 @@ void CChild_connective_list::UpdateConnectiveList()
 	// check) 윈도우가 생성되어 있지 않으면 끝낸다.
 	RETURN_IF(m_hWnd == nullptr)
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 	
 	// 1) Connective Manager를 얻는다.
 	object_ptr<net::io::connective::manager> pmanager_connective;
 
-	scoped_lock(m_lockable_manager_connective)
+	SCOPED_LOCK(m_lockable_manager_connective)
 	{
 		// 1) Connective Manager를 설정한다.
 		pmanager_connective = m_pmanager_connective;
@@ -215,7 +215,7 @@ void CChild_connective_list::UpdateConnectiveList()
 	// declare) 
 	int index = 0;
 	
-	scoped_lock(pmanager_connective->get_lockable())
+	SCOPED_LOCK(pmanager_connective->get_lockable())
 	{
 		// 2) managerConnective에서 begin과 end를 얻는다.
 		auto iter = pmanager_connective->begin();
@@ -248,7 +248,7 @@ void CChild_connective_list::UpdateConnectiveList()
 				// - Nameable을 얻는다.
 				auto pnameable = dynamic_cast<object::Inameable*>(pconnective);
 
-				// - 값을 추가하고 데이타를 설정한다.
+				// - 값을 추가하고 데이터를 설정한다.
 				if(pnameable != nullptr)
 				{
 				#ifdef _UNICODE
@@ -367,7 +367,7 @@ void CChild_connective_list::UpdateConnective(int _index)
 				}
 				else
 				{
-					to_string<TCHAR>(text, 1024, addr_socket);
+					wsprintf(text, TEXT("%hs"), to_string(addr_socket).data());
 				}
 			}
 			else
@@ -455,10 +455,10 @@ void CChild_connective_list::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// 1) Update한다.

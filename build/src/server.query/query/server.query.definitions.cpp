@@ -37,6 +37,12 @@ std::string_view _get_provider_string<char>(eDB_PROVIDER _provider)
 	case	eDB_PROVIDER::MYSQL_8:				str_provider = "mysql_8"; break;
 	case	eDB_PROVIDER::MYSQL_8_ANSI:			str_provider = "mysql_8_ansi"; break;
 	case	eDB_PROVIDER::MYSQL_8_UNICODE:		str_provider = "mysql_8_unicode"; break;
+	case	eDB_PROVIDER::MYSQL_9:				str_provider = "mysql_9"; break;
+	case	eDB_PROVIDER::MYSQL_9_ANSI:			str_provider = "mysql_9_ansi"; break;
+	case	eDB_PROVIDER::MYSQL_9_UNICODE:		str_provider = "mysql_9_unicode"; break;
+	case	eDB_PROVIDER::MYSQL_9_7:			str_provider = "mysql_9_7"; break;
+	case	eDB_PROVIDER::MYSQL_9_7_ANSI:		str_provider = "mysql_9_7_ansi"; break;
+	case	eDB_PROVIDER::MYSQL_9_7_UNICODE:	str_provider = "mysql_9_7_unicode"; break;
 	case	eDB_PROVIDER::MARIADB:				str_provider = "mariadb"; break;
 	case	eDB_PROVIDER::MARIADB_3_1:			str_provider = "mariadb_3_1"; break;
 	case	eDB_PROVIDER::EXCEL:				str_provider = "excel"; break;
@@ -83,6 +89,12 @@ std::wstring_view _get_provider_string<wchar_t>(eDB_PROVIDER _provider)
 	case	eDB_PROVIDER::MYSQL_8:				str_provider = L"mysql_8"; break;
 	case	eDB_PROVIDER::MYSQL_8_ANSI:			str_provider = L"mysql_8_ansi"; break;
 	case	eDB_PROVIDER::MYSQL_8_UNICODE:		str_provider = L"mysql_8_unicode"; break;
+	case	eDB_PROVIDER::MYSQL_9:				str_provider = L"mysql_9"; break;
+	case	eDB_PROVIDER::MYSQL_9_ANSI:			str_provider = L"mysql_9_ansi"; break;
+	case	eDB_PROVIDER::MYSQL_9_UNICODE:		str_provider = L"mysql_9_unicode"; break;
+	case	eDB_PROVIDER::MYSQL_9_7:			str_provider = L"mysql_9_7"; break;
+	case	eDB_PROVIDER::MYSQL_9_7_ANSI:		str_provider = L"mysql_9_7_ansi"; break;
+	case	eDB_PROVIDER::MYSQL_9_7_UNICODE:	str_provider = L"mysql_9_7_unicode"; break;
 	case	eDB_PROVIDER::MARIADB:				str_provider = L"mariadb"; break;
 	case	eDB_PROVIDER::MARIADB_3_1:			str_provider = L"mariadb_3_1"; break;
 	case	eDB_PROVIDER::EXCEL:				str_provider = L"excel"; break;

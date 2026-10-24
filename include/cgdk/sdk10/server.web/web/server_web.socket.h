@@ -46,7 +46,8 @@ public:
 // framework) 
 protected:
 	// 1) 접속이 되었을 때 불려지는 함수.
-	virtual void				on_connect(net::io::Iconnective* _pconnective);
+	using net::socket::http_server::on_connect;
+	virtual void				on_connect() override;
 
 	// 2) 접속이 종료되었을 때 호출되는 함수.
 	virtual void				on_disconnect(uint64_t _disconnect_reason);

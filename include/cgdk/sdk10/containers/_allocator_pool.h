@@ -23,7 +23,7 @@
 //
 // 1. CGDK::list란!
 //    말 그대로 list이다. 이 list의 특징은 ring형태의 linked list로 구현하여
-//    push나 pop시 부하를 거의 최하수준이라고 할수 있다.
+//    push나 pop시 부하를 거의 최하수준이라고 할 수 있다.
 //    최대 rist를 넘어설 경우에만 list를 새로 만들어서 추가하는 부하가 있을
 //    따름이다. 
 //    최대크기의 list를 한번 만들고 나면 그다음부터는 부하가 거의 없다고 보면 된다.
@@ -80,14 +80,14 @@ public:
 
 	
 // ****************************************************************************
-// Allocator의 Opeartion
+// Allocator의 Operation
 // ----------------------------------------------------------------------------
 public:
 	// 1) Address
 	pointer				address(reference _Val) const				{	return (&_Val);}
 	const_pointer		address(const_reference _Val) const			{	return (&_Val);}
 
-	// 2) Assignment Opeator
+	// 2) Assignment Operator
 	template<typename _Other>
 	allocator_pool<TYPE>& operator=(const allocator_pool<_Other>&)	{	return (*this);}	// assign from a related allocator (do nothing)
 
@@ -122,7 +122,7 @@ public:
 	}
 	void				destroy([[maybe_unused]] pointer _Ptr)		{ (_Ptr)->~TYPE();}
 
-	// 6) Max Size (최다 할당 갯수)
+	// 6) Max Size (최다 할당 개수)
 	size_type			max_size() const							{ size_type count = (size_type)(-1) / sizeof (TYPE);	return (0 < count ? count : 1);}	// estimate maximum array size
 
 

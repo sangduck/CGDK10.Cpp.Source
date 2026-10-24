@@ -31,3 +31,109 @@ tls pool의 garbage collection 처리 변경
 
 2023.9.10
 - 구조체를 이용한 query의 get_value 기능 추가.
+
+2024.2.24
+- 구조체 query 튜터리얼 추가.
+
+2026.10.21
+- net::emergency 추가 : 비상용 acceptor(net::emergency::acceptor<T>)와 signal 처리기(net::emergency::manager)
+  - acceptor는 system_executor와 완전히 분리된 자체 executor에서 동작하고, 접속한 socket마다 전용 executor(thread 1개)를 가지며 접속 종료 시 해당 executor는 제거된다.
+  - signal 처리 : 종료 signal(service를 stop/destroy하고 종료), emergency signal(비상 acceptor 생성), 강제 종료 signal(dump 생성 후 전체 접속 강제 종료, 프로세스 종료)
+  - acceptor와 executor는 예외로 죽지 않으며 system_executor의 정상 종료(destroy) 시에만 종료된다. (system_executor::register_destroy_handler)
+- executor::make_io_context_threads() 추가 : system_executor와 별개의 io_context executor(자체 iocp/epoll, thread)를 생성
+- acceptor::Ntcp::process_get_connectable_io_context() 추가 : accept되는 socket의 io_context를 지정하는 hook
+- examples/1.6.emergency_signal 추가
+
+2026.10.22
+- TCP socket option 추가 (sSOCKET_OPTION_TCP, Isocket::socket_option() / apply_socket_option()) : TCP_NODELAY, TCP_QUICKACK, SO_BUSY_POLL, TCP_NOTSENT_LOWAT, TCP Fast Open
+  - 기본값은 아무것도 켜지 않는다. (TCP_NODELAY만 예전과 같이 true. connectable::Ntcp::m_enable_tcp_nodelay는 socket_option().tcp_nodelay로 대체)
+  - acceptor : "socket_option" (accept되는 socket에 적용), "tcp_fastopen" (listen socket의 TFO. true/false/queue 길이. linux는 sysctl net.ipv4.tcp_fastopen에 2가 필요)
+  - connect_requestable / connector : "socket_option" (connector는 start context = 할당하는 socket, 접속 context = 그 socket). "tcp_fastopen"은 socket_option 안에 둔다.
+    (windows : ConnectEx 전 TCP_FASTOPEN. linux : TCP_FASTOPEN_CONNECT. connect()가 즉시 끝나고 첫 send()가 SYN을 보낸다. cookie가 없으면 첫 send()가 EINPROGRESS => epoll sendable이 EWOULDBLOCK과 같이 EPOLLOUT을 기다린다)
+  - START_PARAMETER(sSOCKET_ACCEPT_PARAMETER / sSOCKET_CONNECT_REQUEST_PARAMETER)에 socket_option, flag_socket_option, (acceptor) tcp_fastopen 추가 => 구조체 크기 변경, 사용하는 쪽 재빌드 필요
+  - windows : tcp_quickack은 SIO_TCP_SET_ACK_FREQUENCY=1 (영구), busy_poll / tcp_notsent_lowat은 경고 후 무시
+  - linux : TCP_QUICKACK은 영구가 아니라 receivable이 recv마다 다시 설정한다. busy_poll은 socket별 값이라 epoll_wait 자체의 busy poll에는 영향이 없다. (net.core.busy_poll)
+  - api::socket::set_tcp_quickack / set_busy_poll / set_tcp_notsent_lowat / set_tcp_fastopen / set_tcp_fastopen_connect / get_sysctl_tcp_fastopen 추가
+  - 단위 테스트 unit_test.net_socket.http/test_socket_option.cpp, tutorial socket.ex15.socket_option 추가
+
+2026.10.23
+- epoll_wait 자체의 busy poll (linux, kernel 6.9+ EPIOCSPARAMS)
+  - executor::set_default_busy_poll(usecs, budget, prefer) : 이후 만드는 모든 epoll io_context(system_executor, acceptor의 cpu_affinity io_context 포함)에 적용
+  - io_context_threads::START_PARAMETER::busy_poll_usecs / busy_poll_budget / prefer_busy_poll, context "busy_poll" / "busy_poll_budget" / "prefer_busy_poll", make_io_context_threads(name, count, cpu, busy_poll_usecs)
+  - Iio_context::set_busy_poll() / get_busy_poll() (시작 후 변경), executor::is_busy_poll_available()
+  - epoll_wait()가 잠들기 전에 NIC 큐를 usecs 동안 돌며 본다. 같은 NAPI ID(한 NIC 큐)의 socket들이 한 epoll에 있어야 한다. loopback / UDS는 해당 없음.
+  - budget 64 초과는 CAP_NET_ADMIN. 6.9 미만 커널은 sysctl net.core.busy_poll만. windows / io_uring 백엔드는 경고 후 무시.
+  - 단위 테스트 test_linux_io.cpp linux_io.epoll_busy_poll_*, tutorial socket.ex15.socket_option 5절
+- io_uring completion 백엔드 1단계 (api::io_context_uring_cq, CGDK_IO_URING=completion, io_backend::io_uring_completion)
+  - worker thread 마다 ring 하나(CQ 단일 소비자), op 별 executable 완료(submit_recv/recvmsg/send(zc)/sendmsg(zc)/accept(multishot)/connect/cancel/cancel_fd/wait_cancelled_fd -> process_execute(res, cqe_flags))
+  - 기존 readiness 인터페이스(attach/set_event/detach)도 서비스 : 소켓 코드는 아직 readiness 경로(2단계에서 op 로 전환)
+  - ring 메모리는 RLIMIT_MEMLOCK 에 계상 : 서버는 ulimit -l 을 올릴 것. 인수인계 문서 1.14
+- connect_requestable::Ntcp::enable_uds_loopback 기본값 true -> false (클라이언트 UDS 자동 사용 끔)
+  - loopback 접속이 그 port 의 UDS 를 먼저 시도하는 동작은 enable_uds_loopback(true) 를 부른 프로세스에서만. 서버의 enable_uds / uds_only 는 그대로(기본 false).
+  - unit test(uds.*, linux_io.*)는 시작 시 스위치를 켜고 guard 가 이전 값을 복원. tutorial socket.ex14.uds 도 main 에서 켠다.
+- io_uring completion 2단계 : 소켓 수신·송신·close·accept·connect 를 op 로 (r11441, 인수인계 문서 1.15) + 백엔드 staging (r11444, 1.16)
+  - io_uring 요청은 enter 한 thread 의 소유(종료하면 -ECANCELED). poll/op 는 어느 thread 가 쓰든 ring 의 staging 에 쓰고 ring 의 owner worker 만 제출한다.
+    owner 가 아닌 thread 는 NOP 으로 owner 를 깨운다. staging 중 취소된 op 는 owner 가 -ECANCELED 로 전달(synthetic), 취소된 poll 은 버린다.
+  - completion 모드(CGDK_IO_URING=completion) net_socket.http 전체 통과. 소켓 코드는 변경 없음.
+  - r11451 (인수인계 문서 1.17) : owner 가 아닌 thread 는 어떤 ring 에도 io_uring_enter 하지 않는다(enter 는 SQ 의 남의 SQE 까지 제출한다).
+    깨우기는 wake ring 의 IORING_OP_MSG_RING, poll remove 는 staging, 커널의 op 취소는 IORING_REGISTER_SYNC_CANCEL(timeout 0).
+    owner 는 flush 와 submit 을 같은 락 안에서 한다(취소 누락 방지). per handle 배열은 처음 쓸 때 할당하는 chunk 표로(fd 한도와 무관).
+    kernel 7.0 / 32 CPU 에서 connector_many_connects 등 실패하던 것을 해결.
+- net::emergency : emergency acceptor/socket executor와 emergency manager thread를 최우선(TIME_CRITICAL) thread 우선순위로 생성
+  - api::set_current_thread_priority(eTHREAD_PRIORITY) 추가 (windows SetThreadPriority / linux SCHED_RR 10, 권한이 없으면 nice -20)
+  - io_context_threads START_PARAMETER::thread_priority, context "thread_priority" 추가 : 각 thread가 첫 실행 전에 스스로 적용
+  - Nacceptor::executor_thread_priority(), manager::SETTING::thread_priority (기본 TIME_CRITICAL)
+- io_uring completion 3단계 : multishot RECV + provided buffer ring (r11453, 인수인계 문서 1.18)
+  - Iio_context::submit_recv_multishot() / get_provided_buffer() / return_buffer() 추가 (io_uring_completion 만. 다른 백엔드는 false / nullptr)
+  - ring 마다 provided buffer ring(16KB x 256)을 첫 multishot recv 때 등록. 도착마다 완료(IORING_CQE_F_BUFFER, F_MORE), 버퍼는 어느 thread 에서든 반환(ring 별 lock)
+  - stream 소켓 수신이 소켓당 한 번 제출하는 multishot RECV 로 : 데이터는 수신 버퍼로 복사 후 즉시 반환, 버퍼 고갈(-ENOBUFS)이면 RECV 한 번 뒤 재개
+  - CGDK_IO_URING_MULTISHOT=0 이면 이전 경로(완료마다 RECV 재제출). receivable::Nstream 헤더 변경 : 사용하는 쪽 재빌드
+- net::emergency tutorial / unit test 추가
+  - tutorials/network.1.socket/socket.ex16.emergency_acceptor : 일반 acceptor + emergency manager, emergency signal로 acceptor 생성, system_executor를 막은 상태에서 응답, 종료 signal로 정상 종료
+  - unit_test.net_socket.http test_emergency.cpp : thread 우선순위, socket별 executor, system_executor 막힘/멈춘 session/예외 격리, manager signal(실제 signal 포함), destroy handler 등록
+- io_uring completion 수신 모드 전환 (r11459, 인수인계 문서 1.19)
+  - 큰 트래픽(provided buffer 를 다 채운 도착, 그보다 큰 메시지)은 multishot 을 취소하고 단일 RECV 로 : 수신 버퍼가 IOCP 와 같은 규칙으로 커진다(1KB, 8KB, 64KB, 메시지 크기)
+  - 작은 수신이 16번 이어지면 다시 multishot. CGDK_IO_URING_RECV_ADAPTIVE=0 이면 전환 끔
+  - Iio_context::provided_buffer_size() 추가. receivable::Nstream 헤더 변경 : 사용하는 쪽 재빌드
+- io_uring 두 백엔드(linux) : 막히는 executable 하나가 executor 의 모든 post 를 멈추던 문제 수정 (r11464, 인수인계 문서 1.20)
+  - readiness(CGDK_IO_URING=io_uring) : post eventfd 를 CQE 를 받는 즉시 다시 poll(전에는 그 배치를 다 실행한 뒤 : 다른 thread 가 post 를 받지 못함)
+  - completion(CGDK_IO_URING=completion) : post 큐의 wake 를 커널에서 기다리는 ring 에 먼저, 자기 ring 은 마지막에. 늦게 ring 을 만든 worker 도 큐를 가져감
+- unit_test emergency.* : linux 실패 3개(테스트 전제 : 준비 socket 수, 배치로 가져가는 post, 임시 포트 범위의 테스트 포트) 수정 (r11465)
+- MSG_ZEROCOPY(linux, readiness io_uring) : 송신 thread 가 소유자를 보관하기 전에 다른 thread 가 읽은 완료 통지를 잃던 문제 수정 (r11468, 인수인계 문서 1.21)
+  - 보관 전에 통지된 송신은 보관하지 않고 바로 놓음 : zerocopy_pending_count() 가 0 이 되지 않고 버퍼가 socket 종료까지 남던 간헐 문제
+  - Itcp_gather 헤더 멤버 추가 : 사용하는 쪽 재빌드
+
+2026.10.24
+- executor::queue_list : 한꺼번에 들어온 post 를 thread 하나가 혼자 처리하던 문제 수정 (r11470, 인수인계 문서 1.22)
+  - post 는 queue 가 비어 있다가 찰 때만 깨우므로 나머지 thread 는 wait 의 timeout(queue_list_threads 1초)까지 잠들어 있었다 : odbc querier 의 query 가 몰리면 하나씩 실행됨
+  - 꺼낸 뒤에도 queue 에 남아 있으면 기다리는 thread 를 하나 더 깨운다(차례로 모두 깸)
+- executor::scheduler : 실행 시각이 된 executable 을 힙 락 밖에서 post (r11470) : 그동안 다른 thread 의 post_at() / cancel() 이 기다리지 않는다
+- executor::queue_list_threads::stop() 이 기다리는 thread 를 바로 깨운다 (r11472) : 전에는 각 thread 가 1초 timeout 뒤에 끝나 stop() 이 최대 1초 늦었다
+  - queue_list 헤더 멤버 추가(cancel_wait) : 사용하는 쪽 재빌드
+- net.socket(linux epoll) send cork : 나이 확인을 송신마다 하지 않고 적응형 간격(1~32 송신)으로, SEND_CORK_DURATION 20us -> 200us (r11471)
+  - r11345 이후 큰 묶음 push 처리량 회귀(r11344 대비 -22%)의 송신 쪽 원인. 수신 버퍼 쪽(r11371, r11377)과 함께 회복
+- io_uring(linux) : worker 가 아닌 thread 의 blocking 호출(SO_RCVTIMEO recv 등)이 EINTR 로 끊기던 문제 수정 (r11474, 인수인계 문서 1.23)
+  - io_uring 은 요청을 제출한 thread, ring 을 만들거나 ring 에 제출한 thread 에 task work 를 보낸다(요청 완료 때, ring 해제 때)
+  - readiness(CGDK_IO_URING=1) : executor 의 worker 만 ring 에 제출, 다른 thread 는 SQ 에 두고 eventfd 로 worker 를 깨움. ring 은 곧 끝나는 임시 thread 가 생성
+  - completion : 다른 ring 의 owner 깨우기를 MSG_RING 대신 ring 별 eventfd 로. ring 은 임시 thread 가 생성
+  - readiness 동작 변경 : worker 가 아닌 thread 의 execute() 펌핑은 이벤트를 처리하지 않음. 헤더 변경 : 사용하는 쪽 재빌드
+- io_uring completion : post 의 깨우기가 바쁜 ring 으로 가면 다른 worker 가 쉬어도 그 post 가 기다리던 문제 수정 (r11475, 인수인계 문서 1.24)
+  - owner 가 기다리기 직전 post 큐를 확인해 가져감. 헤더 멤버 추가 : 사용하는 쪽 재빌드
+- io_uring completion : handler 가 scoped_thread_block(sync query 등)에서 블로킹하면 같은 ring 의 모든 socket 이 멈추던 문제 수정 (r11481, 인수인계 문서 1.26)
+  - 블로킹하는 worker 의 ring 을 다른 worker 가 대신 실행(빌려주기). 막힌 executable 의 결과는 풀린 뒤 그 worker 가 순서대로 실행
+  - CPU 를 오래 쓰는 handler 는 그대로(같은 ring 의 socket 이 그만큼 늦음) : completion 서버의 handler 는 짧게
+  - 200 접속 중 하나가 300ms 블로킹할 때 다른 접속 최대 270ms -> 2ms. 헤더 변경 : 사용하는 쪽 재빌드
+- io_uring completion : 한 acceptor 가 받은 socket 이 모두 listen socket 의 ring(thread 하나)에서 돌던 문제 수정 (r11487, 인수인계 문서 1.27)
+  - accept 완료(CQE)에서 새 socket 을 worker 의 ring 에 round robin 으로 바인딩(전에는 accept handler 의 첫 제출 = listen ring)
+  - 8 thread 벤치 completion : tcp 64B x32 2.5M -> 10.6M msg/s, uds 13.9M -> 25.1M, tcp 16B x256 878K -> 1.18M, 64KB x4 178K -> 210K
+  - unit_test bench_linux_io : 서버 socket 이 system executor 에서 돌던 측정 수정(이전 completion 수치는 클라이언트만 completion), handler thread 분포 출력
+  - 헤더는 private 함수 선언만 : 재빌드 불필요
+- net.socket(linux) : acceptor 가 accept 한 socket 에 acceptor 의 io_context 를 준다 (r11489, 인수인계 문서 2. 남은 일 19) - 동작 변경
+  - 순서 : process_get_connectable_io_context() -> acceptor 의 io_context -> system_executor (windows 와 헤더 주석과 같음)
+  - 전에는 acceptor 에 io_context 를 줘도 accept 된 socket 은 system_executor 에서 돌았다(풀에서 재사용된 socket 은 전에 가졌던 io_context)
+  - acceptor 에 io_context 를 주지 않은 서버는 그대로(acceptor 의 기본 io_context 가 system_executor). acceptor 에 accept 전용 executor 를 준 서버는 접속도 그 executor 에서 돈다
+  - 단위 테스트 unit_test.net_socket.http/test_acceptor_io_context.cpp 추가. 헤더 변경 없음
+- MSG_ZEROCOPY / io_uring SEND_ZC(linux) : ENOBUFS 면 연결을 닫지 않고 같은 데이터를 복사로 다시 보냄 (r11490, 인수인계 문서 1.28)
+  - zerocopy 가 고정하는 페이지는 사용자 단위 RLIMIT_MEMLOCK(같은 계정의 모든 프로세스가 나눠 씀)에 합산 : 넘으면 ENOBUFS 로 실패하고 연결이 끊겼다
+  - ENOBUFS 뒤 그 socket 은 100ms 동안 zerocopy 를 쉼. Itcp_gather::zerocopy_fallback_count() 추가. Itcp_gather 헤더 변경 : 사용하는 쪽 재빌드
+  - 실서버에서 zerocopy 를 쓰려면 ulimit -l(systemd LimitMEMLOCK)을 넉넉히

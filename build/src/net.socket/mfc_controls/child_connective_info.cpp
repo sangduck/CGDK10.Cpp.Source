@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <charconv>
 
 extern	HINSTANCE	g_hInstance;
 
@@ -119,7 +120,7 @@ void CChild_connective_info::OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pscr
 
 void CChild_connective_info::UpdateConnectiveInfo()
 {
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 	// check) 
@@ -134,14 +135,14 @@ void CChild_connective_info::UpdateConnectiveInfo()
 
 
 	//-----------------------------------------------------------------
-	// 1. Traffice Info 계산하기.
+	// 1. Traffic Info 계산하기.
 	//-----------------------------------------------------------------
 	// 1) 이전과 현재의 차이를 구한다. (Overflow가 났을 경우를 대비하여 계산해야 한다.)
-	LONGLONG countTry			 = this->m_pstatistics->count_try.load() - this->m_statistics_offet_count_try;
-	LONGLONG countConnect		 = this->m_pstatistics->count_success_connect.load() - this->m_statistics_offet_success_connect;
-	LONGLONG countDisconnect	 = this->m_pstatistics->count_disconnect.load() - this->m_statistics_offet_disconnect;
-	LONGLONG countFailConnect	 = this->m_pstatistics->count_fail_connect.load() - this->m_statistics_offet_fail_connect;
-	LONGLONG countErrorDisconnect= this->m_pstatistics->count_error_disconnect.load() - this->m_statistics_offet_error_disconnect;
+	LONGLONG countTry			 = this->m_pstatistics->count_try.load() - this->m_statistics_offset_count_try;
+	LONGLONG countConnect		 = this->m_pstatistics->count_success_connect.load() - this->m_statistics_offset_success_connect;
+	LONGLONG countDisconnect	 = this->m_pstatistics->count_disconnect.load() - this->m_statistics_offset_disconnect;
+	LONGLONG countFailConnect	 = this->m_pstatistics->count_fail_connect.load() - this->m_statistics_offset_fail_connect;
+	LONGLONG countErrorDisconnect= this->m_pstatistics->count_error_disconnect.load() - this->m_statistics_offset_error_disconnect;
 
 	// 2) 초당 전송률을 구한다.
 	float fTry_PerSec			 = (countTry > this->m_countTry) ? static_cast<float>(countTry - this->m_countTry)*1000/tick_differ.count() : 0;
@@ -158,6 +159,7 @@ void CChild_connective_info::UpdateConnectiveInfo()
 	// 2.control에 표시하기.
 	//-----------------------------------------------------------------
 	TCHAR		temp_string[256]={};
+	char		temp_string_mb[256]={};
 	LONGLONG	countKeep = this->m_pstatistics->count_keep.load();
 
 	// 1) Connection Info
@@ -168,27 +170,27 @@ void CChild_connective_info::UpdateConnectiveInfo()
 	m_graph_tcp_connect.Scroll(1);
 
 	// 2) Connection Info
-	__to_string(temp_string, countKeep);			this->SetDlgItemText(IDC_STATIC_KEEP_CONNECT,	temp_string);
-	__to_string(temp_string, countTry);				this->SetDlgItemText(IDC_STATIC_TRY,			temp_string);
-	__to_string(temp_string, countConnect);			this->SetDlgItemText(IDC_STATIC_CONNECTED,		temp_string);
-	__to_string(temp_string, countDisconnect);		this->SetDlgItemText(IDC_STATIC_DISCONNECTED,	temp_string);
-	__to_string(temp_string, countFailConnect);		this->SetDlgItemText(IDC_STATIC_FAIL_CONNECT,	temp_string);
-	__to_string(temp_string, countErrorDisconnect);	this->SetDlgItemText(IDC_STATIC_ERROR_CLOSE,	temp_string);
+	*std::to_chars(temp_string_mb, temp_string_mb + (std::size(temp_string_mb)) - 1, countKeep).ptr = 0;				::SetDlgItemTextA(this->m_hWnd, IDC_STATIC_KEEP_CONNECT,	temp_string_mb);
+	*std::to_chars(temp_string_mb, temp_string_mb + (std::size(temp_string_mb)) - 1, countTry).ptr = 0;				::SetDlgItemTextA(this->m_hWnd, IDC_STATIC_TRY,			temp_string_mb);
+	*std::to_chars(temp_string_mb, temp_string_mb + (std::size(temp_string_mb)) - 1, countConnect).ptr = 0;			::SetDlgItemTextA(this->m_hWnd, IDC_STATIC_CONNECTED,		temp_string_mb);
+	*std::to_chars(temp_string_mb, temp_string_mb + (std::size(temp_string_mb)) - 1, countDisconnect).ptr = 0;		::SetDlgItemTextA(this->m_hWnd, IDC_STATIC_DISCONNECTED,	temp_string_mb);
+	*std::to_chars(temp_string_mb, temp_string_mb + (std::size(temp_string_mb)) - 1, countFailConnect).ptr = 0;		::SetDlgItemTextA(this->m_hWnd, IDC_STATIC_FAIL_CONNECT,	temp_string_mb);
+	*std::to_chars(temp_string_mb, temp_string_mb + (std::size(temp_string_mb)) - 1, countErrorDisconnect).ptr = 0;	::SetDlgItemTextA(this->m_hWnd, IDC_STATIC_ERROR_CLOSE,	temp_string_mb);
 
 	// 3) 초당 전송률 표시.
-	__sprintf(temp_string, TEXT("%.2f"), fTry_PerSec);			this->SetDlgItemText(IDC_STATIC_TRY_PERSEC,				temp_string);
-	__sprintf(temp_string, TEXT("%.2f"), fConnected_PerSec);	this->SetDlgItemText(IDC_STATIC_CONNECTED_PERSEC,		temp_string);
-	__sprintf(temp_string, TEXT("%.2f"), fDisconnected_PerSec);	this->SetDlgItemText(IDC_STATIC_DISCONNECTED_PERSEC,	temp_string);
+	std::swprintf(temp_string, std::size(temp_string), std::wstring_view(TEXT("%.2f")).data(), fTry_PerSec);			this->SetDlgItemText(IDC_STATIC_TRY_PERSEC,				temp_string);
+	std::swprintf(temp_string, std::size(temp_string), std::wstring_view(TEXT("%.2f")).data(), fConnected_PerSec);	this->SetDlgItemText(IDC_STATIC_CONNECTED_PERSEC,		temp_string);
+	std::swprintf(temp_string, std::size(temp_string), std::wstring_view(TEXT("%.2f")).data(), fDisconnected_PerSec);	this->SetDlgItemText(IDC_STATIC_DISCONNECTED_PERSEC,	temp_string);
 }
 
 void CChild_connective_info::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent==0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// 1) Update한다.
@@ -243,7 +245,7 @@ void CChild_connective_info::OnDestroy()
 void CChild_connective_info::set_connection_info(const statistics::unit_connective* _statistics_acceptor)
 {
 	// 1) 값을 설정한다.
-	scoped_lock(m_lockable_statistics)
+	SCOPED_LOCK(m_lockable_statistics)
 	{
 		m_pstatistics = _statistics_acceptor;
 	}
@@ -372,11 +374,11 @@ void CChild_connective_info::OnBnClickedCheckGraphDisconnect()
 void CChild_connective_info::OnBnClickedResetStatistics()
 {
 	// 1) reset
-	this->m_statistics_offet_count_try = this->m_pstatistics->count_try.load() ;
-	this->m_statistics_offet_success_connect = this->m_pstatistics->count_success_connect.load();
-	this->m_statistics_offet_disconnect = this->m_pstatistics->count_disconnect.load();
-	this->m_statistics_offet_fail_connect = this->m_pstatistics->count_fail_connect.load();
-	this->m_statistics_offet_error_disconnect = this->m_pstatistics->count_error_disconnect.load();
+	this->m_statistics_offset_count_try = this->m_pstatistics->count_try.load() ;
+	this->m_statistics_offset_success_connect = this->m_pstatistics->count_success_connect.load();
+	this->m_statistics_offset_disconnect = this->m_pstatistics->count_disconnect.load();
+	this->m_statistics_offset_fail_connect = this->m_pstatistics->count_fail_connect.load();
+	this->m_statistics_offset_error_disconnect = this->m_pstatistics->count_error_disconnect.load();
 	this->m_tick_last = chrono::tick::now();
 
 	// 2) 최종 시간을 last에 넣는다.

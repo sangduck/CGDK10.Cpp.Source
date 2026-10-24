@@ -46,7 +46,7 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 			void				SetEventInfo(time_event::Ientity* _pentity);
-			void				EnableEventContorls(bool _bEnable=true);
+			void				EnableEventControls(bool _bEnable=true);
 
 			void				UpdateEntityInfo();
 			void				UpdateAsEntity	(time_event::Ientity* _pentity);
@@ -74,7 +74,8 @@ public:
 			CDateTimeCtrl		m_datatime_LastFailed_YMD;
 			CDateTimeCtrl		m_datatime_LastFailed_MHS;
 
-			lockable<object_ptr<time_event::Ientity>>	m_pevent_entity;
+	mutable	lock_object			m_lockable_pevent_entity;
+			object_ptr<time_event::Ientity> m_pevent_entity;
 };
 
 

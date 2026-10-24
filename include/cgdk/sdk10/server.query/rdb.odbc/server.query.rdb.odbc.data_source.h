@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                         Server Query odbc Classes                         *
+//*                          server.query.rdb.odbc                            *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -41,6 +41,7 @@ public:
 			SQLHENV				m_handle_env;
 			SQLUSMALLINT		m_driver_completion;
 			std::string			m_str_initialization;
+			uint32_t			m_session_wait_timeout = 0;	// (seconds) 'SET SESSION wait_timeout' on connecting (MySQL/MariaDB, 0: not set)
 };
 
 

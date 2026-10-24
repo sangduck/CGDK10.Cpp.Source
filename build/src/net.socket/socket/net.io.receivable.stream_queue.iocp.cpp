@@ -13,7 +13,7 @@ intptr_t net::io::receivable::Nstream_queue::executable_receiving::process_execu
 	// 1) process_complete_receiveable을 호출한다.
 	auto result = this->m_preceivable_stream->process_complete_receivable(_result, _param);
 
-	// statistics) receive가 완료되었으므로 걸려있는 Overlapped I/O의 갯수를 줄인다.
+	// statistics) receive가 완료되었으므로 걸려있는 Overlapped I/O의 개수를 줄인다.
 	this->m_preceivable_stream->statistics_on_decrease_async_receiveing();
 
 	// 2) release한다.
@@ -32,7 +32,7 @@ intptr_t net::io::receivable::Nstream_queue::executable_received::process_execut
 	// 1) process_complete_receiveable을 호출한다.
 	this->m_preceivable_stream->process_received_buffer();
 	
-	// statistics) receive가 완료되었으므로 걸려있는 Overlapped I/O의 갯수를 줄인다.
+	// statistics) receive가 완료되었으므로 걸려있는 Overlapped I/O의 개수를 줄인다.
 	this->m_preceivable_stream->statistics_on_decrease_async_receiveing();
 
 	// 2) release한다.
@@ -50,20 +50,20 @@ net::io::receivable::Nstream_queue::Nstream_queue() :
 	m_buf_processing(),
 	m_bytes_required(0),
 	m_max_received_bytes_queued(DEFAULT_BYTES_MAX_MESSAGE_RECEIVE_QUEUE),
-	m_minimum_mesage_buffer_size(g_bytes_message_buffer_default_min_size),
+	m_minimum_message_buffer_size(g_bytes_message_buffer_default_min_size),
 	m_maximum_message_buffer_size(g_bytes_message_buffer_default_max_size)
 {
 	// check) 최소 MINIMUM_REMAINED_RECEIVE_BUFFER보다는 크거나 같아야 한다.
-	CGASSERT_ERROR(this->m_minimum_mesage_buffer_size >= MINIMUM_REMAINED_RECEIVE_BUFFER);
+	CGASSERT_ERROR(this->m_minimum_message_buffer_size >= MINIMUM_REMAINED_RECEIVE_BUFFER);
 
 	// check) MAX_TCP_MESSAGE_SIZE보다는 같거나 작아야 한다.
 	CGASSERT_ERROR(this->m_maximum_message_buffer_size <= MAX_TCP_MESSAGE_SIZE);
 
-	// 1) executable Receiving 객첼를 생성한다.
+	// 1) executable Receiving 객체를 생성한다.
 	this->m_pexecutable_receiving = make_object<executable_receiving>();
 	this->m_pexecutable_receiving->m_preceivable_stream = this;
 
-	// 2) executable Received 객첼를 생성한다.
+	// 2) executable Received 객체를 생성한다.
 	this->m_pexecutable_received = make_object<executable_received>();
 	this->m_pexecutable_received->m_preceivable_stream = this;
 }
@@ -77,7 +77,7 @@ net::io::receivable::Nstream_queue::~Nstream_queue() noexcept
 std::size_t net::io::receivable::Nstream_queue::minimum_message_buffer_size(std::size_t _size) noexcept
 {
 	// 1) 기존의 Min receive buffer 크기를 저장해 놓는다.
-	std::size_t	old	= this->m_minimum_mesage_buffer_size;
+	std::size_t	old	= this->m_minimum_message_buffer_size;
 
 	// 2) 최하크기 이하일 경우 최하크기로 맞춘다.
 	SATURATE_MIN(_size, MINIMUM_REMAINED_RECEIVE_BUFFER)
@@ -86,12 +86,12 @@ std::size_t net::io::receivable::Nstream_queue::minimum_message_buffer_size(std:
 	RETURN_IF(old == _size, old);
 
 	// 3) 값을 변경한다.
-	this->m_minimum_mesage_buffer_size = _size;
+	this->m_minimum_message_buffer_size = _size;
 
 	// 4) 
-	if (this->m_minimum_mesage_buffer_size > this->m_maximum_message_buffer_size)
+	if (this->m_minimum_message_buffer_size > this->m_maximum_message_buffer_size)
 	{
-		this->m_maximum_message_buffer_size = this->m_minimum_mesage_buffer_size;
+		this->m_maximum_message_buffer_size = this->m_minimum_message_buffer_size;
 	}
 
 	// return) 
@@ -100,7 +100,7 @@ std::size_t net::io::receivable::Nstream_queue::minimum_message_buffer_size(std:
 
 std::size_t net::io::receivable::Nstream_queue::minimum_message_buffer_size() noexcept
 {
-	return this->m_minimum_mesage_buffer_size;
+	return this->m_minimum_message_buffer_size;
 }
 
 std::size_t net::io::receivable::Nstream_queue::maximum_message_buffer_size(std::size_t _size) noexcept
@@ -115,9 +115,9 @@ std::size_t net::io::receivable::Nstream_queue::maximum_message_buffer_size(std:
 	this->m_maximum_message_buffer_size = _size;
 
 	// 4) 
-	if (this->m_minimum_mesage_buffer_size > this->m_maximum_message_buffer_size)
+	if (this->m_minimum_message_buffer_size > this->m_maximum_message_buffer_size)
 	{
-		this->m_minimum_mesage_buffer_size = this->m_maximum_message_buffer_size;
+		this->m_minimum_message_buffer_size = this->m_maximum_message_buffer_size;
 	}
 
 	// return) 
@@ -138,7 +138,7 @@ void net::io::receivable::Nstream_queue::process_reset_receivable()
 	this->m_buffer_receiving = alloc_shared_buffer(size_alloc) ^ size_alloc;
 
 	// 3) Received Queue를 clear한다.
-	scoped_lock(this->m_lockable_queue_received)
+	SCOPED_LOCK(this->m_lockable_queue_received)
 	{
 		this->m_queue_received.clear();
 		this->m_byte_queued_receive = 0;
@@ -175,7 +175,7 @@ bool net::io::receivable::Nstream_queue::receive()
 	this->m_wsa_flag = 0;
 
 	// 5) 보낸다.
-	if(api::socket::recv_async(this->native_handle(), &this->m_wsabuf_receiving, &this->m_wsa_bytes_received, &m_wsa_flag, this->m_pexecutable_receiving) == false)
+	if(this->_call_receiving([&](CGSOCKET _handle_socket) { return api::socket::recv_async(_handle_socket, &this->m_wsabuf_receiving, &this->m_wsa_bytes_received, &m_wsa_flag, this->m_pexecutable_receiving); }) == false)
 	{
 		// statistics) 
 		this->statistics_on_error_receive();
@@ -309,18 +309,18 @@ intptr_t net::io::receivable::Nstream_queue::process_complete_receivable( intptr
 			//   (이렇게 8의 배수로 하는 이유는... 너무 단계를 많이 하게 될 경우 오히리 사용하는 메모리 버퍼 풀의 종류가 많아져
 			//   각 풀에 재고가 너무 많이 남아 있어 메모리 사용량을 늘릴 수 있으므로 단계를 줄이기 위해서 8의 승수로
 			//   단계를 줄여 사용하는 풀의 종류를 줄인다.)
-			std::size_t size_prepare = this->m_minimum_mesage_buffer_size; while (size_compare > size_prepare) size_prepare *= 8;
+			std::size_t size_prepare = this->m_minimum_message_buffer_size; while (size_compare > size_prepare) size_prepare *= 8;
 
 			// - [최소_TCP_수신_버퍼_크기]보다는 크게 한다.
 			SATURATE_MAX(size_prepare, this->m_maximum_message_buffer_size);
 
-			// - 최소 [요구_버퍼_크기]+[이미_수신한_데이터_크기]보다는 크야 한다.
+			// - 최소 [요구_버퍼_크기]+[이미_수신한_데이터_크기]보다는 커야 한다.
 			size_prepare = __select_max(size_prepare, bytes_required);
 
 			// - [새_수신_버퍼]를 [준비할_버퍼량] 크기만큼 할당한다.
 			//   exception) Memory 할당을 받지 못했을 경우라면... Error처리를 위해 Throw한다.
 			//   * Size가 Pool이 할당할 수 있는 최대 크기(일반적으로 256Kbytes)이상일 경우 발생한다.
-			//   * 메모리 부족으로 인해 더이상 할당받지 못했을 경우에 뜬다.
+			//   * 메모리 부족으로 인해 더 이상 할당받지 못했을 경우에 뜬다.
 			//   [새_수신_버퍼]를 [준비할_버퍼량] 크기만큼 할당해 [수신_버퍼](m_buffer_receiving)에 설정한다.
 			this->m_buffer_receiving = alloc_shared_buffer(size_prepare) ^ size_prepare;
 		}
@@ -380,8 +380,8 @@ bool net::io::receivable::Nstream_queue::post_received_buffer()
 void net::io::receivable::Nstream_queue::queue_close_message()
 {
 	//-----------------------------------------------------------------
-	// 설명) 접속 종료시 처리
-	//    - 여기서 바로 접속 종료처리를 해서는 안됀다.
+	// 설명) 접속 종료 시 처리
+	//    - 여기서 바로 접속 종료처리를 해서는 안 된다.
 	//      (receive 데이터를 처리하는 쪽에서 접속종료처리를 하도록 한다.)
 	//    - 따라서 buffer(0,0,0)을 queuing하고 끝낸다.
 	//    - 그러면 receive 데이터를 처리하는 쪽에서 접속종료처리를 한다.
@@ -389,7 +389,7 @@ void net::io::receivable::Nstream_queue::queue_close_message()
 	// declare) 
 	bool is_post = false;
 
-	scoped_lock(this->m_lockable_queue_received)
+	SCOPED_LOCK(this->m_lockable_queue_received)
 	{
 		// 1) Empty엿으면 새로 PostReceive를 걸어야 한다.
 		is_post = this->m_queue_received.empty();
@@ -426,9 +426,9 @@ void net::io::receivable::Nstream_queue::queue_received_message( const shared_bu
 {
 	//-----------------------------------------------------------------
 	// 설명) receive 데이터 queuing
-	//    - receive받은 데이터를 queuing한 후에 다른 쓰레드에서 처리하도록 한다.
+	//    - receive받은 데이터를 queuing한 후에 다른 스레드에서 처리하도록 한다.
 	//    - 일단 this->m_queue_received에 추가한 다음.
-	//    - post_received_buffer()함수를 호출해 다른 쓰레드에서 
+	//    - post_received_buffer()함수를 호출해 다른 스레드에서 
 	//      receive 데이터를 처리하도록 한다.
 	//-----------------------------------------------------------------
 	// check) 
@@ -437,7 +437,7 @@ void net::io::receivable::Nstream_queue::queue_received_message( const shared_bu
 	// declare) 
 	bool is_post = false;
 
-	scoped_lock(this->m_lockable_queue_received)
+	SCOPED_LOCK(this->m_lockable_queue_received)
 	{
 		// 1) bPrePost인지 확인한다.(Empty라면 새로 Post해야 한다.)
 		is_post = this->m_queue_received.empty();
@@ -466,7 +466,7 @@ void net::io::receivable::Nstream_queue::queue_received_message( const shared_bu
 void net::io::receivable::Nstream_queue::process_received_buffer()
 {
 	//-----------------------------------------------------------------
-	// 설명) qeueing된 receive 데이터 처리
+	// 설명) queueing된 receive 데이터 처리
 	//    - queuing된 receive 데이터를 이 함수에서 처리한다.
 	//    - queue에서 receive 데이터를 하나 꺼낸 후 process_packet()
 	//      함수를 호출해 message를 처리한다. 
@@ -477,7 +477,7 @@ void net::io::receivable::Nstream_queue::process_received_buffer()
 	shared_buffer buf_buffer;
 	net::sockaddr address_peer;
 
-	scoped_lock(this->m_lockable_queue_received)
+	SCOPED_LOCK(this->m_lockable_queue_received)
 	{
 		// check) 만약 정상적인 접속 종료가 아니라 오류로 접속이 죵료되었다면 recset되었을 수 있으므로 그럴 경우 바로 리턴한다.
 		RETURN_IF(this->m_queue_received.empty(),);
@@ -531,12 +531,12 @@ void net::io::receivable::Nstream_queue::process_received_buffer()
 			CGASSERT_ERROR(bytes_required <= m_maximum_message_buffer_size);
 
 			// check) 요구한 message의 크기가 최대 message buffer 크기보다 크면 Exception을 던진다.
-			THROW_IF(bytes_required > m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long lengnth"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
+			THROW_IF(bytes_required > m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long length"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
 
 			// - m_bytes_required를 저장한다.
 			this->m_bytes_required = bytes_required;
 		}
-		// Case 5-2) 기본 buffer가 완전히 빈경우.
+		// Case 5-2) 기본 buffer가 완전히 빈 경우.
 		else if(buf_processing.size() == 0)
 		{
 			// - 그대로 덥어 쓴다.
@@ -552,7 +552,7 @@ void net::io::receivable::Nstream_queue::process_received_buffer()
 			CGASSERT_ERROR(bytes_required <= this->m_maximum_message_buffer_size);
 
 			// check) 요구한 message의 크기가 최대 message buffer 크기보다 크면 Exception을 던진다.
-			THROW_IF(bytes_required > this->m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long lengnth"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
+			THROW_IF(bytes_required > this->m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long length"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
 
 			// - m_bytes_required를 저장한다.
 			this->m_bytes_required = bytes_required;
@@ -571,7 +571,7 @@ void net::io::receivable::Nstream_queue::process_received_buffer()
 				// check) 
 				CGASSERT_ERROR(this->m_bytes_required>buf_processing.size());
 
-				// - 더 복사해 넣어야할 량을 계산한다.
+				// - 더 복사해 넣어야 할 량을 계산한다.
 				auto more_needed = this->m_bytes_required - buf_processing.size();
 
 				// - 나머지 데이터는 새로 받은 데이터에서 복사해 넣는다.
@@ -595,7 +595,7 @@ void net::io::receivable::Nstream_queue::process_received_buffer()
 				CGASSERT_ERROR(bytes_required <= this->m_maximum_message_buffer_size);
 
 				// check) 요구한 message의 크기가 최대 message buffer 크기보다 크면 Exception을 던진다.
-				THROW_IF(bytes_required > this->m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long lengnth"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
+				THROW_IF(bytes_required > this->m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long length"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
 
 				// - m_bytes_required를 저장한다.
 				this->m_bytes_required = bytes_required;
@@ -622,7 +622,7 @@ void net::io::receivable::Nstream_queue::process_received_buffer()
 					CGASSERT_ERROR(bytes_required <= this->m_maximum_message_buffer_size);
 
 					// check) 요구한 message의 크기가 최대 message buffer 크기보다 크면 Exception을 던진다.
-					THROW_IF(bytes_required > this->m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long lengnth"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
+					THROW_IF(bytes_required > this->m_maximum_message_buffer_size, throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, bytes_required, "message is too long length"sv), LOG_DEBUG << "(err ) CGDK.net.socket: message size is too BIG!"sv);
 
 					// - m_bytes_required를 저장한다.
 					this->m_bytes_required = bytes_required;
@@ -640,8 +640,8 @@ void net::io::receivable::Nstream_queue::process_received_buffer()
 	catch (throwable::failure& _e)
 	{
 		// trace) 
-		LOG_DEBUG << "(excp) CGDK.net.socket: exception occure and socket closed (throwable) " << __CGFUNCTION__;
-		LOG_DEBUG << "       - reason: " << NFMT::format("0x{:x}", _e.reason<uint64_t>()) << " [" << to_string<char>(_e.reason<eRESULT>()) << "]";
+		LOG_DEBUG << "(excp) CGDK.net.socket: exception occurred and socket closed (throwable) " << __CGFUNCTION__;
+		LOG_DEBUG << "       - reason: " << CGDK::stream_hex(_e.reason<uint64_t>(), 0, false, true) << " [" << to_string(_e.reason<eRESULT>()) << "]";
 		if (_e.description().empty() == false) LOG_DEBUG << "       - description: " << _e.description();
 
 		// - call 'exception handler'
@@ -666,7 +666,7 @@ void net::io::receivable::Nstream_queue::process_received_buffer()
 	catch(std::exception& _e)
 	{
 		// trace) 
-		LOG_DEBUG << "(excp) CGDK.net.socket: exception occure and socket closed (std::exception) " << __CGFUNCTION__;
+		LOG_DEBUG << "(excp) CGDK.net.socket: exception occurred and socket closed (std::exception) " << __CGFUNCTION__;
 		LOG_DEBUG << "       - " << _e.what();
 
 		// - call 'exception handler'
@@ -718,7 +718,7 @@ void net::io::receivable::Nstream_queue::process_received_buffer()
 	bool is_post = false;
 
 	// 6) 비어 있는지 확인한다.
-	scoped_lock(this->m_lockable_queue_received)
+	SCOPED_LOCK(this->m_lockable_queue_received)
 	{
 		// - Pop front한다.
 		this->m_queue_received.pop_front();

@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
@@ -28,7 +28,7 @@ protected:
 	virtual void on_disconnect() noexcept {}
 	virtual int on_message(const const_buffer& /*_msg*/) { return 0; }
 
-	virtual void process_connect_complate() override;
+	virtual void process_connect_complete() override;
 	virtual bool process_closesocket() noexcept override;
 	virtual bool process_send(const SEND_NODE& _send_node) override;
 			bool process_send_sync(const SEND_NODE& _send_node);

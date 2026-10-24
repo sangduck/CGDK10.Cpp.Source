@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 #include "../../define_message.h"
 
 #include <iostream>
@@ -9,37 +9,37 @@
 using namespace CGDK;
 
 // 
-// ì„¤ëª…) ì ‘ì†ì„ ì¢…ë£Œì²˜ë¦¬í•˜ëŠ” ë¶€ë¶„ì€ client(tut.socket.ex01.tcp_graceful_close.client)ìª½ í™•ì¸
+// ¼³¸í) Á¢¼ÓÀ» Á¾·áÃ³¸®ÇÏ´Â ºÎºĞÀº client(tut.socket.ex01.tcp_graceful_close.client)ÂÊ È®ÀÎ
 //       
-//       graceful close -> ì •ìƒì ì¸ ì ‘ì† ì¢…ë£Œ. 
-//                         ë°ì´í„°ë¥¼ ëª¨ë‘ ì†¡ìˆ˜ì‹ í›„ ì •ìƒì ì¸ ì ‘ì† ì¢…ë£Œ ì²˜ë¦¬ë¥¼ í•œë‹¤.
-//                         ì†Œì¼“ì˜ ì ‘ì† ì¢…ë£Œë¥¼ ìš”ì²­í•˜ë”ë¼ë„ ì¦‰ì‹œ ì²˜ë¦¬ë˜ì§€ ì•Šì„ ìˆ˜ ìˆë‹¤. 
+//       graceful close -> Á¤»óÀûÀÎ Á¢¼Ó Á¾·á. 
+//                         µ¥ÀÌÅÍ¸¦ ¸ğµÎ ¼Û¼ö½Å ÈÄ Á¤»óÀûÀÎ Á¢¼Ó Á¾·á Ã³¸®¸¦ ÇÑ´Ù.
+//                         ¼ÒÄÏÀÇ Á¢¼Ó Á¾·á¸¦ ¿äÃ»ÇÏ´õ¶óµµ Áï½Ã Ã³¸®µÇÁö ¾ÊÀ» ¼ö ÀÖ´Ù. 
 //
 //                         psocket->disconnect();
 //
 //
-//       abortive close -> ë¹„ì •ìƒì ‘ì† ì¢…ë£Œ ì²˜ë¦¬. 
-//                         ì†¡ìˆ˜ì‹ ì¤‘ì´ ë°ì´í„°ê°€ ìˆë‹¤í•´ë„ ì¦‰ê° ì ‘ì† ì¢…ë£Œì²˜ë¦¬ë¥¼ í•œë‹¤.
-//                         ì†Œì¼“ì€ ì¦‰ê° í•´ì œëœë‹¤.
+//       abortive close -> ºñÁ¤»óÁ¢¼Ó Á¾·á Ã³¸®. 
+//                         ¼Û¼ö½ÅÁßÀÌ µ¥ÀÌÅÍ°¡ ÀÖ´ÙÇØµµ Áï°¢ Á¢¼Ó Á¾·áÃ³¸®¸¦ ÇÑ´Ù.
+//                         ¼ÒÄÏÀº Áï°¢ ÇØÁ¦µÈ´Ù.
 //
 //                         psocket->closesocket();
 //
 
 class socket_tcp : public net::socket::tcp<>
 {
-	// (v) ì ‘ì† ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_connect() override 
 	{
 		std::cout << " @ connected"sv << '\n'; 
 	}
 
-	// (v) ì ‘ì† ì¢…ë£Œ ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó Á¾·á ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_disconnect(uint64_t /*_disconnect_reason*/) override 
 	{
 		std::cout << " @ disconnected"sv << '\n'; 
 	}
 
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜.
+	// (v) ¸Ş½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö.
 	virtual result_code on_message(sMESSAGE_NETWORK& /*_msg*/) override
 	{
 		std::cout << " - message received"sv << '\n';
@@ -49,15 +49,15 @@ class socket_tcp : public net::socket::tcp<>
 
 int main()
 {
-	// 1) acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto pacceptor = make_own<net::acceptor<socket_tcp>>();
 
-	// 2) acceptorë¥¼ ì‹œì‘í•œë‹¤.(20000ë²ˆ í¬íŠ¸ì—ì„œ listenì„ ì‹œì‘í•œë‹¤.)
+	// 2) acceptor¸¦ ½ÃÀÛÇÑ´Ù.(20000¹ø Æ÷Æ®¿¡¼­ listenÀ» ½ÃÀÛÇÑ´Ù.)
 	pacceptor->start({{ net::ip::make_address("any"sv), 20000 }});
 
-	// - ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+	// - ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 	while(_getch() != 27);
 
-	// end) ì„œë²„ ì¢…ë£Œ
+	// end) ¼­¹ö Á¾·á
 	return 0;
 }

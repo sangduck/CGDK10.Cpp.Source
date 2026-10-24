@@ -3,16 +3,14 @@
 namespace CGDK
 {
 
-void net::socket::web_server::on_connect(net::io::Iconnective* _pconnective)
+void net::socket::web_server::on_connect()
 {
 	// 1) get entitable
-	auto pentitable = dynamic_cast<server::web::Ientitable*>(_pconnective);
+	auto pentitable = dynamic_cast<server::web::Ientitable*>(this);
 
 	// 2) set entitiable
 	if(pentitable != nullptr)
-	{
-		m_pweb_entity = pentitable->get_web_entity();
-	}
+		this->m_pweb_entity = pentitable->get_web_entity();
 }
 
 void net::socket::web_server::on_disconnect(uint64_t /*_disconnect_reason*/)

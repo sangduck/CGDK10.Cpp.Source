@@ -1,4 +1,4 @@
-#include "pch.h"
+ #include "pch.h"
 
 #if defined(__ANDROID__)
 
@@ -10,7 +10,7 @@ FILE_HANDLE api::file::open(const std::string& _filename, eFILE_OPERATION _opera
 	// check)
 	CGASSERT_ERROR(_filename.empty() == false);
 
-	// check) _filename이 nullptr이면 안됀다.
+	// check) _filename이 nullptr이면 안 된다.
 	RETURN_IF(_filename.empty(), INVALID_FILE_HANDLE);
 
 
@@ -32,16 +32,15 @@ FILE_HANDLE api::file::open(const std::string& _filename, eFILE_OPERATION _opera
 				auto pActive = resource::manager::instance()->get_activity();
 
 				// check) pNativeActivity가 nullptr이면 Exception을 던진다.
-				RETURN_IF(pActive==nullptr, hFile);
+				if(pActive==nullptr)
+					return hFile;
 
 				// declare)
 				AAsset* pAsset = nullptr;
 
 				// 2) 파일명 그대로 열기를 시도한다.
 				if ((_file_location & eFILE_LOCATION::NOW)!=eFILE_LOCATION::NONE)
-				{
 					pAsset = AAssetManager_open(pActive->assetManager, _filename, AASSET_MODE_STREAMING);
-				}
 
 				// 3) File의 open이 여기서도 실패한 경우 eFILE_LOCATION::INTERNAL을 시도해 본다.
 				if(pAsset==nullptr && (_file_location & eFILE_LOCATION::INTERNAL)!=eFILE_LOCATION::NONE)
@@ -75,7 +74,7 @@ FILE_HANDLE api::file::open(const std::string& _filename, eFILE_OPERATION _opera
 						char temp_string[MAX_STRING_LENGTH];
 
 						// - Path를 작성한다.
-						__sprintf(temp_string, "%s/%s", pActive->externalDataPath, _filename);
+						std::snprintf(temp_string, std::size(temp_string), std::string_view("%s/%s").data(), pActive->externalDataPath, _filename);
 
 						// - 파일을 연다.
 						pAsset = AAssetManager_open(pActive->assetManager, temp_string, AASSET_MODE_STREAMING);
@@ -91,7 +90,7 @@ FILE_HANDLE api::file::open(const std::string& _filename, eFILE_OPERATION _opera
 						char temp_string[MAX_STRING_LENGTH];
 
 						// - Path를 작성한다.
-						__sprintf(temp_string, "%s/%s", iter.c_str(), _filename);
+						std::snprintf(temp_string, std::size(temp_string), std::string_view("%s/%s").data(), iter.c_str(), _filename);
 
 						// - 파일을 연다.
 						pAsset = AAssetManager_open(pActive->assetManager, temp_string, AASSET_MODE_STREAMING);
@@ -113,11 +112,9 @@ FILE_HANDLE api::file::open(const std::string& _filename, eFILE_OPERATION _opera
 
 				// 1) 파일명 그대로 열기를 시도한다.
 				if ((_file_location & eFILE_LOCATION::NOW) != eFILE_LOCATION::NONE)
-				{
-					pFile = fopen(_filename, "wb");
-				}
+					pFile = std::fopen(_filename, "wb");
 
-				// 2) 파일 열기에 실패한 경우 eFILE_LOCATION::INTERNAL 플래그가 설정되어 있다면 INTERNAL 디렉토리에서 열기를 시도한다.
+				// 2) 파일 열기에 실패한 경우 eFILE_LOCATION::INTERNAL 플래그가 설정되어 있다면 INTERNAL 디렉터리에서 열기를 시도한다.
 				if(pFile==nullptr && (_file_location & eFILE_LOCATION::INTERNAL)!=eFILE_LOCATION::NONE)
 				{
 					// 1) Activity를 얻는다.
@@ -132,11 +129,11 @@ FILE_HANDLE api::file::open(const std::string& _filename, eFILE_OPERATION _opera
 						snprintf(temp_string, MAX_STRING_LENGTH, "%s/%s", pActive->internalDataPath, _filename);
 
 						// - 읽어들인다.
-						pFile = fopen(temp_string, "wb");
+						pFile = std::fopen(temp_string, "wb");
 					}
 				}
 
-				// 3) 파일 열기에 실패한 경우 eFILE_LOCATION::EXTERNAL 플래그가 설정되어 있다면 EXTERNAL 디렉토리에서 열기를 시도한다.
+				// 3) 파일 열기에 실패한 경우 eFILE_LOCATION::EXTERNAL 플래그가 설정되어 있다면 EXTERNAL 디렉터리에서 열기를 시도한다.
 				if (pFile == nullptr && (_file_location & eFILE_LOCATION::EXTERNAL) != eFILE_LOCATION::NONE)
 				{
 					// 1) Activity를 얻는다.
@@ -149,26 +146,26 @@ FILE_HANDLE api::file::open(const std::string& _filename, eFILE_OPERATION _opera
 						char temp_string[MAX_STRING_LENGTH];
 
 						// - Path를 작성한다.
-						__sprintf(temp_string, "%s/%s", pActive->externalDataPath, _filename);
+						std::snprintf(temp_string, std::size(temp_string), std::string_view("%s/%s").data(), pActive->externalDataPath, _filename);
 
 						// - 읽어들인다.
-						pFile = fopen(temp_string, "wb");
+						pFile = std::fopen(temp_string, "wb");
 					}
 				}
 
-				// 4) 파일 열기에 실패한 경우 eFILE_LOCATION::RESOURCE 플래그가 설정되어 있다면 등록된 Resource 디렉토리에서 열기를 시도한다.
+				// 4) 파일 열기에 실패한 경우 eFILE_LOCATION::RESOURCE 플래그가 설정되어 있다면 등록된 Resource 디렉터리에서 열기를 시도한다.
 				if(pFile == nullptr && (_file_location & eFILE_LOCATION::RESOURCE)!=eFILE_LOCATION::NONE)
 				{
 					for(auto& iter: *resource::manager::instance())
 					{
 						// declare) 
-						char	temp_string[MAX_STRING_LENGTH];
+						char temp_string[MAX_STRING_LENGTH];
 
 						// - Path를 작성한다.
-						__sprintf(temp_string, "%s/%s", iter.c_str(), _filename);
+						std::snprintf(temp_string, std::size(temp_string), std::string_view("%s/%s").data(), iter.c_str(), _filename);
 
 						// - 읽어들인다.
-						pFile = fopen(temp_string, "wb");
+						pFile = std::fopen(temp_string, "wb");
 
 						// check) 성공했으면 여기서 중단.
 						BREAK_IF(pFile != nullptr);
@@ -187,11 +184,9 @@ FILE_HANDLE api::file::open(const std::string& _filename, eFILE_OPERATION _opera
 
 				// 1) 파일명 그대로 열기를 시도한다.
 				if((_file_location & eFILE_LOCATION::NOW)!=eFILE_LOCATION::NONE)
-				{
-					pFile = fopen(_filename, "a+");
-				}
+					pFile = std::fopen(_filename, "a+");
 
-				// 2) 파일 열기에 실패한 경우 eFILE_LOCATION::INTERNAL 플래그가 설정되어 있다면 INTERNAL 디렉토리에서 열기를 시도한다.
+				// 2) 파일 열기에 실패한 경우 eFILE_LOCATION::INTERNAL 플래그가 설정되어 있다면 INTERNAL 디렉터리에서 열기를 시도한다.
 				if (pFile == nullptr && (_file_location & eFILE_LOCATION::INTERNAL) != eFILE_LOCATION::NONE)
 				{
 					// - Activity를 얻는다.
@@ -206,11 +201,11 @@ FILE_HANDLE api::file::open(const std::string& _filename, eFILE_OPERATION _opera
 						snprintf(temp_string, MAX_STRING_LENGTH, "%s/%s", pActive->internalDataPath, _filename);
 
 						// - 읽어들인다.
-						pFile = fopen(temp_string, "a+");
+						pFile = std::fopen(temp_string, "a+");
 					}
 				}
 
-				// 3) 파일 열기에 실패한 경우 eFILE_LOCATION::EXTERNAL 플래그가 설정되어 있다면 EXTERNAL 디렉토리에서 열기를 시도한다.
+				// 3) 파일 열기에 실패한 경우 eFILE_LOCATION::EXTERNAL 플래그가 설정되어 있다면 EXTERNAL 디렉터리에서 열기를 시도한다.
 				if (pFile == nullptr && (_file_location & eFILE_LOCATION::EXTERNAL) != eFILE_LOCATION::NONE)
 				{
 					// - Activity를 얻는다.
@@ -223,14 +218,14 @@ FILE_HANDLE api::file::open(const std::string& _filename, eFILE_OPERATION _opera
 						char temp_string[MAX_STRING_LENGTH];
 
 						// - Path를 작성한다.
-						__sprintf(temp_string, "%s/%s", pActive->externalDataPath, _filename);
+						std::snprintf(temp_string, std::size(temp_string), std::string_view("%s/%s").data(), pActive->externalDataPath, _filename);
 
 						// - 읽어들인다.
-						pFile = fopen(temp_string, "a+");
+						pFile = std::fopen(temp_string, "a+");
 					}
 				}
 
-				// 4) 파일 열기에 실패한 경우 eFILE_LOCATION::RESOURCE 플래그가 설정되어 있다면 등록된 Resource 디렉토리에서 열기를 시도한다.
+				// 4) 파일 열기에 실패한 경우 eFILE_LOCATION::RESOURCE 플래그가 설정되어 있다면 등록된 Resource 디렉터리에서 열기를 시도한다.
 				if(pFile == nullptr && (_file_location & eFILE_LOCATION::RESOURCE)!=eFILE_LOCATION::NONE)
 				{
 					for(auto& iter: *resource::manager::instance())
@@ -239,10 +234,10 @@ FILE_HANDLE api::file::open(const std::string& _filename, eFILE_OPERATION _opera
 						char temp_string[MAX_STRING_LENGTH];
 
 						// - Path를 작성한다.
-						__sprintf(temp_string, "%s/%s", iter.c_str(), _filename);
+						std::snprintf(temp_string, std::size(temp_string), std::string_view("%s/%s").data(), iter.c_str(), _filename);
 
 						// - 읽어들인다.
-						pFile = fopen(temp_string, "a+");
+						pFile = std::fopen(temp_string, "a+");
 
 						// check) 성공했으면 여기서 중단.
 						BREAK_IF(pFile!=nullptr);
@@ -265,13 +260,15 @@ FILE_HANDLE api::file::open(const std::string& _filename, eFILE_OPERATION _opera
 size_t api::file::read(FILE_HANDLE _handle_file, size_t _size, void* _data) noexcept
 {
 	// check)
-	CGASSERT_ERROR(_data!=nullptr);
+	CGASSERT_FATAL(_data!=nullptr);
 
 	// check)
-	RETURN_IF(_data == nullptr || _size == 0, 0);
+	if(_data == nullptr || _size == 0)
+		return 0;
 
 	// check)
-	RETURN_IF(_handle_file.hRead == nullptr, 0);
+	if(_handle_file.hRead == nullptr)
+		return 0;
 
 	// declare)
 	size_t size_result;
@@ -285,16 +282,18 @@ size_t api::file::read(FILE_HANDLE _handle_file, size_t _size, void* _data) noex
 size_t api::file::write(FILE_HANDLE _handle_file, size_t _size, const void* _data) noexcept
 {
 	// check)
-	CGASSERT_ERROR(_data != nullptr);
+	CGASSERT_FATAL(_data != nullptr);
 
 	// check)
-	RETURN_IF(_data == nullptr, 0);
+	if(_data == nullptr)
+		return 0;
 
 	// check)
-	RETURN_IF(_handle_file.hWrite == nullptr, 0);
+	if(_handle_file.hWrite == nullptr)
+		return 0;
 
 	// 1) File을 읽는다.
-	auto size_result = fwrite(_data, 1, _size, _handle_file);
+	auto size_result = std::fwrite(_data, 1, _size, _handle_file);
 
 	// Return) 
 	return size_result;
@@ -317,7 +316,7 @@ size_t api::file::seek(FILE_HANDLE _handle_file, size_t _offset, eFILE_ORIGIN _o
 	}
 	else if(_handle_file.hWrite!=nullptr)
 	{
-		result = fseek(_handle_file.hWrite, _offset, static_cast<int>(_origin));
+		result = std::fseek(_handle_file.hWrite, _offset, static_cast<int>(_origin));
 	}
 
 	// Return) 
@@ -344,10 +343,10 @@ size_t api::file::get_length(FILE_HANDLE _handle_file) noexcept
 		fpos_t	pos_now = 0;
 		fgetpos(_handle_file.hWrite, &pos_now);
 
-		fseek(_handle_file.hWrite, 0, SEEK_END);
+		std::fseek(_handle_file.hWrite, 0, SEEK_END);
 		result = ftell(_handle_file.hWrite);
 
-		fseek(_handle_file.hWrite, pos_now, SEEK_SET);
+		std::fseek(_handle_file.hWrite, pos_now, SEEK_SET);
 	}
 
 	// return) 
@@ -466,7 +465,7 @@ void api::file::set_last_write_time(const std::string& _filename, std::filesyste
 //
 //	//// 4) position을 0으로 설정한다.
 //	//m_dwPosition		 = 0;
-//	//m_bufferSended.len	 = 0;
+//	//m_bufferSent.len	 = 0;
 //
 //	//// Return) 
 //	//return true;
@@ -521,10 +520,10 @@ void api::file::set_last_write_time(const std::string& _filename, std::filesyste
 //	//RETURN_IF(_buffer.len==0, 0);
 //
 //	//// 설명) 이미 Writing중인지를 확인한다.
-//	//scoped_lock(m_lockable_buffer)
+//	//SCOPED_LOCK(m_lockable_buffer)
 //	//{
 //	//	// 1) send중이면 Queuing만 하고 끝낸다.
-//	//	if(m_bufferSended.len!=0)
+//	//	if(m_bufferSent.len!=0)
 //	//	{
 //	//		if(m_listQueued.empty() || (MAX_WRITE_BUFFER-m_listQueued.back().len)<_buffer.len)
 //	//		{
@@ -537,8 +536,8 @@ void api::file::set_last_write_time(const std::string& _filename, std::filesyste
 //	//		return	_buffer.len;
 //	//	}
 //
-//	//	// 2) Sended buffer에 저장후 전송한다.
-//	//	m_bufferSended	 = _buffer;
+//	//	// 2) Sent buffer에 저장 후 전송한다.
+//	//	m_bufferSent	 = _buffer;
 //	//}
 //
 //	//// 2) write한다.
@@ -586,21 +585,21 @@ void api::file::set_last_write_time(const std::string& _filename, std::filesyste
 //
 //intptr_t CGArchive::CFile::process_execute(intptr_t /*_return*/, size_t /*_param*/)
 //{
-//	//scoped_lock(m_lockable_buffer)
+//	//SCOPED_LOCK(m_lockable_buffer)
 //	//{
-//	//	// 1) Sended buffer를 clear한다.
-//	//	m_bufferSended.clear();
+//	//	// 1) Sent buffer를 clear한다.
+//	//	m_bufferSent.clear();
 //
 //	//	// check) Queuing된 것이 없으면 그냥 끝낸다.
 //	//	RETURN_IF(m_listQueued.empty(), intptr_t(1));
 //
 //	//	// 2) Queuing된 것을 하나 끄집어 낸다.
-//	//	m_bufferSended	 = m_listQueued.front();
+//	//	m_bufferSent	 = m_listQueued.front();
 //	//	m_listQueued.pop_front();
 //	//}
 //
 //	//// 3) 전송한다.
-//	//RequestProcessWrite(m_bufferSended.buf, static_cast<uint32_t>(m_bufferSended.len));
+//	//RequestProcessWrite(m_bufferSent.buf, static_cast<uint32_t>(m_bufferSent.len));
 //
 //	// Return) Success!
 //	return	intptr_t(0);

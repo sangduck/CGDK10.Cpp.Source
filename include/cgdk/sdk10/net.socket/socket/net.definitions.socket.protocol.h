@@ -124,18 +124,18 @@ struct message_headerable
 
 			while (total_bytes != 0)
 			{
-				// Check) Message의 크기가 실제 버퍼의 크기보다 작으면 안됀다.
+				// Check) Message의 크기가 실제 버퍼의 크기보다 작으면 안 된다.
 				CGASSERT_ERROR(iter != iter_end)
 				if (iter == iter_end) return false;
 
 				// - message_size를 구한다.
 				auto message_size = *buf_temp.data<int32_t>();
 
-				// check) message_size가 0byte면 안됀다.
+				// check) message_size가 0byte면 안 된다.
 				CGASSERT_ERROR(message_size != 0);
 				if (message_size == 0) return false;
 
-				// check) message_size가 실제 버퍼의 크기보다 작으면 안됀다.
+				// check) message_size가 실제 버퍼의 크기보다 작으면 안 된다.
 				CGASSERT_ERROR(message_size <= total_bytes);
 				if (message_size > total_bytes) return false;
 
@@ -175,17 +175,17 @@ struct message_headerable
 
 		while(size_ != 0)
 		{
-			// check) message의 크기가 0Byte면 안됀다.
+			// check) message의 크기가 0Byte면 안 된다.
 			CGDK_ASSERT(size_ >= sizeof(uint32_t));
 			if (size_ < sizeof(uint32_t)) return false;
 
 			auto message_size = *reinterpret_cast<const uint32_t*>(data_);
 
-			// check) message의 크기가 0Byte면 안됀다.
+			// check) message의 크기가 0Byte면 안 된다.
 			CGDK_ASSERT(message_size != 0);
 			if(message_size == 0) return false;
 
-			// check) message의 크기가 실제 버퍼의 크기보다 작으면 안됀다.
+			// check) message의 크기가 실제 버퍼의 크기보다 작으면 안 된다.
 			CGDK_ASSERT(message_size <= size_);
 			if(message_size > size_) return false;
 
@@ -220,18 +220,18 @@ struct message_headable_primitive : public message_headerable
 
 			while (total_bytes != 0)
 			{
-				// Check) Message의 크기가 실제 버퍼의 크기보다 작으면 안됀다.
+				// Check) Message의 크기가 실제 버퍼의 크기보다 작으면 안 된다.
 				CGASSERT_ERROR(iter != iter_end)
 				if (iter == iter_end) return false;
 
 				// - message_size를 구한다.
 				int32_t message_size = (int32_t)*buf_temp.data<T>(N);
 					
-				// check) message_size가 0byte면 안됀다.
+				// check) message_size가 0byte면 안 된다.
 				CGASSERT_ERROR(message_size != 0);
 				if (message_size == 0) return false;
 
-				// check) message_size가 실제 버퍼의 크기보다 작으면 안됀다.
+				// check) message_size가 실제 버퍼의 크기보다 작으면 안 된다.
 				CGASSERT_ERROR(message_size <= total_bytes);
 				if (message_size > total_bytes) return false;
 
@@ -271,17 +271,17 @@ struct message_headable_primitive : public message_headerable
 
 		while(size_ != 0)
 		{
-			// check) message의 크기가 0Byte면 안됀다.
+			// check) message의 크기가 0Byte면 안 된다.
 			CGDK_ASSERT(size_ >= static_cast<int64_t>(sizeof(T) + N));
 			if (size_ < static_cast<int64_t>(sizeof(T) + N)) return false;
 
 			int64_t message_size = *reinterpret_cast<const T*>(data_ + N);
 
-			// check) message의 크기가 0Byte면 안됀다.
+			// check) message의 크기가 0Byte면 안 된다.
 			CGDK_ASSERT(message_size !=0);
 			if(message_size ==0) return false;
 
-			// check) message의 크기가 실제 버퍼의 크기보다 작으면 안됀다.
+			// check) message의 크기가 실제 버퍼의 크기보다 작으면 안 된다.
 			CGDK_ASSERT(message_size <= size_);
 			if(message_size > size_) return false;
 

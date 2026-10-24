@@ -1,7 +1,7 @@
 #include "pch.h"
 
 
-void _append_executor_entity_add(buffer& _buf_dest, const server_admin::executor_snap& _statistics_executor)
+void _append_executor_entity_add(buffer& _buf_dest, const server_system::executor_snap& _statistics_executor)
 {
 	// 1) executor "NAME"
 	_buf_dest.append_text<char>("<span style='font-size:14px;font-weight:bold;overflow-x:hidden;' title=\"");
@@ -31,7 +31,7 @@ void _append_executor_entity_add(buffer& _buf_dest, const server_admin::executor
 			_buf_dest.append_text<char>("<li>");
 
 			_buf_dest.append_text<char>("<table width='400px' cellspacing='4'><tbody><tr id='");
-			auto er_element_id = NFMT::format("xt{}", iter.id_thread);
+			auto er_element_id = CGDK::stream_string("xt", iter.id_thread);
 			_buf_dest.append_text<char>(er_element_id);
 			_buf_dest.append_text<char>("' align='left'><td width='140px' align='right'>thread#");
 			_buf_dest.append_text<char>(index);
@@ -52,7 +52,7 @@ void _append_executor_entity_add(buffer& _buf_dest, const server_admin::executor
 	}
 }
 
-void _append_executor_entity_update(buffer& _buf_dest, const server_admin::executor_snap& _statistics_executor)
+void _append_executor_entity_update(buffer& _buf_dest, const server_system::executor_snap& _statistics_executor)
 {
 	// 1) executor "name"
 	_buf_dest.append<char>(' ');
@@ -66,7 +66,7 @@ void _append_executor_entity_update(buffer& _buf_dest, const server_admin::execu
 	// 3) threads
 	for (auto& iter : _statistics_executor.updatable.vector_threads)
 	{
-		auto er_element_id = NFMT::format("xt{}", iter.id_thread);
+		auto er_element_id = CGDK::stream_string("xt", iter.id_thread);
 		_buf_dest.append_text<char>(er_element_id);
 		_buf_dest.append_text<char>("\n");
 
@@ -77,7 +77,7 @@ void _append_executor_entity_update(buffer& _buf_dest, const server_admin::execu
 	}
 }
 
-void _append_executable_entity_add(buffer& _buf_dest, const server_admin::factory_snap& _executable_snap)
+void _append_executable_entity_add(buffer& _buf_dest, const server_system::factory_snap& _executable_snap)
 {
 	// 1) "name"
 	_buf_dest.append_text<char>("<td style='overflow-x:hidden;' title=\"");
@@ -110,18 +110,18 @@ void _append_executable_entity_add(buffer& _buf_dest, const server_admin::factor
 
 	// 2) TIME.NEXT
 	_buf_dest.append_text<char>("<td align='right'>");
-	_buf_dest.append_text<char>(_executable_snap.updatable.now.extra);
+	_buf_dest.append_text<char>(std::to_string(_executable_snap.updatable.now.execute_count));
 	_buf_dest.append_text<char>("</td>");
 }
 
-void _append_executable_entity_update(buffer& _buf_dest, const server_admin::factory_snap& _executable_snap)
+void _append_executable_entity_update(buffer& _buf_dest, const server_system::factory_snap& _executable_snap)
 {
 	// 1) EXECUTED
-	_buf_dest.append_text<char>(_executable_snap.updatable.now.extra);
+	_buf_dest.append_text<char>(std::to_string(_executable_snap.updatable.now.execute_count));
 	_buf_dest.append_text<char>("\n");
 }
 
-void _append_schedulable_entity_add(buffer& _buf_dest, const server_admin::schedulable_snap& _schedulable_snap)
+void _append_schedulable_entity_add(buffer& _buf_dest, const server_system::schedulable_snap& _schedulable_snap)
 {
 	// 1) "name"
 	_buf_dest.append_text<char>("<td style='overflow-x:hidden;' title=\"");
@@ -156,7 +156,7 @@ void _append_schedulable_entity_add(buffer& _buf_dest, const server_admin::sched
 	_buf_dest.append_text<char>("</td>");
 }
 
-void _append_schedulable_entity_update(buffer& _buf_dest, const server_admin::schedulable_snap& _schedulable_snap)
+void _append_schedulable_entity_update(buffer& _buf_dest, const server_system::schedulable_snap& _schedulable_snap)
 {
 	// 1) INTERVAL
 	_buf_dest.append_text<char>(to_string(_schedulable_snap.updatable.duration_interval));
@@ -167,12 +167,10 @@ void _append_schedulable_entity_update(buffer& _buf_dest, const server_admin::sc
 	_buf_dest.append_text<char>("\n");
 }
 
-observable_websocket_peer_executor_info::observable_websocket_peer_executor_info(const std::string_view _name)
+observable_websocket_peer_executor_info::observable_websocket_peer_executor_info()
 {
-	set_name(_name);
-
-	m_webpage_str_target = "webpage_server_executor_info.htm";
-	m_webpage_index = 'C';
+	this->m_webpage_str_target = "webpage_server_executor_info.htm";
+	this->m_webpage_index = 'C';
 }
 
 observable_websocket_peer_executor_info::~observable_websocket_peer_executor_info()
@@ -182,19 +180,19 @@ observable_websocket_peer_executor_info::~observable_websocket_peer_executor_inf
 void observable_websocket_peer_executor_info::request_update_webpage_executor(uint64_t /*_flag*/)
 {
 	// check)
-	CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+	CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 	// declare)
 	net::local_send_queue send_queue;
 
-	// 1) make messsages
-	scoped_lock(this->m_lockable_observable)
+	// 1) make messages
+	SCOPED_LOCK(this->m_lockable_observable)
 	{
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
 			for (auto& iter : this->m_container_observer)
 			{
-				send_queue.enqueue({ iter.pobserver , make_webmessage_executor_list_update(this->m_pservice_entity->m_instance.status.vector_executor, iter.pobserver->m_flag_set) });
+				send_queue.enqueue({ iter.pobserver , make_webmessage_executor_list_update(this->m_pservice_entity->m_instance.info.status.vector_executor, iter.pobserver->m_flag_set) });
 			}
 		}
 	}
@@ -206,19 +204,19 @@ void observable_websocket_peer_executor_info::request_update_webpage_executor(ui
 void observable_websocket_peer_executor_info::request_update_webpage_schedulable(uint64_t /*_flag*/)
 {
 	// check)
-	CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+	CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 	// declare)
 	net::local_send_queue send_queue;
 
-	// 1) make messsages
-	scoped_lock(this->m_lockable_observable)
+	// 1) make messages
+	SCOPED_LOCK(this->m_lockable_observable)
 	{
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
 			for (auto& iter : this->m_container_observer)
 			{
-				send_queue.enqueue({ iter.pobserver , make_webmessage_schedulable_list_update(this->m_pservice_entity->m_instance.status.vector_schedulable, iter.pobserver->m_flag_set) });
+				send_queue.enqueue({ iter.pobserver , make_webmessage_schedulable_list_update(this->m_pservice_entity->m_instance.info.status.vector_schedulable, iter.pobserver->m_flag_set) });
 			}
 		}
 	}
@@ -230,15 +228,15 @@ void observable_websocket_peer_executor_info::request_update_webpage_schedulable
 void observable_websocket_peer_executor_info::request_update_webpage_executable(uint64_t /*_flag*/)
 {
 	// check)
-	CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+	CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 	// declare)
 	net::local_send_queue send_queue;
 
-	// 1) make messsages
-	scoped_lock(this->m_lockable_observable)
+	// 1) make messages
+	SCOPED_LOCK(this->m_lockable_observable)
 	{
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
 			for (auto& iter : this->m_container_observer)
 			{
@@ -264,16 +262,16 @@ void observable_websocket_peer_executor_info::on_observer_registered(socket_webs
 	_pobserver->register_messageable(this);
 
 	// check)
-	CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+	CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 	// declare)
 	std::array<shared_buffer, 3> array_buf;
 
 	// 2) make messages
-	scoped_lock(this->m_pservice_entity->m_cs_instance)
+	SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 	{
-		array_buf[0] = make_webmessage_executor_list(this->m_pservice_entity->m_instance.status.vector_executor, _pobserver->m_flag_set);
-		array_buf[1] = make_webmessage_schedulable_list(this->m_pservice_entity->m_instance.status.vector_schedulable, _pobserver->m_flag_set);
+		array_buf[0] = make_webmessage_executor_list(this->m_pservice_entity->m_instance.info.status.vector_executor, _pobserver->m_flag_set);
+		array_buf[1] = make_webmessage_schedulable_list(this->m_pservice_entity->m_instance.info.status.vector_schedulable, _pobserver->m_flag_set);
 		array_buf[2] = make_webmessage_executable_list(this->m_pservice_entity->m_instance.vector_executable, _pobserver->m_flag_set);
 	}
 
@@ -287,7 +285,7 @@ uintptr_t observable_websocket_peer_executor_info::on_observer_unregistering(soc
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);
 
-	// 2) uregister _pmenber
+	// 2) unregister _pmenber
 	_pobserver->unregister_messageable(this);
 
 	// return) 
@@ -341,28 +339,28 @@ result_code observable_websocket_peer_executor_info::on_message_server_button_to
 	if (str_id == "button_executor_system_v")
 	{
 		// check)
-		CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+		CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 		pmember->m_flag_set ^= 0x10;
 
 		shared_buffer buf_send;
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
-			buf_send = make_webmessage_executor_list(this->m_pservice_entity->m_instance.status.vector_executor, pmember->m_flag_set);
+			buf_send = make_webmessage_executor_list(this->m_pservice_entity->m_instance.info.status.vector_executor, pmember->m_flag_set);
 		}
 		pmember->send(buf_send);
 	}
 	else if (str_id == "button_executor_user_v")
 	{
 		// check)
-		CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+		CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 		pmember->m_flag_set ^= 0x20;
 
 		shared_buffer buf_send;
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
-			buf_send = make_webmessage_executor_list(this->m_pservice_entity->m_instance.status.vector_executor, pmember->m_flag_set);
+			buf_send = make_webmessage_executor_list(this->m_pservice_entity->m_instance.info.status.vector_executor, pmember->m_flag_set);
 		}
 		pmember->send(buf_send);
 	}
@@ -370,40 +368,40 @@ result_code observable_websocket_peer_executor_info::on_message_server_button_to
 	else if (str_id == "button_schedulable_system_v")
 	{
 		// check)
-		CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+		CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 		pmember->m_flag_set ^= 0x40;
 
 		shared_buffer buf_send;
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
-			buf_send = make_webmessage_schedulable_list(this->m_pservice_entity->m_instance.status.vector_schedulable, pmember->m_flag_set);
+			buf_send = make_webmessage_schedulable_list(this->m_pservice_entity->m_instance.info.status.vector_schedulable, pmember->m_flag_set);
 		}
 		pmember->send(buf_send);
 	}
 	else if (str_id == "button_schedulable_user_v")
 	{
 		// check)
-		CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+		CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 		pmember->m_flag_set ^= 0x80;
 
 		shared_buffer buf_send;
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
-			buf_send = make_webmessage_schedulable_list(this->m_pservice_entity->m_instance.status.vector_schedulable, pmember->m_flag_set);
+			buf_send = make_webmessage_schedulable_list(this->m_pservice_entity->m_instance.info.status.vector_schedulable, pmember->m_flag_set);
 		}
 		pmember->send(buf_send);
 	}
 	else if (str_id == "button_executable_system_v")
 	{
 		// check)
-		CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+		CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 		pmember->m_flag_set ^= 0x100;
 
 		shared_buffer buf_send;
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
 			buf_send = make_webmessage_executable_list(this->m_pservice_entity->m_instance.vector_executable, pmember->m_flag_set);
 		}
@@ -412,12 +410,12 @@ result_code observable_websocket_peer_executor_info::on_message_server_button_to
 	else if (str_id == "button_executable_user_v")
 	{
 		// check)
-		CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+		CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 		pmember->m_flag_set ^= 0x200;
 
 		shared_buffer buf_send;
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
 			buf_send = make_webmessage_executable_list(this->m_pservice_entity->m_instance.vector_executable, pmember->m_flag_set);
 		}
@@ -428,7 +426,7 @@ result_code observable_websocket_peer_executor_info::on_message_server_button_to
 	return eRESULT::DONE;
 }
 
-shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_list(const std::vector<server_admin::executor_snap>& _vector_executor_snap, uint64_t _flag)
+shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_list(const std::vector<server_system::executor_snap>& _vector_executor_snap, uint64_t _flag)
 {
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -459,7 +457,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_
 		buffer buf_text = buf_temp;
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("ex{}", iter.updatable.id);
+		auto tr_element_id = CGDK::stream_string("ex", iter.updatable.id);
 
 		// - append tr data
 		_append_executor_entity_add(buf_text, iter);
@@ -483,7 +481,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulable_list(const std::vector<server_admin::schedulable_snap>& _vector_schedulable_info, uint64_t _flag)
+shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulable_list(const std::vector<server_system::schedulable_snap>& _vector_schedulable_info, uint64_t _flag)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -514,7 +512,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulab
 		buffer buf_text = buf_temp;
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("es{}", iter.updatable.id);
+		auto tr_element_id = CGDK::stream_string("es", iter.updatable.id);
 
 		// - append tr data
 		_append_schedulable_entity_add(buf_text, iter);
@@ -536,7 +534,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulab
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-shared_buffer observable_websocket_peer_executor_info::make_webmessage_executable_list(const std::vector<server_admin::factory_snap>& _vector_executable_info, uint64_t _flag)
+shared_buffer observable_websocket_peer_executor_info::make_webmessage_executable_list(const std::vector<server_system::factory_snap>& _vector_executable_info, uint64_t _flag)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -567,7 +565,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executabl
 		buffer buf_text = buf_temp;
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("eb{}", iter.updatable.id);
+		auto tr_element_id = CGDK::stream_string("eb", iter.updatable.id);
 
 		// - append tr data
 		_append_executable_entity_add(buf_text, iter);
@@ -592,7 +590,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executabl
 //shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_list_add(uint64_t _flag)
 //{
 //	// 1) 
-//	object_ptr<service> pservice = service::instance();
+//	object_ptr<service> pservice = ::service::instance();
 //
 //	// 2) buffer
 //	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -606,7 +604,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executabl
 //	bool is_visiable_user = _flag & 0x020;
 //
 //	// 4) get time_event amanger
-//	auto vector_statistiscs_executor = server_admin::get_now_snap(executor::manager::instance());
+//	auto vector_statistiscs_executor = server_system::get_now_snap(executor::manager::instance());
 //
 //	// 5) append message 
 //	for (const auto& iter : vector_statistiscs_executor)
@@ -619,7 +617,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executabl
 //		buffer buf_text = buf_temp;
 //
 //		// - tr element id
-//		auto tr_element_id = NFMT::format("ex{}", iter.updatable.id);
+//		auto tr_element_id = CGDK::stream_string("ex", iter.updatable.id);
 //
 //		// - append tr data
 //		_append_executor_entity_add(buf_text, iter);
@@ -645,7 +643,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executabl
 //	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 //}
 
-shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_list_update(const std::vector<server_admin::executor_snap>& _vector_executor_snap, uint64_t _flag)
+shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_list_update(const std::vector<server_system::executor_snap>& _vector_executor_snap, uint64_t _flag)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -669,7 +667,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_
 		buffer buf_text = buf_temp;
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("ex{}", iter.updatable.id);
+		auto tr_element_id = CGDK::stream_string("ex", iter.updatable.id);
 
 		// - append tr data
 		_append_executor_entity_update(buf_text, iter);
@@ -692,7 +690,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_
 //shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulable_list_add(uint64_t _flag)
 //{
 //	// 1) 
-//	object_ptr<service> pservice = service::instance();
+//	object_ptr<service> pservice = ::service::instance();
 //
 //	// 2) buffer
 //	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -706,7 +704,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_
 //	buf_result.append_text<char>(MESSAGE_WEB_SCHEDULABLE_LIST);
 //
 //	// 4) snap executable statistics
-//	auto vector_schedulable_snap = server_admin::get_snap(system_executor::get_scheduler());
+//	auto vector_schedulable_snap = server_system::get_snap(system_executor::get_scheduler());
 //		
 //	// 5) append message 
 //	for (const auto& iter : vector_schedulable_snap)
@@ -719,7 +717,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_
 //		buffer buf_text = buf_temp;
 //
 //		// - tr element id
-//		auto tr_element_id = NFMT::format("es{}", iter.updatable.id);
+//		auto tr_element_id = CGDK::stream_string("es", iter.updatable.id);
 //
 //		// - append tr data
 //		_append_schedulable_entity_add(buf_text, iter);
@@ -743,10 +741,10 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executor_
 //	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 //}
 
-shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulable_list_update(const std::vector<server_admin::schedulable_snap>& _vector_schedulable, uint64_t _flag)
+shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulable_list_update(const std::vector<server_system::schedulable_snap>& _vector_schedulable, uint64_t _flag)
 {
 	// 1) 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -770,7 +768,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulab
 		buffer buf_text = buf_temp;
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("es{}", iter.updatable.id);
+		auto tr_element_id = CGDK::stream_string("es", iter.updatable.id);
 
 		// - append tr data
 		_append_schedulable_entity_update(buf_text, iter);
@@ -793,7 +791,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulab
 //shared_buffer observable_websocket_peer_executor_info::make_webmessage_executable_list_add(uint64_t _flag)
 //{
 //	// 1) 
-//	object_ptr<service> pservice = service::instance();
+//	object_ptr<service> pservice = ::service::instance();
 //
 //	// 2) buffer
 //	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -807,7 +805,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulab
 //	bool is_visiable_user = _flag & 0x0200;
 //
 //	// 4) snap executable statistics
-//	auto vector_executable_statistics_snap = server_admin::get_now_snap(factory::manager::instance(), eOBJECT_TYPE::EXECUTABLE);
+//	auto vector_executable_statistics_snap = server_system::get_now_snap(factory::manager::instance(), eOBJECT_TYPE::EXECUTABLE);
 //
 //	// 5) append message 
 //	for (const auto& iter : vector_executable_statistics_snap)
@@ -820,7 +818,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulab
 //		buffer buf_text = buf_temp;
 //
 //		// - tr element id
-//		auto tr_element_id = NFMT::format("eb{}", iter.updatable.id);
+//		auto tr_element_id = CGDK::stream_string("eb", iter.updatable.id);
 //
 //		// - append tr data
 //		_append_executable_entity_add(buf_text, iter);
@@ -844,10 +842,10 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_schedulab
 //	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 //}
 
-shared_buffer observable_websocket_peer_executor_info::make_webmessage_executable_list_update(const std::vector<server_admin::factory_snap>& _vector_schedulable_snap, uint64_t _flag)
+shared_buffer observable_websocket_peer_executor_info::make_webmessage_executable_list_update(const std::vector<server_system::factory_snap>& _vector_schedulable_snap, uint64_t _flag)
 {
 	// 1) 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(65536 * 4);
@@ -871,7 +869,7 @@ shared_buffer observable_websocket_peer_executor_info::make_webmessage_executabl
 		buffer buf_text = buf_temp;
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("eb{}", iter.updatable.id);
+		auto tr_element_id = CGDK::stream_string("eb", iter.updatable.id);
 
 		// - append tr data
 		_append_executable_entity_update(buf_text, iter);

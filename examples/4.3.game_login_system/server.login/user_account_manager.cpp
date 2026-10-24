@@ -26,7 +26,7 @@ void User::CAccountManager::RequestAccountLogin(const wchar_t* _pstrID, const wc
 
 
 	// 3) 성공적으로 적절한 Lobby Server를 얻는다.
-	auto	psocketServerLobby	 = g_pService->GetSuitableLobbyServer();
+	auto	psocketServerLobby	 = g_pservice->GetSuitableLobbyServer();
 
 	// check) 적당한 Lobby Server가 없으면 Exception을 던진다.
 	THROW_IF(psocketServerLobby.empty(), CGException::CThrow_NotExist());

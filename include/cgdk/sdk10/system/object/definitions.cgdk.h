@@ -104,19 +104,15 @@ public:
 };
 
 
-}
-
-
 //----------------------------------------------------------------------------
-// CGDK functions
+// functions
 //----------------------------------------------------------------------------
-namespace CGDK
-{
-	[[nodiscard]] int											get_version() noexcept;
-	[[nodiscard]] const std::vector<sCOMPONENT_INFO>&			get_component_info() noexcept;
-	[[nodiscard]] sCOMPONENT_INFO								get_component_info(std::string_view _name) noexcept;
+[[nodiscard]] int get_version() noexcept;
+[[nodiscard]] const std::vector<sCOMPONENT_INFO>& get_component_info() noexcept;
+[[nodiscard]] sCOMPONENT_INFO get_component_info(std::string_view _name) noexcept;
+[[nodiscard]] std::string_view to_string(eCONFIGURATION _configure) noexcept;
+[[nodiscard]] std::string_view to_string(ePLATFORM _platform) noexcept;
+[[nodiscard]] std::string_view to_string(eCOMPILER _compiler) noexcept;
 
-	template <class T>	[[nodiscard]] std::basic_string_view<T> to_string(eCOMPILER _compiler) noexcept;
-	template <class T>	[[nodiscard]] std::basic_string_view<T> to_string(eCONFIGURATION _configuration) noexcept;
-	template <class T>	[[nodiscard]] std::basic_string_view<T> to_string(ePLATFORM _platform) noexcept;
+
 }

@@ -19,67 +19,46 @@
 #-----------------------------------------------------------------------------
 # setting
 #-----------------------------------------------------------------------------
-# 1) project name
-PROJECT ( "CGDK10.server.admin.host_agent.service" )
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY ( VERSION 3.20 )
 
-# 2) project version
+# 2) project name
+PROJECT ( "CGDK10.server.admin.host_agent" )
+
+# 3) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
+# 4) common build rules
+INCLUDE ( ${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/cgdk.cmake )
 
-# 4) default BUILD_TYPE
-IF (NOT DEFINED CMAKE_BULD_TYPE)
-	SET (CMAKE_BULD_TYPE "Debug")
-ENDIF()
-
-# 5) directories
-SET ( CMAKE_RUNTIME_OTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../../execute )
-SET ( EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../execute )
-
-# 6) compile options
-set ( CMAKE_CXX_STANDARD 20)
-set ( CMAKE_CXX_STANDARD_REQUIRED ON)
-SET ( CMAKE_CXX_FLAGS "-DC_FLAGS -fexceptions -std=c++20" )
-SET ( CMAKE_CXX_FLAGS_DEBUG "-D_DEBUG -g1 -Wall -Wextra" )
-SET ( CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -Wall -Wextra" )
-
-# 7) include directories
-INCLUDE_DIRECTORIES(
-	${CMAKE_CURRENT_SOURCE_DIR}/../../../../include
-	./
-)
-
-# 8) library directories
-LINK_DIRECTORIES(
-	${CMAKE_CURRENT_SOURCE_DIR}/../../../../lib/cgdk/sdk10/${DIST}
-)
 
 #-----------------------------------------------------------------------------
-# source files
+# source files (same as CGDK10.server.admin.host_agent.service.shared.vcxitems)
 #-----------------------------------------------------------------------------
 SET (SRC_FILES
-#...
 pch.cpp
 
-Igroup.cpp
-
-# server entities
+# instances
 server_admin.Iinstance.cpp
 server_admin.instance_host.cpp
-server_admin.instance_Iservice.cpp
 server_admin.instance_manager.cpp
+server_admin.instance_service.cpp
 server_admin.instance_service_local.cpp
 server_admin.instance_service_remote.cpp
 
-# server
-socket_server.cpp
-group_server.cpp
-group_server_immigration.cpp
+# peer (service)
+Igroup.cpp
+socket_peer.cpp
+group_peer_immigration.cpp
+group_peer_server.cpp
+group_peer_client.cpp
+
+# admin server
+socket_admin_server.cpp
 
 # web client
 socket_web.cpp
@@ -99,7 +78,7 @@ observable_websocket_server_querier_info.cpp
 observable_websocket_server_crash_info.cpp
 observable_websocket_system_info.cpp
 
-#webpages
+# webpages
 webpage_frame_htm.cpp
 webpage_host_info_htm.cpp
 webpage_host_log_htm.cpp
@@ -114,12 +93,7 @@ webpage_server_crash_info_htm.cpp
 webpage_server_setting_htm.cpp
 webpage_server_statistics_htm.cpp
 webpage_time_event_info_htm.cpp
-
-# control
-group_control.cpp
-
-# socket
-socket_admin_server.cpp
+webpage_login_htm.cpp
 
 # service
 service.cpp
@@ -128,42 +102,43 @@ service.cpp
 CGDK10.server.admin.host_agent.service.cpp
 )
 
+
 #-----------------------------------------------------------------------------
 # compile
 #-----------------------------------------------------------------------------
-# 1) set variable
-IF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
-	SET (BUILD_MESSAGE "Debug")
-	SET (BUILD_TYPE "Debug")
-ELSEIF (${CMAKE_BUILD_TYPE} MATCHES "Release")
-	SET (BUILD_MESSAGE "Release")
-	SET (BUILD_TYPE "Release")
-ELSE ()
-	MESSAGE (SEND_ERROR "'CMAKE_BUILD_TYPE' is not mathed")
+CGDK_ADD_EXECUTABLE ( ${PROJECT_NAME}
+	SOURCES		${SRC_FILES}
+	PCH			pch.h
+	LINUX_LIBS
+		CGDK10.server.service_linux.${BUILD_TYPE}
+		CGDK10.server.time_event_linux.${BUILD_TYPE}
+		CGDK10.server.log_linux.${BUILD_TYPE}
+		CGDK10.net.socket.http_linux.${BUILD_TYPE}
+		CGDK10.net.socket.crypt_linux.${BUILD_TYPE}
+		CGDK10.net.socket_linux.${BUILD_TYPE}
+		CGDK10.system.util.crypt_linux.${BUILD_TYPE}
+		CGDK10.system.object_linux.${BUILD_TYPE}
+		crypto
+		ssl
+		rt
+		pthread
+	DEPENDS
+		CGDK10.server.service
+		CGDK10.server.time_event
+		CGDK10.server.log
+		CGDK10.net.socket.http
+		CGDK10.net.socket.crypt
+		CGDK10.net.socket
+		CGDK10.system.util.crypt
+		CGDK10.system.object
+)
+CGDK_ADD_SVN_VERSION ( ${PROJECT_NAME} )
+TARGET_LINK_DIRECTORIES ( ${PROJECT_NAME} PRIVATE "${CGDK_LIB_DIR}" )
+
+# - output name (windows vcxproj: CGDK10.server.admin.host_agent[.Debug])
+IF (NOT WIN32)
+	SET_TARGET_PROPERTIES ( ${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}_linux.${BUILD_TYPE}" )
 ENDIF ()
 
-# 2) messages
-MESSAGE (STATUS "compile ${PROJECT_NAME}")
-MESSAGE (STATUS "  - configure['${BUILD_MESSAGE}']")
-
-# 3) compile
-ADD_EXECUTABLE(${PROJECT_NAME} ${SRC_FILES})
-TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:pch.h>")
-
-# 4) configure file
-#CONFIGURE_FILE ( version.h.in version.h )
-
-# 5) add library
-TARGET_LINK_LIBRARIES( ${PROJECT_NAME} 
-	CGDK10.server.service_linux.${BUILD_TYPE}
-	CGDK10.server.time_event_linux.${BUILD_TYPE}
-	CGDK10.server.log_linux.${BUILD_TYPE}
-	CGDK10.net.socket.http_linux.${BUILD_TYPE}
-	CGDK10.net.socket_linux.${BUILD_TYPE}
-	CGDK10.system.util.crypt_linux.${BUILD_TYPE}
-	CGDK10.system.object_linux.${BUILD_TYPE}
-	crypto
-	ssl
-	rt
-	pthread
-)
+# Build alias for convenience
+ADD_CUSTOM_TARGET ( host_agent DEPENDS ${PROJECT_NAME} )

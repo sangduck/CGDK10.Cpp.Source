@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                               CGDK::buffer                                *
 //*                       ver 5.0 / release 2021.11.01                        *
@@ -765,11 +765,6 @@ template <class T> constexpr bool is_string_pointer_type_v = is_string_pointer_t
 //-----------------------------------------------------------------------------
 // base
 //-----------------------------------------------------------------------------
-template<class B, class T, class FLAG = void> class serializer_prepend
-							{	using TX = std::remove_const_t<T>;
-								public: using type = TX&;
-								template<class S> constexpr static type _do_prepend(S& _s, const TX& _data) { return _s.template _prepend_general<TX> (_data); }
-							};
 template<class B, class T, class FLAG = void> class serializer_append
 							{	using TX = std::remove_const_t<T>;
 								public: using type = TX&;
@@ -801,8 +796,6 @@ template<class T, class FLAG = void> class serializer_size_of
 template<class B, class T> using APPD_t	 = serializer_append<B, std::remove_reference_t<std::remove_const_t<T>>>;
 template<class B, class T> using APPD_tr = typename APPD_t<B, T>::type;
 
-template<class B, class T> using PRPD_t	 = serializer_prepend<B, std::remove_reference_t<std::remove_const_t<T>>>;
-template<class B, class T> using PRPD_tr = typename PRPD_t<B, T>::type;
 
 template<class B, class T> using EXTR_t	 = serializer_extract<B, std::remove_reference_t<std::remove_const_t<T>>>;
 template<class B, class T> using EXTR_tr = typename EXTR_t<B, T>::type;
@@ -838,18 +831,6 @@ std::size_t Ibuffer_serializable::get_size_of(const T& _source)
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-// class for prepend)
-template<class B, class T,class E>	class serializer_prepend<B, _ITERATOR<T,E>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const _ITERATOR<T,E>& _data) { return _s.template _prepend_iterator(_data.iterFirst, _data.iterLast);}
-								template<class S> constexpr static type _do_prepend(S& _s, _ITERATOR<T,E>&& _data) { return _s.template _prepend_iterator(_data.iterFirst, _data.iterLast);}
-							};
-template<class B, class T>	class serializer_prepend<B, std::initializer_list<T>>
-							{	using TX = std::remove_const_t<T>;
-								public:	using type = _buffer_view<typename B::element_t>;;
-								template<class S> constexpr static type _do_prepend(S& _s, const std::initializer_list<TX>& _data){ return _s.template _prepend_initializer_list(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, std::initializer_list<TX>&& _data){ return _s.template _prepend_initializer_list(_data);}
-							};
 
 // class for append)
 template<class B, class T,class E>	class serializer_append<B, _ITERATOR<T,E>>
@@ -868,13 +849,6 @@ template<class B, class T>			class serializer_append<B, std::initializer_list<T>
 //-----------------------------------------------------------------------------
 // array
 //-----------------------------------------------------------------------------
-// serializer_prepend - T[N]
-template<class B, class T, std::size_t N> class serializer_prepend<B, T[N], void>
-							{	using TX = std::remove_const_t<T>;
-								public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const TX (&_data)[N]) { return _s.template _prepend_array<TX>((TX*)_data, N);}
-								template<class S> constexpr static type _do_prepend(S& _s, TX (&&_data)[N]) { return _s.template _prepend_array<TX>((TX*)_data, N);}
-							};
 template<class B, class T, std::size_t N> class serializer_append<B, T[N], void>
 							{	using TX = std::remove_const_t<T>;
 								public:	using type = _buffer_view<typename B::element_t>;
@@ -989,11 +963,6 @@ template<class B, class T>	class serializer_peek<B, T[], std::enable_if_t<is_str
 // std::array<T,X>
 //-----------------------------------------------------------------------------
 // 1) T[N] - !is_string_pointer_type_v<T>
-template<class B, class T, std::size_t N> class serializer_prepend<B, std::array<T,N>>
-							{	public: using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const std::array<T,N>& _data) { return _s.template _prepend_array<T>(_data.data(), N);}
-								template<class S> constexpr static type _do_prepend(S& _s, std::array<T,N>&& _data) { return _s.template _prepend_array<T>(_data.data(), N);}
-							};
 template<class B, class T, std::size_t N> class serializer_append<B, std::array<T,N>>
 							{	public: using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const std::array<T,N>& _data) { return _s.template _append_array<T,N>(_data.data());}
@@ -1020,18 +989,6 @@ template<class T, std::size_t N> class serializer_size_of<std::array<T,N>>
 //-----------------------------------------------------------------------------
 // buffer_view
 //-----------------------------------------------------------------------------
-template<class B>			class serializer_prepend<B, _buffer_view<typename B::element_t>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const _buffer_view<typename B::element_t>& _data) { return _s._prepend_buffer(_data);}
-							};
-template<class B>			class serializer_prepend<B, _basic_buffer<typename B::element_t>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const _basic_buffer<typename B::element_t>& _data) { return _s._prepend_buffer(_data);}
-							};
-template<class B, class T>	class serializer_prepend<B, _shared_buffer<T>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const _shared_buffer<T>& _data) { return _s._prepend_buffer(_data);}
-							};
 
 template<class B>			class serializer_append<B, _buffer_view<typename B::element_t>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
@@ -1109,11 +1066,6 @@ template<>					class serializer_size_of<WEB_MODIFY>
 //-----------------------------------------------------------------------------
 // skip
 //-----------------------------------------------------------------------------
-template<class B>			class serializer_prepend<B, skip>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const skip& _data) { return _s._prepend_skip(_data.amount);}
-								template<class S> constexpr static type _do_prepend(S& _s, skip&& _data) { return _s._prepend_skip(_data.amount);}
-							};
 template<class B>			class serializer_append<B, skip>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const skip& _data) { return _s._append_skip(_data.amount);}
@@ -1131,12 +1083,6 @@ template<>					class serializer_size_of<skip>
 //-----------------------------------------------------------------------------
 // tupple
 //-----------------------------------------------------------------------------
-template<class B, class... T> class serializer_prepend<B, std::tuple<T...>>
-							{
-								public:	using type = _buffer_view<typename B::element_t>;;
-								template<class S> constexpr static type _do_prepend(S& _s, const std::tuple<T...>& _data) { return _s.template _prepend_tuple(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, std::tuple<T...>&& _data) { return _s.template _prepend_tuple(_data);}
-							};
 template<class B, class... T>	class serializer_append<B, std::tuple<T...>>
 							{
 								public:	using type = _buffer_view<typename B::element_t>;
@@ -1194,7 +1140,7 @@ template<class T>			class serializer_size_of<T, std::enable_if_t<std::is_base_of
 								constexpr static std::size_t  _get_extract_size(const buffer_view& _buffer, int64_t& _offset) noexcept { CGDK_ASSERT_ERROR; return 0;}
 							};
 
-// 2) T* - Ibuffer_serializable ì—¬ê¸°: ì œê±°?
+// 2) T* - Ibuffer_serializable ¿©±â: Á¦°Å?
 template<class B, class T>	class serializer_append<B, T*, std::enable_if_t<std::is_base_of_v<Ibuffer_serializable, T>>>
 							{	using TX = std::remove_const_t<T>;
 								public:	using type = _buffer_view<typename B::element_t>;
@@ -1363,7 +1309,7 @@ template<class T>			class serializer_size_of<T, std::enable_if_t<std::is_base_of
 								constexpr static std::size_t  _get_extract_size(const buffer_view& _buffer, int64_t& _offset) noexcept { CGDK_ASSERT_ERROR; return 0;}
 							};
 
-// 2) T* - protobuf ì—¬ê¸°: ì œê±°?
+// 2) T* - protobuf ¿©±â: Á¦°Å?
 template<class B, class T>	class serializer_append<B, T*, std::enable_if_t<std::is_base_of_v<::google::protobuf::Message, T>>>
 							{	using TX = std::remove_const_t<T>;
 								public:	using type = _buffer_view<typename B::element_t>;
@@ -1574,41 +1520,12 @@ template<class T>			class serializer_size_of<own_ptr<T>, std::enable_if_t<std::i
 //
 // for strings
 //-----------------------------------------------------------------------------
-// class for prepend)
-template<class B, class T>	class serializer_prepend<B, T*, std::enable_if_t<is_string_type<T>::value>>
-							{	using TX = std::remove_const_t<T>;
-								public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const TX* _data) { return _s.template  _prepend_string<TX>(_data);}
-								template<class S, class TY> constexpr static type _do_prepend(S& _s, const TY* _data) { return _s.template  _prepend_string_encoding<TX,TY>(_data);}
-							};
-template<class B, class T>	class serializer_prepend<B, text<T>, std::enable_if_t<is_string_type<T>::value>>
-							{	using TX = std::remove_const_t<T>;
-								public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const text<T>& _data) { return _s.template  _prepend_text<TX>(_data.p);}
-								template<class S> constexpr static type _do_prepend(S& _s, text<T>&& _data) { return _s.template  _prepend_text<TX>(_data.p);}
-								template<class S, class TY> constexpr static type _do_prepend(S& _s, text<TY>&& _data) { return _s.template  _prepend_text_encoding<TX,TY>(_data.p);}
-							};
-template<class B, class T>	class serializer_prepend<B, std::basic_string<T>, std::enable_if_t<is_string_type<T>::value>>
-							{	using TX = std::remove_const_t<T>;
-								public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const std::basic_string<TX>& _data) { return _s.template  _prepend_string<TX>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, std::basic_string<TX>&& _data) { return _s.template  _prepend_string<TX>(_data); }
-								template<class S, class TY> constexpr static type _do_prepend(S& _s, std::basic_string<TY>&& _data){ return _s.template  _prepend_string_encoding<TX,TY>(_data); }
-							};
-template<class B, class T>	class serializer_prepend<B, std::basic_string_view<T>, std::enable_if_t<is_string_type<T>::value>>
-							{	using TX = std::remove_const_t<T>;
-								public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const std::basic_string_view<TX>& _data) { return _s.template _prepend_string<TX>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, std::basic_string_view<TX>&& _data) { return _s.template _prepend_string<TX>(_data);}
-								template<class S, class TY> constexpr static type _do_prepend(S& _s, std::basic_string_view<T>&& _data){ return _s.template _prepend_string_encoding<TX, TY>(_data);}
-							};
 
 // class for append)
 template<class B, class T>	class serializer_append<B, T*, std::enable_if_t<is_string_type<T>::value>>
 							{	using TX = std::remove_const_t<T>;
 								public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const TX* _data) { return _s.template  _append_string<TX>(std::basic_string_view<TX>(_data));}
-								template<class S, class TY> constexpr static type _do_append(S& _s, const TY* _data) { return _s.template  _append_string_encoding<TX,TY>(std::basic_string_view<TY>(_data));}
 							};
 template<class B, class T>	class serializer_append<B, text<T>, std::enable_if_t<is_string_type<T>::value>>
 							{	using TX = std::remove_const_t<T>;
@@ -1622,14 +1539,12 @@ template<class B, class T>	class serializer_append<B, std::basic_string<T>, std:
 								public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const std::basic_string<TX>& _data) { return _s.template  _append_string<TX>(_data);}
 								template<class S> constexpr static type _do_append(S& _s, std::basic_string<TX>&& _data) { return _s.template  _append_string<TX>(_data);}
-								template<class S, class TY> constexpr static type _do_append(S& _s, std::basic_string<TY>&& _data) { return _s.template  _append_string_encoding<TX,TY>(_data);}
 							};
 template<class B, class T>	class serializer_append<B, std::basic_string_view<T>, std::enable_if_t<is_string_type<T>::value>>
 							{	using TX = std::remove_const_t<T>;
 								public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const std::basic_string_view<TX>& _data) { return _s.template  _append_string<TX>(_data);}
 								template<class S> constexpr static type _do_append(S& _s, std::basic_string_view<TX>&& _data) { return _s.template  _append_string<TX>(_data);}
-								template<class S, class TY> constexpr static type _do_append(S& _s, std::basic_string_view<TY>&& _data){ return _s.template  _append_string_encoding<TX,TY>(_data);}
 							};
 
 // class for extract)
@@ -1719,11 +1634,6 @@ template<class T>			class serializer_size_of<std::basic_string_view<T>, std::ena
 // linear container - push_back() only (list<T>, deque<T>, circular_list<T>, ...)
 //-----------------------------------------------------------------------------
 // linear container<T>)
-template<class B, class T>	class serializer_prepend<B, T, std::enable_if_t<is_linear_container<T>::value>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _s.template _prepend_container_list<T>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _s.template _prepend_container_list<T>(_data);}
-							};
 template<class B, class T>	class serializer_append<B, T, std::enable_if_t<is_linear_container<T>::value>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _s.template _append_container_list<T>(_data);}
@@ -1763,11 +1673,6 @@ template<typename T>		class serializer_size_of<T, std::enable_if_t<is_linear_con
 							};
 
 // linear container<object_ptr<T>>)
-template<class B, class T>	class serializer_prepend<B, T, std::enable_if_t<is_linear_object_ptr_container<T>::value>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _s.template _prepend_container_list<T>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _s.template _prepend_container_list<T>(_data);}
-							};
 template<class B, class T>	class serializer_append<B, T, std::enable_if_t<is_linear_object_ptr_container<T>::value>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _s.template _append_container_object_ptr_list<T>(_data);}
@@ -1806,11 +1711,6 @@ template<class T>			class serializer_size_of<T, std::enable_if_t<is_linear_objec
 							};
 
 // linear container<own_ptr<T>>)
-template<class B, class T>	class serializer_prepend<B, T, std::enable_if_t<is_linear_own_ptr_container<T>::value>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _s.template _prepend_container_list<T>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _s.template _prepend_container_list<T>(_data);}
-							};
 template<class B, class T>	class serializer_append<B, T, std::enable_if_t<is_linear_own_ptr_container<T>::value>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _s.template _append_container_own_ptr_list<T>(_data);}
@@ -1853,11 +1753,6 @@ template<class T>			class serializer_size_of<T, std::enable_if_t<is_linear_own_p
 // linear container<shared_buffer> - push_back() and reserve() - (vector<T>, ...)
 //-----------------------------------------------------------------------------
 // linear container<T>
-template<class B, class T>	class serializer_prepend<B, T, std::enable_if_t<is_linear_container_with_reserve<T>::value>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _s.template _prepend_container_array<T>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _s.template _prepend_container_array<T>(_data);}
-							};
 template<class B, class T>	class serializer_append<B, T, std::enable_if_t<is_linear_container_with_reserve<T>::value>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _s.template _append_container_array<T>(_data);}
@@ -1897,11 +1792,6 @@ template<class T>			class serializer_size_of<T, std::enable_if_t<is_linear_conta
 							};
 
 // linear container<object_ptr<T>>
-template<class B, class T>	class serializer_prepend<B, T, std::enable_if_t<is_linear_object_ptr_container_with_reserve<T>::value>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _s.template _prepend_container_array<T>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _s.template _prepend_container_array<T>(_data);}
-							};
 template<class B, class T>	class serializer_append<B, T, std::enable_if_t<is_linear_object_ptr_container_with_reserve<T>::value>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _s.template _append_container_array<T>(_data);}
@@ -1940,11 +1830,6 @@ template<class T>			class serializer_size_of<T, std::enable_if_t<is_linear_objec
 							};
 
 // linear container<own_ptr<T>>
-template<class B, class T>	class serializer_prepend<B, T, std::enable_if_t<is_linear_own_ptr_container_with_reserve<T>::value>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _s.template _prepend_container_array<T>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _s.template _prepend_container_array<T>(_data);}
-							};
 template<class B, class T>	class serializer_append<B, T, std::enable_if_t<is_linear_own_ptr_container_with_reserve<T>::value>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _s.template _append_container_array<T>(_s, _data);}
@@ -1988,11 +1873,6 @@ template<class T>			class serializer_size_of<T, std::enable_if_t<is_linear_own_p
 //-----------------------------------------------------------------------------
 #if defined(__cpp_lib_span)
 // std::span<T>)
-template<class B, class T,size_t E>	class serializer_prepend<B, std::span<T,E>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const std::span<T,E>& _data) { return _s.template _prepend_container_list<std::span<T,E>>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, std::span<T,E>&& _data) { return _s.template _prepend_container_list<std::span<T,E>>(_data);}
-							};
 template<class B, class T,size_t E>	class serializer_append<B, std::span<T,E>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const std::span<T,E>& _data) { return _s.template _append_container_list<std::span<T,E>>(_data);}
@@ -2035,11 +1915,6 @@ template<class T,size_t E>	class serializer_size_of<std::span<T,E>>
 //-----------------------------------------------------------------------------
 // set container<T>)
 // std::set<T>, std::multiset<T>, ...
-template<class B, class T>	class serializer_prepend<B, T, std::enable_if_t<is_set_container<T>::value>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _s.template _prepend_container_list<T>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _s.template _prepend_container_list<T>(_data);}
-							};
 template<class B, class T>	class serializer_append<B, T, std::enable_if_t<is_set_container<T>::value>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _s.template _append_container_list<T>(_data);}
@@ -2078,11 +1953,6 @@ template<class T>			class serializer_size_of<T, std::enable_if_t<is_set_containe
 							};
 
 // std::set<object_ptr<T>>, std::multiset<object_ptr<T>>, ...
-template<class B, class T>	class serializer_prepend<B, T, std::enable_if_t<is_set_object_ptr_container<T>::value>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _s.template _prepend_container_list<T>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _s.template _prepend_container_list<T>(_data);}
-							};
 template<class B, class T>	class serializer_append<B, T, std::enable_if_t<is_set_object_ptr_container<T>::value>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _s.template _append_container_list<T>(_data);}
@@ -2122,11 +1992,6 @@ template<class T>			class serializer_size_of<T, std::enable_if_t<is_set_object_p
 
 
 // std::set<own_ptr<T>>, std::multiset<own_ptr<T>>, ...
-template<class B, class T>	class serializer_prepend<B, T, std::enable_if_t<is_set_own_ptr_container<T>::value>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _s.template _prepend_container_list<T>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _s.template _prepend_container_list<T>(_data);}
-							};
 template<class B, class T>	class serializer_append<B, T, std::enable_if_t<is_set_own_ptr_container<T>::value>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _s.template _append_container_list<T>(_data);}
@@ -2169,11 +2034,6 @@ template<class T>			class serializer_size_of<T, std::enable_if_t<is_set_own_ptr_
 // associated container (std::map<T>, std::multimap<T>, ...)
 //-----------------------------------------------------------------------------
 // associated container<T>)
-template<class B, class T>	class serializer_prepend<B, T, std::enable_if_t<is_associative_container<T>::value>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _s.template _prepend_container_associative<T>(_data); }
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _s.template _prepend_container_associative<T>(_data); }
-							};
 template<class B, class T>	class serializer_append<B, T, std::enable_if_t<is_associative_container<T>::value>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _s.template _append_container_associative<T>(_data); }
@@ -2214,11 +2074,6 @@ template<class T>			class serializer_size_of<T, std::enable_if_t<is_associative_
 
 
 // associated container<object_ptr<T>>)
-template<class B, class T>		class serializer_prepend<B, T, std::enable_if_t<is_associative_object_ptr_container<T>::value>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _s.template _prepend_container_associative<T>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _s.template _prepend_container_associative<T>(_data);}
-							};
 template<class B, class T>		class serializer_append<B, T, std::enable_if_t<is_associative_object_ptr_container<T>::value>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _s.template _append_container_associative<T>(_data);}
@@ -2259,11 +2114,6 @@ template<typename T>		class serializer_size_of<T, std::enable_if_t<is_associativ
 
 
 // associated container<own_ptr<T>>)
-template<class B, class T>	class serializer_prepend<B, T, std::enable_if_t<is_associative_own_ptr_container<T>::value>>
-							{	public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _s.template _prepend_container_associative<T>(_data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _s.template _prepend_container_associative<T>(_data);}
-							};
 template<class B, class T>	class serializer_append<B, T, std::enable_if_t<is_associative_own_ptr_container<T>::value>>
 							{	public:	using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _s.template _append_container_associative<T>(_data);}

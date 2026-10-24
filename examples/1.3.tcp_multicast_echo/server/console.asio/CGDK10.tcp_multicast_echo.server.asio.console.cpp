@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 
 
 std::unique_ptr<group_test> g_pgroup;
@@ -211,16 +211,16 @@ void print_setting_info()
 
 void print_statistics_info()
 {
-	// 1) í˜„ì¬ Tickê³¼ Tick Gapì„ êµ¬í•œë‹¤.
+	// 1) ÇöÀç Tick°ú Tick GapÀ» ±¸ÇÑ´Ù.
 	static auto tick_last = std::chrono::steady_clock::time_point(std::chrono::steady_clock::duration::zero());
 	auto tick_now = std::chrono::steady_clock::now();
 	auto tick_differ = std::chrono::duration_cast<std::chrono::milliseconds>(tick_now - tick_last);
 
-	// check) tickdifferê°€ 10msì´í•˜ë©´ ê·¸ëƒ¥ ëë‚¸ë‹¤.
+	// check) tickdiffer°¡ 10msÀÌÇÏ¸é ±×³É ³¡³½´Ù.
 	if (tick_differ < 1s)
 		return;
 
-	// 2) ìµœì¢… ì‹œê°„ì„ Updateí•œë‹¤.
+	// 2) ÃÖÁ¾ ½Ã°£À» UpdateÇÑ´Ù.
 	tick_last = tick_now;
 
 	// 3) alloc buffer
@@ -234,18 +234,18 @@ void print_statistics_info()
 		static uint64_t	last_count_success = 0;
 		static uint64_t	last_count_disconnected = 0;
 
-		// - ì´ì „ê³¼ í˜„ì¬ì˜ ì°¨ì´ë¥¼ êµ¬í•œë‹¤. (Overflowê°€ ë‚¬ì„ ê²½ìš°ë¥¼ ëŒ€ë¹„í•˜ì—¬ ê³„ì‚°í•´ì•¼ í•œë‹¤.)
+		// - ÀÌÀü°ú ÇöÀçÀÇ Â÷ÀÌ¸¦ ±¸ÇÑ´Ù. (Overflow°¡ ³µÀ» °æ¿ì¸¦ ´ëºñÇÏ¿© °è»êÇØ¾ß ÇÑ´Ù.)
 		auto now_count_keep = asio::Nstatistics::statistics_connect_keep.load();
 		auto now_count_try = asio::Nstatistics::statistics_connect_try.load();
 		auto now_count_success = asio::Nstatistics::statistics_connect_success.load();
 		auto now_count_disconnected = asio::Nstatistics::statistics_connect_disconnect.load();
 
-		// - ì´ˆë‹¹ ì „ì†¡ë¥ ì„ êµ¬í•œë‹¤.
+		// - ÃÊ´ç Àü¼Û·üÀ» ±¸ÇÑ´Ù.
 		auto total_try_per_sec = ((float)(now_count_try - last_count_try)) * 1000.0f / tick_differ.count();
 		auto total_success_per_sec = ((float)(now_count_success - last_count_success)) * 1000.0f / tick_differ.count();
 		auto total_disconnected_per_sec = ((float)(now_count_disconnected - last_count_disconnected)) * 1000.0f / tick_differ.count();
 
-		// - ì´ì „ ê°’ì„ í˜„ì¬ ê°’ìœ¼ë¡œ Updateí•œë‹¤.(ë‹¤ìŒ Frameì—ì„œì˜ ê³„ì‚°ì„ ìœ„í•´)
+		// - ÀÌÀü °ªÀ» ÇöÀç °ªÀ¸·Î UpdateÇÑ´Ù.(´ÙÀ½ Frame¿¡¼­ÀÇ °è»êÀ» À§ÇØ)
 		last_count_try = now_count_try;
 		last_count_success = now_count_success;
 		last_count_disconnected = now_count_disconnected;
@@ -263,27 +263,27 @@ void print_statistics_info()
 	// 5) traffic info
 	{
 		// declare) 
-		static uint64_t	last_count_sended = 0;
+		static uint64_t	last_count_sent = 0;
 		static uint64_t	last_count_received = 0;
-		static uint64_t	last_count_sendedByte = 0;
+		static uint64_t	last_count_sentByte = 0;
 		static uint64_t	last_count_received_byte = 0;
 
-		// - ì´ì „ê³¼ í˜„ì¬ì˜ ì°¨ì´ë¥¼ êµ¬í•œë‹¤. (Overflowê°€ ë‚¬ì„ ê²½ìš°ë¥¼ ëŒ€ë¹„í•˜ì—¬ ê³„ì‚°í•´ì•¼ í•œë‹¤.)
-		auto now_count_sended = asio::Nstatistics::statistics_send_messages.load();
-		auto now_count_sendedByte = asio::Nstatistics::statistics_send_bytes.load();
+		// - ÀÌÀü°ú ÇöÀçÀÇ Â÷ÀÌ¸¦ ±¸ÇÑ´Ù. (Overflow°¡ ³µÀ» °æ¿ì¸¦ ´ëºñÇÏ¿© °è»êÇØ¾ß ÇÑ´Ù.)
+		auto now_count_sent = asio::Nstatistics::statistics_send_messages.load();
+		auto now_count_sentByte = asio::Nstatistics::statistics_send_bytes.load();
 		auto now_count_send_failed = asio::Nstatistics::statistics_send_error.load();
 		auto now_count_received = asio::Nstatistics::statistics_receive_messages.load();
 		auto now_count_received_byte = asio::Nstatistics::statistics_receive_bytes.load();
 
-		// - ì´ˆë‹¹ ì „ì†¡ë¥ ì„ êµ¬í•œë‹¤.
-		auto total_sended_message_per_sec = ((float)(now_count_sended - last_count_sended)) * 1000.0f / tick_differ.count();
-		auto total_sended_byte_per_sec = ((float)(now_count_sendedByte - last_count_sendedByte)) * 1000.0f / tick_differ.count();
+		// - ÃÊ´ç Àü¼Û·üÀ» ±¸ÇÑ´Ù.
+		auto total_sent_message_per_sec = ((float)(now_count_sent - last_count_sent)) * 1000.0f / tick_differ.count();
+		auto total_sent_byte_per_sec = ((float)(now_count_sentByte - last_count_sentByte)) * 1000.0f / tick_differ.count();
 		auto total_receive_message_per_sec = ((float)(now_count_received - last_count_received)) * 1000.0f / tick_differ.count();
 		auto total_receive_byte_per_sec = ((float)(now_count_received_byte - last_count_received_byte)) * 1000.0f / tick_differ.count();
 
-		// - ì´ì „ ê°’ì„ í˜„ì¬ ê°’ìœ¼ë¡œ Updateí•œë‹¤.(ë‹¤ìŒ Frameì—ì„œì˜ ê³„ì‚°ì„ ìœ„í•´)
-		last_count_sended = now_count_sended;
-		last_count_sendedByte = now_count_sendedByte;
+		// - ÀÌÀü °ªÀ» ÇöÀç °ªÀ¸·Î UpdateÇÑ´Ù.(´ÙÀ½ Frame¿¡¼­ÀÇ °è»êÀ» À§ÇØ)
+		last_count_sent = now_count_sent;
+		last_count_sentByte = now_count_sentByte;
 		last_count_received = now_count_received;
 		last_count_received_byte = now_count_received_byte;
 
@@ -292,15 +292,15 @@ void print_statistics_info()
 
 		// - sended
 		buf_output << " [send]    "sv;
-		buf_output << "\x1b[90m   messages \x1b[0m"sv << std::setw(12) << now_count_sended;
+		buf_output << "\x1b[90m   messages \x1b[0m"sv << std::setw(12) << now_count_sent;
 	#if defined(_WIN32)
-		sprintf_s(temp_string, "%.2f", total_sended_message_per_sec);
+		sprintf_s(temp_string, "%.2f", total_sent_message_per_sec);
 		buf_output << "\x1b[90m   messages/s \x1b[0m"sv << temp_string;
 	#else
-		sprintf(temp_string, "%.2f", total_sended_message_per_sec);
+		sprintf(temp_string, "%.2f", total_sent_message_per_sec);
 		buf_output << "\x1b[90m   messages/s \x1b[0m"sv << temp_string;
 	#endif
-		buf_output << "\x1b[90m   bytes/s \x1b[0m"sv << static_cast<uint64_t>(total_sended_byte_per_sec);
+		buf_output << "\x1b[90m   bytes/s \x1b[0m"sv << static_cast<uint64_t>(total_sent_byte_per_sec);
 		buf_output << "\x1b[90m   failed \x1b[0m"sv << now_count_send_failed << "\x1b[K\n"sv;
 
 		// - received

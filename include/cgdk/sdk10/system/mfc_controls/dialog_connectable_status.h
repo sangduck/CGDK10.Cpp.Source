@@ -73,11 +73,11 @@ private:
 private:
 			chrono::tick::time_point m_tick_last;
 
-			LONGLONG			m_countMessageSended;
+			LONGLONG			m_countMessageSent;
 			LONGLONG			m_countMessageReceived;
-			LONGLONG			m_countMessageSendedByte;
+			LONGLONG			m_countMessageSentByte;
 			LONGLONG			m_countMessageReceivedByte;
-			LONGLONG			m_countIOSended;
+			LONGLONG			m_countIOSent;
 			LONGLONG			m_countIOReceived;
 
 			CStatic_graph		m_graphMessage_Traffic;
@@ -93,7 +93,7 @@ private:
 			lockable<>			m_csConnectable;
 
 			CComboBox			m_comboUpdateInterval;
-	static	int					m_iUpdateInverval;
+	static	int					m_iUpdateInterval;
 
 			void				set_connectable(net::io::Iconnectable* _pconnectable);
 			void				SetUpdateInterval(int p_iInterval);

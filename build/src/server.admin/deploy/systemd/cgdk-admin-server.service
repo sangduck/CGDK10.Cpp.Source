@@ -1,0 +1,38 @@
+#-----------------------------------------------------------------------------
+# CGDK10 admin server (systemd unit)
+#
+#  install)
+#    1) copy files to /opt/cgdk/admin_server
+#         CGDK10.server_admin.admin_server.console_linux.Release
+#         config/admin_server.setting.json
+#         (config/admin_server.desired_state.json is created by 'want' command)
+#    2) (optional) /etc/cgdk/admin_server.env : CGDK_ADMIN_CERTIFY_KEY=<key>
+#    3) sudo cp cgdk-admin-server.service /etc/systemd/system/
+#       sudo systemctl daemon-reload
+#       sudo systemctl enable --now cgdk-admin-server
+#
+#  notes)
+#    - foreground process. systemd stop sends SIGTERM -> destroyed gracefully.
+#    - console commands (list/start/stop/want ...) are read from stdin.
+#      under systemd stdin is /dev/null (no console commands).
+#-----------------------------------------------------------------------------
+[Unit]
+Description=CGDK10 admin server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cgdk
+Group=cgdk
+WorkingDirectory=/opt/cgdk/admin_server
+EnvironmentFile=-/etc/cgdk/admin_server.env
+ExecStart=/opt/cgdk/admin_server/CGDK10.server_admin.admin_server.console_linux.Release
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

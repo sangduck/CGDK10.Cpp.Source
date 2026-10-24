@@ -33,10 +33,26 @@ enum class eSCHEDULABLE_TYPE : int32_t
 	MAX
 };
 
-// 2) to_string functions
-template <class T>	[[nodiscard]] std::basic_string_view<T>	to_string(eSCHEDULABLE_TYPE _character_set) noexcept;
-template <>			[[nodiscard]] std::string_view			to_string<char>(eSCHEDULABLE_TYPE _character_set) noexcept;
-template <>			[[nodiscard]] std::wstring_view			to_string<wchar_t>(eSCHEDULABLE_TYPE _character_set) noexcept;
+[[nodiscard]] std::string_view to_string(eSCHEDULABLE_TYPE _character_set) noexcept;
+
+//-----------------------------------------------------------------------------
+// eSCHEDULE_OVERRUN
+//  - policy when the next execution time has already passed
+//    (the previous execution took longer than the interval, or the execution was delayed)
+//
+//  CATCH_UP : execute the missed executions immediately (the execution count is guaranteed)
+//             ex) interval 100ms, execution delayed 350ms -> executed 3 times immediately, then 100ms interval
+//  SKIP     : skip the missed executions and execute at the next interval (the interval grid is kept)
+//             ex) interval 100ms, execution delayed 350ms -> next execution at 400ms
+//-----------------------------------------------------------------------------
+enum class eSCHEDULE_OVERRUN : int32_t
+{
+	CATCH_UP			 = 0,
+	SKIP				 = 1,
+	DEFAULT				 = CATCH_UP
+};
+
+[[nodiscard]] std::string_view to_string(eSCHEDULE_OVERRUN _overrun) noexcept;
 
 namespace statistics
 {

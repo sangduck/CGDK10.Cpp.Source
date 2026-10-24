@@ -1,16 +1,3 @@
-﻿//*****************************************************************************
-//*                                                                           *
-//*                               CGDK::buffer                                *
-//*                       ver 3.03 / release 2023.10.17                       *
-//*                                                                           *
-//*                                                                           *
-//*                                                                           *
-//*                                                                           *
-//*  programmed by Cho SangHyun. sangduck@cgcii.com                           *
-//*                                                                           *
-//*                          http://www.CGCII.co.kr                           *
-//*                                                                           *
-//*****************************************************************************
 namespace std
 {
 	[[nodiscard]] constexpr auto begin(CGDK::buffer_view& _buf) -> decltype(_buf.get_front_ptr()) { return _buf.get_front_ptr(); }
@@ -32,9 +19,9 @@ template <class B, std::size_t INDEX, std::size_t IALIGN>
 struct any_constructor_extract
 {
 	_buffer_view<typename B::element_t>& buf_source;
-	
+
 	template <class Type>
-	constexpr operator Type() const 
+	constexpr operator Type() const
 	{
 		return buf_source.template extract<std::decay_t<Type>>();
 	}
@@ -59,28 +46,24 @@ public:	using type = T;
 	template<class S>
 	constexpr static type _do_extract(S& _source)
 	{
-		// check)
+
 		static_assert(!std::is_base_of_v<Ibuffer_serializable, T>, "''Ibuffer_serializable' class has priority");
 
-		// check)
-		static_assert(!std::is_polymorphic<T>::value, "'struct_serializable' class must not be polymorphic (no virtual fuction)");
+		static_assert(!std::is_polymorphic<T>::value, "'struct_serializable' class must not be polymorphic (no virtual function)");
 
-		// check)
-		static_assert(std::is_default_constructible<T>::value, "'struct_serializable' class must have default constructor (remove construtor)");
+		static_assert(std::is_default_constructible<T>::value, "'struct_serializable' class must have default constructor (remove constructor)");
 
 		return extract_member_impl<B,T>(_source, std::make_index_sequence<constexpr_field_count<T>>());
 	}
 	template<class D, class S>
 	constexpr static void _do_extract(D& _dest, S& _source)
 	{
-		// check)
+
 		static_assert(!std::is_base_of_v<Ibuffer_serializable, T>, "''Ibuffer_serializable' class has priority");
 
-		// check)
-		static_assert(!std::is_polymorphic<T>::value, "'struct_serializable' class must not be polymorphic (no virtual fuction)");
+		static_assert(!std::is_polymorphic<T>::value, "'struct_serializable' class must not be polymorphic (no virtual function)");
 
-		// check)
-		static_assert(std::is_default_constructible<T>::value, "'struct_serializable' class must have default constructor (remove construtor)");
+		static_assert(std::is_default_constructible<T>::value, "'struct_serializable' class must have default constructor (remove constructor)");
 
 		extract_member_impl<B,T>(_dest, _source, std::make_index_sequence<constexpr_field_count<T>>());
 	}
@@ -123,21 +106,17 @@ struct member_size_of
 	template <class Type>
 	constexpr operator Type () const noexcept
 	{
-		// 1) pre-offset
+
 		offset = align_offset_pre<IALIGN>(offset, sizeof(Type));
 
-		// 2) get get_size_of source
 		size_object += get_size_of<std::size_t, std::decay_t<Type>>(*reinterpret_cast<const Type*>(source + offset));
 
-		// 3) add offset
 		offset += sizeof(Type);
 
-		// return) 
 		return Type();
 	}
 };
 
-// 5) for structure (reflection)
 template <class T, std::size_t... I>
 constexpr std::size_t size_of_member_impl(const char* _source, std::index_sequence<I...>)
 {
@@ -147,45 +126,36 @@ constexpr std::size_t size_of_member_impl(const char* _source, std::index_sequen
 	return size_object;
 }
 
-
 template<class B, class T>
 class serializer_peek<B, T, std::enable_if_t<is_struct_serializable_v<T>>>
-{	
+{
 public:	using type = T;
-	template<class S> 
+	template<class S>
 	constexpr static type _do_peek(const S& _source, int64_t& _offset)
 	{
-		// check) T must be default construcable
+
 		static_assert(std::is_default_constructible<T>::value, "T must be default constructable");
 
-		// check) 'Ibuffer_serializable' attribue is priorier than 'struct_serializable' attribute
-		static_assert(!std::is_base_of_v<Ibuffer_serializable, T>, "'Ibuffer_serializable' attribue is priorier than 'struct_serializable' attribute");
+		static_assert(!std::is_base_of_v<Ibuffer_serializable, T>, "'Ibuffer_serializable' attribute is priorier than 'struct_serializable' attribute");
 
-		// check) T must have 'is_struct_serializable' attribute
 		static_assert(is_struct_serializable_v<T>, "T must derive 'is_struct_serializable' class");
 
-		// check) T must be 'is_default_constructible_v<T>' attribute
-		static_assert(std::is_default_constructible_v<T>, "'is_struct_serializable' class must have default constructor (remove construtor)");
+		static_assert(std::is_default_constructible_v<T>, "'is_struct_serializable' class must have default constructor (remove constructor)");
 
-		// return) front member
 		return front_member_impl<B, T>(_Sfromt_member_auto_close<S>(_source, _offset), std::make_index_sequence<constexpr_field_count<T>>());
 	}
 	template<class D, class S>
 	constexpr static void _do_peek(D& _dest, const S& _source, int64_t& _offset)
 	{
-		// check) T must be default construcable
+
 		static_assert(std::is_default_constructible<T>::value, "T must be default constructable");
 
-		// check) 'Ibuffer_serializable' attribue is priorier than 'struct_serializable' attribute
-		static_assert(!std::is_base_of_v<Ibuffer_serializable, T>, "'Ibuffer_serializable' attribue is priorier than 'struct_serializable' attribute");
+		static_assert(!std::is_base_of_v<Ibuffer_serializable, T>, "'Ibuffer_serializable' attribute is priorier than 'struct_serializable' attribute");
 
-		// check) T must have 'is_struct_serializable' attribute
 		static_assert(is_struct_serializable_v<T>, "T must derive 'is_struct_serializable' class");
 
-		// check) T must be 'is_default_constructible_v<T>' attribute
-		static_assert(std::is_default_constructible_v<T>, "'is_struct_serializable' class must have default constructor (remove construtor)");
+		static_assert(std::is_default_constructible_v<T>, "'is_struct_serializable' class must have default constructor (remove constructor)");
 
-		// return) front member
 		front_member_impl<B, T>(_dest, _Sfromt_member_auto_close<S>(_source, _offset), std::make_index_sequence<constexpr_field_count<T>>());
 	}
 };
@@ -195,28 +165,23 @@ class serializer_size_of<T, std::enable_if_t<is_struct_serializable_v<T>>>
 public:
 	constexpr static std::size_t  _get_append_size(const T& _object)
 	{
-		// check) T must be default construcable
+
 		static_assert(std::is_default_constructible<T>::value, "T must be default constructable");
 
-		// check) 'Ibuffer_serializable' attribue is priorier than 'struct_serializable' attribute
-		static_assert(!std::is_base_of_v<Ibuffer_serializable, T>, "'Ibuffer_serializable' attribue is priorier than 'struct_serializable' attribute");
+		static_assert(!std::is_base_of_v<Ibuffer_serializable, T>, "'Ibuffer_serializable' attribute is priorier than 'struct_serializable' attribute");
 
-		// check) T must derive 'is_struct_serializable_v'
 		static_assert(is_struct_serializable_v<T>, "T must defined 'ENABLE_STRUCT_SERIALIZABLE'");
 
-		// check) T must be 'std::is_default_constructable_v<T>' attribute
-		static_assert(std::is_default_constructible_v<T>, "'struct_serializable' attribute must have default constructor (remove construtor)");
+		static_assert(std::is_default_constructible_v<T>, "'struct_serializable' attribute must have default constructor (remove constructor)");
 
-		// 1) get size 0f mebsers
 		return size_of_member_impl<T>(reinterpret_cast<const char*>(&_object), std::make_index_sequence<constexpr_field_count<T>>());
 	}
-	template<class S> 
+	template<class S>
 	constexpr static std::size_t  _get_extract_size(const S& _buffer, int64_t& _offset)
 	{
 		CGDK_ASSERT(false);
 		return 0;
 	}
 };
-
 
 }

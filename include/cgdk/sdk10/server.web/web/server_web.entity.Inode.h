@@ -33,21 +33,17 @@ public:
 			Inode() noexcept;
 	virtual ~Inode() noexcept;
 
-// public)
 public:
 			bool				attach_child			(Ientity* _pchild);
 			void				detach_child			(Ientity* _pchild) noexcept;
 			void				detach_child_all		() noexcept;
 
 			object_ptr<Ientity>	find_child_entity		(std::string_view _source) const noexcept;
-
-// framework)
 protected:
 	virtual	result_code			process_update			(context& _context) override;
 
-// implementation)
-protected:
-			lockable<std::map<std::string, object_ptr<server::web::Ientity>>> m_map_child;
+	mutable	lock_object			m_lockable_map_child;
+			std::map<std::string, object_ptr<server::web::Ientity>, std::less<>> m_map_child;
 };
 
 

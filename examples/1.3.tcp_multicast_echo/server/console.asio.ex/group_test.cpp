@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 
 void group_test::send(shared_buffer& _msg)

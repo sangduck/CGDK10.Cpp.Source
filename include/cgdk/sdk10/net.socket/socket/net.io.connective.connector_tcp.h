@@ -28,12 +28,9 @@ namespace CGDK
 class net::io::connective::connector::Ntcp :
 	virtual public				net::io::connective::Iconnector,
 	public						object::Nnameable,
-	public                      object::Ninitializable_startable
+	public                      object::Ninitializable_startable,
+	private						non_copyable
 {
-public:
-			Ntcp() {}
-			Ntcp(std::string_view _name) : Nnameable(_name) {}
-
 public:
 	[[nodiscard]] virtual object_ptr<Iconnectable> alloc_connectable() override;
 
@@ -43,6 +40,11 @@ public:
 	[[nodiscard]] virtual end_point_type get_default_endpoint() const noexcept override { return m_default_endpoint; };
 	virtual void				set_default_endpoint(const end_point_type& _default_endpoint) override { m_default_endpoint = _default_endpoint; }
 
+	// 4) the tcp socket option of the sockets allocated by this connector (alloc_connectable. see sSOCKET_OPTION_TCP. the start context : "socket_option")
+	//    (not set : the sockets keep their own socket_option(). on_alloc_connectable() may change it. the "socket_option" of a connect context changes the socket's one)
+			void				socket_option(const sSOCKET_OPTION_TCP& _option) noexcept { this->m_socket_option = _option; this->m_flag_socket_option = true; }
+	[[nodiscard]] const sSOCKET_OPTION_TCP& socket_option() const noexcept { return this->m_socket_option; }
+
 	// 3) executor
 	virtual void				io_context (executor::Iio_context* _pio_context) noexcept override { m_pio_context = _pio_context;}
 	[[nodiscard]] virtual object_ptr<executor::Iio_context> io_context () const noexcept override { return m_pio_context;}
@@ -51,8 +53,8 @@ protected:
 	virtual void				on_alloc_connectable (net::io::Iconnectable* /*_pconnectable*/) {}
 	virtual	void				on_request_connect (net::io::Iconnectable* /*_pconnectable*/, context& /*_context_connect*/) {}
 	virtual	void				on_connect (net::io::Iconnectable* /*_pconnectable*/)	{}
-	virtual	void				on_disconnect (net::io::Iconnectable* /*_pconnectable*/, uint64_t /*_disconnect_reason*/)	{}
 	virtual	void				on_fail_connect (net::io::Iconnectable* /*_pconnectable*/, uint64_t /*_disconnect_reason*/) {}
+	virtual	void				on_disconnect(net::io::Iconnectable* /*_pconnectable*/, uint64_t /*_disconnect_reason*/) {}
 
 protected:
 	virtual result_code			_process_starting (context& _context) override;
@@ -79,6 +81,9 @@ protected:
 			std::size_t			m_max_allocate = SIZE_MAX;
 			end_point_type		m_default_endpoint;
 			bool				m_enable_progress_log = true;
+
+			sSOCKET_OPTION_TCP	m_socket_option;
+			bool				m_flag_socket_option = false;
 
 			object_ptr<executor::Iio_context> m_pio_context;
 

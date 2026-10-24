@@ -14,36 +14,37 @@ FILE_HANDLE api::file::open(const std::filesystem::path& _filename, eFILE_OPERAT
 	RETURN_IF(_filename.empty(), INVALID_FILE_HANDLE);
 
 	// declare) 
+	// - 'e' : O_CLOEXEC (glibc. not inherited by fork/exec)
 	const char* str_access;
 
 	switch (_operation)
 	{
 	case	eFILE_OPERATION::READ:
-			str_access = "r";
+			str_access = "re";
 			break;
 
 	case	eFILE_OPERATION::WRITE:
-			str_access = "w";
+			str_access = "we";
 			break;
 
 	case	eFILE_OPERATION::APPEND:
-			str_access = "a+";
+			str_access = "a+e";
 			break;
 
 	case	eFILE_OPERATION::UPDATE:
-			str_access = "a+";
+			str_access = "a+e";
 			break;
 
 	case	eFILE_OPERATION::READ_ASYNC:
-			str_access = "r+";
+			str_access = "r+e";
 			break;
 
 	case	eFILE_OPERATION::WRITE_ASYNC:
-			str_access = "w";
+			str_access = "we";
 			break;
 
 	case	eFILE_OPERATION::APPEND_ASYNC:
-			str_access = "a+";
+			str_access = "a+e";
 			break;
 
 	default:
@@ -56,7 +57,12 @@ FILE_HANDLE api::file::open(const std::filesystem::path& _filename, eFILE_OPERAT
 	 || _operation == eFILE_OPERATION::WRITE_ASYNC
 	 || _operation == eFILE_OPERATION::APPEND_ASYNC)
 	{
-		std::filesystem::create_directories(_filename.parent_path());
+		// - create the parent directory (no parent : nothing to create / error : open() below fails)
+		if (auto parent_path = _filename.parent_path(); parent_path.empty() == false)
+		{
+			std::error_code error_code;
+			std::filesystem::create_directories(parent_path, error_code);
+		}
 	}
 
 	// declare) 
@@ -68,12 +74,12 @@ FILE_HANDLE api::file::open(const std::filesystem::path& _filename, eFILE_OPERAT
 		hFile = fopen(_filename.c_str(), str_access);
 	}
 
-	// 2) 파일 열기에 실패한 경우 eFILE_LOCATION::INTERNAL 플래그가 설정되어 있다면 INTERNAL 디렉토리에서 열기를 시도한다.
+	// 2) 파일 열기에 실패한 경우 eFILE_LOCATION::INTERNAL 플래그가 설정되어 있다면 INTERNAL 디렉터리에서 열기를 시도한다.
 	if (hFile == INVALID_FILE_HANDLE && (_file_location & eFILE_LOCATION::INTERNAL) != eFILE_LOCATION::NONE)
 	{
 	}
 
-	// 3) 파일 열기에 실패한 경우 eFILE_LOCATION::EXTERNAL 플래그가 설정되어 있다면 EXTERNAL 디렉토리에서 열기를 시도한다.
+	// 3) 파일 열기에 실패한 경우 eFILE_LOCATION::EXTERNAL 플래그가 설정되어 있다면 EXTERNAL 디렉터리에서 열기를 시도한다.
 	if (hFile == INVALID_FILE_HANDLE && (_file_location & eFILE_LOCATION::EXTERNAL) != eFILE_LOCATION::NONE)
 	{
 	}
@@ -84,7 +90,7 @@ FILE_HANDLE api::file::open(const std::filesystem::path& _filename, eFILE_OPERAT
 		for (auto& iter : *resource::manager::instance())
 		{
 			// - path + filename
-			auto temp_string = NFMT::format("{}/{}", iter, _filename.c_str());
+			auto temp_string = CGDK::stream_string(iter, "/", _filename.native());
 
 			// - 파일을 open한다.
 			hFile = fopen(temp_string.c_str(), str_access);
@@ -98,13 +104,13 @@ FILE_HANDLE api::file::open(const std::filesystem::path& _filename, eFILE_OPERAT
 	return hFile;
 }
 
-void api::file::close(FILE_HANDLE _handle_file)
+void api::file::close(FILE_HANDLE _handle_file) noexcept
 {
-	// check) FileHandle이 INVALID_FILE_HANDLE이면 안됀다.
+	// check) FileHandle이 INVALID_FILE_HANDLE이면 안 된다.
 	RETURN_IF(_handle_file == INVALID_FILE_HANDLE);
 
 	// 1) close한다.
-	fclose(_handle_file);
+	std::fclose(_handle_file);
 }
 
 size_t api::file::read(FILE_HANDLE _handle_file, size_t _size, void* _data) noexcept
@@ -116,7 +122,7 @@ size_t api::file::read(FILE_HANDLE _handle_file, size_t _size, void* _data) noex
 	RETURN_IF(_handle_file == INVALID_FILE_HANDLE, 0);
 
 	// 1) read한다.
-	return	fread(_data, 1, _size, _handle_file);
+	return std::fread(_data, 1, _size, _handle_file);
 }
 
 size_t api::file::write(FILE_HANDLE _handle_file, size_t _size, const void* _data) noexcept
@@ -128,7 +134,7 @@ size_t api::file::write(FILE_HANDLE _handle_file, size_t _size, const void* _dat
 	RETURN_IF(_handle_file == INVALID_FILE_HANDLE, 0);
 
 	// 1) write한다.
-	return	fwrite(_data, _size, 1, _handle_file);
+	return std::fwrite(_data, 1, _size, _handle_file);
 }
 
 size_t api::file::seek(FILE_HANDLE _handle_file, size_t _offset, eFILE_ORIGIN _origin) noexcept

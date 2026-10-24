@@ -14,72 +14,69 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Service.h" />
-    <ClInclude Include="LoginServer.h" />
-    <ClInclude Include="LoginServerDefinition.h" />
-    <ClInclude Include="ServerLobbyGroupImmigrationSocket.h">
+    <ClInclude Include="CGDK1.game_login.server.lobby.h" />
+    <ClInclude Include="CGDK1.game_login.server.lobby.definition.h" />
+    <ClInclude Include="server_lobby_group_immigration_socket.h">
       <Filter>Server Lobby</Filter>
     </ClInclude>
-    <ClInclude Include="ServerLobbySocket.h">
+    <ClInclude Include="server_lobby_socket.h">
       <Filter>Server Lobby</Filter>
     </ClInclude>
-    <ClInclude Include="UserGroupImmigrationSocket.h">
+    <ClInclude Include="user_group_immigration_socket.h">
       <Filter>User</Filter>
     </ClInclude>
-    <ClInclude Include="UserSocket.h">
+    <ClInclude Include="user_socket.h">
       <Filter>User</Filter>
     </ClInclude>
-    <ClInclude Include="ServerLobbyGroupSocket.h">
+    <ClInclude Include="server_lobby_group_socket.h">
       <Filter>Server Lobby</Filter>
     </ClInclude>
-    <ClInclude Include="LoginServerDlg.h" />
+    <ClInclude Include="CGDK1.game_login.server.lobby.dlg.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="..\Common\Definitions.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="UserAccountManager.h" />
+    <ClInclude Include="user_account_manager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Service.cpp" />
-    <ClCompile Include="LoginServer.cpp" />
-    <ClCompile Include="ServerLobbyGroupImmigrationSocket.cpp">
+    <ClCompile Include="CGDK1.game_login.server.lobby.cpp" />
+    <ClCompile Include="server_lobby_group_immigration_socket.cpp">
       <Filter>Server Lobby</Filter>
     </ClCompile>
-    <ClCompile Include="ServerLobbySocket.cpp">
+    <ClCompile Include="server_lobby_socket.cpp">
       <Filter>Server Lobby</Filter>
     </ClCompile>
-    <ClCompile Include="UserGroupImmigrationSocket.cpp">
+    <ClCompile Include="user_group_immigration_socket.cpp">
       <Filter>User</Filter>
     </ClCompile>
-    <ClCompile Include="UserSocket.cpp">
+    <ClCompile Include="user_socket.cpp">
       <Filter>User</Filter>
     </ClCompile>
-    <ClCompile Include="ServerLobbyGroupSocket.cpp">
+    <ClCompile Include="server_lobby_group_socket.cpp">
       <Filter>Server Lobby</Filter>
     </ClCompile>
-    <ClCompile Include="LoginServerDlg.cpp" />
+    <ClCompile Include="CGDK1.game_login.server.lobby.dlg.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="UserAccountManager.cpp" />
+    <ClCompile Include="user_account_manager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="LoginServer.rc">
+    <ResourceCompile Include="CGDK1.game_login.server.lobby.rc">
       <Filter>리소스 파일</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="LoginServer_Setting.json" />
-    <None Include="res\LoginServer.ico">
+    <None Include="CGDK1.game_login.server.lobby.setting.json" />
+    <None Include="res\CGDK1.game_login.server.lobby.ico">
       <Filter>리소스 파일</Filter>
     </None>
-    <None Include="res\LoginServer.rc2">
+    <None Include="res\CGDK1.game_login.server.lobby.rc2">
       <Filter>리소스 파일</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
+    <Text Include="read_me.txt" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\ServerStateMngServer.ico">
-      <Filter>리소스 파일</Filter>
-    </Image>
   </ItemGroup>
 </Project>

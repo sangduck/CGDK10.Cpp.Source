@@ -23,21 +23,21 @@ namespace CGDK
 //-----------------------------------------------------------------------------
 /**
 
- @class		nake_executable fucntions
+ @class		nake_executable functions
  
 *///-----------------------------------------------------------------------------
 template <class TFUNCTION>
 static	std::enable_if_t<!std::is_base_of_v<Iexecutable, std::remove_pointer_t<std::decay_t<TFUNCTION>>> && !std::is_function<std::remove_pointer_t<std::decay_t<TFUNCTION>>>::value, object_ptr<Iexecutable>>
-make_executable(TFUNCTION&& _fucntion)
+make_executable(TFUNCTION&& _function)
 {
 	// declaration)
-	class executable_function : public executable::function<std::function<decltype(_fucntion())()>>, public factory::_traits_system {};
+	class executable_function : public executable::function<std::function<decltype(_function())()>>, public factory::_traits_system {};
 
 	// 1) alloc executable
 	auto pexecutable = alloc_object<executable_function>();
 
 	// 2) set '_function' to pexecutable
-	pexecutable->set_function(std::forward<TFUNCTION>(_fucntion));
+	pexecutable->set_function(std::forward<TFUNCTION>(_function));
 
 	// return)
 	return pexecutable;
@@ -45,16 +45,16 @@ make_executable(TFUNCTION&& _fucntion)
 
 template <class TFUNCTION>
 static	std::enable_if_t<!std::is_base_of_v<Iexecutable, std::remove_pointer_t<std::decay_t<TFUNCTION>>>&& std::is_function<std::remove_pointer_t<std::decay_t<TFUNCTION>>>::value, object_ptr<Iexecutable>>
-make_executable(TFUNCTION&& _fucntion)
+make_executable(TFUNCTION&& _function)
 {
 	// declaration)
-	class executable_function : public executable::function<std::function<decltype(_fucntion())()>>, public factory::_traits_system {};
+	class executable_function : public executable::function<std::function<decltype(_function())()>>, public factory::_traits_system {};
 
 	// 1) alloc executable
 	auto pexecutable = alloc_object<executable_function>();
 
 	// 2) set '_function' to pexecutable
-	pexecutable->set_function(std::forward<TFUNCTION>(_fucntion));
+	pexecutable->set_function(std::forward<TFUNCTION>(_function));
 
 	// return)
 	return pexecutable;
@@ -62,24 +62,24 @@ make_executable(TFUNCTION&& _fucntion)
 
 template <class T, class TFUNCTION, class... TARGS>
 static	std::enable_if_t<std::is_base_of_v<Ireferenceable, std::remove_pointer_t<std::decay_t<T>>>&& std::is_member_function_pointer_v<TFUNCTION>, object_ptr<Iexecutable>>
-make_executable(T* _this, TFUNCTION _fucntion, TARGS&&... _args)
+make_executable(T* _this, TFUNCTION _function, TARGS&&... _args)
 {
 	object_ptr<T> hold_this(_this);
 	return make_executable([=]()
 		{
 			// - call function
-			(hold_this->*_fucntion)(std::forward<TARGS>(_args)...);
+			(hold_this->*_function)(std::forward<TARGS>(_args)...);
 		});
 }
 template <class T, class TFUNCTION, class... TARGS>
 static	std::enable_if_t<std::is_base_of_v<Ireferenceable, std::remove_pointer_t<std::decay_t<T>>>&& std::is_member_function_pointer_v<TFUNCTION>, object_ptr<Iexecutable>>
-make_executable(TFUNCTION _fucntion, TARGS&&... _args)
+make_executable(TFUNCTION _function, TARGS&&... _args)
 {
 	// 2) post
 	return make_executable([=]()
 		{
 			// - call function
-			_fucntion(std::forward<TARGS>(_args)...);
+			_function(std::forward<TARGS>(_args)...);
 		});
 }
 

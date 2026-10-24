@@ -20,42 +20,32 @@ int Nmessage_transmitter_static::process_reset_message_transmitter() noexcept
 
 object_ptr<Imessageable> Nmessage_transmitter_static::reset_dispatchable_static() noexcept
 {
-	// declare) 
-	object_ptr<Imessageable> pmessageable;
+	// lock)
+	std::lock_guard lock(lockable());
 
-	// 1) Static Messageable를 얻는다.
-	lockable<object_ptr<Imessageable>>&	messageable	 = get_messageable_static();
-
-	scoped_lock(messageable)
-	{
-		// check) 
-		RETURN_IF(messageable.empty(), pmessageable); 
-
-		// 1) 값을 임시로 복사
-		pmessageable = std::move(messageable);
-	}
-
-	// return)
-	return pmessageable;
+	// 1) 값을 임시로 복사
+	return std::move(get_messageable_static());
 }
 
 bool Nmessage_transmitter_static::register_messageable_static(object_ptr<Imessageable>&& _pmessageable)	
 {
-	// check) _pmessageable이 nullptr이면 안됀다!
+	// check) _pmessageable이 nullptr이면 안 된다!
 	RETURN_IF(_pmessageable.empty(), false);
 
-	// 1) 일단 unregister
+	// 1) 일단 기존 messageable unregister
 	unregister_messageable_static(get_messageable_static());
 
-	// 2) Messagable을...
+	// 2) Messagable을 얻기
 	auto& messageable = get_messageable_static();
 
-	scoped_lock(messageable)
 	{
-		// check) 
-		RETURN_IF(messageable == _pmessageable, false); 
+		// lock)
+		std::lock_guard lock(lockable());
 
-		// 4) Messageable한다~
+		// check) 
+		RETURN_IF(messageable == _pmessageable, false);
+
+		// 4) Messageable 등록 한다~
 		messageable = std::move(_pmessageable);
 	}
 
@@ -75,11 +65,13 @@ int Nmessage_transmitter_static::unregister_messageable_static(Imessageable* _pm
 	// declare) 
 	object_ptr<Imessageable> pmessageable;
 
-	// 1) Messageable Static을 얻는다.
-	lockable<object_ptr<Imessageable>>&	messageable = get_messageable_static();
+	// 1) Messageable Static을 얻는다. (참조 : 이전에는 복사본을 비워서 실제로는 해제되지 않았다)
+	auto& messageable = get_messageable_static();
 
-	scoped_lock(messageable)
 	{
+		// lock)
+		std::lock_guard lock(lockable());
+
 		// check) 제거하려는 Messageable이 아니면 그냥 끝낸다.
 		RETURN_IF(messageable!=_pmessageable, 0);
 	
@@ -99,9 +91,10 @@ result_code Nmessage_transmitter_static::process_transmit_message(sMESSAGE& _msg
 	// declare) 
 	object_ptr<Imessageable> pmessageable;
 
-	// 2) 복사
-	scoped_lock(messageable)
 	{
+		// lock)
+		std::lock_guard lock(lockable());
+
 		// check) messageable이 nullptr이면 끝낸다.
 		RETURN_IF(messageable.empty(), 0);
 

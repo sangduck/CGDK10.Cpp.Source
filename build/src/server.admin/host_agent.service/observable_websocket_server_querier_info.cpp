@@ -14,7 +14,7 @@ void _append_querier_entity(buffer& _buf_dest, time_event::Ientity* _querier_inf
 
 	// 3) TYPE (ONCE/ITERATION/...)
 	_buf_dest.append_text<char>("<td>"sv);
-	_buf_dest.append_text<char>(to_string<char>(static_cast<time_event::eTYPE>(entity_setting.type)));
+	_buf_dest.append_text<char>(to_string(static_cast<time_event::eTYPE>(entity_setting.type)));
 	_buf_dest.append_text<char>("</td>"sv);
 
 	// 4) STATUS
@@ -81,7 +81,7 @@ void _append_querier_entity(buffer& _buf_dest, time_event::Ientity* _querier_inf
 shared_buffer _make_webmessage_querier_entity_add(time_event::Ientity* _querier_info)
 {
 	// 1) get service instance 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -105,7 +105,7 @@ shared_buffer _make_webmessage_querier_entity_add(time_event::Ientity* _querier_
 		buf_result.append<char>('A');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("sc{}", reinterpret_cast<uint64_t>(_querier_info));
+		auto tr_element_id = CGDK::stream_string("sc", reinterpret_cast<uint64_t>(_querier_info));
 
 		// - append element_id
 		buf_result.append_text<char>(tr_element_id);
@@ -126,7 +126,7 @@ shared_buffer _make_webmessage_querier_entity_add(time_event::Ientity* _querier_
 shared_buffer _make_webmessage_querier_entity_update(time_event::Ientity* _querier_info, uint64_t /*_flag*/)
 {
 	// 1) 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -150,7 +150,7 @@ shared_buffer _make_webmessage_querier_entity_update(time_event::Ientity* _queri
 		buf_result.append<char>('U');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("sc{}", reinterpret_cast<uint64_t>(_querier_info));
+		auto tr_element_id = CGDK::stream_string("sc", reinterpret_cast<uint64_t>(_querier_info));
 
 		// - <tr>
 		buf_result.append_text<char>(tr_element_id);
@@ -171,7 +171,7 @@ shared_buffer _make_webmessage_querier_entity_update(time_event::Ientity* _queri
 shared_buffer _make_webmessage_querier_entity_remove(time_event::Ientity* _querier_info)
 {
 	// 1) 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -189,7 +189,7 @@ shared_buffer _make_webmessage_querier_entity_remove(time_event::Ientity* _queri
 		buf_result.append<char>('D');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("sc{}", reinterpret_cast<uint64_t>(_querier_info));
+		auto tr_element_id = CGDK::stream_string("sc", reinterpret_cast<uint64_t>(_querier_info));
 
 		// - append tr_element_id
 		buf_result.append_text<char>(tr_element_id);
@@ -213,7 +213,7 @@ shared_buffer _make_webmessage_querier_list_add()
 	auto ptime_event_entity_manager = time_event::entity_manager::instance();
 
 	// 4) append message 
-	scoped_lock(ptime_event_entity_manager->get_lockable())
+	SCOPED_LOCK(ptime_event_entity_manager->get_lockable())
 	{
 		for (const auto& iter : *ptime_event_entity_manager)
 		{
@@ -221,7 +221,7 @@ shared_buffer _make_webmessage_querier_list_add()
 			buffer buf_text = buf_temp;
 
 			// - tr element id
-			auto tr_element_id = NFMT::format("sc{}", reinterpret_cast<uint64_t>(iter.get()));
+			auto tr_element_id = CGDK::stream_string("sc", reinterpret_cast<uint64_t>(iter.get()));
 
 			// - append tr data
 			_append_querier_entity(buf_text, iter);
@@ -259,7 +259,7 @@ shared_buffer make_webmessage_querier_list_update()
 	//auto ptime_event_entity_manager = time_event::entity_manager::instance();
 
 	//// 4) append message 
-	//scoped_lock(ptime_event_entity_manager->get_lockable())
+	//SCOPED_LOCK(ptime_event_entity_manager->get_lockable())
 	//{
 	//	for (const auto& iter : ptime_event_entity_manager->m_vector_entity)
 	//	{
@@ -267,7 +267,7 @@ shared_buffer make_webmessage_querier_list_update()
 	//		buffer buf_text = buf_temp;
 
 	//		// - tr element id
-	//		auto tr_element_id = NFMT::format("sc{}", reinterpret_cast<uint64_t>(iter.get()));
+	//		auto tr_element_id = CGDK::stream_string("sc", reinterpret_cast<uint64_t>(iter.get()));
 
 	//		// - append tr data
 	//		_append_executor_entity(buf_text, iter);
@@ -296,10 +296,8 @@ shared_buffer make_webmessage_querier_list_update()
 
 
 
-observable_websocket_peer_querier_info::observable_websocket_peer_querier_info(const std::string_view _name)
+observable_websocket_peer_querier_info::observable_websocket_peer_querier_info()
 {
-	this->set_name(_name);
-
 	this->m_webpage_str_target = "webpage_server_querier_info.htm"sv;
 	this->m_webpage_index = 'E';
 }
@@ -322,7 +320,7 @@ uintptr_t observable_websocket_peer_querier_info::on_observer_unregistering(sock
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);
 
-	// 2) uregister _pmenber
+	// 2) unregister _pmenber
 	_pobserver->unregister_messageable(this);
 
 	// return) 

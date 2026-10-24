@@ -1,0 +1,72 @@
+{
+  "title": "CGDK servers",
+  "uid": "cgdk-servers",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      { "name": "datasource", "type": "datasource", "query": "prometheus" }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat", "title": "host agents", "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [ { "expr": "cgdk_admin_hosts" } ]
+    },
+    {
+      "type": "stat", "title": "services", "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [ { "expr": "cgdk_admin_services" } ]
+    },
+    {
+      "type": "stat", "title": "running services", "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [ { "expr": "sum(cgdk_service_running)" } ]
+    },
+    {
+      "type": "stat", "title": "crash loop", "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [ { "expr": "sum(cgdk_service_restart_suspended)" } ]
+    },
+    {
+      "type": "stat", "title": "pending requests", "gridPos": { "x": 16, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [ { "expr": "cgdk_admin_pending_requests" } ]
+    },
+    {
+      "type": "table", "title": "services", "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "cgdk_service_running", "format": "table", "instant": true, "refId": "running" },
+        { "expr": "cgdk_service_desired_running", "format": "table", "instant": true, "refId": "desired" },
+        { "expr": "cgdk_service_connections", "format": "table", "instant": true, "refId": "connections" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "connections", "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [ { "expr": "cgdk_service_connections", "legendFormat": "{{name}}" } ]
+    },
+    {
+      "type": "timeseries", "title": "traffic (bytes/s)", "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "rate(cgdk_service_received_bytes_total[1m])", "legendFormat": "{{name}} recv" },
+        { "expr": "rate(cgdk_service_sent_bytes_total[1m])", "legendFormat": "{{name}} send" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "host cpu (%)", "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [ { "expr": "cgdk_host_cpu_usage_percent", "legendFormat": "{{name}}" } ]
+    },
+    {
+      "type": "timeseries", "title": "host memory (bytes)", "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [ { "expr": "cgdk_host_memory_used_bytes", "legendFormat": "{{name}}" } ]
+    }
+  ]
+}

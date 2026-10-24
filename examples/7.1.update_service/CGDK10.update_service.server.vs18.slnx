@@ -1,0 +1,8 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="server\shared\CGDK10.update_service.server.shared.vcxitems" Id="e80da72e-0562-436f-806d-a0a0dcd5b369" />
+  <Project Path="server\console\CGDK10.update_service.server.console.vs18.vcxproj" Id="dd2b0cae-895d-43b5-9d3b-06e11a71cf8a" />
+  <Project Path="server\mfc\CGDK10.update_service.server.mfc.vs18.vcxproj" Id="9da689ec-18ef-4dca-a8a1-ef1e7cb5656e" />
+</Solution>

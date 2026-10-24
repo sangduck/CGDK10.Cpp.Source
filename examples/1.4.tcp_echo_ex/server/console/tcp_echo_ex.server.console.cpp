@@ -1,5 +1,5 @@
-﻿#include "cgdk/sdk10/net.socket.h"
-#include "../../common/packatable.h"
+#include "cgdk/sdk10/net.socket.h"
+#include "../../common/packetable.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -33,6 +33,7 @@ void print_setting_info();
 class socket_tcp_buffered :
 	public						net::io::socket::tcp::Ndefault,
 	public						net::io::connectable::tcp::Ndefault,
+	public						net::io::connect_notify::tcp::Ndefault,
 	public						net::io::sendable::Ntcp_async_gather_buffered, // (*)
 	public				 		net::io::send_request::tcp::Ndefault,
 	public						net::io::sender::Nstream,
@@ -59,7 +60,7 @@ void readn_and_apply_setting()
 	context context_config;
 
 	// 1) read json file
-	context_config.read_from_json_file("message_format.json"sv);
+	context_config.from_json(api::file::read_file("message_format.json"sv));
 
 	// 2) get message format
 	{
@@ -126,7 +127,7 @@ int main()
 			{
 			// disconnect
 			case	'6':
-					scoped_lock(pacceptor->get_lockable())
+					SCOPED_LOCK(pacceptor->get_lockable())
 					{
 						if (pacceptor->count() != 0)
 							(*pacceptor->begin())->closesocket();
@@ -138,7 +139,7 @@ int main()
 
 			// closesocket
 			case	'8':
-					scoped_lock(pacceptor->get_lockable())
+					SCOPED_LOCK(pacceptor->get_lockable())
 					{
 						if (pacceptor->count() != 0)
 							(*pacceptor->begin())->disconnect();

@@ -1,4 +1,4 @@
-ï»¿#include "asio.h"
+#include "asio.h"
 
 
 void asio::Nsocket_tcp_client::start(tcp::endpoint _endpoint_connect)
@@ -15,12 +15,12 @@ void asio::Nsocket_tcp_client::start(tcp::endpoint _endpoint_connect)
 
 void asio::Nsocket_tcp_client::process_connect_request_complete(const boost::system::error_code& _error)
 {
-	// check) ì‹¤íŒ¨í–ˆì„ ê²½ìš° ë“±ë¡í•´ì œí•˜ê³  ì†Œì¼“ì„ ë‹«ê³  ëë‚¸ë‹¤.
+	// check) ½ÇÆÐÇßÀ» °æ¿ì µî·ÏÇØÁ¦ÇÏ°í ¼ÒÄÏÀ» ´Ý°í ³¡³½´Ù.
 	if (_error)
 		return;
 
 	// 1) process connect socket
-	this->process_connect_complate();
+	this->process_connect_complete();
 
 	// statistics) 
 	++Nstatistics::statistics_connect_success;

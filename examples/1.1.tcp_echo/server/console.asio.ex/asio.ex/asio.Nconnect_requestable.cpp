@@ -1,4 +1,4 @@
-ï»¿#include "asio.h"
+#include "asio.h"
 
 
 void asio::Nconnect_requestable::connect(boost::asio::ip::tcp::endpoint _endpoint_connect)
@@ -31,7 +31,7 @@ void asio::Nconnect_requestable::connect(boost::asio::ip::tcp::endpoint _endpoin
 
 void asio::Nconnect_requestable::process_connect_request_complete(const boost::system::error_code& _error)
 {
-	// check) ì‹¤íŒ¨í–ˆì„ ê²½ìš° ë“±ë¡í•´ì œí•˜ê³  ì†Œì¼“ì„ ë‹«ê³  ëë‚¸ë‹¤.
+	// check) ½ÇÆĞÇßÀ» °æ¿ì µî·ÏÇØÁ¦ÇÏ°í ¼ÒÄÏÀ» ´İ°í ³¡³½´Ù.
 	if (_error)
 	{
 		// - rollback (set socket state ESOCKET_STATUE::NONE)

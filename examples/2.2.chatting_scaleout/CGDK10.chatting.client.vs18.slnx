@@ -1,0 +1,7 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="client\mfc\CGDK10.chatting.client.mfc.vs18.vcxproj" Id="7fd27c95-fd2b-43ee-98b6-1ea92d880296" />
+  <Project Path="common\common.vcxitems" Id="e3a4bd8d-2a03-4789-b05e-34ee5857984c" />
+</Solution>

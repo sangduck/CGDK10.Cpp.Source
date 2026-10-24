@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.update.h"
+#include "cgdk/sdk10/net.update.h"
 using namespace CGDK;
 
 #include "../define_message.h"
@@ -16,25 +16,25 @@ int main()
 {
 	// ------------------------------------------------------------------
 	// 1. update.resource_manager
-	//    resource_managerì— update resourceë¥¼ ë“±ë¡í•´ ë†“ì•˜ë‹¤ê°€.
-	//    í•„ìš”í•  ê²½ìš° UPDATE_RESOURCE_IDë¡œ update resourceë¥¼ ì°¾ì•„ senderì— 
-	//    ë“±ë¡í•´ ì‚¬ìš©í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+	//    resource_manager¿¡ update resource¸¦ µî·ÏÇØ ³õ¾Ò´Ù°¡.
+	//    ÇÊ¿äÇÒ °æ¿ì UPDATE_RESOURCE_ID·Î update resource¸¦ Ã£¾Æ sender¿¡ 
+	//    µî·ÏÇØ »ç¿ëÇÒ ¼ö ÀÖ½À´Ï´Ù.
 	// 
-	// 2. ë™ì‘ ì„¤ëª…
-	//    1) ì„œë²„ëŠ” resource_managerë¥¼ ìƒì„±í•©ë‹ˆë‹¤.
-	//    2) jsoníŒŒì¼ì¸ "configure/update_server_setting.json"ì—ì„œ ìƒì„±í• 
-	//       update resource ë¦¬ìŠ¤íŠ¸ë¥¼ ì½ì–´ í•´ë‹¹ update resourceë¥¼ ìƒì„±í•©ë‹ˆë‹¤.
-	//    3) ê° update resourceëŠ” ê³ ìœ ì˜ idë¥¼ ê°€ì§€ê³  ìˆìŠµë‹ˆë‹¤.
-	//    4) í´ë¼ì´ì–¸íŠ¸ê°€ ì ‘ì†í•´ ì—…ë°ì´íŠ¸ë¥¼ ìš”ì²­í•©ë‹ˆë‹¤.
-	//       ì´ë•Œ updateë¥¼ í•  update resource idë¥¼ ì„œë²„ì— ì „ë‹¬í•©ë‹ˆë‹¤.
-	//    5) ì„œë²„ëŠ” í´ë¼ì´ì–¸íŠ¸ì—ì„œ ì „ë‹¬ë°›ì€ update resource idë¡œ update resourceë¥¼
-	//       resource managerë¡œ ë¶€í„° ì–»ìŠµë‹ˆë‹¤.
-	//    6) í•´ë‹¹ update resourceë¥¼ ì„±ê³µì ìœ¼ë¡œ ì°¾ì•˜ë‹¤ë©´ update senderë¥¼ ìƒì„±í•œ í›„
-	//       ì°¾ì€ update resourceë¥¼ ì¶”ê°€í•©ë‹ˆë‹¤.
-	//    7) ì¶”ê°€ì ì¸ ì„¤ì •ì„ í•œ í›„ update senderë¥¼ start()í•´ ì—…ë°ì´íŠ¸ë¥¼ ì‹œì‘í•©ë‹ˆë‹¤.
-	//    8) ì™„ë£Œê°€ ëœ í›„ í´ë¼ì´ì–¸íŠ¸ë¡œ ë¶€í„° eMESSAGE::UPDATE::COMPLETE ë©”ì‹œì§€ê°€ 
-	//       ì „ë‹¬ë˜ì–´ ì˜¤ë©´ senderë¥¼ ì œê±°í•©ë‹ˆë‹¤.
-	//    9) clientê°€ ì ‘ì†ì„ ì¢…ë£Œí•´ë„ senderë¥¼ ì œê±°í•©ë‹ˆë‹¤.
+	// 2. µ¿ÀÛ ¼³¸í
+	//    1) ¼­¹ö´Â resource_manager¸¦ »ı¼ºÇÕ´Ï´Ù.
+	//    2) jsonÆÄÀÏÀÎ "configure/update_server_setting.json"¿¡¼­ »ı¼ºÇÒ
+	//       update resource ¸®½ºÆ®¸¦ ÀĞ¾î ÇØ´ç update resource¸¦ »ı¼ºÇÕ´Ï´Ù.
+	//    3) °¢ update resource´Â °íÀ¯ÀÇ id¸¦ °¡Áö°í ÀÖ½À´Ï´Ù.
+	//    4) Å¬¶óÀÌ¾ğÆ®°¡ Á¢¼ÓÇØ ¾÷µ¥ÀÌÆ®¸¦ ¿äÃ»ÇÕ´Ï´Ù.
+	//       ÀÌ¶§ update¸¦ ÇÒ update resource id¸¦ ¼­¹ö¿¡ Àü´ŞÇÕ´Ï´Ù.
+	//    5) ¼­¹ö´Â Å¬¶óÀÌ¾ğÆ®¿¡¼­ Àü´Ş¹ŞÀº update resource id·Î update resource¸¦
+	//       resource manager·Î ºÎÅÍ ¾ò½À´Ï´Ù.
+	//    6) ÇØ´ç update resource¸¦ ¼º°øÀûÀ¸·Î Ã£¾Ò´Ù¸é update sender¸¦ »ı¼ºÇÑ ÈÄ
+	//       Ã£Àº update resource¸¦ Ãß°¡ÇÕ´Ï´Ù.
+	//    7) Ãß°¡ÀûÀÎ ¼³Á¤À» ÇÑ ÈÄ update sender¸¦ start()ÇØ ¾÷µ¥ÀÌÆ®¸¦ ½ÃÀÛÇÕ´Ï´Ù.
+	//    8) ¿Ï·á°¡ µÈ ÈÄ Å¬¶óÀÌ¾ğÆ®·Î ºÎÅÍ eMESSAGE::UPDATE::COMPLETE ¸Ş½ÃÁö°¡ 
+	//       Àü´ŞµÇ¾î ¿À¸é sender¸¦ Á¦°ÅÇÕ´Ï´Ù.
+	//    9) client°¡ Á¢¼ÓÀ» Á¾·áÇØµµ sender¸¦ Á¦°ÅÇÕ´Ï´Ù.
 	// 
 	// ------------------------------------------------------------------
 
@@ -50,21 +50,24 @@ int main()
 		g_presource_manager = make_own<update::resource_manager>();
 
 		// declare)
-		context cotext_initialize("configure/update_server_setting.json"sv);
+		context cotext_initialize;
+		
+		// 2) ¼³Á¤ json ÆÄÀÏ·Î ÀĞ¾î µéÀÔ´Ï´Ù.
+		cotext_initialize.from_json(api::file::read_file("configure/update_server_setting.json"));
 
-		// 2) json íŒŒì¼ë¡œ update resource ì •ë³´ë¥¼ ì½ì–´ë“¤ì—¬ í•œë²ˆì— ìƒì„±í•©ë‹ˆë‹¤.
+		// 2) json ÆÄÀÏ·Î update resource Á¤º¸¸¦ ÀĞ¾îµé¿© ÇÑ¹ø¿¡ »ı¼ºÇÕ´Ï´Ù.
 		g_presource_manager->initialize(cotext_initialize);
 
 		// trace) 
 		std::cout << "start server [tut.update.01.tcp_simple.server]..."sv << std::endl;
 
-		// 3) acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 3) acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pacceptor = make_own<net::acceptor<socket_update>>();
 
-		// 4) acceptorë¥¼ ì‹œì‘í•œë‹¤.(20000ë²ˆ í¬íŠ¸ì—ì„œ listenì„ ì‹œì‘í•œë‹¤.)
+		// 4) acceptor¸¦ ½ÃÀÛÇÑ´Ù.(20000¹ø Æ÷Æ®¿¡¼­ listenÀ» ½ÃÀÛÇÑ´Ù.)
 		pacceptor->start({ { net::ip::make_address("any"sv), 31000 } });
 
-		// 5) ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+		// 5) ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 		while (_getch() != 27);
 	}
 	catch (...)
@@ -79,6 +82,6 @@ int main()
 	// trace) show cursor
 	std::cout << "\x1b[?25h"sv;
 
-	// end) ì„œë²„ ì¢…ë£Œ
+	// end) ¼­¹ö Á¾·á
 	return 0;
 }

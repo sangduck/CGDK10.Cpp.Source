@@ -31,7 +31,7 @@ namespace CGDK
 	public:
 		virtual	~Ithrowable() noexcept {}
 	public:
-		virtual	std::string_view	description() const noexcept PURE;
+		virtual	std::string_view description() const noexcept PURE;
 		virtual	object_ptr<LOG_RECORD> get_log_record() const noexcept PURE;
 	};
 
@@ -40,17 +40,17 @@ namespace CGDK
 	{
 	public:
 				Nthrowable() noexcept : m_description(), m_param(), m_reason(eRESULT::NOT_DEFINED) {}
-				Nthrowable(const std::string_view _description) noexcept : m_description(_description), m_param(0), m_reason(eRESULT::NOT_DEFINED) {}
+				Nthrowable(std::string_view _description) noexcept : m_description(_description), m_param(0), m_reason(eRESULT::NOT_DEFINED) {}
 				Nthrowable(std::string&& _description) noexcept : m_description(std::forward<std::string>(_description)), m_param(0), m_reason(eRESULT::NOT_DEFINED) {}
 				Nthrowable(result_code _reason, intptr_t _param = 0) noexcept : m_description(), m_param(_param), m_reason(_reason) {}
-				Nthrowable(result_code _reason, intptr_t _param, const std::string_view _description) noexcept : m_description(_description), m_param(_param), m_reason(_reason) {}
+				Nthrowable(result_code _reason, intptr_t _param, std::string_view _description) noexcept : m_description(_description), m_param(_param), m_reason(_reason) {}
 				Nthrowable(result_code _reason, intptr_t _param, std::string&& _description) noexcept : m_description(std::move(_description)), m_param(_param), m_reason(_reason) {}
 		virtual	~Nthrowable() noexcept {}
 
 	public:
-		[[nodiscard]] virtual	char const* what() const noexcept override { return to_string<char>(static_cast<eRESULT>(this->m_reason.value())).data(); }
-		[[nodiscard]] virtual	std::string_view description() const noexcept override { return this->m_description; }
-		[[nodiscard]] virtual	object_ptr<LOG_RECORD> get_log_record() const noexcept override;
+		[[nodiscard]] virtual auto what() const noexcept -> char const* override { return to_string(static_cast<eRESULT>(this->m_reason.value())).data(); }
+		[[nodiscard]] virtual auto description() const noexcept -> std::string_view override { return this->m_description; }
+		[[nodiscard]] virtual auto get_log_record() const noexcept -> object_ptr<LOG_RECORD> override;
 
 		[[nodiscard]] result_code reason() const noexcept { return this->m_reason; }
 		template <class TRESULT = result_code>
@@ -58,6 +58,7 @@ namespace CGDK
 		[[nodiscard]] intptr_t	param() const noexcept { return this->m_param; }
 		template <class TPARAM = intptr_t>
 		[[nodiscard]] TPARAM	param() const noexcept { return static_cast<TPARAM>(this->m_param); }
+		[[nodiscard]] auto&		where() const noexcept { return this->m_where; }
 
 				auto&			operator >> (std::ostream& _stream_out) { this->stream_out(_stream_out); return *this; }
 				auto&			operator >> (std::ostream& _stream_out) const { this->stream_out(_stream_out); return *this; }
@@ -69,6 +70,7 @@ namespace CGDK
 				std::string		m_description;
 				intptr_t		m_param;
 				result_code		m_reason;
+				std::source_location m_where;
 	};
 
 	// 3)
@@ -87,15 +89,15 @@ namespace CGDK
 				void			stream_out(std::ostream& _stream_out) const { for (auto& iter : this->m_description_ex) { _stream_out << iter << '\n'; } }
 	};
 
-	// 3) Nthrowable with extra desciptions
+	// 3) Nthrowable with extra descriptions
 	class Nthrowable_ex : public Nthrowable, public Ndescription_ex
 	{
 	public:
 				Nthrowable_ex() noexcept {}
-				Nthrowable_ex(const std::string_view _description) noexcept : Nthrowable(_description) {}
+				Nthrowable_ex(std::string_view _description) noexcept : Nthrowable(_description) {}
 				Nthrowable_ex(std::string&& _description) noexcept : Nthrowable(std::move(_description)) {}
 				Nthrowable_ex(result_code _reason, intptr_t _param = 0) noexcept : Nthrowable(_reason, _param) {}
-				Nthrowable_ex(result_code _reason, intptr_t _param, const std::string_view _description) noexcept : Nthrowable(_reason, _param, _description) {}
+				Nthrowable_ex(result_code _reason, intptr_t _param, std::string_view _description) noexcept : Nthrowable(_reason, _param, _description) {}
 				Nthrowable_ex(result_code _reason, intptr_t _param, const std::string& _description) noexcept : Nthrowable(_reason, _param, _description) {}
 				Nthrowable_ex(result_code _reason, intptr_t _param, std::string&& _description) noexcept : Nthrowable(_reason, _param, std::move(_description)) {}
 		virtual	~Nthrowable_ex() noexcept {}
@@ -123,7 +125,7 @@ namespace CGDK
 					failure(std::string_view _description) noexcept : Nthrowable(_description) {}
 					failure(std::string&& _description) noexcept : Nthrowable(std::move(_description)) {}
 					failure(result_code _reason, intptr_t _param = 0) noexcept : Nthrowable(_reason, _param) {}
-					failure(result_code _reason, intptr_t _param, const std::string_view _description) noexcept : Nthrowable(_reason, _param, _description) {}
+					failure(result_code _reason, intptr_t _param, std::string_view _description) noexcept : Nthrowable(_reason, _param, _description) {}
 					failure(result_code _reason, intptr_t _param, const std::string& _description) noexcept : Nthrowable(_reason, _param, _description) {}
 					failure(result_code _reason, intptr_t _param, std::string&& _description) noexcept : Nthrowable(_reason, _param, std::move(_description)) {}
 			virtual	~failure() noexcept {}
@@ -132,11 +134,11 @@ namespace CGDK
 		class failure_ex : public failure, public Ndescription_ex
 		{
 		public:
-				failure_ex() noexcept {}
-					failure_ex(const std::string_view _description) noexcept : failure(_description) {}
+					failure_ex() noexcept {}
+					failure_ex(std::string_view _description) noexcept : failure(_description) {}
 					failure_ex(std::string&& _description) noexcept : failure(std::move(_description)) {}
 					failure_ex(result_code _reason, intptr_t _param = 0) noexcept : failure(_reason, _param) {}
-					failure_ex(result_code _reason, intptr_t _param, const std::string_view _description) noexcept : failure(_reason, _param, _description) {}
+					failure_ex(result_code _reason, intptr_t _param, std::string_view _description) noexcept : failure(_reason, _param, _description) {}
 					failure_ex(result_code _reason, intptr_t _param, const std::string& _description) noexcept : failure(_reason, _param, _description) {}
 					failure_ex(result_code _reason, intptr_t _param, std::string&& _description) noexcept : failure(_reason, _param, std::move(_description)) {}
 			virtual	~failure_ex() noexcept {}
@@ -159,7 +161,7 @@ namespace CGDK
 					critical(std::string_view _description) noexcept : Nthrowable(_description) {}
 					critical(std::string&& _description) noexcept : Nthrowable(std::move(_description)) {}
 					critical(result_code _reason, intptr_t _param = 0) noexcept : Nthrowable(_reason, _param) {}
-					critical(result_code _reason, intptr_t _param, const std::string_view _description) noexcept : Nthrowable(_reason, _param, _description) {}
+					critical(result_code _reason, intptr_t _param, std::string_view _description) noexcept : Nthrowable(_reason, _param, _description) {}
 					critical(result_code _reason, intptr_t _param, const std::string& _description) noexcept : Nthrowable(_reason, _param, _description) {}
 					critical(result_code _reason, intptr_t _param, std::string&& _description) noexcept : Nthrowable(_reason, _param, std::move(_description)) {}
 			virtual	~critical() noexcept {}
@@ -169,10 +171,10 @@ namespace CGDK
 		{
 		public:
 					critical_ex() noexcept {}
-					critical_ex(const std::string_view _description) noexcept : critical(_description) {}
+					critical_ex(std::string_view _description) noexcept : critical(_description) {}
 					critical_ex(std::string&& _description) noexcept : critical(std::move(_description)) {}
 					critical_ex(result_code _reason, intptr_t _param = 0) noexcept : critical(_reason, _param) {}
-					critical_ex(result_code _reason, intptr_t _param, const std::string_view _description) noexcept : critical(_reason, _param, _description) {}
+					critical_ex(result_code _reason, intptr_t _param, std::string_view _description) noexcept : critical(_reason, _param, _description) {}
 					critical_ex(result_code _reason, intptr_t _param, std::string&& _description) noexcept : critical(_reason, _param, std::move(_description)) {}
 			virtual	~critical_ex() noexcept {}
 
@@ -183,14 +185,14 @@ namespace CGDK
 
 		//-----------------------------------------------------------------------------
 		/**
-		 @class		seh_exception
+		 @class		system_exception
 		*///-----------------------------------------------------------------------------
-	#ifdef _WIN32
-		class seh_exception : public throwable::critical
+	#if defined(_WIN32)
+		class system_exception : public throwable::critical
 		{
 		public:
-			seh_exception() noexcept : throwable::critical(), m_exception_record(), m_context_record() {}
-			seh_exception(_EXCEPTION_POINTERS* _exception_pointers) noexcept :
+			system_exception() noexcept : throwable::critical(), m_exception_record(), m_context_record() {}
+			system_exception(_EXCEPTION_POINTERS* _exception_pointers) noexcept :
 				throwable::critical(),
 				m_exception_record(*_exception_pointers->ExceptionRecord),
 				m_context_record(*_exception_pointers->ContextRecord)
@@ -201,6 +203,21 @@ namespace CGDK
 		public:
 			EXCEPTION_RECORD	m_exception_record;
 			CONTEXT				m_context_record;
+		};
+	#elif defined(__linux__)
+		class system_exception : public throwable::critical
+		{
+		public:
+			system_exception() noexcept {}
+			system_exception(int _sig) noexcept :
+				throwable::critical(),
+				m_sig(_sig)
+			{
+				this->m_description = "SIGNAL Exception";
+			}
+
+		public:
+			int					m_sig{ 0 };
 		};
 	#endif
 
@@ -215,14 +232,14 @@ namespace CGDK
 
 		//-----------------------------------------------------------------------------
 		//-----------------------------------------------------------------------------
-		template <class TOBJECT>
-		bool execute_exception_handler(TOBJECT* /*_pExceptionObject*/, const std::exception& /*_exception*/, const std::string_view /*_exception_description*/)
+		template <class T>
+		bool execute_exception_handler(T* /*_pExceptionObject*/, const std::exception& /*_exception*/, std::string_view /*_exception_description*/)
 		{
 			return false;
 		}
 
-		template <class TOBJECT>
-		bool execute_exception_handler(TOBJECT* /*_pExceptionObject*/, const std::string_view /*_exception_description*/)
+		template <class T>
+		bool execute_exception_handler(T* /*_pExceptionObject*/, std::string_view /*_exception_description*/)
 		{
 			return false;
 		}

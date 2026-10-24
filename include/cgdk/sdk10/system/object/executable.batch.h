@@ -50,7 +50,8 @@ protected:
 	virtual intptr_t			process_execute(intptr_t _return, size_t _param) override;
 	virtual void				on_final_release() noexcept override;
 
-	lockable<std::list<object_ptr<Iexecutable>>> m_list_executable;
+	mutable	lock_object			m_lockable_list_executable;
+			std::list<object_ptr<Iexecutable>> m_list_executable;
 };
 
 

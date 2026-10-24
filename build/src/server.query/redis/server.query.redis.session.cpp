@@ -6,26 +6,71 @@ using namespace CGDK;
 query::redis::session::session() : 
 	m_query_reference(0)
 {
-	minimum_message_buffer_size	(        64*1024);
-	maximum_message_buffer_size	( 64 * 1024*1024);
+	this->minimum_message_buffer_size (        64*1024);
+	this->maximum_message_buffer_size ( 64 * 1024*1024);
 }
 
-query::redis::session::~session()
+query::redis::session::~session() noexcept
 {
 }
 
 void query::redis::session::add_query_reference()
 {
-	++this->m_query_reference;
-}
-void query::redis::session::release_query_reference()
-{
-	if ((--this->m_query_reference) == 0)
+	// declare)
+	object_ptr<querier> pquerier;
+
+	// - the reference count and 'm_pquerier' are changed together in 'm_cs_queue_query' (process_detach_querier())
+	SCOPED_LOCK(this->m_cs_queue_query)
 	{
-		if (this->m_pquerier.exist())
-		{
-			this->m_pquerier->free_session(this);
-		}
+		// check) not the first one
+		RETURN_IF((this->m_query_reference++) != 0);
+
+		pquerier = this->m_pquerier;
+	}
+
+	// statistics) the session is in use from the first query attached (dedicated or shared) to the last one released
+	if (pquerier.exist())
+		pquerier->statistics_on_alloc_session();
+}
+void query::redis::session::release_query_reference() noexcept
+{
+	// declare)
+	object_ptr<querier> pquerier;
+
+	SCOPED_LOCK(this->m_cs_queue_query)
+	{
+		// check) not the last one
+		RETURN_IF((--this->m_query_reference) != 0);
+
+		pquerier = this->m_pquerier;
+	}
+
+	// check) unregistered (the free is counted by the querier when it is detached)
+	RETURN_IF(pquerier.empty());
+
+	// statistics)
+	pquerier->statistics_on_free_session();
+
+	// - back to the querier
+	pquerier->free_session(this);
+}
+
+object_ptr<query::redis::querier> query::redis::session::process_attach_querier(querier* _pquerier) noexcept
+{
+	SCOPED_LOCK(this->m_cs_queue_query)
+	{
+		return std::exchange(this->m_pquerier, _pquerier);
+	}
+}
+
+object_ptr<query::redis::querier> query::redis::session::process_detach_querier(bool& _is_in_use) noexcept
+{
+	SCOPED_LOCK(this->m_cs_queue_query)
+	{
+		// - in use : its last release is not counted any more (no querier)
+		_is_in_use = this->m_query_reference != 0;
+
+		return std::move(this->m_pquerier);
 	}
 }
 
@@ -37,11 +82,56 @@ bool query::redis::session::execute_query(REQUEST_QUERY&&_query)
 	// check) ...
 	THROW_IF(_query.pquery.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) Query를 먼저 Queuing한다
-	this->push_query(_query);
+	// - queued and sent holding 'm_cs_queue_query' : the requests are sent in the order of the queue
+	//   (the responses are matched to the queue in order by process_message(). on_connect() resends them holding it too)
+	std::unique_lock<std::recursive_mutex> lock_queue(this->m_cs_queue_query);
 
-	// 2) send를 전송한다.
-	this->send(_query.buf_request);
+	// declare) (empty if unregistered)
+	object_ptr<querier> pquerier = this->m_pquerier;
+
+	// statistics)
+	if (pquerier.exist())
+		pquerier->statistics_on_query_try();
+
+	// declare)
+	bool result = true;
+	bool is_queued = false;
+	auto buf_request = _query.buf_request;
+
+	try
+	{
+		// 1) Query를 먼저 Queuing한다
+		this->push_query(std::move(_query));
+		is_queued = true;
+
+		// 2) send를 전송한다.
+		result = this->send(buf_request);
+
+		// check)
+		THROW_IF(result == false, throwable::failure(eRESULT::FAIL_TO_OPERATION));
+	}
+	catch (...)
+	{
+		// declare)
+		REQUEST_QUERY request_rollback;
+
+		// - rollback : not sent. the request is taken out of the queue (the last one : queued holding the lock)
+		if (is_queued && this->m_queue_query.empty() == false && this->m_queue_query.back().buf_request.data() == buf_request.data())
+		{
+			request_rollback = std::move(this->m_queue_query.back());
+			this->m_queue_query.pop_back();
+		}
+
+		// - unlock (the request is released out of the lock)
+		lock_queue.unlock();
+
+		// statistics)
+		if (pquerier.exist())
+			pquerier->statistics_on_query_fail();
+
+		// reraise)
+		throw;
+	}
 
 	// return)
 	return true;
@@ -49,97 +139,96 @@ bool query::redis::session::execute_query(REQUEST_QUERY&&_query)
 
 void query::redis::session::cancel_query_all() noexcept
 {
+	// declare)
+	object_ptr<querier>	pquerier;
+
 	// locked)
+	SCOPED_LOCK(this->m_cs_queue_query)
 	{
-		// scoped_lock) 
-		std::lock_guard<std::recursive_mutex> cs(this->m_cs_list_query);
+		pquerier = this->m_pquerier;
+	}
 
-		// check)
-		RETURN_IF(this->m_pquerier.empty());
+	// 1) cancel (statistics: the querier it is registered to)
+	this->process_cancel_query_all(pquerier.get());
+}
 
-		for(auto& iter: this->m_list_query)
+void query::redis::session::process_cancel_query_all(querier* _pquerier) noexcept
+{
+	// declare)
+	circular_list<REQUEST_QUERY> list_query;
+
+	// locked)
+	SCOPED_LOCK(this->m_cs_queue_query)
+	{
+		// 1) move
+		list_query = std::move(this->m_queue_query);
+	}
+
+	// 2) the requests waiting for responses are completed with no result (out of the lock. the response functions are not called)
+	for(auto& iter: list_query)
+	{
+		try
 		{
-			try
-			{
-				// - set result as ...
-				iter.pquery->m_result.type = eRESP_DATA_TYPE::NONE_;
+			// - set result as ...
+			iter.pquery->m_result.type = eRESP_DATA_TYPE::NONE_;
 
-				// - process response
-				iter.pquery->process_response();
-			}
-			catch (...)
-			{
-			}
-
-			// statistics) 
-			this->m_pquerier->statistics_on_free_session();
-
-			// statistics) 
-			this->m_pquerier->statistics_on_query_fail();
+			// - process response
+			iter.pquery->process_response();
+		}
+		catch (...)
+		{
 		}
 
-		// - clear한다.
-		this->m_list_query.clear();
+		// statistics) 
+		if (_pquerier != nullptr)
+			_pquerier->statistics_on_query_fail();
 	}
 }
 
 void query::redis::session::push_query(REQUEST_QUERY _request_infoy)
 {
 	// locked) 
+	SCOPED_LOCK(this->m_cs_queue_query)
 	{
-		// scoped_lock) 
-		std::lock_guard<std::recursive_mutex> cs(this->m_cs_list_query);
-
 		// 1) Queuing한다.
-		this->m_list_query.push_back(_request_infoy);
-
-		// statistics) 
-		this->m_pquerier->statistics_on_alloc_session();
+		this->m_queue_query.push_back(std::move(_request_infoy));
 	}
 }
 
 query::redis::session::REQUEST_QUERY query::redis::session::pop_query() noexcept
 {
 	// locked) 
+	SCOPED_LOCK(this->m_cs_queue_query)
 	{
-		// scoped_lock) 
-		std::lock_guard<std::recursive_mutex> cs(this->m_cs_list_query);
-
 		// check) 
-		RETURN_IF(this->m_list_query.empty(), REQUEST_QUERY());
+		RETURN_IF(this->m_queue_query.empty(), REQUEST_QUERY());
 
 		// 1) 제일 앞에 것을 얻는다.
-		auto request_info = this->m_list_query.front();
+		auto query_info = std::move(this->m_queue_query.front());
 
 		// 2) 하나를 빼낸다.
-		this->m_list_query.pop_front();
-
-		// statistics) 
-		this->m_pquerier->statistics_on_free_session();
+		this->m_queue_query.pop_front();
 
 		// return) 
-		return request_info;
+		return query_info;
 	}
 }
 
-void query::redis::session::on_request_connect(const net::sockaddr& /*_paddrPeer*/) 
+void query::redis::session::on_request_connect([[maybe_unused]] const net::sockaddr& _paddrPeer) 
 {
-	// 1) set as nodelay (turn off nagle)
-	api::socket::instance().set_tcp_nodelay(native_handle(), true);
 }
 
 void query::redis::session::on_connect()
 {
+	// 1) socket tunning parameter
 	this->minimum_message_buffer_size(64 * 1024);
 	this->maximum_message_buffer_size(64 * 1024 * 1024);
 
 	// locked) 
+	SCOPED_LOCK(this->m_cs_queue_query)
 	{
-		// scoped_lock) 
-		std::lock_guard<std::recursive_mutex> cs(this->m_cs_list_query);
-
-		// 1) 접속시 Queuing된 데이터들을 모두 전송한다.
-		for (auto& iter : this->m_list_query)
+		// 1) 접속 시 Queuing된 데이터들을 모두 전송한다.
+		for (auto& iter : this->m_queue_query)
 		{
 			// 2) send를 전송한다.
 			this->send(iter.pquery->m_buffer_query);
@@ -147,11 +236,11 @@ void query::redis::session::on_connect()
 	}
 }
 
-void query::redis::session::on_fail_connect(uint64_t /*_Reason*/)
+void query::redis::session::on_fail_connect([[maybe_unused]] uint64_t _reason)
 {
 }
 
-void query::redis::session::on_disconnect(uint64_t /*_Reason*/)
+void query::redis::session::on_disconnect([[maybe_unused]] uint64_t _reason)
 {
 }
 
@@ -161,56 +250,53 @@ result_code query::redis::session::process_message(sMESSAGE& _msg)
 	if(_msg.message == eMESSAGE::SYSTEM::NETWORK_RESP)
 	{
 		// declare) 
-		REQUEST_QUERY request_info;
+		REQUEST_QUERY query_info;
 		object_ptr<querier>	pquerier;
 
-		// 1) poping queued query
-		scoped_lock(this->m_cs_list_query)
+		// 1) poping queued query (an unregistered session also completes the request. statistics: only when registered)
+		SCOPED_LOCK(this->m_cs_queue_query)
 		{
-			request_info = this->pop_query();
+			query_info = this->pop_query();
 			pquerier = this->m_pquerier;
 		}
 
 		// check) return if pquery is empty
-		RETURN_IF(pquerier.empty(), 0);
-
-		// check) return if pquery is empty
-		RETURN_IF(request_info.pquery.empty(), eRESULT::BYPASS);
+		RETURN_IF(query_info.pquery.empty(), eRESULT::BYPASS);
 
 		// declare) 
 		auto& msg_redis = (sMESSAGE_RESP&)_msg;
 
 		// - result를 설정한다.
-		request_info.pquery->m_result = std::move(msg_redis.data);
+		query_info.pquery->m_result = std::move(msg_redis.data);
 
 		// - 완료 시...
 		try
 		{
 			// - call response function
-			if (request_info.response != nullptr)
+			if (query_info.response != nullptr)
 			{
-				request_info.response();
+				query_info.response();
 			}
 
 			// - response한다.
-			request_info.pquery->process_response();
+			query_info.pquery->process_response();
 
 			// statistics) 
-			if (request_info.pquery->m_result.type != eRESP_DATA_TYPE::ERROR_)
+			if (query_info.pquery->m_result.type != eRESP_DATA_TYPE::ERROR_)
 			{
-				pquerier->statistics_on_query_success();
+				if (pquerier.exist())
+					pquerier->statistics_on_query_success();
 			}
 			else
 			{
-				pquerier->statistics_on_query_fail();
+				if (pquerier.exist())
+					pquerier->statistics_on_query_fail();
 			}
-
-			// statistics) 
-			--pquerier->m_count_query_queued;
 		}
 		catch (...)
 		{
-			pquerier->statistics_on_query_fail();
+			if (pquerier.exist())
+				pquerier->statistics_on_query_fail();
 		}
 	}
 	

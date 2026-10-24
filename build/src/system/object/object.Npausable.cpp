@@ -70,9 +70,7 @@ void object::Npausable::process_pause()
 	{
 		// - start했던 자식 객체를 Roll-back한다.
 		for (auto iter_rollback = this->m_container.begin(); iter_rollback != iter; ++iter_rollback)
-		{
 			object::resume(*iter_rollback);
-		}
 
 		// - on_stop 함수를 호출한다.(on_starting()함수와 짝함수이므로 호출된다.)
 		try

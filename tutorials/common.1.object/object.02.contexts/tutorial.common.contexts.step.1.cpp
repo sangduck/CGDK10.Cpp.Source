@@ -1,4 +1,4 @@
-Ôªø//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -27,7 +27,7 @@ using namespace CGDK;
 
 //-----------------------------------------------------------------------------
 //
-// step 1) contextÏùò Í∏∞Î≥∏ ÏÇ¨Ïö© Î≤ï
+// step 1) context¿« ±‚∫ª ªÁøÎ π˝
 //
 // 
 // 
@@ -44,23 +44,23 @@ void tutorial_context_step_1_basic()
 	// Declare) 
 	context	temp;
 
-	// 1) Context ÏûëÏÑ±
-	temp["z"sv][0]			  = 1;
-	temp["z"sv][1]			  = 2;
-	temp["z"sv][2]			  = 3;
+	// 1) Context ¿€º∫
+	temp["z"][0]		  = 1;
+	temp["z"][1]		  = 2;
+	temp["z"][2]		  = 3;
 
-	temp["x"sv][0]["Test"sv]  = "ÌÖåÏä§Ìä∏"sv;
-	temp["x"sv][0]["value"sv] = 2;
-	temp["x"sv][0]["exit"sv]  = 3;
+	temp["x"][0]["Test"]  = "\uD14C\uC2A4\uD2B8 string";	// "≈◊Ω∫∆Æ string"
+	temp["x"][0]["value"] = 2;
+	temp["x"][0]["exit"]  = 3;
 
-	temp["x"sv][1]["a"sv]	  = 5;
-	temp["x"sv][1]["b"sv]	  = 6;
-	temp["x"sv][1]["c"sv]	  = 7;
-	temp["x"sv][1]["d"sv]	  = chrono::time::utc::now();
+	temp["x"][1]["a"]	  = 5;
+	temp["x"][1]["b"]	  = 6;
+	temp["x"][1]["c"]	  = 7;
+	temp["x"][1]["d"]	  = chrono::time::utc::now();
 
-	// 2) JSON stringÏúºÎ°ú Ïç®ÎÑ£Í∏∞
-	auto buf = temp.write_to_json_string();
+	// 2) JSON string¿∏∑Œ Ω·≥÷±‚
+	auto buf = temp.to_json();
 
-	// 3) ÌôîÎ©¥Ïóê Ï∂úÎ†•ÌïúÎã§.
+	// 3) »≠∏Èø° √‚∑¬«—¥Ÿ.
 	std::cout << buf.data() << std::endl;
 }

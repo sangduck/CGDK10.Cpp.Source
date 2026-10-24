@@ -15,7 +15,7 @@ CGPTR<ServerLobby::CSocket> ServerLobby::CGroupSocket::GetSuitableLobbyServer()
 	// Declare) 
 	CGPTR<ServerLobby::CSocket>	pSocket;
 
-	scoped_lock(m_csGroup)
+	SCOPED_LOCK(m_csGroup)
 	{
 		// check) 서버가 하나도 없으면 nullptr을 리턴한다.
 		RETURN_IF(IsMemberEmpty()==true, CGPTR<ServerLobby::CSocket>());
@@ -136,7 +136,7 @@ int ServerLobby::CGroupSocket::OnMessage_SEND_LOBBYSERVER_STATUS(CGNETMSG& _msg)
 	auto	pSocket = _msg.GetSource<ServerLobby::CSocket>();
 
 	// 4) SERVER_INFO를 저장한다.
-	scoped_lock(pSocket->m_ServerInfo)
+	SCOPED_LOCK(pSocket->m_ServerInfo)
 	{
 		pSocket->m_ServerInfo	 = _msg.Buffer.front<SERVER_INFO>(8);
 	}
@@ -150,7 +150,7 @@ int ServerLobby::CGroupSocket::OnMessage_REQUEST_ACCOUNT_CHECKIN(CGNETMSG& _msg)
 	// 1) Message Casting
 	auto	pSocket = _msg.GetSource<User::CSocket>();
 
-	// check) pSocket이 nullptr이면 안됀다.
+	// check) pSocket이 nullptr이면 안 된다.
 	CGASSERT_ERROR(pSocket != nullptr);
 
 	// 2) AccountID를 얻는다.
@@ -160,7 +160,7 @@ int ServerLobby::CGroupSocket::OnMessage_REQUEST_ACCOUNT_CHECKIN(CGNETMSG& _msg)
 	try
 	{
 		// 3) 제대로된 login인지 AccountID를 확인한다.
-		g_pService->m_pmanagerAccount->RequestAccountCheckin(idAccount);
+		g_pservice->m_pmanagerAccount->RequestAccountCheckin(idAccount);
 
 		// 4) 성공 메시지를 전송한다.
 		pSocket->Send(Message_RESPONSE_ACCOUNT_CHECKIN(0, idTransaction, idAccount));
@@ -184,7 +184,7 @@ int ServerLobby::CGroupSocket::OnMessage_REQUEST_ACCOUNT_CHECKOUT(CGNETMSG& _msg
 	auto	idAccount	= _msg.Buffer.front<ACCOUNT_ID>(8);
 
 	// 2) Checkout 처리를 한다.
-	g_pService->m_pmanagerAccount->RequestAccountCheckout(idAccount);
+	g_pservice->m_pmanagerAccount->RequestAccountCheckout(idAccount);
 
 	// Return)
 	return	1;

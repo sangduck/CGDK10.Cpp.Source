@@ -2,6 +2,7 @@
 //
 
 #include "pch.h"
+#include <charconv>
 
 #if defined(_DEBUG) && !defined(NDEBUG)
 	#define new DEBUG_NEW
@@ -160,7 +161,7 @@ void CChild_thread_list::OnEnable(BOOL _is_enable)
 	// 1) control 버튼
 	GetDlgItem(IDC_BUTTON_FORCE_EXCEPTION)->EnableWindow(_is_enable & m_is_enable_control);
 
-	// 2) Thread 갯수
+	// 2) Thread 개수
 	GetDlgItem(IDC_STATIC_T1)->EnableWindow(_is_enable);
 	GetDlgItem(IDC_STATIC_THREAD_COUNT)->EnableWindow(_is_enable);
 
@@ -180,8 +181,10 @@ void CChild_thread_list::OnDestroy()
 void CChild_thread_list::SetThreadManager(api::manager_thread* _pthread_manager)
 {
 	// 1) Thread Manager를 설정한다.
-	scoped_lock(m_lockable_manager_thread)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_manager_thread);
+
 		m_pmanager_thread = _pthread_manager;
 	}
 
@@ -194,10 +197,10 @@ void CChild_thread_list::SetThreadManager(api::manager_thread* _pthread_manager)
 
 void CChild_thread_list::ClearThreadList()
 {
-	scoped_lock(m_lockable_manager_thread)
-	{
-		m_pmanager_thread.reset();
-	}
+	// lock)
+	std::lock_guard lock(this->m_lockable_manager_thread);
+
+	this->m_pmanager_thread.reset();
 }
 
 void CChild_thread_list::UpdateThreadList()
@@ -205,7 +208,7 @@ void CChild_thread_list::UpdateThreadList()
 	// check) 윈도우가 생성되어 있지 않으면 끝낸다.
 	RETURN_IF(m_hWnd == nullptr)
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 
@@ -216,11 +219,12 @@ void CChild_thread_list::UpdateThreadList()
 	object_ptr<api::manager_thread>	pmanager_thread;
 
 	// 1) Thread Manager를 설정한다.
-	scoped_lock(m_lockable_manager_thread)
 	{
-		pmanager_thread	 = m_pmanager_thread;
-	}
+		// lock)
+		std::lock_guard lock(this->m_lockable_manager_thread);
 
+		pmanager_thread = m_pmanager_thread;
+	}
 
 	//-----------------------------------------------------------------
 	// 2. Manager가 Empty면 모두 지운다.
@@ -235,8 +239,6 @@ void CChild_thread_list::UpdateThreadList()
 		return;
 	}
 
-
-
 	//-----------------------------------------------------------------
 	// 3. List를 다시 setting한다.
 	//-----------------------------------------------------------------
@@ -248,8 +250,10 @@ void CChild_thread_list::UpdateThreadList()
 
 	auto tick_now = chrono::tick::now();
 
-	scoped_lock(pmanager_thread->get_lockable())
 	{
+		// lock)
+		std::lock_guard<std::shared_mutex> lock(pmanager_thread->get_lockable());
+
 		// 2) Thread list Iterator의 begin과 end를 얻는다.
 		auto iter = pmanager_thread->begin();
 		auto iter_end = pmanager_thread->end();
@@ -294,7 +298,7 @@ void CChild_thread_list::UpdateThreadList()
 		m_list_thread.DeleteItem(index);
 	}
 
-	// 8) Thread의 갯수를 표시한다.
+	// 8) Thread의 개수를 표시한다.
 	SetDlgItemInt(IDC_STATIC_THREAD_COUNT, static_cast<int>(pmanager_thread->size()));
 
 	// 9) Redraw On
@@ -317,7 +321,18 @@ void CChild_thread_list::UpdateThread(int _index, chrono::tick::time_point _tick
 	
 	// 3) List를 설정한다.
 	TCHAR* text = reinterpret_cast<TCHAR*>(malloc(MAX_STRING_LENGTH * sizeof(TCHAR)));
+	char text_mb[MAX_STRING_LENGTH] = {};
 	LV_ITEM	list_item;
+	auto set_number_text = [&](auto _value)
+	{
+		if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(_value)>> && std::is_unsigned_v<std::remove_cvref_t<decltype(_value)>>)
+		*std::to_chars(text_mb, text_mb + (std::size(text_mb)) - 1, static_cast<uint64_t>(_value)).ptr = 0;
+	else if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(_value)>>)
+		*std::to_chars(text_mb, text_mb + (std::size(text_mb)) - 1, static_cast<int64_t>(_value)).ptr = 0;
+	else
+		*std::to_chars(text_mb, text_mb + (std::size(text_mb)) - 1, _value).ptr = 0;
+		list_item.pszText = const_cast<TCHAR*>(encode_string(text, std::string_view(text_mb), MAX_STRING_LENGTH).data());
+	};
 
 	list_item.mask = LVIF_TEXT;
 	list_item.state = 0;
@@ -334,14 +349,14 @@ void CChild_thread_list::UpdateThread(int _index, chrono::tick::time_point _tick
 	m_list_thread.SetItem(&list_item);
 	
 	// declare) 
-	THREAD_HANDLE	id_thread = pthread->thread_handle();
+	THREAD_HANDLE	id_thread = pthread->statistics().id_thread.load();
 	
 	// 1	"ID"
 	list_item.iSubItem = 1;
-	if(id_thread!=INVALID_CGHANDLE_VALUE)
+	if(id_thread != INVALID_CGHANDLE_VALUE && id_thread != THREAD_HANDLE{})
 	{
 		list_item.pszText = text;
-		__sprintf(text, MAX_STRING_LENGTH, TEXT("%p"), id_thread);
+		std::swprintf(text, MAX_STRING_LENGTH, std::wstring_view(TEXT("%p")).data(), id_thread);
 	}
 	else
 	{
@@ -351,19 +366,19 @@ void CChild_thread_list::UpdateThread(int _index, chrono::tick::time_point _tick
 	
 	// 3	"Executed"
 	list_item.iSubItem = 2;
-	__to_string(text, MAX_STRING_LENGTH, rStatistics.count_executed);
+	set_number_text(rStatistics.count_executed.load());
 	m_list_thread.SetItem(&list_item);
 
 	// 4	"Error"
 	list_item.iSubItem = 3;
-	__to_string(text, MAX_STRING_LENGTH, rStatistics.count_error);
+	set_number_text(rStatistics.count_error.load());
 	m_list_thread.SetItem(&list_item);
 
 	// 5	"Executing"
 	list_item.iSubItem = 4;
 	if(rStatistics.is_executing)
 	{
-		__to_string(text, MAX_STRING_LENGTH, std::chrono::duration_cast<chrono::tick::milliseconds>(_tick_now-rStatistics.tick_last_execute).count());
+		set_number_text(std::chrono::duration_cast<chrono::tick::milliseconds>(_tick_now-rStatistics.tick_last_execute.load()).count());
 	}
 	else
 	{
@@ -401,10 +416,10 @@ void CChild_thread_list::OnTimer(UINT_PTR nIDEvent)
 	// 1) Thread list Update
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		UpdateThreadList();
@@ -420,17 +435,21 @@ void CChild_thread_list::OnBnClickedForceException()
 	object_ptr<api::manager_thread>	pmanager_thread;
 
 	// 1) Thread Manager를 설정한다.
-	scoped_lock(m_lockable_manager_thread)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_manager_thread);
+
 		pmanager_thread = m_pmanager_thread;
 	}
 
 	// check) 
 	RETURN_IF(pmanager_thread.empty());
 
-	// 2) 선택된 것을 raise_exception한다.
-	scoped_lock(pmanager_thread->get_lockable())
+	// 2) 선택된 것을 force_raise_exception한다.
 	{
+		// lock)
+		std::lock_guard<std::shared_mutex> lock(pmanager_thread->get_lockable());
+
 		POSITION pos = m_list_thread.GetFirstSelectedItemPosition();
 		while(pos)
 		{
@@ -440,10 +459,14 @@ void CChild_thread_list::OnBnClickedForceException()
 			api::Nthread* pthread = reinterpret_cast<api::Nthread*>(m_list_thread.GetItemData(nItem));
 
 			// check) pConnectable이 nullptr일 수는 없다.
-			CGASSERT_ERROR(pthread != nullptr);
-		
-			// 2) Thread를 강재로 raise_exception한다.
-			pthread->raise_exception();
+			CGASSERT_FATAL(pthread != nullptr);
+
+			// check) the thread may have ended (and its object released) after the list was updated
+			if (std::find(pmanager_thread->begin(), pmanager_thread->end(), pthread) == pmanager_thread->end())
+				continue;
+
+			// 2) Thread를 강재로 force_raise_exception한다.
+			pthread->force_raise_exception("force raise exception");
 		}
 	}
 }
@@ -470,7 +493,7 @@ void CChild_thread_list::OnBnClickedSnapDump()
 	//-----------------------------------------------------------------
 	// 2. Dump를 남긴다.
 	//-----------------------------------------------------------------
-	wchar_t	temp[1024]{ L"Test" };
+	char temp[1024]{ "Test" };
 
 	// 1) Dump를 남긴다.
 	auto result = snap_dump(temp);

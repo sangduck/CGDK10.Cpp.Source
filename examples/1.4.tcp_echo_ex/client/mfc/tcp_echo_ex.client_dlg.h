@@ -1,16 +1,16 @@
-ï»¿
-// tcp_echo_dlg.h: í—¤ë” íŒŒì¼
+
+// tcp_echo_dlg.h: Çì´õ ÆÄÀÏ
 //
 
 #pragma once
 
 
-// tcp_echo_ex_client_dlg ëŒ€í™” ìƒì
+// tcp_echo_ex_client_dlg ´ëÈ­ »óÀÚ
 class tcp_echo_ex_client_dlg : public CDialogEx
 {
-// ìƒì„±ì…ë‹ˆë‹¤.
+// »ı¼ºÀÔ´Ï´Ù.
 public:
-	tcp_echo_ex_client_dlg(CWnd* pParent = nullptr);	// í‘œì¤€ ìƒì„±ìì…ë‹ˆë‹¤.
+	tcp_echo_ex_client_dlg(CWnd* pParent = nullptr);	// Ç¥ÁØ »ı¼ºÀÚÀÔ´Ï´Ù.
 
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_TCP_ECHOWINDOWSMFC_DIALOG };
@@ -73,7 +73,7 @@ public:
 			CDialog_thread_status		m_dlg_thread_status;
 			
 public:
-	// 5) ì¡°ì‘í•¨ìˆ˜.
+	// 5) Á¶ÀÛÇÔ¼ö.
 			void				ReadServerAddress();
 			void				SetMessageFormatInfo();
 };

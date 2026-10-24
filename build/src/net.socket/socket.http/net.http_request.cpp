@@ -1,4 +1,7 @@
-Ôªø#include "pch.h"
+#include "pch.h"
+#include <charconv>
+#include <cstring>
+#include <random>
 
 #if defined(_WIN32)
 	#include <shlwapi.h>
@@ -20,6 +23,7 @@ public:
 	std::string_view	str_hostname;
 	std::string_view	str_object;
 	std::string_view	str_optional;
+	std::string_view	str_path_query;		// - the path and the query (the object of GET)
 };
 
 bool _is_use_ssl(eHTTP_SCHEME_TYPE _scheme)  noexcept
@@ -37,7 +41,8 @@ eHTTP_SCHEME_TYPE _get_scheme_type(const std::string_view _str_scheme) noexcept
 	auto size = _str_scheme.size();
 
 	// check)
-	RETURN_IF(size < 2, result);
+	if(size < 2)
+		return result;
 
 	switch (*pos)
 	{
@@ -61,7 +66,7 @@ eHTTP_SCHEME_TYPE _get_scheme_type(const std::string_view _str_scheme) noexcept
 				if((pos[1] == 'o' || pos[1] == 'O')
 				&& (pos[2] == 'p' || pos[2] == 'P')
 				&& (pos[3] == 'h' || pos[3] == 'H')
-				&& (pos[4] == 't' || pos[4] == 'E')
+				&& (pos[4] == 'e' || pos[4] == 'E')
 				&& (pos[5] == 'r' || pos[5] == 'R')
 				)
 				{
@@ -127,19 +132,21 @@ eHTTP_SCHEME_TYPE _get_scheme_type(const std::string_view _str_scheme) noexcept
 				&& (pos[9] == 't' || pos[9] == 'T')
 				)
 				{
-					result = eHTTP_SCHEME_TYPE::SOCKS_;
+					result = eHTTP_SCHEME_TYPE::JAVASCRIPT_;
 				}
 			}
 			break;
 
-	// case mail
+	// case "mailto"
 	case	'm':
 	case	'M':
-			if (size == 4)
+			if (size == 6)
 			{
 				if((pos[1] == 'a' || pos[1] == 'A')
 				&& (pos[2] == 'i' || pos[2] == 'I')
 				&& (pos[3] == 'l' || pos[3] == 'L')
+				&& (pos[4] == 't' || pos[4] == 'T')
+				&& (pos[5] == 'o' || pos[5] == 'O')
 				)
 				{
 					result = eHTTP_SCHEME_TYPE::MAILTO_;
@@ -170,7 +177,7 @@ eHTTP_SCHEME_TYPE _get_scheme_type(const std::string_view _str_scheme) noexcept
 				if((pos[1] == 'o' || pos[1] == 'O')
 				&& (pos[2] == 'c' || pos[2] == 'C')
 				&& (pos[3] == 'k' || pos[3] == 'K')
-				&& (pos[4] == 's' || pos[3] == 'S')
+				&& (pos[4] == 's' || pos[4] == 'S')
 				)
 				{
 					result = eHTTP_SCHEME_TYPE::SOCKS_;
@@ -187,10 +194,10 @@ eHTTP_SCHEME_TYPE _get_scheme_type(const std::string_view _str_scheme) noexcept
 				if((pos[1] == 'b' || pos[1] == 'B')
 				&& (pos[2] == 's' || pos[2] == 'S')
 				&& (pos[3] == 'c' || pos[3] == 'C')
-				&& (pos[4] == 'r' || pos[3] == 'R')
-				&& (pos[4] == 'i' || pos[3] == 'I')
-				&& (pos[4] == 'p' || pos[3] == 'P')
-				&& (pos[4] == 't' || pos[3] == 'T')
+				&& (pos[4] == 'r' || pos[4] == 'R')
+				&& (pos[5] == 'i' || pos[5] == 'I')
+				&& (pos[6] == 'p' || pos[6] == 'P')
+				&& (pos[7] == 't' || pos[7] == 'T')
 				)
 				{
 					result = eHTTP_SCHEME_TYPE::VBSCRIPT_;
@@ -227,168 +234,83 @@ eHTTP_SCHEME_TYPE _get_scheme_type(const std::string_view _str_scheme) noexcept
 	return	result;
 }
 
-bool _crack_url(URL_COMPONENT& _url_parsed, const std::string_view _str_url, eHTTP_METHOD _type)
+// - "scheme://host[:port][/path][?query][#fragment]" (the host can be "[ipv6]")
+//   str_object : the path ("/" if empty), str_optional : the query (without '?'), the fragment is not sent
+bool _crack_url(URL_COMPONENT& _url_parsed, const std::string_view _str_url)
 {
-	// declare) 
-	auto str_now = _str_url.data();
-	auto str_end = str_now + _str_url.size();
+	// declare)
+	std::string_view rest = _str_url;
 
-	// 1) Protocol ÏñªÍ∏∞
-	for(auto str_begin = str_now; *str_now != '/' && str_now < str_end; ++str_now)
+	// - trim the spaces
+	while (rest.empty() == false && (rest.front() == ' ' || rest.front() == '\t'))
+		rest.remove_prefix(1);
+	while (rest.empty() == false && (rest.back() == ' ' || rest.back() == '\t' || rest.back() == '\r' || rest.back() == '\n'))
+		rest.remove_suffix(1);
+
+	// 1) scheme ("scheme:")
+	if (const auto pos_scheme = rest.find(':'); pos_scheme != std::string_view::npos && rest.substr(0, pos_scheme).find('/') == std::string_view::npos)
 	{
-		// Case) ProtocolÏùÑ Ï∞æÏùå(ProtocolÏóê Î≥µÏÇ¨)
-		if(*str_now ==':')
-		{
-			// - get scheme string && scheme type
-			_url_parsed.str_scheme = std::string_view(str_begin, str_now - str_begin);
-			_url_parsed.scheme = _get_scheme_type(_url_parsed.str_scheme);
+		_url_parsed.str_scheme = rest.substr(0, pos_scheme);
+		_url_parsed.scheme = _get_scheme_type(_url_parsed.str_scheme);
 
-			// check) ...
-			THROW_IF(_url_parsed.scheme == eHTTP_SCHEME_TYPE::NOT_DEFINED_, throwable::failure(eRESULT::INVALID_ARGUMENT));
+		// check)
+		if (_url_parsed.scheme == eHTTP_SCHEME_TYPE::NOT_DEFINED_)
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
-			// - set port string
-			_url_parsed.str_port = _is_use_ssl(_url_parsed.scheme) ? STRING_HTTPS_PORT : STRING_HTTP_PORT;
+		// - the default port
+		_url_parsed.str_port = _is_use_ssl(_url_parsed.scheme) ? STRING_HTTPS_PORT : STRING_HTTP_PORT;
 
-			// - next character (skip ':')
-			++str_now;
-
-			// break) 
-			break;
-		}
+		rest.remove_prefix(pos_scheme + 1);
 	}
 
-	if(str_now < str_end  && (*str_now == '/'))
+	// 2) authority ("//host[:port]")
+	if (rest.size() >= 2 && rest[0] == '/' && rest[1] == '/')
 	{
-		// - SlashÎäî ÌÜµÍ≥º
-		++str_now;
+		rest.remove_prefix(2);
 
-		// 2) Address- Slash Ïó∞Îã¨ÏïÑ ÎëêÍ∞ú'//' Ïó¨ÏïºÏßÄÎßå Ï£ºÏÜåÎã§. (ÌïúÍ∞úÎ©¥ path)
-		if(str_now < str_end && *str_now == '/')
+		const auto pos_end = rest.find_first_of("/?# \t"sv);
+		auto authority = rest.substr(0, pos_end);
+		rest = (pos_end == std::string_view::npos) ? std::string_view() : rest.substr(pos_end);
+
+		// - user info ("user:password@") is not used
+		if (const auto pos_at = authority.rfind('@'); pos_at != std::string_view::npos)
+			authority.remove_prefix(pos_at + 1);
+
+		// - "[ipv6]:port"
+		if (authority.empty() == false && authority.front() == '[')
 		{
-			// - skip '/'
-			++str_now;
+			const auto pos_close = authority.find(']');
+			if (pos_close == std::string_view::npos)
+				throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
-			// - read host name
-			for(auto str_begin = str_now; ; ++str_now)
+			_url_parsed.str_hostname = authority.substr(1, pos_close - 1);
+			authority.remove_prefix(pos_close + 1);
+
+			if (authority.empty() == false)
 			{
-				char char_now = *str_now;
-
-				// Case) Host NameÏùÑ Ï∞æÏùå! - PathÎ°ú Í∞ê!
-				if(char_now == '/'
-				|| char_now == ' '
-				|| char_now == '?'
-				|| char_now == '#'
-				|| char_now == ':'
-				|| str_now  >= str_end)
-				{
-					// - stroe host name
-					_url_parsed.str_hostname = std::string_view(str_begin, str_now - str_begin);
-
-					// - break
-					break;
-				}
+				if (authority.front() != ':')
+					throw throwable::failure(eRESULT::INVALID_ARGUMENT);
+				_url_parsed.str_port = authority.substr(1);
 			}
 		}
-
-		// 3) Path
-		if(*str_now ==':')
-		{
-			// - ColonÎäî ÌÜµÍ≥º
-			++str_now;
-
-			for(auto str_begin = str_now; ; ++str_now)
-			{
-				char char_now = *str_now;
-
-				// Case) Host NameÏùÑ Ï∞æÏùå! - PathÎ°ú Í∞ê!
-				if(char_now == '/'
-				|| char_now == ' '
-				|| char_now == '?'
-				|| char_now == '#'
-				|| str_now  >= str_end)
-				{
-					// - store port string
-					_url_parsed.str_port = std::string_view(str_begin, str_now - str_begin);
-
-					// break)
-					break;
-				}
-			}
-		}
-
-		if (_type == eHTTP_METHOD::GET_)
-		{
-			// - Path
-			if(str_now < str_end && *str_now =='/')
-			{
-				for(auto str_begin = str_now; ; ++str_now)
-				{
-					char char_now = *str_now;
-
-					// Case) Host NameÏùÑ Ï∞æÏùå! - PathÎ°ú Í∞ê!
-					if(char_now==' ' 
-					|| char_now=='\t' 
-					|| str_now >= str_end)
-					{
-						// - store 
-						_url_parsed.str_object = std::string_view(str_begin, str_now - str_begin);
-
-						// break;)
-						break;
-					}
-				}
-			}
-		}
+		// - "host:port"
 		else
 		{
-			// - Path
-			if(str_now < str_end && *str_now =='/')
-			{
-				for(auto str_begin = str_now; ; ++str_now)
-				{
-					char char_now = *str_now;
-
-					// Case) Host NameÏùÑ Ï∞æÏùå! - PathÎ°ú Í∞ê!
-					if(char_now == ' ' 
-					|| char_now == '\t' 
-					|| char_now == '?' 
-					|| char_now == '#' 
-					|| str_now  >= str_end)
-					{
-						// store object string
-						_url_parsed.str_object = std::string_view(str_begin, str_now - str_begin);
-
-						// break)
-						break;
-					}
-				}
-			}
-
-			// - optional (param)
-			if(str_now < str_end && (*str_now =='?' || *str_now == '#'))
-			{
-				// - '?'Îäî Ï†úÍ±∞ÌïúÎã§.
-				++str_now;
-
-				for(auto str_begin = str_now; ; ++str_now)
-				{
-					char char_now = *str_now;
-
-					// Case) Host NameÏùÑ Ï∞æÏùå! - PathÎ°ú Í∞ê!
-					if(char_now == ' ' 
-					|| char_now == '\t' 
-					|| str_now  >  str_end)
-					{
-						// Î≥µÏÇ¨ÌïúÎã§.
-						_url_parsed.str_optional = std::string_view(str_begin, str_now - str_begin);
-
-						// break)
-						break;
-					}
-				}
-			}
+			const auto pos_colon = authority.find(':');
+			_url_parsed.str_hostname = authority.substr(0, pos_colon);
+			if (pos_colon != std::string_view::npos)
+				_url_parsed.str_port = authority.substr(pos_colon + 1);
 		}
 	}
+
+	// 3) path, query, fragment (a space ends the url)
+	rest = rest.substr(0, rest.find_first_of(" \t"sv));
+	rest = rest.substr(0, rest.find('#'));
+
+	const auto pos_query = rest.find('?');
+	_url_parsed.str_object = rest.substr(0, pos_query);
+	_url_parsed.str_optional = (pos_query == std::string_view::npos) ? std::string_view() : rest.substr(pos_query + 1);
+	_url_parsed.str_path_query = rest;
 
 	// return)
 	return true;
@@ -426,28 +348,28 @@ bool base64_encode(char* _dest, size_t _dest_size, const std::string_view _sourc
 void net::http_request::set_request(const std::string_view _str_url, eHTTP_METHOD _type)
 {
 	// Example)
-	//			GET / HTTP/1.1
+	//			GET /path?query HTTP/1.1
 	//			Host: localhost:19000
-	//			Connection: keep-alive
-	//			Cache-control: max-age=0
-	//			Upgrade-Insecure-Requests: 1
-	//			User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36
-	//			DNT: 1
-	//			Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
-	//			Accept-Encoding: gzip, deflate, br
-	//			Accept-Language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7
+	//			User-Agent: CGCII http 10.0
+	//			Accept: */*
+	//			Connection: close
 	//
 
 	// check)
-	THROW_IF(_str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
+	if(_str_url.empty())
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
-	// declare) 
+	// declare)
 	URL_COMPONENT temp_cracked_URL;
 
-	// 1) URLÏùÑ parsingÌïúÎã§.
-	_crack_url(temp_cracked_URL, _str_url, _type);
+	// 1) parse the url
+	_crack_url(temp_cracked_URL, _str_url);
 
-	// 2) _typeÏù¥ DEFAULT_Ïùº Í≤ΩÏö∞ Default MethodÎ•º ÏñªÎäîÎã§.
+	// check) the host
+	if (temp_cracked_URL.str_hostname.empty())
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
+
+	// 2) the default method (before the object : the query of GET is in the path)
 	if(_type == eHTTP_METHOD::DEFAULT_)
 	{
 		_type = _get_default_HTTP_method(temp_cracked_URL.scheme);
@@ -455,89 +377,71 @@ void net::http_request::set_request(const std::string_view _str_url, eHTTP_METHO
 
 	// declare)
 	std::string_view str_version;
-	bool is_use_SSL = _is_use_ssl(temp_cracked_URL.scheme);		// SSLÏùò Ï†ÅÏö© Ïó¨Î∂Ä
-	uint16_t port = __from_string<uint16_t>(temp_cracked_URL.str_port);
+	bool is_use_SSL = _is_use_ssl(temp_cracked_URL.scheme);		// - ssl
+	uint16_t port = 0;
+	if (const auto [ptr, ec] = std::from_chars(temp_cracked_URL.str_port.data(), temp_cracked_URL.str_port.data() + temp_cracked_URL.str_port.size(), port); ec != std::errc() || ptr != temp_cracked_URL.str_port.data() + temp_cracked_URL.str_port.size())
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 	std::vector<std::string_view> vector_header;
 	std::vector<std::string_view> vector_accept;
 	std::string_view str_referer;
-	buffer_view buffer_optional = to_buffer_view(temp_cracked_URL.str_optional);
+	std::string str_websocket_key;		// - the strings of vector_header (kept until set_request below)
 
-	// 3) websocket
+	// 3) GET (and HEAD, DELETE, ...) : the query is in the path / the others : the query is the body (form)
+	const bool is_query_body = (_type == eHTTP_METHOD::POST_ || _type == eHTTP_METHOD::PUT_ || _type == eHTTP_METHOD::PATCH_);
+	const std::string_view str_object = is_query_body ? temp_cracked_URL.str_object : temp_cracked_URL.str_path_query;
+	buffer_view buffer_optional = is_query_body ? to_buffer_view(temp_cracked_URL.str_optional) : buffer_view();
+
+	// 4) websocket
 	if (temp_cracked_URL.scheme == eHTTP_SCHEME_TYPE::WS_ || temp_cracked_URL.scheme == eHTTP_SCHEME_TYPE::WSS_)
 	{
-		// declare)
-		auto temp_key = "12ag4df59aa3wtd1"sv;
-		m_keys.resize(24);
+		// - Sec-WebSocket-Key : a random 16 byte nonce in base64 (RFC 6455 4.1)
+		std::array<uint32_t, 4> nonce{};
+		{
+			std::random_device random_device;
+			for (auto& value : nonce)
+				value = static_cast<uint32_t>(random_device());
+		}
 
-		// - Base64Î°ú Encoding
-		auto result = base64_encode(&m_keys.front(), 25, temp_key);
-
-		// check) ...
-		THROW_IF(result == false, throwable::failure(eRESULT::FAIL));
+		char temp_key[32]{ 0 };
+		if (base64_encode(temp_key, sizeof(temp_key), std::string_view(reinterpret_cast<const char*>(nonce.data()), nonce.size() * sizeof(uint32_t))) == false)
+			throw throwable::failure(eRESULT::FAIL);
+		m_keys = std::string_view(temp_key);
 
 		// - set version
 		str_version = "HTTP/1.1";	// 'HTTP/1.1'
 
-		char temp_str_websocket_key[64] { 0 };
-		__sprintf(temp_str_websocket_key, "Sec-WebSocket-Key: %s"sv, m_keys.c_str());
+		str_websocket_key = "Sec-WebSocket-Key: ";
+		str_websocket_key += temp_key;
 		vector_header.push_back("Origin: null"sv);
-		vector_header.push_back(temp_str_websocket_key);
+		vector_header.push_back(str_websocket_key);
 		vector_header.push_back("Connection: Upgrade"sv);
 		vector_header.push_back("Upgrade: websocket"sv);
-		vector_header.push_back("Sec-Websocket-Version: 13"sv);
-
-		//if (temp_cracked_URL.scheme == eHTTP_SCHEME_TYPE::WS_)
-		//{
-		//	vector_header.push_back("Sec-WebSocket-Protocol: ws");
-		//}
-		//else
-		//{
-		//	vector_header.push_back("Sec-WebSocket-Protocol: wss");
-		//}
-		//vector_header.push_back("Sec-WebSocket-Extensions: 13");
+		vector_header.push_back("Sec-WebSocket-Version: 13"sv);
 	}
 	else
 	{
 		// - set version
-		str_version = to_string<char>(temp_cracked_URL.scheme);	// 'HTTP/1.1'
+		str_version = to_string(temp_cracked_URL.scheme);	// 'HTTP/1.1'
 	}
 
-	// 4) Í∏∞Î≥∏ headerÎ•º ÏÑ§Ï†ïÌïúÎã§.
-	//vector_header.push_back("Connection: keep-Alive");
+	// 5) the default headers (Content-Length is written by set_request from the body)
 	vector_header.push_back("User-Agent: CGCII http 10.0"sv);
-	if (temp_cracked_URL.str_optional.empty() == false || _type != eHTTP_METHOD::GET_)
-	{
-		char temp_str_content_length[64]{ 0 };
+	if (buffer_optional.size() != 0)
+		vector_header.push_back("Content-Type: application/x-www-form-urlencoded"sv);
 
-		// - content lengthÏùÑ ÏûëÏÑ±ÌïúÎã§.
-		__sprintf(temp_str_content_length, "Content-Length: %d"sv, temp_cracked_URL.str_optional.size());
-
-		// - headerÏóê Ï∂îÍ∞ÄÌïúÎã§.
-		vector_header.push_back("Content-Type: application/x-www-form-urlencoded");
-		vector_header.push_back(temp_str_content_length);
-	}
-
-	//// 4) Accept typeÏùÑ ÏÑ§Ï†ïÌïúÎã§.
-	//vector_accept.push_back("text/html"sv);
-	//vector_accept.push_back("application/xhtml+xml"sv);
-	//vector_accept.push_back("application/xml;q=0.9"sv);
-	//vector_accept.push_back("image/webp"sv);
-	//vector_accept.push_back("image/apng"sv);
-	//vector_accept.push_back("*/*;q=0.8"sv);
+	// 6) accept
 	vector_accept.push_back("*/*");
 
-	// 5) Host addressÎ•º ÏñªÎäîÎã§.
-	m_address_host = from_string(temp_cracked_URL.str_hostname, __from_string<uint16_t>(temp_cracked_URL.str_port));
-
+	// 7) request (the address is resolved by it)
 	set_request(
 		_type,							// eHTTP_METHOD					_method_type,
 		temp_cracked_URL.str_hostname,	// const char*					_host_name,
 		port,							// uint16_t						_host_port,
 		str_version,					// const char*					_version,
-		temp_cracked_URL.str_object,	// const char*					_object,
+		str_object,						// const char*					_object,
 		str_referer,					// const char*					_referer,
 		vector_header,					// const vector<const char*>&	_vector_header,
-		buffer_optional,				// const shared_buffer&		_buffer_optinal,
+		buffer_optional,				// const shared_buffer&		_buffer_optional,
 		vector_accept,					// const vector<const char*>&	_vector_accept_type,
 		is_use_SSL
 	);
@@ -545,46 +449,97 @@ void net::http_request::set_request(const std::string_view _str_url, eHTTP_METHO
 
 void net::http_request::set_request (const net::sockaddr& _address_host, const shared_buffer& _buffer)
 {
-	// check) ÏûòÎ™ªÎêú AddressÏù∏ÏßÄ Í≤ÄÏÇ¨ÌïúÎã§.
+	// check) ¿ﬂ∏¯µ» Address¿Œ¡ˆ ∞ÀªÁ«—¥Ÿ.
 	CGASSERT_ERROR(_address_host.exist());
 
-	// check) ÏûòÎ™ªÎêú AddressÏù∏ÏßÄ Í≤ÄÏÇ¨ÌïúÎã§.
-	THROW_IF(_address_host.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
+	// check) ¿ﬂ∏¯µ» Address¿Œ¡ˆ ∞ÀªÁ«—¥Ÿ.
+	if(_address_host.empty())
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
-	// 1) Host AddressÎ•º ÏÑ§Ï†ïÌïúÎã§.
+	// 1) Host Address∏¶ º≥¡§«—¥Ÿ.
 	m_address_host	 = _address_host;
 
-	// 2) shared_bufferÎ•º ÏÑ§Ï†ïÌïúÎã§.
+	// 2) shared_buffer∏¶ º≥¡§«—¥Ÿ.
 	m_buffer_request = _buffer;
 }
 
 void _append_host(shared_buffer& _buffer, const std::string_view _host_name, uint16_t _host_port) noexcept
 {
+	// - an ipv6 address is in "[]"
+	const bool is_ipv6 = (_host_name.find(':') != std::string_view::npos);
+
+	_buffer.append_text<char>("Host: "sv);
+	if (is_ipv6)
+		_buffer.append_text<char>("["sv);
+	_buffer.append_text<char>(_host_name);
+	if (is_ipv6)
+		_buffer.append_text<char>("]"sv);
 	if (_host_port != 0)
 	{
-		_buffer.append_text<char>("Host:{}:{}\r\n"sv, _host_name.data(), (int)_host_port);
+		char temp_port[16]{ 0 };
+		const auto length = std::snprintf(temp_port, std::size(temp_port), ":%u", static_cast<unsigned>(_host_port));
+		_buffer.append_text<char>(std::string_view(temp_port, static_cast<size_t>(length)));
 	}
-	else
-	{
-		_buffer.append_text<char>("Host:{}\r\n"sv, _host_name.data());
-	}
+	_buffer.append_text<char>("\r\n"sv);
 }
 
 void _append_referer(shared_buffer& _buffer, const std::string_view _referer) noexcept
 {
 	// check)
-	RETURN_IF(_referer.empty());
+	if(_referer.empty())
+		return;
 
-	// 1) Ï∂îÍ∞õ„Ñ¥Îã§.
+	// 1) √ﬂ∞≤§§¥Ÿ.
 	_buffer.append_text<char>("Referer:"sv);
 	_buffer.append_text<char>(_referer);
 	_buffer.append_text<char>("\r\n"sv);
+}
+
+// - "Content-Length" header (case insensitive)
+bool _is_content_length_header(std::string_view _header) noexcept
+{
+	constexpr std::string_view name = "content-length";
+
+	// check)
+	if (_header.size() < name.size())
+		return false;
+
+	for (size_t i = 0; i < name.size(); ++i)
+	{
+		if (static_cast<char>(std::tolower(static_cast<unsigned char>(_header[i]))) != name[i])
+			return false;
+	}
+
+	// return) "Content-Length:" or "Content-Length :"
+	return _header.size() == name.size() || _header[name.size()] == ':' || _header[name.size()] == ' ';
+}
+
+// - the header _name is in _vector_header (case insensitive, _name : lower case)
+bool _has_header(const std::vector<std::string_view>& _vector_header, std::string_view _name) noexcept
+{
+	for (auto& iter : _vector_header)
+	{
+		if (iter.size() <= _name.size() || iter[_name.size()] != ':')
+			continue;
+
+		bool is_same = true;
+		for (size_t i = 0; i < _name.size() && is_same; ++i)
+			is_same = (static_cast<char>(std::tolower(static_cast<unsigned char>(iter[i]))) == _name[i]);
+
+		if (is_same)
+			return true;
+	}
+	return false;
 }
 
 void _append_headers(shared_buffer& _buffer, const std::vector<std::string_view>& _vector_header) noexcept
 {
 	for (auto& iter : _vector_header)
 	{
+		// - "Content-Length" is written by set_request from the size of the body (a mismatch isn't possible)
+		if (_is_content_length_header(iter))
+			continue;
+
 		_buffer.append_text<char>(iter);
 		_buffer.append_text<char>("\r\n"sv);
 	}
@@ -593,7 +548,8 @@ void _append_headers(shared_buffer& _buffer, const std::vector<std::string_view>
 void _append_accept_type(shared_buffer& _buffer, const std::vector<std::string_view>& _vector_accept_type) noexcept
 {
 	// check) 
-	RETURN_IF(_vector_accept_type.empty());
+	if(_vector_accept_type.empty())
+		return;
 
 	// 1) Add key["Accept"]
 	_buffer.append_text<char>("Accept:"sv);
@@ -605,7 +561,7 @@ void _append_accept_type(shared_buffer& _buffer, const std::vector<std::string_v
 		_buffer.append_text<char>(","sv);
 	}
 
-	// 3) ÎßàÏßÄÎßâÏùò ','Î•º Ï†úÍ±∞ÌïúÎã§.
+	// 3) ∏∂¡ˆ∏∑¿« ','∏¶ ¡¶∞≈«—¥Ÿ.
 	_buffer.dec_size();
 
 	// 4) End...
@@ -615,28 +571,28 @@ void _append_accept_type(shared_buffer& _buffer, const std::vector<std::string_v
 void _append_accept_encoding(shared_buffer& /*_buffer*/)
 {
 	//
-	// Accept-Encoding ÌååÎùºÎØ∏ÌÑ∞
+	// Accept-Encoding ∆ƒ∂ÛπÃ≈Õ
 	//
-	// ÌÅ¥ÎùºÏù¥Ïñ∏Ìä∏(ÏöîÏ≤≠Ïûê)Ï™ΩÏóêÏÑú Ïù¥Ìï¥ Í∞Ä Îä•Ìïú Ïù∏ÏΩîÎî©ÏùÑ ÏïåÎ†§Ï§ÄÎã§.
-	// Í≥†Î∂ÄÌïò ÏÉÅÌÉú(CPU 80%Ïù¥ÏÉÅÏùÑ ÏÇ¨Ïö©ÌïòÎäî ÏÉÅÌô©)ÏóêÏÑúÎäî ÏÇ¨Ïö©ÌïòÏßÄ ÏïäÍ∏∞Î•º Í∂åÏû•ÌïúÎã§.
+	// ≈¨∂Û¿Ãæ∆Æ(ø‰√ª¿⁄)¬ ø°º≠ ¿Ã«ÿ ∞° ¥…«— ¿Œƒ⁄µ˘¿ª æÀ∑¡¡ÿ¥Ÿ.
+	// ∞Ì∫Œ«œ ªÛ≈¬(CPU 80%¿ÃªÛ¿ª ªÁøÎ«œ¥¬ ªÛ»≤)ø°º≠¥¬ ªÁøÎ«œ¡ˆ æ ±‚∏¶ ±«¿Â«—¥Ÿ.
 	//
-	//	"gzip"		32bit CRCÏôÄ Ìï®Íªò LZW ÏïïÏ∂ï
-	//	"compress"	LZW ÏïïÏ∂ï
-	//	"deflate"	deflate ÏïïÏ∂ïÍ≥º Ìï®Íªò zlib Íµ¨Ï°∞Î•º ÏÇ¨Ïö©Ìï¥ ÏïïÏ∂ï
-	//	"br"		Brotli ÏïåÍ≥†Î¶¨Ï¶òÏùÑ ÏÇ¨Ïö©Ìï¥ ÏïïÏ∂ï
-	//	"identity"	ÏãùÎ≥Ñ Ìï®Ïàò(ÏïïÏ∂ïÌïòÏßÄ ÏïäÍ±∞ÎÇò ÏàòÏ†ïÌïòÏßÄ ÏïäÏùÄ Í≤ΩÏö∞)Î•º  ÎßêÌïúÎã§. Ïù¥ Í∞íÏùÄ Î™ÖÏãúÌïòÏßÄ ÏïäÏïÑÎèÑ Ìï≠ÏÉÅ ÏÑ§Ï†ïÎêúÎã§. "identity;q=0"ÏúºÎ°ú ÏÑ§Ï†ïÌïòÏßÄ ÏïäÎäîÌïú Î¨¥Ï°∞Í±¥ Ïú†Ìö®ÌïòÎã§.
-	//	"*"			Ïñ¥Îñ§ Ïù∏ÏΩîÎî© Î∞©Î≤ïÏù¥ÎùºÎèÑ Î∞õÏïÑ Îì§Ïù∏Îã§. Ìó§ÎçîÍ∞Ä Ï°¥Ïû¨ÌïòÏßÄ ÏïäÎäî Í≤ΩÏö∞ Ïù¥ Í∞íÏù¥ Í∏∞Î≥∏Í∞íÏù¥ ÎêúÎã§.
-	//				Î™®Îì† ÏïåÍ≥†Î¶¨Ï¶òÏùÑ ÏßÄÏõêÌïúÎã§Îäî Í≤ÉÏùÑ ÏùòÎØ∏ÌïòÏßÄ ÏïäÎäîÎã§. Îã®ÏßÄ ÌëúÌòÑÎêú ÏÑ†Ìò∏ ÎåÄÏÉÅÏù¥ ÏóÜÎã§Îäî Í≤ÉÏùÑ ÏùòÎØ∏ÌïúÎã§.
-	//	";q=[w]"	wÎäî ÏÉÅÎåÄÏ†Å Ïö∞ÏÑ†ÏàúÏúÑÍ∞íÏúºÎ°ú Ïù¥ Í∞ëÏù¥ ÎÜíÏúºÎ©¥ Îçî ÏÑ†Ìò∏ÌïúÎã§Îäî ÏùòÎØ∏Ïù¥Îã§.
+	//	"gzip"		32bit CRCøÕ «‘≤≤ LZW æ–√‡
+	//	"compress"	LZW æ–√‡
+	//	"deflate"	deflate æ–√‡∞˙ «‘≤≤ zlib ±∏¡∂∏¶ ªÁøÎ«ÿ æ–√‡
+	//	"br"		Brotli æÀ∞Ì∏Æ¡Ú¿ª ªÁøÎ«ÿ æ–√‡
+	//	"identity"	Ωƒ∫∞ «‘ºˆ(æ–√‡«œ¡ˆ æ ∞≈≥™ ºˆ¡§«œ¡ˆ æ ¿∫ ∞ÊøÏ)∏¶  ∏ª«—¥Ÿ. ¿Ã ∞™¿∫ ∏ÌΩ√«œ¡ˆ æ æ∆µµ «◊ªÛ º≥¡§µ»¥Ÿ. "identity;q=0"¿∏∑Œ º≥¡§«œ¡ˆ æ ¥¬«— π´¡∂∞« ¿Ø»ø«œ¥Ÿ.
+	//	"*"			æÓ∂≤ ¿Œƒ⁄µ˘ πÊπ˝¿Ã∂Ûµµ πﬁæ∆ µÈ¿Œ¥Ÿ. «Ï¥ı∞° ¡∏¿Á«œ¡ˆ æ ¥¬ ∞ÊøÏ ¿Ã ∞™¿Ã ±‚∫ª∞™¿Ã µ»¥Ÿ.
+	//				∏µÁ æÀ∞Ì∏Æ¡Ú¿ª ¡ˆø¯«—¥Ÿ¥¬ ∞Õ¿ª ¿«πÃ«œ¡ˆ æ ¥¬¥Ÿ. ¥‹¡ˆ «•«ˆµ» º±»£ ¥ÎªÛ¿Ã æ¯¥Ÿ¥¬ ∞Õ¿ª ¿«πÃ«—¥Ÿ.
+	//	";q=[w]"	w¥¬ ªÛ¥Î¿˚ øÏº±º¯¿ß∞™¿∏∑Œ ¿Ã ∞©¿Ã ≥Ù¿∏∏È ¥ı º±»£«—¥Ÿ¥¬ ¿«πÃ¿Ã¥Ÿ.
 	//
-	// Ïó¨Îü¨ Í∞íÎì§Ïù¥ ','Î°ú Íµ¨Î∂ÑÌïòÏó¨ Ïó¨Îü¨ Í∞úÎ•º ÎèôÏãúÏóê ÏÑ§Ï†ïÌï† Ïàò ÏûàÎã§.
+	// ø©∑Ø ∞™µÈ¿Ã ','∑Œ ±∏∫–«œø© ø©∑Ø ∞≥∏¶ µøΩ√ø° º≥¡§«“ ºˆ ¿÷¥Ÿ.
 	// identity
 	//
 	//
-	// Ïòà)
+	// øπ)
 	//       Accept-Encoding: gzip
 	//       Accept-Encoding: gzip, compress, br
-	//       Accept-Encoding: br;q=1.0, gzie;q=0.8, *;q=0.1
+	//       Accept-Encoding: br;q=1.0, gzip;q=0.8, *;q=0.1
 	//
 
 	//// 1) Add key["Accept-encoding"sv]
@@ -652,13 +608,13 @@ void _append_accept_encoding(shared_buffer& /*_buffer*/)
 void _append_accept_lnaguae(shared_buffer& /*_buffer*/)
 {
 	//
-	// Accept-Language ÌååÎùºÎØ∏ÌÑ∞
+	// Accept-Language ∆ƒ∂ÛπÃ≈Õ
 	//
-	// ÌÅ¥ÎùºÏù¥Ïñ∏Ìä∏(ÏöîÏ≤≠Ïûê)Ï™ΩÏóêÏÑú Ïù¥Ìï¥ Í∞ÄÎä•Ìïú Ïñ∏Ïñ¥Î•º ÏïåÎ†§Ï§ÄÎã§. 
-	// Í≥†Î∂ÄÌïò ÏÉÅÌÉú(CPU 80%Ïù¥ÏÉÅÏùÑ ÏÇ¨Ïö©ÌïòÎäî ÏÉÅÌô©)ÏóêÏÑúÎäî ÏÇ¨Ïö©ÌïòÏßÄ ÏïäÍ∏∞Î•º Í∂åÏû•ÌïúÎã§.
-	// Ï†úÏïàÎêú Ïñ∏Ïñ¥ Ï§ë ÏßÄÏõê Í∞ÄÎä•Ìïú Í≤ÉÏù¥ ÏóÜÏùÑ Í≤ΩÏö∞ 406(Not Acceptable) ÏóêÎü¨Î•º Î∞úÏÉùÌïúÎã§.
+	// ≈¨∂Û¿Ãæ∆Æ(ø‰√ª¿⁄)¬ ø°º≠ ¿Ã«ÿ ∞°¥…«— ææÓ∏¶ æÀ∑¡¡ÿ¥Ÿ. 
+	// ∞Ì∫Œ«œ ªÛ≈¬(CPU 80%¿ÃªÛ¿ª ªÁøÎ«œ¥¬ ªÛ»≤)ø°º≠¥¬ ªÁøÎ«œ¡ˆ æ ±‚∏¶ ±«¿Â«—¥Ÿ.
+	// ¡¶æ»µ» ææÓ ¡ﬂ ¡ˆø¯ ∞°¥…«— ∞Õ¿Ã æ¯¿ª ∞ÊøÏ 406(Not Acceptable) ø°∑Ø∏¶ πﬂª˝«—¥Ÿ.
 	//
-	// Ïòà)
+	// øπ)
 	//       Accept-Language: kr
 	//       Accept-Language: *
 	//       Accept-Language: kr;q=1.0, en;q=0.8, jp;q=0.1
@@ -676,13 +632,13 @@ void _append_accept_lnaguae(shared_buffer& /*_buffer*/)
 void _append_accept_charset(shared_buffer& /*_buffer*/)
 {
 	//
-	// Accept-Charset ÌååÎùºÎØ∏ÌÑ∞
+	// Accept-Charset ∆ƒ∂ÛπÃ≈Õ
 	//
-	// ÌÅ¥ÎùºÏù¥Ïñ∏Ìä∏(ÏöîÏ≤≠Ïûê)Í∞Ä Ïù¥Ìï¥Ìï† Ïàò ÏûàÎäî Ï∫êÎ¶≠ÌÑ∞ÏÖãÏùÑ ÏïåÎ†§Ï§ÄÎã§. 
-	// ÏÑúÎ≤ÑÏ∏°ÏùÄ Ïù¥ Ï†úÏïàÎêú Í≤É Ï§ë ÌïòÎÇòÎ•º ÏÑ†ÌÉùÌï¥ 'Content-Type' ÏùëÎãµ Ìó§ÎçîÎ°ú ÏÑ†ÌÉùÎêú Ï∫êÎ¶≠ÌÑ∞ÏÖãÏùÑ ÏïåÎ†§Ï§ÄÎã§.
-	// Ï†úÏïàÎêú Ï∫êÎ¶≠ÌÑ∞ÏÖã Ï§ë ÏßÄÏõê Í∞ÄÎä•Ìïú Í≤ÉÏù¥ ÏóÜÏùÑ Í≤ΩÏö∞ 406(Not Acceptable) ÏóêÎü¨Î•º Î∞úÏÉùÌïúÎã§.
+	// ≈¨∂Û¿Ãæ∆Æ(ø‰√ª¿⁄)∞° ¿Ã«ÿ«“ ºˆ ¿÷¥¬ ƒ≥∏Ø≈Õº¬¿ª æÀ∑¡¡ÿ¥Ÿ. 
+	// º≠πˆ√¯¿∫ ¿Ã ¡¶æ»µ» ∞Õ ¡ﬂ «œ≥™∏¶ º±≈√«ÿ 'Content-Type' ¿¿¥‰ «Ï¥ı∑Œ º±≈√µ» ƒ≥∏Ø≈Õº¬¿ª æÀ∑¡¡ÿ¥Ÿ.
+	// ¡¶æ»µ» ƒ≥∏Ø≈Õº¬ ¡ﬂ ¡ˆø¯ ∞°¥…«— ∞Õ¿Ã æ¯¿ª ∞ÊøÏ 406(Not Acceptable) ø°∑Ø∏¶ πﬂª˝«—¥Ÿ.
 	//
-	// Ïòà)
+	// øπ)
 	//       Accept-Charset: utf-8
 	//       Accept-Charset: utf-8, iso-8859-1
 	//       Accept-Charset: utf-8, iso-8859-1;q=0.5, *;q=0.1
@@ -705,102 +661,146 @@ void net::http_request::set_request(
 		const std::string_view			_object,
 		const std::string_view			_referer,
 		const std::vector<std::string_view>& _vector_header,
-		const buffer_view				_buffer_optinal,
+		const buffer_view				_buffer_optional,
 		const std::vector<std::string_view>& _vector_accept_type,
 		bool							_is_crypt
 	)
 {
-	// 1) request messageÎ•º ÏûëÏÑ±ÌïòÎÇü.
-	auto buf_temp = alloc_shared_buffer(8192LL + _buffer_optinal.size());
+	// 1) size of the request (request line + headers + body)
+	size_t size_request = 128 + _version.size() + _object.size() + _host_name.size() + _referer.size() + _buffer_optional.size();
+	for (auto& iter : _vector_header)
+		size_request += iter.size() + 2;
+	for (auto& iter : _vector_accept_type)
+		size_request += iter.size() + 1;
 
-	// 2) message Header
-	buf_temp.append_text<char>(to_string<char>(_method_type));				// GET/POST/ ...
-	buf_temp.append_text<char>(" "sv);										// space
-	buf_temp.append_text<char>((_object.empty() == false) ? _object : "/"sv);	// space
-	buf_temp.append_text<char>(" "sv);										// space
-	buf_temp.append_text<char>(_version);									// HTTP/1.1
+	auto buf_temp = alloc_shared_buffer(size_request);
+
+	// 2) request line
+	buf_temp.append_text<char>(to_string(_method_type));						// GET/POST/ ...
+	buf_temp.append_text<char>(" "sv);
+	buf_temp.append_text<char>((_object.empty() == false) ? _object : "/"sv);
+	buf_temp.append_text<char>(" "sv);
+	buf_temp.append_text<char>(_version);										// HTTP/1.1
 	buf_temp.append_text<char>("\r\n"sv);
 
-	// 3) headersÎ•º Ï∂îÍ∞ÄÌïúÎã§.
+	// 3) headers (except "Content-Length" : written below from the body)
 	_append_headers(buf_temp, _vector_header);
 
-	// 4) host and portÎ•º ÏÑ§Ï†ïÌïúÎã§.
+	// 4) host and port
 	_append_host(buf_temp, _host_name, _host_port);
 
-	// 5) refererÎ•º Ï∂îÍ∞ÄÌïúÎã§.
+	// 5) referer
 	_append_referer(buf_temp, _referer);
 
-	// 65) accept typeÏùÑ Ï∂îÍ∞ÄÌïúÎã§.
+	// 6) accept types
 	_append_accept_type(buf_temp, _vector_accept_type);
 	_append_accept_encoding(buf_temp);
 	_append_accept_lnaguae(buf_temp);
 	_append_accept_charset(buf_temp);
 
-	// 7) end header
-	buf_temp.append_text<char>("\r\n"sv);
-
-	// 8) add optional
-	if (_buffer_optinal.size() != 0 || _method_type != eHTTP_METHOD::GET_)
+	// 7) "Content-Length" : the size of the body exactly (POST/PUT/PATCH always : "Content-Length: 0" if no body)
+	if (_buffer_optional.size() != 0 || _method_type == eHTTP_METHOD::POST_ || _method_type == eHTTP_METHOD::PUT_ || _method_type == eHTTP_METHOD::PATCH_)
 	{
-		// - Add Context
-		buf_temp.append(_buffer_optinal.size(), _buffer_optinal.data());
-		buf_temp.append_text<char>("\r\n\r\n"sv);
+		char temp_content_length[64]{ 0 };
+		const auto length = std::snprintf(temp_content_length, std::size(temp_content_length), "Content-Length: %zu\r\n", _buffer_optional.size());
+		buf_temp.append_text<char>(std::string_view(temp_content_length, static_cast<size_t>(length)));
 	}
 
-	// 9) End Optinal
-	buf_temp[buf_temp.size()] = 0;
+	// 8) "Connection: close" if not given (the client closes the connection after the response)
+	if (_has_header(_vector_header, "connection"sv) == false)
+		buf_temp.append_text<char>("Connection: close\r\n"sv);
 
-	// 10) AddressÎ•º ÏñªÎäîÎã§.
+	// 9) end of the header
+	buf_temp.append_text<char>("\r\n"sv);
+
+	// 10) body (as it is : nothing is appended after it, Content-Length is its size)
+	if (_buffer_optional.size() != 0)
+		buf_temp.append(_buffer_optional.size(), _buffer_optional.data());
+
+	// 11) the address of the host
 	net::sockaddr addr_host = from_string(_host_name, _host_port);
 
-	// 11) Î≤ÑÌçºÎ•º ÏÑ§Ï†ïÌïúÎã§.
+	// 12) set
 	m_buffer_request = std::move(buf_temp);
 	m_address_host = addr_host;
 	m_is_crypt = _is_crypt;
+	m_host_name = _host_name;
+	m_http_method = _method_type;		// - the response of HEAD has no body
 }
 
 result_code net::http_request::process_request()
 {
-	// 1) connectorÎ•º ÏÉùÏÑ±ÌïúÎã§.
-	auto psocket_http = make_object<net::socket::http_client>();
+	// 1) not completed (a request object can be requested again)
+	m_is_completed.store(false, std::memory_order_release);
 
-	// 2) FlagÏóê Îî∞Îùº...
-	psocket_http->prepare_ssl(m_is_crypt);
+	// declare)
+	bool result = false;
 
-	// 3) connectÎ•º ÏöîÏ≤≠ÌïúÎã§.
-	auto result = psocket_http->connect(this);
+	try
+	{
+		// 2) the socket
+		auto psocket_http = make_object<net::socket::http_client>();
 
-	// check) Ïã§Ìå®ÌñàÏúºÎ©¥ Ï¢ÖÎ£å...
-	RETURN_IF(result == false, eRESULT::FAIL);
+		// 3) ssl
+		psocket_http->prepare_ssl(m_is_crypt, m_host_name);
 
-	// return) 
+		// 4) connect (the response comes by process_response)
+		result = psocket_http->connect(this);
+	}
+	catch (...)
+	{
+		// - completed (wait() returns)
+		_process_complete();
+
+		// reraise)
+		throw;
+	}
+
+	// check) failed : completed without the response (wait() returns)
+	if(result == false)
+	{
+		_process_complete();
+		return eRESULT::FAIL;
+	}
+
+	// return)
 	return eRESULT::SUCCESS;
+}
+
+void net::http_request::_process_complete() noexcept
+{
+	// - the flag is set in the lock : a waiter checking the flag can't miss the notification
+	{
+		std::lock_guard<lock_object> cs(m_lockable_wait);
+		m_is_completed.store(true, std::memory_order_release);
+	}
+	m_cv_complete.notify_all();
 }
 
 int net::http_request::process_response(sMESSAGE& _msg)
 {
-	// check) 
+	// check)
 	CGASSERT_ERROR(_msg.message == eMESSAGE::SYSTEM::HTTP_RESPONSE);
 
-	// 1) MESSAGEÎ•º castingÌïúÎã§.
+	// 1) cast
 	auto& msg_http = static_cast<sMESSAGE_HTTP_RESPONSE&>(_msg);
 
-	// 2) ÏÑ§Ï†ï
+	// 2) set
 	m_buffer_response = msg_http.buf_message;
 	msg_http.method = m_http_method;
 
-	// 3) functionÏùÑ Ìò∏Ï∂úÌïúÎã§.
+	// 3) call the function
 	if(m_function_on_response)
 	{
 		m_function_on_response(msg_http);
 	}
 
-	// 4) notify completion
+	// 4) notify completion (after the function)
 	if (msg_http.is_completed)
 	{
-		m_cv_complete.notify_one();
+		_process_complete();
 	}
 
-	// return)  
+	// return)
 	return 1;
 }

@@ -124,20 +124,17 @@ result_code socket_tcp::on_message_UPDATE_RESPONSE(sMESSAGE_NETWORK& _msg)
 				pupdate_receiver->set_transmitter(this);
 
 				// - destination folder를 설정한다.
-				pupdate_receiver->set_root_path("./destination"sv);
+				pupdate_receiver->set_root_path("./destination");
 
 				// - set lambda functions
 				pupdate_receiver->set_function_update_begin([=](update::receiver_lambda* /*_pupdate_receiver*/, const update::sUPDATE_REQUEST_INFO& _update_request_info) {
-					std::cout << " @ update begin  " << NFMT::format("{} files, {} bytes "sv, _update_request_info.total_count, _update_request_info.total_bytes) << std::endl;
-					struct UPDATE_REQUEST_INFO
-					{
-					};
+						std::cout << " @ update begin  " << _update_request_info.total_count << " files," << _update_request_info.total_bytes << " bytes " << std::endl;
 					});
 
 				pupdate_receiver->set_function_update_end([=](update::receiver_lambda* _pupdate_receiver, eRESULT /*_result*/) {
 					std::cout << " @ update complete" << std::endl;
-					std::cout << "   - total transfered files: " << NFMT::format("{}", _pupdate_receiver->get_total_transfered_files()) << std::endl;
-					std::cout << "   - total transfered bytes: " << NFMT::format("{}", _pupdate_receiver->get_total_transfered_bytes()) << std::endl;
+					std::cout << "   - total transfered files: " << _pupdate_receiver->get_total_transfered_files() << std::endl;
+					std::cout << "   - total transfered bytes: " << _pupdate_receiver->get_total_transfered_bytes() << std::endl;
 					});
 
 				pupdate_receiver->set_function_updatable_begin([=](update::receiver_lambda* /*_pupdate_receiver*/, update::Ireceivable* _preceivable, uint64_t /*_pos_begin*/) {

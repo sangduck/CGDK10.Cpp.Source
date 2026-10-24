@@ -27,7 +27,7 @@ namespace CGDK
 // 1. Iconnective은~
 //    1) 많은 connectable의 연결을 수행을 처리해주는 기능을 수행을 정의한다.
 //    2) connectable을 상속받은 객체를 연결을 해준다.
-//    3) 대표적인 것으로 TCP의 acceptor와 Connetor가 있다.
+//    3) 대표적인 것으로 TCP의 acceptor와 Connector가 있다.
 //       connective::acceptor는 연결을 받아 Iconnectable을 연결시켜주는 것이고
 //       connective::connector는 클라이언트로 연결을 시도해주는 것이다.
 //    4) 이 클래스를 상속받아 생성된 객체는 모두 connective::manager에 등록되며
@@ -66,7 +66,7 @@ public:
 	[[nodiscard]] object_ptr<TSTART> start_object() const noexcept { return dynamic_pointer_cast<TSTART>(this->m_pobject_start); }
 			void				set_start_object(Ireferenceable* _pobject) noexcept { this->m_pobject_start = _pobject;}
 
-	// 2) public finctions
+	// 2) public functions
 	[[nodiscard]] virtual std::size_t allocated_socket_count() const noexcept PURE;
 	[[nodiscard]] virtual std::size_t max_socket_count() const noexcept PURE;
 	virtual void				set_max_socket_count(std::size_t _max_allocate) noexcept PURE;

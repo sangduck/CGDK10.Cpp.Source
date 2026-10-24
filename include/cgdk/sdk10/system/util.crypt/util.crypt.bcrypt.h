@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                              Utility Classes                              *
+//*                          Utinity.Crypto Classes                           *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *

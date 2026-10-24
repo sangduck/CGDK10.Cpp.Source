@@ -22,7 +22,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{FD1C1343-18CC-4E0F-A817-724509415453}</ProjectGuid>
     <Keyword>MFCDLLProj</Keyword>
-    <RootNamespace>CGDKnetworksocketcontrolsMFCvs16</RootNamespace>
+    <RootNamespace>CGDKnetworksocketcontrolsMFC</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>CGDK.net.socket.mfc_controls</ProjectName>
   </PropertyGroup>

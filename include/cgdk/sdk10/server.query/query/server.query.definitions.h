@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                           Server Query Classes                            *
+//*                               server.query                                *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -84,6 +84,12 @@ enum class eDB_PROVIDER : uint32_t
 	MYSQL_8				 = 0x0000020e,	// {MySQL ODBC 8.0 Driver}
 	MYSQL_8_ANSI		 = 0x0000020f,	// {MySQL ODBC 8.0 ANSI Driver}
 	MYSQL_8_UNICODE		 = 0x00000210,	// {MySQL ODBC 8.0 Unicode Driver}
+	MYSQL_9				 = 0x00000211,	// {MySQL ODBC 9.0 Driver}
+	MYSQL_9_ANSI		 = 0x00000212,	// {MySQL ODBC 9.0 ANSI Driver}
+	MYSQL_9_UNICODE		 = 0x00000213,	// {MySQL ODBC 9.0 Unicode Driver}
+	MYSQL_9_7			 = 0x00000214,	// {MySQL ODBC 9.7 Driver}
+	MYSQL_9_7_ANSI		 = 0x00000215,	// {MySQL ODBC 9.7 ANSI Driver}
+	MYSQL_9_7_UNICODE	 = 0x00000216,	// {MySQL ODBC 9.7 Unicode Driver}
 	MARIADB				 = 0x00000301,	// {MariaDB ODBC Driver}
 	MARIADB_3_1			 = 0x00000302,	// {MariaDB ODBC 3.01 Driver}
 	EXCEL				 = 0x00000401,	// {Microsoft Excel Driver}

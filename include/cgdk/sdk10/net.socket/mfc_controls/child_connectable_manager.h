@@ -75,7 +75,7 @@ protected:
 			CListCtrl			m_list_connectable;
 
 			object_ptr<net::io::Iconnectable_manager>	m_pConnectableManager;
-			lockable<>			m_lockable_connectable_manager;
+	mutable	lock_object			m_lockable_connectable_manager;
 
 			void				EnableControls(bool p_bStatus);
 

@@ -31,7 +31,7 @@ class server_system::Nservice :
 	public						Iservice,
 	public						object::Ninitializable_startable,
 	public						object::Npausable,
-	public						net::io::messageable::Nbase,
+	virtual public				Imessageable,
 	virtual public				Nmessage_transmitter
 {
 public:
@@ -39,19 +39,17 @@ public:
 			Nservice(const std::string_view _name) noexcept;
 	virtual ~Nservice() noexcept;
 
-	// 1) server setting Info (from HostAgent)
-	[[nodiscard]] const auto&	info() const noexcept { return this->m_service_instance_info; }
-	[[nodiscard]] auto&			setting() noexcept { return this->m_service_setting;}
-	[[nodiscard]] const auto&	setting() const noexcept { return this->m_service_setting;}
-			void				setting(server_admin::sSERVICE_SETTING&& _service_setting);
+	[[nodiscard]] auto&			host_instance() noexcept { return this->m_phost_instance; }
+	[[nodiscard]] const			auto& host_instance() const noexcept { std::lock_guard lock(this->m_lockable_setting); return this->m_phost_instance; }
+			void				host_instance(object_ptr<server_system::host::instance_local>&& _phost_instance);
 
-	// 2) wait
+	[[nodiscard]] auto			get_service_instance() const noexcept { std::lock_guard lock(this->m_lockable_setting); return this->m_pservice_instance.get_object_ptr(); }
+			void				set_service_instance(own_ptr<server_system::service::instance_local>&& _pservice_instance);
 			bool				wait_destroy(const chrono::tick::duration& _wait = chrono::tick::duration::max());
 
 protected:
-	virtual	void				on_service_setting(context& _context);
-	virtual void				on_service_setting(const server_admin::sSERVICE_SETTING& _server_setting);
-	virtual	void				on_service_info(const shared_buffer& _info_server);
+	virtual	void				on_initialize_setting(context& _context);
+	virtual void				on_start_setting(context& _context);
 
 	virtual	result_code			process_initialize(context& _context) override;
 	virtual	result_code			process_destroy() noexcept override;
@@ -61,20 +59,32 @@ protected:
 	virtual	void				process_resume() override;
 
 	virtual result_code			_process_initializing(context& _context) override;
+	virtual void				_process_initializing_service_instance(context& _context);
+	virtual void				_process_initializing_service_setting(context& _context);
+	virtual void				_process_initializing_loggers(context& _context);
+	virtual void				_process_initialize_complete(context& _context) override;
 	virtual result_code			_process_starting(context& _context) override;
+	virtual	void				_process_start_complete(context& _context) override;
+	virtual	void				_process_stop_complete() noexcept override;
+	virtual	void				_process_destroy_complete() noexcept override;
 
 	virtual	void				process_state_changed(eOBJECT_STATE _state_new, eOBJECT_STATE _state_old) override;
 
-	virtual	void				process_set_name(std::string_view _name) override { this->m_service_setting.nickname = _name; }
-	[[nodiscard]] virtual bool	process_is_this(std::string_view _str_compare) const noexcept override { return this->m_service_setting.nickname == _str_compare; }
-	[[nodiscard]] virtual std::string_view process_get_name() const noexcept override { return this->m_service_setting.nickname; }
+	virtual	void				process_set_name(std::string_view _name) override;
+	[[nodiscard]] virtual bool	process_is_this(std::string_view _str_compare) const noexcept override;
+	[[nodiscard]] virtual auto	process_get_name() const noexcept -> std::string override;
 
-	// 1) admin server에서 설정한 정보.(from Host Agent)
-			server_admin::sSERVICE_SETTING m_service_setting;
-			server_admin::sSERVICE_INSTANCE_INFO m_service_instance_info;
+	[[nodiscard]] virtual auto	process_alloc_service_instance_local(context& _context) -> own_ptr<server_system::service::instance_local>;
+	[[nodiscard]] virtual auto	process_alloc_service_instance_manager(context& _context) -> own_ptr<server_system::service::manager>;
+	[[nodiscard]] virtual auto	process_alloc_host_instance_manager(context& _context) -> own_ptr<server_system::host::manager>;
+	
+	mutable	lock_object			m_lockable_setting;
+			object_ptr<server_system::host::instance_local> m_phost_instance;
+			own_ptr<server_system::service::instance_local> m_pservice_instance;
+			std::string			m_name_pending;		// name set before the service instance is created (applied when it is created)
+			std::vector<own_ptr<Ilogger>> m_vector_logger;
 
-	// 2) cv destroy
-			std::mutex				m_lock_destroy;
+			std::mutex			m_lockable_destroy;
 			std::condition_variable	m_cv_destroy;
 };
 

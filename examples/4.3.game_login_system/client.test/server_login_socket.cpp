@@ -4,13 +4,13 @@
 void ServerLogin::CSocket::OnRequestConnect(LPCSOCKADDR_IN /*_SockAddr*/)
 {
 	// 1) 접속 시도 시간을 얻는다.
-	m_perforanceConnect.CheckTimeStart();
+	m_performanceConnect.CheckTimeStart();
 }
 
 void ServerLogin::CSocket::OnConnect(CGNet::IO::IConnective* /*_pConnective*/)
 {
 	// 1) 접속 완료 시간을 얻는다.
-	m_perforanceConnect.CheckTimeEnd();
+	m_performanceConnect.CheckTimeEnd();
 
 	// 2) 아이디를 얻는다.
 	GenerateLoginID();
@@ -23,7 +23,7 @@ void ServerLogin::CSocket::OnConnect(CGNet::IO::IConnective* /*_pConnective*/)
 void ServerLogin::CSocket::OnFailConnect(CGNet::IO::IConnective* /*_pConnective*/, uint32_t /*_Reason*/)
 {
 	// 1) 접속 완료 시간을 얻는다.
-	m_perforanceConnect.CheckTimeEnd();
+	m_performanceConnect.CheckTimeEnd();
 }
 
 void ServerLogin::CSocket::OnDisconnect(uint32_t /*_Reason*/)
@@ -55,7 +55,7 @@ void ServerLogin::CSocket::GenerateLoginID()
 {
 	//if (g_IsGuildTest == true )	// 길드 테스트용.
 	//{
-	//	scoped_lock(m_csGuildTestLock)
+	//	SCOPED_LOCK(m_csGuildTestLock)
 	//	{
 	//		static int nUserNameIndex_1 = 4000;
 

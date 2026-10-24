@@ -36,7 +36,7 @@ class CGMFCCONTROL_EXT_CLASS CDialog_reference_status : public CDialogEx
 
 // constructor/destructor)
 public:
-			CDialog_reference_status(Ireferenceable* _prefernece=nullptr, CWnd* _pnode_parent = nullptr);   // standard constructor
+			CDialog_reference_status(Ireferenceable* _preference=nullptr, CWnd* _pnode_parent = nullptr);   // standard constructor
 	virtual ~CDialog_reference_status();
 
 // MFC) Virtual Functions
@@ -46,7 +46,7 @@ protected:
 
 // public) 
 public:
-			BOOL				CreateModaless(Ireferenceable* _prefernece=nullptr, CWnd* _pparent=nullptr);
+			BOOL				CreateModaless(Ireferenceable* _preference=nullptr, CWnd* _pparent=nullptr);
 			void				EnableControl(BOOL _enable=TRUE);
 
 // MFC) Windows Message
@@ -65,12 +65,13 @@ private:
 // implementation) 
 protected:
 			CComboBox			m_combo_update_interval;
-	static int					m_update_inverval;
-			CChild_reference_list m_child_refernece_list;
-			lockable<object_ptr<Ireferenceable>> m_pobject;
+	static int					m_update_interval;
+			CChild_reference_list m_child_reference_list;
+			lock_object			m_lockable_pobject;
+			object_ptr<Ireferenceable> m_pobject;
 
-			void				set_object(Ireferenceable* _prefernece);
-			void				reset_object();
+			void				set_object(Ireferenceable* _preference);
+			void				reset_object() noexcept;
 			void				SetUpdateInterval(int _Interval);
 			void				UpdateThreadStatus();
 			void				SetViewStatus(bool _enable_sustain);

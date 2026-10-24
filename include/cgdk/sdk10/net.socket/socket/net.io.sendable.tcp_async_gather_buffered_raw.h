@@ -76,7 +76,7 @@ protected:
 			QUEUE_SEND			m_queue_sending;
 			bool				m_flag_sending{ false };
 			object_ptr<executable_send_buffer_list> m_pexecutable_send_buffer_list;
-			lockable<>			m_lockable_sending;
+	mutable	lock_object			m_lockable_sending;
 			void				_process_prepare_send_buffers();
 };
 

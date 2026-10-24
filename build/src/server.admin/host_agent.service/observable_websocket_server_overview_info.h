@@ -26,7 +26,7 @@
 class observable_websocket_peer_overview_info : public Iobservable_websocket
 {
 protected:
-	explicit observable_websocket_peer_overview_info(const std::string_view _name);
+			observable_websocket_peer_overview_info();
 	virtual ~observable_websocket_peer_overview_info();
 
 public:
@@ -44,5 +44,5 @@ private:
 			bool				m_is_count_log_count_updating;
 			std::array<size_t, MAX_LOG_TYPE> m_array_log_count_last;
 public:
-			server_admin::instance_Iservice* m_pservice_entity = nullptr;
+			server_system::instance_service* m_pservice_entity = nullptr;
 };

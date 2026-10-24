@@ -1,7 +1,7 @@
 #include "pch.h"
 
 
-void _append_network_connective_entity(buffer& _buf_dest, const server_admin::connective_info_snap& _connective_info_snap)
+void _append_network_connective_entity(buffer& _buf_dest, const server_system::connective_info_snap& _connective_info_snap)
 {
 	// 2) "Name"
 	_buf_dest.append_text<char>("<td><span style='font-size:14px;font-weight:bold;overflow-x:hidden;' title=\"");
@@ -13,13 +13,13 @@ void _append_network_connective_entity(buffer& _buf_dest, const server_admin::co
 
 	// 3) STATUS
 	_buf_dest.append_text<char>("<td>");
-	_buf_dest.append_text<char>(to_string<char>(_connective_info_snap.status.state));
+	_buf_dest.append_text<char>(to_string(_connective_info_snap.status.state));
 	_buf_dest.append_text<char>("</td>");
 
 	// 4) BIND ADDRESS
 	_buf_dest.append_text<char>("<td>");
 	if (_connective_info_snap.status.state > eSOCKET_STATE::CLOSED)
-		_buf_dest.append_text<char>(to_string<char>(_connective_info_snap.status.addr_local));
+		_buf_dest.append_text<char>(to_string(_connective_info_snap.status.addr_local));
 	else
 		_buf_dest.append_text<char>(" - ");
 	_buf_dest.append_text<char>("</td>");
@@ -69,7 +69,7 @@ void _append_network_connective_entity(buffer& _buf_dest, const server_admin::co
 //shared_buffer _make_webmessage_network_entity_add(time_event::Ientity* _network_info)
 //{
 //	// 1) get service instance 
-//	object_ptr<service> pservice = service::instance();
+//	object_ptr<service> pservice = ::service::instance();
 //
 //	// 2) buffer
 //	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -93,7 +93,7 @@ void _append_network_connective_entity(buffer& _buf_dest, const server_admin::co
 //		buf_result.append<char>('A');
 //
 //		// - tr element id
-//		auto tr_element_id = NFMT::format("cv{}", reinterpret_cast<uint64_t>(_network_info));
+//		auto tr_element_id = CGDK::stream_string("cv", reinterpret_cast<uint64_t>(_network_info));
 //
 //		// - append element_id
 //		buf_result.append_text<char>(tr_element_id);
@@ -114,7 +114,7 @@ void _append_network_connective_entity(buffer& _buf_dest, const server_admin::co
 //shared_buffer _make_webmessage_network_entity_update(time_event::Ientity* _network_info, uint64_t /*_flag*/)
 //{
 //	// 1) 
-//	object_ptr<service> pservice = service::instance();
+//	object_ptr<service> pservice = ::service::instance();
 //
 //	// 2) buffer
 //	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -138,7 +138,7 @@ void _append_network_connective_entity(buffer& _buf_dest, const server_admin::co
 //		buf_result.append<char>('U');
 //
 //		// - tr element id
-//		auto tr_element_id = NFMT::format("cv{}", reinterpret_cast<uint64_t>(_network_info));
+//		auto tr_element_id = CGDK::stream_string("cv", reinterpret_cast<uint64_t>(_network_info));
 //
 //		// - <tr>
 //		buf_result.append_text<char>(tr_element_id);
@@ -159,7 +159,7 @@ void _append_network_connective_entity(buffer& _buf_dest, const server_admin::co
 //shared_buffer _make_webmessage_network_entity_remove(time_event::Ientity* _network_info)
 //{
 //	// 1) 
-//	object_ptr<service> pservice = service::instance();
+//	object_ptr<service> pservice = ::service::instance();
 //
 //	// 2) buffer
 //	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -177,7 +177,7 @@ void _append_network_connective_entity(buffer& _buf_dest, const server_admin::co
 //		buf_result.append<char>('D');
 //
 //		// - tr element id
-//		auto tr_element_id = NFMT::format("cv{}", reinterpret_cast<uint64_t>(_network_info));
+//		auto tr_element_id = CGDK::stream_string("cv", reinterpret_cast<uint64_t>(_network_info));
 //
 //		// - append tr_element_id
 //		buf_result.append_text<char>(tr_element_id);
@@ -188,7 +188,7 @@ void _append_network_connective_entity(buffer& _buf_dest, const server_admin::co
 //	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 //}
 
-void _append_network_binder_entity(buffer& _buf_dest, const server_admin::socket_info_snap& _binder_info_snap)
+void _append_network_binder_entity(buffer& _buf_dest, const server_system::socket_info_snap& _binder_info_snap)
 {
 	// 2) "Name"
 	_buf_dest.append_text<char>("<td><span style='font-size:14px;font-weight:bold;overflow-x:hidden;' title=\"");
@@ -206,13 +206,13 @@ void _append_network_binder_entity(buffer& _buf_dest, const server_admin::socket
 
 	// 4) STATUS
 	_buf_dest.append_text<char>("<td>");
-	_buf_dest.append_text<char>(to_string<char>(_binder_info_snap.updatable.state));
+	_buf_dest.append_text<char>(to_string(_binder_info_snap.updatable.state));
 	_buf_dest.append_text<char>("</td>");
 
 	// 5) ADDRESS
 	_buf_dest.append_text<char>("<td>");
 	if(_binder_info_snap.updatable.state >= eSOCKET_STATE::BINDED)
-		_buf_dest.append_text<char>(to_string<char>(_binder_info_snap.updatable.addr_remote));
+		_buf_dest.append_text<char>(to_string(_binder_info_snap.updatable.addr_remote));
 	else
 		_buf_dest.append_text<char>(" - ");
 	_buf_dest.append_text<char>("</td>");
@@ -220,29 +220,29 @@ void _append_network_binder_entity(buffer& _buf_dest, const server_admin::socket
 	// 6) ESTABLIISH
 	_buf_dest.append_text<char>("<td>");
 	if(_binder_info_snap.updatable.state >= eSOCKET_STATE::BINDED)
-		_buf_dest.append_text<char>(to_string<char>(_binder_info_snap.updatable.time_bind, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}"));
+		_buf_dest.append_text<char>(to_string(_binder_info_snap.updatable.time_bind, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}"));
 	else
 		_buf_dest.append_text<char>(" -");
 	_buf_dest.append_text<char>("</td>");
 
 	// 7) SEND - messages
 	_buf_dest.append_text<char>("<td align='right'>");
-	_buf_dest.append_text<char>(to_string_scaled<char>(_binder_info_snap.updatable.traffic.count_sended_message));
+	_buf_dest.append_text<char>(to_string_scaled(_binder_info_snap.updatable.traffic.count_sent_message));
 	_buf_dest.append_text<char>("</td>");
 
 	// 8) SEND - bytes
 	_buf_dest.append_text<char>("<td align='right'>");
-	_buf_dest.append_text<char>(to_string_scaled_byte<char>(_binder_info_snap.updatable.traffic.count_sended_bytes));
+	_buf_dest.append_text<char>(to_string_scaled_byte(_binder_info_snap.updatable.traffic.count_sent_bytes));
 	_buf_dest.append_text<char>("</td>");
 
 	// 9) RECEIVE - messages
 	_buf_dest.append_text<char>("<td align='right'>");
-	_buf_dest.append_text<char>(to_string_scaled<char>(_binder_info_snap.updatable.traffic.count_received_message));
+	_buf_dest.append_text<char>(to_string_scaled(_binder_info_snap.updatable.traffic.count_received_message));
 	_buf_dest.append_text<char>("</td>");
 
 	// 10) RECEIVE - bytes
 	_buf_dest.append_text<char>("<td align='right'>");
-	_buf_dest.append_text<char>(to_string_scaled_byte<char>(_binder_info_snap.updatable.traffic.count_received_bytes));
+	_buf_dest.append_text<char>(to_string_scaled_byte(_binder_info_snap.updatable.traffic.count_received_bytes));
 	_buf_dest.append_text<char>("</td>");
 
 	// 11) ERROR
@@ -254,7 +254,7 @@ void _append_network_binder_entity(buffer& _buf_dest, const server_admin::socket
 	_buf_dest.append_text<char>("</td>");
 }
 
-shared_buffer _make_webmessage_connective_list_add(const std::vector<server_admin::connective_info_snap>& _vector_connective_info, uint64_t /*_flag*/)
+shared_buffer _make_webmessage_connective_list_add(const std::vector<server_system::connective_info_snap>& _vector_connective_info, uint64_t /*_flag*/)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -270,7 +270,7 @@ shared_buffer _make_webmessage_connective_list_add(const std::vector<server_admi
 		buffer buf_text = buf_temp;
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("cv{}", iter.status.id);
+		auto tr_element_id = CGDK::stream_string("cv", iter.status.id);
 
 		// - append tr data
 		_append_network_connective_entity(buf_text, iter);
@@ -294,7 +294,7 @@ shared_buffer _make_webmessage_connective_list_add(const std::vector<server_admi
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-shared_buffer _make_webmessage_connective_list_update(const std::vector<server_admin::connective_info_snap>& _vector_connective_info, uint64_t /*_flag*/)
+shared_buffer _make_webmessage_connective_list_update(const std::vector<server_system::connective_info_snap>& _vector_connective_info, uint64_t /*_flag*/)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -310,7 +310,7 @@ shared_buffer _make_webmessage_connective_list_update(const std::vector<server_a
 		buffer buf_text = buf_temp;
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("cv{}", iter.status.id);
+		auto tr_element_id = CGDK::stream_string("cv", iter.status.id);
 
 		// - append command
 		buf_result.append<char>('U');
@@ -324,12 +324,12 @@ shared_buffer _make_webmessage_connective_list_update(const std::vector<server_a
 		buf_result.append<char>('\n');
 
 		// - STATUS
-		buf_result.append_text<char>(to_string<char>(iter.status.state));
+		buf_result.append_text<char>(to_string(iter.status.state));
 		buf_result.append<char>('\n');
 
 		// - BIND ADDRESS
 		if (iter.status.state > eSOCKET_STATE::CLOSED)
-			buf_result.append_text<char>(to_string<char>(iter.status.addr_local));
+			buf_result.append_text<char>(to_string(iter.status.addr_local));
 		else
 			buf_result.append_text<char>(" - ");
 		buf_result.append<char>('\n');
@@ -373,7 +373,7 @@ shared_buffer _make_webmessage_connective_list_update(const std::vector<server_a
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-shared_buffer _make_webmessage_binder_list_add(const std::vector<server_admin::socket_info_snap>& _vector_binder_info, uint64_t /*_flag*/)
+shared_buffer _make_webmessage_binder_list_add(const std::vector<server_system::socket_info_snap>& _vector_binder_info, uint64_t /*_flag*/)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -389,7 +389,7 @@ shared_buffer _make_webmessage_binder_list_add(const std::vector<server_admin::s
 		buffer buf_text = buf_temp;
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("bi{}", iter.updatable.id);
+		auto tr_element_id = CGDK::stream_string("bi", iter.updatable.id);
 
 		// - append tr data
 		_append_network_binder_entity(buf_text, iter);
@@ -413,7 +413,7 @@ shared_buffer _make_webmessage_binder_list_add(const std::vector<server_admin::s
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-shared_buffer _make_webmessage_binder_list_update(const std::vector<server_admin::socket_info_snap>& _vector_binder_info, uint64_t /*_flag*/)
+shared_buffer _make_webmessage_binder_list_update(const std::vector<server_system::socket_info_snap>& _vector_binder_info, uint64_t /*_flag*/)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -426,7 +426,7 @@ shared_buffer _make_webmessage_binder_list_update(const std::vector<server_admin
 	for (const auto& iter : _vector_binder_info)
 	{
 		// - tr element id
-		auto tr_element_id = NFMT::format("bi{}", iter.updatable.id);
+		auto tr_element_id = CGDK::stream_string("bi", iter.updatable.id);
 
 		// - append command
 		buf_result.append<char>('U');
@@ -445,37 +445,37 @@ shared_buffer _make_webmessage_binder_list_update(const std::vector<server_admin
 		buf_result.append<char>('\n');
 
 		// 4) STATUS
-		buf_result.append_text<char>(to_string<char>(iter.updatable.state));
+		buf_result.append_text<char>(to_string(iter.updatable.state));
 		buf_result.append<char>('\n');
 
 		// 5) ADDRESS
 		if (iter.updatable.state >= eSOCKET_STATE::BINDED)
-			buf_result.append_text<char>(to_string<char>(iter.updatable.addr_remote));
+			buf_result.append_text<char>(to_string(iter.updatable.addr_remote));
 		else
 			buf_result.append_text<char>(" - ");
 		buf_result.append<char>('\n');
 
 		// 6) ESTABLIISH
 		if (iter.updatable.state >= eSOCKET_STATE::BINDED)
-			buf_result.append_text<char>(to_string<char>(iter.updatable.time_bind, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}"));
+			buf_result.append_text<char>(to_string(iter.updatable.time_bind, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}"));
 		else
 			buf_result.append_text<char>(" -");
 		buf_result.append<char>('\n');
 
 		// 7) SEND - messages
-		buf_result.append_text<char>(to_string_scaled<char>(iter.updatable.traffic.count_sended_message));
+		buf_result.append_text<char>(to_string_scaled(iter.updatable.traffic.count_sent_message));
 		buf_result.append<char>('\n');
 
 		// 8) SEND - bytes
-		buf_result.append_text<char>(to_string_scaled_byte<char>(iter.updatable.traffic.count_sended_bytes));
+		buf_result.append_text<char>(to_string_scaled_byte(iter.updatable.traffic.count_sent_bytes));
 		buf_result.append<char>('\n');
 
 		// 9) RECEIVE - messages
-		buf_result.append_text<char>(to_string_scaled<char>(iter.updatable.traffic.count_received_message));
+		buf_result.append_text<char>(to_string_scaled(iter.updatable.traffic.count_received_message));
 		buf_result.append<char>('\n');
 
 		// 10) RECEIVE - bytes
-		buf_result.append_text<char>(to_string_scaled_byte<char>(iter.updatable.traffic.count_received_bytes));
+		buf_result.append_text<char>(to_string_scaled_byte(iter.updatable.traffic.count_received_bytes));
 		buf_result.append<char>('\n');
 
 		// 11) ERROR
@@ -497,19 +497,19 @@ shared_buffer _make_webmessage_binder_list_update(const std::vector<server_admin
 void observable_websocket_peer_network_info::request_update_webpage_connective(uint64_t /*_flag*/)
 {
 	// check)
-	CGASSERT_ERROR(this->m_pservice_entity != nullptr);
+	CGASSERT_FATAL(this->m_pservice_entity != nullptr);
 
 	// declare)
 	net::local_send_queue send_queue;
 
 	// 1) 모두에게 전송한다.
-	scoped_lock(this->m_lockable_observable)
+	SCOPED_LOCK(this->m_lockable_observable)
 	{
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
 			for (auto& iter : this->m_container_observer)
 			{
-				send_queue.enqueue({ iter.pobserver, _make_webmessage_connective_list_update(this->m_pservice_entity->m_instance.status.vector_connective, iter.pobserver->m_flag_set) });
+				send_queue.enqueue({ iter.pobserver, _make_webmessage_connective_list_update(this->m_pservice_entity->m_instance.info.status.vector_connective, iter.pobserver->m_flag_set) });
 			}
 		}
 	}
@@ -521,19 +521,19 @@ void observable_websocket_peer_network_info::request_update_webpage_connective(u
 void observable_websocket_peer_network_info::request_update_webpage_binder(uint64_t /*_flag*/)
 {
 	// check)
-	CGASSERT_ERROR(m_pservice_entity != nullptr);
+	CGASSERT_FATAL(m_pservice_entity != nullptr);
 
 	// declare)
 	net::local_send_queue send_queue;
 
 	// 1) 모두에게 전송한다.
-	scoped_lock(this->m_lockable_observable)
+	SCOPED_LOCK(this->m_lockable_observable)
 	{
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
 			for (auto& iter : this->m_container_observer)
 			{
-				send_queue.enqueue({ iter.pobserver, _make_webmessage_binder_list_update(this->m_pservice_entity->m_instance.status.vector_binder, iter.pobserver->m_flag_set) });
+				send_queue.enqueue({ iter.pobserver, _make_webmessage_binder_list_update(this->m_pservice_entity->m_instance.info.status.vector_binder, iter.pobserver->m_flag_set) });
 			}
 		}
 	}
@@ -542,10 +542,8 @@ void observable_websocket_peer_network_info::request_update_webpage_binder(uint6
 	send_queue.send();
 }
 
-observable_websocket_peer_network_info::observable_websocket_peer_network_info(const std::string_view _name)	
+observable_websocket_peer_network_info::observable_websocket_peer_network_info()	
 {
-	this->set_name(_name);
-
 	this->m_webpage_str_target = "webpage_server_network_info.htm";
 	this->m_webpage_index = 'D';
 }
@@ -570,10 +568,10 @@ void observable_websocket_peer_network_info::on_observer_registered(socket_webso
 	shared_buffer buf_send_2;
 
 	// 2) make buffer
-	scoped_lock(this->m_pservice_entity->m_cs_instance)
+	SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 	{
-		buf_send_1 = _make_webmessage_connective_list_add(this->m_pservice_entity->m_instance.status.vector_connective, _pobserver->m_flag_set);
-		buf_send_2 = _make_webmessage_binder_list_add(this->m_pservice_entity->m_instance.status.vector_binder, _pobserver->m_flag_set);
+		buf_send_1 = _make_webmessage_connective_list_add(this->m_pservice_entity->m_instance.info.status.vector_connective, _pobserver->m_flag_set);
+		buf_send_2 = _make_webmessage_binder_list_add(this->m_pservice_entity->m_instance.info.status.vector_binder, _pobserver->m_flag_set);
 	}
 
 	// 3) send factory list
@@ -586,7 +584,7 @@ uintptr_t observable_websocket_peer_network_info::on_observer_unregistering(sock
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);
 
-	// 2) uregister _pmenber
+	// 2) unregister _pmenber
 	_pobserver->unregister_messageable(this);
 
 	// return) 

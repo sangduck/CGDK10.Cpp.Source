@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "windows", "windows", "{CEA3F6DE-4BE5-4643-A529-60EC461D11D4}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "cgdk_info.shared", "..\common\cgdk_info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.net.update", "update\CGDK10.net.update.vcxitems", "{3F405DE5-5202-46B7-AF8B-7F5ACEFEC1D6}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.network.update.mfc_controls", "mfc_controls\CGDK10.network.update.controls.mfc.vs17.vcxproj", "{076481F8-9B35-4286-989C-9A48FAA5A553}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.update", "update\CGDK10.net.update.vs17.vcxproj", "{230CCD34-CB6E-4C71-8B63-992C441D469E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{076481F8-9B35-4286-989C-9A48FAA5A553}.Debug|x64.ActiveCfg = Debug|x64
+		{076481F8-9B35-4286-989C-9A48FAA5A553}.Debug|x64.Build.0 = Debug|x64
+		{076481F8-9B35-4286-989C-9A48FAA5A553}.Release|x64.ActiveCfg = Release|x64
+		{076481F8-9B35-4286-989C-9A48FAA5A553}.Release|x64.Build.0 = Release|x64
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Debug|x64.ActiveCfg = Debug|x64
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Debug|x64.Build.0 = Debug|x64
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Release|x64.ActiveCfg = Release|x64
+		{230CCD34-CB6E-4C71-8B63-992C441D469E}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{076481F8-9B35-4286-989C-9A48FAA5A553} = {CEA3F6DE-4BE5-4643-A529-60EC461D11D4}
+		{230CCD34-CB6E-4C71-8B63-992C441D469E} = {CEA3F6DE-4BE5-4643-A529-60EC461D11D4}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {070B8745-6042-4C86-B55F-7D503949CA65}
+	EndGlobalSection
+EndGlobal

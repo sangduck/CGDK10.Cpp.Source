@@ -33,6 +33,7 @@ template <class RECEIVE_HEADER_T = uint32_t, class SEND_HEADER_T = RECEIVE_HEADE
 class net::socket::tcp_buffered :
 	public						net::io::socket::tcp::Ndefault,
 	public						net::io::connectable::tcp::Ndefault,
+	public						net::io::connect_notify::tcp::Ndefault,
 	public						net::io::sendable::Ntcp_async_gather_buffered, // (*)
 	public				 		net::io::send_request::tcp::Ndefault,
 	public						net::io::sender::tcp::Ndefault<SEND_HEADER_T>,
@@ -40,6 +41,7 @@ class net::socket::tcp_buffered :
 	public						net::io::packetable::tcp::Ndefault<RECEIVE_HEADER_T>,
 	public						net::io::messageable::tcp::Ndefault
 {
+	virtual result_code			on_message(sMESSAGE_NETWORK& /*_msg*/) override { return eRESULT::BYPASS; }
 };
 
 

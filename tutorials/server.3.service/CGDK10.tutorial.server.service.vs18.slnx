@@ -1,0 +1,8 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="service.01.simple_service.console\tutorial.server.simple_service.console.vs18.vcxproj" Id="3b92a54d-4c3b-4c52-8928-16c4b5bc9569" />
+  <Project Path="service.02.service_ex.console\tutorial.server.simple.service.vs18.vcxproj" Id="bc2f9b33-a7df-4deb-852a-4fcb837d6e74" />
+  <Project Path="service.03.service_ex.mfc\tutorial.server.service_ex.mfc.vs18.vcxproj" Id="ac102bd1-a150-445d-ab0c-c46b97d03530" />
+</Solution>

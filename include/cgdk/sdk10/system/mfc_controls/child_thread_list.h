@@ -72,7 +72,7 @@ protected:
 			CListCtrl			m_list_thread;
 
 			object_ptr<api::manager_thread>	m_pmanager_thread;
-			lockable<>			m_lockable_manager_thread;
+			lock_object			m_lockable_manager_thread;
 
 			BOOL				m_is_enable_control;
 };

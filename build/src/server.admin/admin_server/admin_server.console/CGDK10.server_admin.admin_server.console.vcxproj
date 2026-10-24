@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -33,7 +33,6 @@
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
-    <Import Project="..\admin_server.shared\CGDK10.server_admin.admin_server.shared.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -44,12 +43,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>../../../../execute/$(ProjectName)/</OutDir>
+    <OutDir>../../../../execute/CGDK10.server_admin.admin_server.console/</OutDir>
+    <TargetName>CGDK10.server_admin.admin_server.console.Debug</TargetName>
     <IntDir>../../../../output/$(ProjectName)\$(Configuration)_$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../../../../execute/$(ProjectName)/</OutDir>
+    <OutDir>../../../../execute/CGDK10.server_admin.admin_server.console/</OutDir>
+    <TargetName>CGDK10.server_admin.admin_server.console</TargetName>
     <IntDir>../../../../output/$(ProjectName)\$(Configuration)_$(Platform)\</IntDir>
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <RunCodeAnalysis>false</RunCodeAnalysis>
@@ -67,6 +68,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -74,7 +76,7 @@
       <AdditionalLibraryDirectories>../../../../../lib</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>SubWCRev.exe ../admin_server.shared ../../../../../include/cgdk/sdk10/svn_version.template svn_version.h
+      <Command>SubWCRev.exe . ../../../../../include/cgdk/sdk10/svn_version.template svn_version.h
 Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -96,6 +98,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <EnablePREfast>false</EnablePREfast>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -105,16 +108,22 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
       <AdditionalLibraryDirectories>../../../../../lib</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>SubWCRev.exe ../admin_server.shared ../../../../../include/cgdk/sdk10/svn_version.template svn_version.h
+      <Command>SubWCRev.exe . ../../../../../include/cgdk/sdk10/svn_version.template svn_version.h
 Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="admin_server.h" />
+    <ClInclude Include="admin_server.policy.h" />
+    <ClInclude Include="admin_server.control.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="svn_version.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="admin_server.cpp" />
+    <ClCompile Include="admin_server.policy.cpp" />
+    <ClCompile Include="admin_server.control.cpp" />
     <ClCompile Include="CGDK10.server_admin.admin_server.console.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -122,7 +131,7 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\..\execute\CGDK10.server_admin.admin_server.console\configure\admin_server_setting.json" />
+    <None Include="..\..\..\..\execute\CGDK10.server_admin.admin_server.console\config\admin_server.setting.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

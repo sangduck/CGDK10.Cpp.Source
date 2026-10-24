@@ -37,29 +37,28 @@ public:
 	virtual ~batch_function() noexcept {}
 
 public:
-			void				set_function(const TEXECUTE& _fucntion) noexcept { scoped_lock(m_lockable_complete) { this->m_function_completion=_fucntion; }}
-			void				set_function(TEXECUTE&& _fucntion) noexcept { scoped_lock(m_lockable_complete) { this->m_function_completion=std::move(_fucntion); }}
-			TEXECUTE			get_function() const noexcept { scoped_lock(m_lockable_complete) { return this->m_function_completion; }}
-
+			void				set_function(const TEXECUTE& _function) noexcept { std::lock_guard lock(m_lockable_complete); this->m_function_completion = _function; }
+			void				set_function(TEXECUTE&& _function) noexcept { std::lock_guard lock(m_lockable_complete); this->m_function_completion = std::move(_function); }
+			TEXECUTE			get_function() const noexcept { std::lock_guard lock(m_lockable_complete); return this->m_function_completion;}
 private:
 	virtual	void				process_complete_execution() override;
 
 private:
 			TEXECUTE			m_function_completion;
-			lockable<>			m_lockable_complete;
+			lock_object			m_lockable_complete;
 };
 
 template <class TEXECUTE>
 void executable::batch_function<TEXECUTE>::process_complete_execution()
 {
-	scoped_lock(m_lockable_complete)
-	{
-		// check) 
-		RETURN_IF(!this->m_function_completion);
+	// lock)
+	std::lock_guard lock(this->m_lockable_complete);
 
-		// 1) 실행한다.
-		this->m_function_completion();
-	}
+	// check) 
+	RETURN_IF(!this->m_function_completion);
+
+	// 1) 실행한다.
+	this->m_function_completion();
 }
 
 

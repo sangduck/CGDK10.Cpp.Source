@@ -255,7 +255,7 @@ void Cchatting_client_mfc_dlg::ShowWindow_Lobby(int _show)
 	GetDlgItem(IDC_STATIC_CHATTING_NICKNAME_TAG)->ShowWindow(_show);
 	GetDlgItem(IDC_STATIC_CHATTING_NICKNAME)->ShowWindow(_show);
 
-	GetDlgItem(IDC_STATIC_CHATTING_SEPERATOR)->ShowWindow(_show);
+	GetDlgItem(IDC_STATIC_CHATTING_SEPARATOR)->ShowWindow(_show);
 	GetDlgItem(IDC_BUTTON_CLOSE)->ShowWindow(_show);
 	GetDlgItem(IDC_STATIC_CHATTING_SEPERATOR2)->ShowWindow(_show);
 
@@ -329,7 +329,7 @@ void Cchatting_client_mfc_dlg::on_send_chatting_message(socket_chatting* /*_psoc
 	// Declare) 
 	TCHAR strString[1024];
 
-	// 1) Nickname과 Chatting String을 붙혀 문자열을 만든다.
+	// 1) Nickname과 Chatting String을 붙여 문자열을 만든다.
 	wsprintf(strString, TEXT("%-24hs %hs"), _nickname.data(), _chatting.data());
 
 	// 2) ListBox에 추가.

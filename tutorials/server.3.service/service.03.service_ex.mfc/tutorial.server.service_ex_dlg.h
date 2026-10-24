@@ -1,22 +1,22 @@
-ï»¿
-// tutorial.server.service_ex_dlg.h: í—¤ë” íŒŒì¼
+
+// tutorial.server.service_ex_dlg.h: Çì´õ ÆÄÀÏ
 //
 
 #pragma once
 
 
-// Ctutorial_server_service_ex_dlg ëŒ€í™” ìƒì
+// Ctutorial_server_service_ex_dlg ´ëÈ­ »óÀÚ
 class Ctutorial_server_service_ex_dlg : 
 	public						CDialogEx,
 	virtual public				Imessageable
 {
 // constructor/destructor)
 public:
-	Ctutorial_server_service_ex_dlg(CWnd* pParent = nullptr);	// í‘œì¤€ ìƒì„±ìì…ë‹ˆë‹¤.
+	Ctutorial_server_service_ex_dlg(CWnd* pParent = nullptr);	// Ç¥ÁØ »ı¼ºÀÚÀÔ´Ï´Ù.
 
 // MFC virtual function
 protected:
-	virtual void				DoDataExchange(CDataExchange* pDX);	// DDX/DDV ì§€ì›ì…ë‹ˆë‹¤.
+	virtual void				DoDataExchange(CDataExchange* pDX);	// DDX/DDV Áö¿øÀÔ´Ï´Ù.
 	virtual BOOL				OnInitDialog();
 
 // MFC message)
@@ -45,7 +45,7 @@ public:
 
 //  CGMessage) 
 private:
-	// 1) Messageë¥¼ ë°›ì•˜ì„ ë•Œ ë¶ˆë ¤ì§€ëŠ” í•¨ìˆ˜.
+	// 1) Message¸¦ ¹Ş¾ÒÀ» ¶§ ºÒ·ÁÁö´Â ÇÔ¼ö.
 	virtual result_code			process_message(sMESSAGE& _msg) override;
 
 	// 2) Message

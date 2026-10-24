@@ -14,9 +14,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="lobby_server.h" />
-    <ClInclude Include="lobby_server_definition.h" />
-    <ClInclude Include="lobby_server_dlg.h" />
+    <ClInclude Include="CGDK1.game_login.server.lobby.h" />
+    <ClInclude Include="CGDK1.game_login.server.lobby.definition.h" />
+    <ClInclude Include="CGDK1.game_login.server.lobby.dlg.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="service.h" />
     <ClInclude Include="targetver.h" />
@@ -35,8 +35,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="lobby_server.cpp" />
-    <ClCompile Include="lobby_server_dlg.cpp" />
+    <ClCompile Include="CGDK1.game_login.server.lobby.cpp" />
+    <ClCompile Include="CGDK1.game_login.server.lobby.dlg.cpp" />
     <ClCompile Include="service.cpp" />
     <ClCompile Include="user_group_immigration_socket.cpp">
       <Filter>user</Filter>
@@ -52,13 +52,13 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="lobby_server.rc">
+    <ResourceCompile Include="CGDK1.game_login.server.lobby.rc">
       <Filter>리소스 파일</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="lobby_server_setting.json" />
-    <None Include="res\lobby_server.rc2">
+    <None Include="CGDK1.game_login.server.lobby.setting.json" />
+    <None Include="res\CGDK1.game_login.server.lobby.rc2">
       <Filter>리소스 파일</Filter>
     </None>
   </ItemGroup>
@@ -66,7 +66,7 @@
     <Text Include="read_me.txt" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\lobby_server.ico">
+    <Image Include="res\CGDK1.game_login.server.lobby.ico">
       <Filter>리소스 파일</Filter>
     </Image>
   </ItemGroup>

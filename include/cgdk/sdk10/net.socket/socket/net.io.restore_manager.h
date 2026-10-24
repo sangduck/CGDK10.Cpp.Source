@@ -32,7 +32,8 @@ namespace CGDK
 class net::io::restore_manager :
 	public						schedulable::Nexecutable,
 	public						object::Nnameable,
-	virtual public				object::Idestroyable
+	virtual public				object::Idestroyable,
+	private						non_copyable
 {
 public:
 			restore_manager();
@@ -47,7 +48,7 @@ public:
 
 public:
 	// 1) Init Instance/run_executor
-	static 	auto				instance() { if (m_pinstance.empty()) { initialize_instance(); } return object_ptr<restore_manager>(m_pinstance); }
+	static 	auto				instance() { auto p = m_pinstance.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_pinstance.get_acquire(); } return object_ptr<restore_manager>(p); }
 	static	void				initialize_instance();
 	static	void				set_instance(own_ptr<restore_manager>&& _pinstance) noexcept;
 	static	void				reset_instance() noexcept;
@@ -59,14 +60,15 @@ protected:
 
 	// 3) 새로운 Restorable을 할당한다.
 	virtual	object_ptr<Irestorable_server> process_alloc_restorable();
-			RESTORE_CLIENT_ID	process_generate_RESTORE_CLIENT_ID();
+			restore_client_io_t	process_generate_RESTORE_CLIENT_ID();
 
 	// 4) on_execute
 	virtual	void				on_execute() override;
 
 	// 5) Restore Server ID
-			RESTORE_SERVER_ID	m_id_restore_server;
-			lockable<std::map<RESTORE_CLIENT_ID, object_ptr<Irestorable_server>>> m_map_restorable;
+			restore_server_id_t	m_id_restore_server;
+	mutable	lock_object			m_lockable_map_restorable;
+			std::map<restore_client_io_t, object_ptr<Irestorable_server>> m_map_restorable;
 
 			chrono::tick::duration	m_tick_timeout;
 

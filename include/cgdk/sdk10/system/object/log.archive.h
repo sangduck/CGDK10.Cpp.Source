@@ -45,6 +45,6 @@ private:
 			circular_list<object_ptr<LOG_RECORD>> m_archive_log;
 			size_t				m_capacity;
 
+	mutable	lock_object			m_lockable_index_stored_log;
 			size_t				m_index_stored_log;
-			lockable<>			m_lockable_index_stored_log;
 };

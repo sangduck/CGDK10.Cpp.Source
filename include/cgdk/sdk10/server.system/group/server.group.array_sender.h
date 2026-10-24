@@ -45,6 +45,7 @@ public:
 
 public:
 	virtual	bool				send_to(int _index, const shared_buffer& _buffer, uint64_t _option = 0) override;
+	virtual	bool				send_to(int _index, shared_buffer&& _buffer, uint64_t _option = 0) override;
 	template<class T>
 	typename std::enable_if<!std::is_base_of<shared_buffer, T>::value, bool>::type
 								send_to(int _index, const T& _data, uint64_t _option = 0);
@@ -84,7 +85,7 @@ bool group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_t
 	// declare) 
 	object_ptr<member_t> pmember;
 
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
 		// check) check range
 		RETURN_IF(_index < 0 || _index >= static_cast<int>(this->member_capacity()), false)
@@ -104,6 +105,34 @@ bool group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_t
 }
 
 template <class _TMEMBER, class _TPARAM, class _TMEMBER_DATA, class _TMEMBERBASE>
+bool group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_to(int _index, shared_buffer&& _buffer, uint64_t _option)
+{
+	// check)
+	RETURN_IF(_buffer.empty(), false)
+
+	// declare)
+	object_ptr<member_t> pmember;
+
+	SCOPED_LOCK(this->m_lockable_group)
+	{
+		// check)
+		RETURN_IF(_index < 0 || _index >= static_cast<int>(this->member_capacity()), false)
+
+		// 1) get member
+		pmember = this->member(_index);
+	}
+
+	// check)
+	RETURN_IF(pmember.empty(), false);
+
+	// 2) send to member
+	pmember->process_send(std::move(_buffer), 1, _option);
+
+	// return)
+	return true;
+}
+
+template <class _TMEMBER, class _TPARAM, class _TMEMBER_DATA, class _TMEMBERBASE>
 template<class T>
 typename std::enable_if<!std::is_base_of<shared_buffer, T>::value, bool>::type
 group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_to(int _index, const T& _data, uint64_t _option)
@@ -111,7 +140,7 @@ group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_to(int
 	// declare) 
 	object_ptr<member_t> pmember;
 
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
 		// check) _index가 정당한 범위 내에 있는가?
 		RETURN_IF(_index < 0 || _index >= static_cast<int>(this->member_capacity()), false)
@@ -139,35 +168,15 @@ group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_to(int
 template <class _TMEMBER, class _TPARAM, class _TMEMBER_DATA, class _TMEMBERBASE>
 bool group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_except(member_t* _member_except, const shared_buffer& _buffer, uint64_t _option)
 {
-	// declare)
-	std::vector<object_ptr<_TMEMBER>> vector_send;
-
-	// 1) make member list
-	scoped_lock(this->m_lockable_group)
-	{
-		// - get member count
-		auto count = this->member_count();
-
-		// - copy member to vector list
-		for (auto iter = this->m_container_member.begin(); count > 0; ++iter)
-		{
-			// check) 
-			CONTINUE_IF((*iter).empty());
-
-			// - dcrease member count
-			--count;
-
-			// check) except member == _memer_except
-			CONTINUE_IF((*iter).member() == _member_except);
-
-			// - push back
-			vector_send.push_back((*iter).member());
-		}
-	}
+	// 1) member snapshot (copy-on-write)
+	auto snapshot_send = this->get_member_snapshot();
 
 	// 2) send to all
-	for (auto& iter : vector_send)
+	for (auto* iter : snapshot_send)
 	{
+		// check) except member == _memer_except
+		CONTINUE_IF(iter == _member_except);
+
 		iter->process_send(shared_buffer(_buffer), 1, _option);
 	}
 
@@ -186,35 +195,15 @@ group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_except
 	// 2) append _data to temporary buffer
 	buffer_temp.template append<T>(_data);
 
-	// declare)
-	std::vector<object_ptr<_TMEMBER>> vector_send;
-
-	// 3) make member list
-	scoped_lock(this->m_lockable_group)
-	{
-		// - get member count
-		auto count = this->member_count();
-
-		// - copy member to vector list
-		for (auto iter = this->m_container_member.begin(); count > 0; ++iter)
-		{
-			// check) 
-			CONTINUE_IF((*iter).empty());
-
-			// - dcrease member count
-			--count;
-
-			// check) except member == _memer_except
-			CONTINUE_IF((*iter).member() == _member_except);
-
-			// - push back
-			vector_send.push_back((*iter).member());
-		}
-	}
+	// 3) member snapshot (copy-on-write)
+	auto snapshot_send = this->get_member_snapshot();
 
 	// 4) send to all
-	for (auto& iter : vector_send)
+	for (auto* iter : snapshot_send)
 	{
+		// check) except member == _memer_except
+		CONTINUE_IF(iter == _member_except);
+
 		iter->process_send(shared_buffer(buffer_temp), 1, _option);
 	}
 
@@ -229,10 +218,13 @@ bool group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_c
 	std::vector<object_ptr<_TMEMBER>> vector_send;
 
 	// 1) make member list
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
 		// - get member count
 		auto count = this->member_count();
+
+		// - reserve
+		vector_send.reserve(count);
 
 		// - copy member to vector list
 		for (auto iter = this->m_container_member.begin(); count > 0; ++iter)
@@ -240,14 +232,14 @@ bool group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_c
 			// check) 
 			CONTINUE_IF((*iter).empty());
 
-			// - dcrease member count
+			// - decrease member count
 			--count;
 
 			// check) 
-			CONTINUE_IF(_pred((*iter).member()) == false);
+			CONTINUE_IF(_pred(*(*iter)) == false);
 
 			// - push back
-			vector_send.push_back((*iter).member());
+			vector_send.push_back(*(*iter));
 		}
 	}
 
@@ -276,10 +268,13 @@ group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_condit
 	std::vector<object_ptr<_TMEMBER>> vector_send;
 
 	// 3) make member list
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
 		// - get member count
 		auto count = this->member_count();
+
+		// - reserve
+		vector_send.reserve(count);
 
 		// - copy member to vector list
 		for (auto iter = this->m_container_member.begin(); count > 0; ++iter)
@@ -287,14 +282,14 @@ group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_condit
 			// check) 
 			CONTINUE_IF((*iter).empty());
 
-			// - dcrease member count
+			// - decrease member count
 			--count;
 
 			// check) 
-			CONTINUE_IF(_pred((*iter).member()) == false);
+			CONTINUE_IF(_pred(*(*iter)) == false);
 
 			// - push back
-			vector_send.push_back((*iter).member());
+			vector_send.push_back(*(*iter));
 		}
 	}
 
@@ -314,31 +309,11 @@ bool group::array_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::proces
 	// check) return if _buffer is empty
 	RETURN_IF(_buffer.empty(), false)
 
-	// declare)
-	std::vector<object_ptr<_TMEMBER>> vector_send;
-
-	// 1) make member list
-	scoped_lock(this->m_lockable_group)
-	{
-		// - get member count
-		auto count = this->member_count();
-
-		// - copy member to vector list
-		for (auto iter = this->m_container_member.begin(); count > 0; ++iter)
-		{
-			// check) 
-			CONTINUE_IF((*iter).empty());
-
-			// - dcrease member count
-			--count;
-
-			// - push back
-			vector_send.push_back((*iter).member());
-		}
-	}
+	// 1) member snapshot (copy-on-write. no group lock while the published one is valid)
+	auto snapshot_send = this->get_member_snapshot();
 
 	// 2) send to all
-	for (auto& iter : vector_send)
+	for (auto* iter : snapshot_send)
 	{
 		iter->process_send(shared_buffer(_buffer), _count_message, _option);
 	}

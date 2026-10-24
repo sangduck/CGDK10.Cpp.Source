@@ -1,0 +1,12 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="group.01.simple\client\tutorial.group.simple.client.console.vs18.vcxproj" Id="ab3fa063-d400-4956-b8c9-bdb4599fbe76" />
+  <Project Path="group.02.message_mediator\client.console\tutorial.group.message_mediator.client.console.vs18.vcxproj" Id="ad255c0a-3570-4e73-a2dd-9921b43d64c2" />
+  <Project Path="group.03.schedulable\client.console\tutorial.group.schedulable.client.console.vs18.vcxproj" Id="8d6fca33-e196-4ac7-9a20-8de56e847a7c" />
+  <Project Path="group.04.chatting\client.mfc\tutorial.group.chatting.client.mfc.vs18.vcxproj" Id="83594743-fe20-458d-b9f7-caff827c4df7" />
+  <Project Path="group.05.observer.1\client.console\tutorial.group.observer.1.client.console.vs18.vcxproj" Id="2739b330-55d3-4e99-bef4-a222f7901f01" />
+  <Project Path="group.06.observer.2\client.console\tutorial.group.observer.2.client.console.vs18.vcxproj" Id="10f27cdf-20c2-4121-8526-a91d7fdf089f" />
+  <Project Path="group.ex01.group_type\client.console\tutorial.group.group_type.client.console.vs18.vcxproj" Id="b842ce0f-78d5-4853-85dd-8474d30bf194" />
+</Solution>

@@ -30,7 +30,6 @@ class doss::depot :
 // constructor/destructor) 
 public:
 			depot() {}
-			depot(const std::string_view _name) : Ndepot(_name) {}
 	virtual	~depot() noexcept {}
 
 // public)

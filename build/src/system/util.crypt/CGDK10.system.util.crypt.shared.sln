@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.29728.190
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.system.util.crypt.shared", "CGDK10.system.util.crypt.shared.vcxitems", "{A8C1DCD6-2112-435F-9528-0922F66A1458}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.system.util.crypt.windows.vs16", "..\CGDK10.system.util.crypt.windows.vs16\CGDK10.system.util.crypt.windows.vs16.vcxproj", "{708FA86B-0F99-473D-BD10-BD51819328DC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.system.util.crypt.vs17", "CGDK10.system.util.crypt.vs17.vcxproj", "{708FA86B-0F99-473D-BD10-BD51819328DC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

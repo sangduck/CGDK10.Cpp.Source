@@ -37,7 +37,7 @@ public:
 	using	ull_type		 = std::array<uint64_t, 2>;
 	using	scope_id_type	 = unsigned long;
 
-// contructor)
+// constructor)
 public:
 	constexpr address_v6() noexcept : ulls{0,0}, sin6_scope_id(0) {}
 	constexpr address_v6(const address_v6& _copy) noexcept : bytes(_copy.bytes), sin6_scope_id(_copy.sin6_scope_id) {}
@@ -50,7 +50,7 @@ public:
 public:
 				  constexpr void scope_id(scope_id_type _scope_id) noexcept { sin6_scope_id = _scope_id; }
 	[[nodiscard]] constexpr auto scope_id() const noexcept { return sin6_scope_id; }
-	[[nodiscard]] constexpr bool is_private() const noexcept { return shorts[0] == constexpr_htons(0xfc00);}
+	[[nodiscard]] constexpr bool is_private() const noexcept { return (sin6_addr.s6_addr[0] & 0xfe) == 0xfc;}
 	[[nodiscard]] constexpr bool is_public() const noexcept { return !is_private();}
 	[[nodiscard]] constexpr bool is_unspecified() const noexcept;
 	[[nodiscard]] constexpr bool is_loopback() const noexcept;
@@ -66,10 +66,8 @@ public:
 	[[nodiscard]] 		  bool is_v4_compatible() const noexcept;
 	[[nodiscard]] constexpr address_v4 get_v4_mapped() const noexcept;
 
-	[[nodiscard]] constexpr bytes_type		to_bytes() const noexcept { return bytes; }
-	template<class T = char, class Allocator = allocator<T>>
-	[[nodiscard]] std::basic_string<T, std::char_traits<T>, Allocator> 
-								to_string(const Allocator& _allocator = Allocator()) const;
+	[[nodiscard]] constexpr bytes_type to_bytes() const noexcept { return bytes; }
+	[[nodiscard]] std::string 	to_string() const;
 
 	[[nodiscard]] static constexpr address_v6 any() noexcept { return address_v6(); }
 	[[nodiscard]] static constexpr address_v6 loopback() noexcept { address_v6 tmp; tmp.sin6_addr.s6_addr[15] = 1; return tmp;}
@@ -135,13 +133,17 @@ constexpr bool address_v6::is_loopback() const noexcept
 	}
 	else
 	{
-		auto temp_addr_v4 = *(uint32_t*)&sin6_addr.s6_addr[12];
-		return (temp_addr_v4 & 0xff000000) == 0x7f000000;
+		return sin6_addr.s6_addr[12] == 0x7f;
 	}
 }
 constexpr bool address_v6::is_v4_mapped() const noexcept
 {
-	return ulls[0] == 0 && ulls[1] == 0xffff000000000000;
+	return ulls[0] == 0 && sin6_addr.s6_addr[8] == 0 && sin6_addr.s6_addr[9] == 0 && sin6_addr.s6_addr[10] == 0xff && sin6_addr.s6_addr[11] == 0xff;
+}
+constexpr address_v4 address_v6::get_v4_mapped() const noexcept
+{
+	// - ::ffff:a.b.c.d -> a.b.c.d (bytes are in network order. empty address if not v4 mapped)
+	return is_v4_mapped() ? address_v4(address_v4::bytes_type{ sin6_addr.s6_addr[12], sin6_addr.s6_addr[13], sin6_addr.s6_addr[14], sin6_addr.s6_addr[15] }) : address_v4();
 }
 
 constexpr address_v6& address_v6::operator = (const address_v6& _rhs) noexcept
@@ -156,11 +158,9 @@ constexpr address_v6& address_v6::operator = (const address_v6& _rhs) noexcept
 template<class CharT, class Traits>
 std::basic_ostream<CharT, Traits>& operator << (std::basic_ostream<CharT, Traits>& os, const address_v6& addr);
 
-template<class T, class Allocator>
-std::basic_string<T, std::char_traits<T>, Allocator> 
-address_v6::to_string(const Allocator& _allocator) const
+inline std::string address_v6::to_string() const
 {
-	return CGDK::to_string<T, Allocator>(*this, _allocator);
+	return CGDK::to_string(*this);
 }
 
 

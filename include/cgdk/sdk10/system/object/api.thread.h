@@ -35,44 +35,42 @@ int						get_current_pid() noexcept;
 
 }
 
-
 //-----------------------------------------------------------------------------
 /**
 
  @class		Nthread
- 
+
 *///-----------------------------------------------------------------------------
-class api::Nthread : 
-// inherited classes)
+class api::Nthread :
 	virtual public				object::Inameable,
-	virtual public				Ireferenceable
+	virtual public				Ireferenceable,
+	private						non_copyable
 {
-// constructor/destructor)
 public:
 			Nthread() noexcept : m_is_blocked(false), m_pexecutor(nullptr) {}
-			template<class TFN, class... TARGS>
-			Nthread(TFN&& _function, TARGS&&... _arguments) : m_is_blocked(false), m_pexecutor(nullptr) { begin_thread(std::forward<TFN>(_function), std::forward<TARGS>(_arguments)...); }
 	virtual	~Nthread() noexcept;
 
 // public)
 public:
+			// - starts the thread (throws when this object already has a thread : call wait() or stop() first)
+			//   if _function takes std::stop_token as the first parameter, the stop_token of the thread is passed
 			template<class TFN, class... TARGS>
 			void				begin_thread(TFN&& _function, TARGS&&... _arguments);
 
-			bool				wait();
-			bool				terminate(uint32_t _exit_code=-1, chrono::tick::duration _ticks_wait = 1min);
+			bool				request_stop() noexcept;
+			bool				wait() noexcept;
+			bool				stop() noexcept;
 			uint32_t			suspend();
 			uint32_t			resume();
-			bool				raise_exception();
 
-	#if !defined(_MSC_VER) || _MSC_VER>=_MSC_VER_2012
-	[[nodiscard]] THREAD_ID		thread_handle() const noexcept { return this->m_thread.native_handle();}
-	#endif
-	[[nodiscard]] auto			get_last_execute() const noexcept { return m_statistics_thread.tick_last_execute;}
+			// - force raises an exception in this thread (Windows: SetThreadContext+APC, Linux: signal)
+			//   (DANGEROUS: may cause memory leaks or data corruption if called during lock acquisition)
+			bool				force_raise_exception(const std::string_view& _message = "Forced thread termination") noexcept;
+
+	[[nodiscard]] auto			get_last_execute() const noexcept { return m_statistics_thread.tick_last_execute.load();}
 	[[nodiscard]] const auto&	get_thread_statistics() const noexcept { return m_statistics_thread;}
 	[[nodiscard]] bool			is_time_out(chrono::tick::duration _tick_differ_time) const noexcept;
 	[[nodiscard]] bool			is_time_out(chrono::tick::duration _tick_differ_time, chrono::tick::time_point _tick_now) const noexcept;
-
 			void				reset() noexcept;
 
 	[[nodiscard]] const auto&	statistics() const noexcept { return m_statistics_thread; }
@@ -80,40 +78,55 @@ public:
 			void				statistics_executing_begin() noexcept;
 			void				statistics_executing_end() noexcept;
 			void				statistics_error() noexcept;
-
-// implementation) 
 private:
 	template <class TTYPE>
-	static	void				fn_process_thread(api::Nthread* _pthread, TTYPE* _functor);
+	static	void				fn_process_thread(api::Nthread* _pthread, TTYPE* _functor, std::stop_token _stop_token);
+	template <class TTYPE>
+	static	void				fn_process_thread_stoppable(api::Nthread* _pthread, TTYPE* _functor, std::stop_token _stop_token);
+	template <class TFN, class TTYPE>
+			void				_start_thread(TFN _fn_thread, TTYPE* _functor);
+			void				_on_thread_started();
+			void				_close_control_handle() noexcept;
+	static	void				process_set_exception_handler_to_thread() noexcept;
 
 			void				register_thread();
 			void				unregister_thread() noexcept;
 			void				process_begin_thread();
 			void				process_end_thread();
-
 public:
 			void				notify_blocked() noexcept;
 			void				notify_unblocked() noexcept;
 
 private:
-			lockable<object_ptr<api::manager_thread>> m_pmanager;
+	mutable	lock_object			m_lockable_pmanager;
+			object_ptr<api::manager_thread> m_pmanager;
 	friend	class api::manager_thread;
+	friend	class api::threads;
 
-	#if !defined(_MSC_VER) || _MSC_VER>=_MSC_VER_2012
-	mutable std::thread			m_thread;
-	#else
-	mutable CGHANDLE			m_thread;
-	#endif
+	// - m_thread : start / join / detach (held while joining, so only one thread joins at a time)
+	mutable	std::mutex			m_lockable_thread;
+			std::jthread		m_thread;
+
+	// - copies of the controls of m_thread (usable while another thread is joining m_thread)
+	mutable	std::mutex			m_lockable_control;
+			std::stop_source	m_stop_source{ std::nostopstate };	// created by begin_thread() (no stop state until then)
+#if defined(_WIN32)
+			HANDLE				m_handle_control = nullptr;		// duplicated thread handle for suspend() / resume()
+#endif
+
+			std::atomic<bool>	m_is_deadlock_reported{ false };	// api::manager_thread : reported once per deadlock
+
 			statistics::thread	m_statistics_thread;
 
 public:
-			lockable<>			m_lockable_executor;
+	mutable	lock_object			m_lockable_executor;
 			bool				m_is_blocked;
 			Iexecutor*			m_pexecutor;
 };
 
+
 template <class TTYPE>
-void api::Nthread::fn_process_thread(api::Nthread* _pthread, TTYPE* _pfunctor)
+void api::Nthread::fn_process_thread(api::Nthread* _pthread, TTYPE* _pfunctor, std::stop_token /*_stop_token*/)
 {
 	// 1) Hold
 	object_ptr<api::Nthread> pthread = _pthread;
@@ -130,29 +143,77 @@ void api::Nthread::fn_process_thread(api::Nthread* _pthread, TTYPE* _pfunctor)
 	{
 	}
 
-	// 4) delete funtor
+	// 4) delete functor
 	delete _pfunctor;
 
 	// 5) post process
 	pthread->process_end_thread();
+
+	// 6) release the reference added by _start_thread()
+	_pthread->release();
 }
 
-template<class TFN, class... TARGS>
-void api::Nthread::begin_thread(TFN&& _function, TARGS&&... _arguments)
+template <class TTYPE>
+void api::Nthread::fn_process_thread_stoppable(api::Nthread* _pthread, TTYPE* _pfunctor, std::stop_token _stop_token)
 {
-	// declare) 
-	using TFUNCTOR = decltype(std::bind(DECAY_COPY(std::forward<TFN>(_function)), DECAY_COPY(std::forward<TARGS>(_arguments))...));
+	// 1) Hold
+	object_ptr<api::Nthread> pthread = _pthread;
 
-	// 1) create functor
-	auto* pfunctor = new TFUNCTOR(DECAY_COPY(std::forward<TFN>(_function)), DECAY_COPY(std::forward<TARGS>(_arguments))...);
+	// 2) pre process
+	pthread->process_begin_thread();
 
-	// 2) add reference count
+	// 3) cal functor (with the stop_token of this thread)
+	try
+	{
+		(*_pfunctor)(std::move(_stop_token));
+	}
+	catch (...)
+	{
+	}
+
+	// 4) delete functor
+	delete _pfunctor;
+
+	// 5) post process
+	pthread->process_end_thread();
+
+	// 6) release the reference added by _start_thread()
+	_pthread->release();
+}
+
+template <class TFN, class TTYPE>
+void api::Nthread::_start_thread(TFN _fn_thread, TTYPE* _pfunctor)
+{
+	// lock)
+	std::lock_guard lock(this->m_lockable_thread);
+
+	// check) already has a thread (running, or ended but not joined yet)
+	if (this->m_thread.joinable())
+	{
+		delete _pfunctor;
+		throw throwable::failure(eRESULT::ALREADY_EXIST, 0, std::string_view("thread is already started (call wait() or stop() first)"));
+	}
+
+	// 1) reset deadlock report state
+	this->m_is_deadlock_reported = false;
+
+	// 2) stop_source of this thread
+	//    - created before the thread starts : the thread may call request_stop() on itself at once
+	//    - its token is passed to the thread function (the stop_source of std::jthread is not used)
+	std::stop_token stop_token;
+	{
+		std::lock_guard lock_control(this->m_lockable_control);
+		this->m_stop_source = std::stop_source();
+		stop_token = this->m_stop_source.get_token();
+	}
+
+	// 3) add reference count (released by the thread function when it ends)
 	this->add_ref();
 
 	try
 	{
-		// 3) start thread
-		this->m_thread = std::thread(fn_process_thread<TFUNCTOR>, this, pfunctor);
+		// 4) start thread
+		this->m_thread = std::jthread(_fn_thread, this, _pfunctor, std::move(stop_token));
 	}
 	catch(...)
 	{
@@ -160,25 +221,50 @@ void api::Nthread::begin_thread(TFN&& _function, TARGS&&... _arguments)
 		release();
 
 		// - delete
-		delete	pfunctor;
+		delete	_pfunctor;
 
 		// reraise)
 		throw;
 	}
 
-	// 4) reset Thread ID
-	m_statistics_thread.id_thread = m_thread.native_handle();
+	// 5) control handle / statistics
+	this->_on_thread_started();
 }
 
-class api::thread : 
+template<class TFN, class... TARGS>
+void api::Nthread::begin_thread(TFN&& _function, TARGS&&... _arguments)
+{
+	if constexpr (std::is_invocable_v<std::decay_t<TFN>&, std::stop_token, std::decay_t<TARGS>&...>)
+	{
+		// declare) the function takes the stop_token of the thread as the first parameter
+		using TFUNCTOR = decltype(std::bind(DECAY_COPY(std::forward<TFN>(_function)), std::placeholders::_1, DECAY_COPY(std::forward<TARGS>(_arguments))...));
+
+		// 1) create functor
+		auto* pfunctor = new TFUNCTOR(std::bind(DECAY_COPY(std::forward<TFN>(_function)), std::placeholders::_1, DECAY_COPY(std::forward<TARGS>(_arguments))...));
+
+		// 2) start thread
+		this->_start_thread(fn_process_thread_stoppable<TFUNCTOR>, pfunctor);
+	}
+	else
+	{
+		// declare)
+		using TFUNCTOR = decltype(std::bind(DECAY_COPY(std::forward<TFN>(_function)), DECAY_COPY(std::forward<TARGS>(_arguments))...));
+
+		// 1) create functor
+		auto* pfunctor = new TFUNCTOR(std::bind(DECAY_COPY(std::forward<TFN>(_function)), DECAY_COPY(std::forward<TARGS>(_arguments))...));
+
+		// 2) start thread
+		this->_start_thread(fn_process_thread<TFUNCTOR>, pfunctor);
+	}
+}
+
+class api::thread :
 	public						Nthread,
 	public						object::Nnameable,
 	public						factory::_traits_system
 {
 public:
 			thread()  noexcept {}
-			template<class TFN, class... TARGS>
-			thread(TFN&& _function, TARGS&&... _arguments) : Nthread(_function, std::forward<TARGS>(_arguments)...) { }
 	virtual	~thread() noexcept {}
 };
 

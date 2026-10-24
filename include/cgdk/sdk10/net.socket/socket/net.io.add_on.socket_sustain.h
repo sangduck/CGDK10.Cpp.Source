@@ -103,22 +103,17 @@ namespace CGDK
 //
 //-----------------------------------------------------------------------------
 class net::io::add_on::Nsocket_sustain :
-// inherited classes)
 	virtual public				net::io::Isocket,
 	virtual	public				net::io::statistics::Nsocket
 {
-// constructor/destructor) 
 protected:
 			Nsocket_sustain();
 	virtual ~Nsocket_sustain();
 
-// publics) 
 public:
-	// 1) keep Alive.
 			bool				start_socket_sustain();
 			bool				stop_socket_sustain();
 
-	// 2) Time 설정 관련.
 			void				time_out_connect(chrono::tick::duration _tick) noexcept { this->m_tick_timeout_connect = _tick; }
 	[[nodiscard]] auto			time_out_connect() const noexcept { return m_tick_timeout_connect;}
 			void				reset_time_out_connect() noexcept { this->time_out_connect(chrono::tick::duration::zero());}
@@ -135,31 +130,67 @@ public:
 	[[nodiscard]] auto			time_out_send() const noexcept { return m_tick_timeout_send;}
 			void				reset_time_out_send() noexcept { this->time_out_send(chrono::tick::duration::zero());}
 
-// frameworks) 
+	// - 공통 시간 제한 (0 : 쓰지 않는다. 시간이 지나 끊을 때는 DISCONNECT_REASON_SUSTAIN_TIMEOUT으로 끊는다)
+	//   (ex. http server : connecting 0, certify = request_timeout, idle = idle_timeout, ping_interval (websocket))
+			struct sTIMEOUT
+			{
+				chrono::tick::duration	connecting{ chrono::tick::duration::zero() };	// - 접속 중(SYN) (접속 중인 것을 처음 본 시각부터 센다. sustain 주기만큼 늦을 수 있다)
+				chrono::tick::duration	certify{ chrono::tick::duration::zero() };		// - 접속 후 CERTIFIED가 되지 않음 (ex. http : 첫 요청이 끝나지 않음(천천히 보내며 접속을 잡아 두는 것))
+				chrono::tick::duration	idle{ chrono::tick::duration::zero() };			// - 받은 것이 없음 (= time_out_receive : on_timeout_receive)
+				chrono::tick::duration	ping_interval{ chrono::tick::duration::zero() };	// - keepalive : 받은 것이 없으면 이 시간마다 process_keepalive_ping(), 두 배의 시간 동안 받은 것이 없으면 끊는다
+			};
+			// - 시간 제한으로 끊은 수 (socket보다 오래 있어야 한다)
+			struct sTIMEOUT_COUNT
+			{
+				std::atomic<uint64_t>	connecting{ 0 };
+				std::atomic<uint64_t>	certify{ 0 };
+				std::atomic<uint64_t>	idle{ 0 };
+			};
+			void				set_sustain_timeout(const sTIMEOUT& _timeout, sTIMEOUT_COUNT* _pcount = nullptr) noexcept;
+
+			void				time_out_connecting(chrono::tick::duration _tick) noexcept { this->m_tick_timeout_connecting = _tick; }
+	[[nodiscard]] auto			time_out_connecting() const noexcept { return m_tick_timeout_connecting;}
+			void				time_out_certify(chrono::tick::duration _tick) noexcept { this->m_tick_timeout_certify = _tick; }
+	[[nodiscard]] auto			time_out_certify() const noexcept { return m_tick_timeout_certify;}
+			void				keepalive_ping_interval(chrono::tick::duration _tick) noexcept { this->m_tick_ping_interval = _tick; }
+	[[nodiscard]] auto			keepalive_ping_interval() const noexcept { return m_tick_ping_interval;}
+
 private:
 	virtual	void				on_timeout_connect(chrono::tick::duration /*p_tickdifferExecute*/) {}
 	virtual	void				on_timeout_disconnect(chrono::tick::duration /*p_tickdifferExecute*/) {}
-	virtual	void				on_timeout_receive(chrono::tick::duration /*p_tickdifferExecute*/) { this->process_close_socket(DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE); }
+	virtual	void				on_timeout_receive(chrono::tick::duration /*p_tickdifferExecute*/) { this->_close_by_sustain_timeout(&sTIMEOUT_COUNT::idle); }
 	virtual	void				on_timeout_send(chrono::tick::duration /*p_tickdifferExecute*/) {}
 
-// implementation)
-private:
-	// Friend) 
-	friend class manager_socket_sustain;
+			friend class manager_socket_sustain;
 
-	// 1) Time-Out 설정
+	// - sustain 대상인가? (manager_socket_sustain이 lock 안에서 모든 socket에 대해 참조를 잡기 전에 부른다)
+	//   - 가상 함수를 부르지 않고 이 class와 기반의 값만 읽는다. (다른 thread에서 소멸 중인 socket에도 불릴 수 있다 : 그 동안 이 값들은 남아 있다)
+	//   - 지금 상태에서 쓰는 시간 제한이 하나도 없으면 false : 참조를 잡지 않고 건너뛴다. (socket이 많아도 대상만 참조 count를 건드린다)
+			bool				_is_sustain_target() noexcept;
+
 			chrono::tick::duration	m_tick_timeout_connect;
 			chrono::tick::duration	m_tick_timeout_disconnect;
 			chrono::tick::duration	m_tick_timeout_receive;
 			chrono::tick::duration	m_tick_timeout_send;
+			chrono::tick::duration	m_tick_timeout_connecting{ chrono::tick::duration::zero() };
+			chrono::tick::duration	m_tick_timeout_certify{ chrono::tick::duration::zero() };
+			chrono::tick::duration	m_tick_ping_interval{ chrono::tick::duration::zero() };
+			chrono::tick::time_point m_tick_connecting_start{};	// - 접속 중(SYN)인 것을 처음 본 시각 (sustain만 쓴다)
+			chrono::tick::time_point m_tick_last_ping{};
+			sTIMEOUT_COUNT*		m_pcount_timeout{ nullptr };
 
-	// 2) Iterator에 붙일 때의 정보...
 			circular_list<Nsocket_sustain*>::iterator m_iter_list_socket_sustain;
 			object_ptr<manager_socket_sustain> m_pmanager;
 
-private:
-	// 1) Process AutoClose
+protected:
+	// - 파생 class가 덮어쓰고 이 함수(기본 동작)를 부를 수 있다.
 	virtual void				process_socket_sustain();
+
+	// - keepalive PING을 보낸다. (ex. websocket. true : 보냄 / false : 보낼 수 없음)
+	virtual	bool				process_keepalive_ping() { return false; }
+
+	// - 시간 제한으로 끊는다. (DISCONNECT_REASON_SUSTAIN_TIMEOUT. sTIMEOUT_COUNT가 있으면 센다)
+			void				_close_by_sustain_timeout(std::atomic<uint64_t> sTIMEOUT_COUNT::* _pcount);
 
 public:
 	static	void				detach_instance() noexcept;

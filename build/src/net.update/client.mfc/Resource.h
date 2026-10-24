@@ -1,12 +1,12 @@
-ï»¿//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ì—ì„œ ìƒì„±í•œ í¬í•¨ íŒŒì¼ìž…ë‹ˆë‹¤.
-// CGDKnetworkupdateclientMFCvs16.rcì—ì„œ ì‚¬ìš©
+//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++¿¡¼­ »ý¼ºÇÑ Æ÷ÇÔ ÆÄÀÏÀÔ´Ï´Ù.
+// CGDKnetworkupdateclientMFC.rc¿¡¼­ »ç¿ë
 //
 #define IDR_MAINFRAME					128
-#define IDD_CGDKNETWORKUPDATECLIENTMFCVS16_DIALOG				102
+#define IDD_CGDKNETWORKUPDATECLIENTMFC_DIALOG				102
 #define IDP_SOCKETS_INIT_FAILED			103
 
-// ë‹¤ìŒì€ ìƒˆ ê°œì²´ì— ì‚¬ìš©í•  ê¸°ë³¸ê°’ìž…ë‹ˆë‹¤.
+// ´ÙÀ½Àº »õ °³Ã¼¿¡ »ç¿ëÇÒ ±âº»°ªÀÔ´Ï´Ù.
 //
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS

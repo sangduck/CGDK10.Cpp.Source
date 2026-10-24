@@ -30,7 +30,7 @@ namespace CGDK
 // 2. Log의 내용
 //		0) Date/Time	Log가 남은 시간이다.(자동기록)
 //		1) Logger		Log를 남기는 자의 이름이다.(자동 등록)
-//		2) type			Log의 종류이다. Errror, Progress, Warning, Info, ...
+//		2) type			Log의 종류이다. Error, Progress, Warning, Info, ...
 //	    3) Level		Log의 중요도이다.
 //		4) Source		Log에 남기는 Event의 주체가 되는 것을 의미한다.
 //		5) Dest			Log에 남기는 Event의 대상이 되는 것을 의미한다.
@@ -40,7 +40,7 @@ namespace CGDK
 //
 //-----------------------------------------------------------------------------
 class logger_console : 
-	public						Nlogger
+	public						Nlogger_async
 {
 public:
 			struct INITIALIZE_PARAMETER
@@ -48,17 +48,22 @@ public:
 			};
 
 			logger_console();
-			logger_console(const std::string_view _name);
 	virtual ~logger_console() noexcept;
 
 			result_code			initialize() { return this->object::Ninitializable::initialize(); }
 			result_code			initialize(const INITIALIZE_PARAMETER&) { return initialize(); }
 	virtual	result_code			initialize(context& _context) override { return this->object::Ninitializable::initialize(_context); }
 
-	[[nodiscard]] eCHARACTER_SET character_encoding() const noexcept { return this->m_char_encoding; }
+	[[nodiscard]] auto			character_encoding() const noexcept -> eCHARACTER_SET { return this->m_char_encoding; }
 			void				character_encoding(eCHARACTER_SET _char_code) noexcept { this->m_char_encoding = _char_code; }
 
-	virtual	void				process_log(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record) override;
+protected:
+	virtual	void				process_log_batch(std::vector<object_ptr<LOG_RECORD>>& _vector_plog_record) override;
+			void				_process_append_log(const object_ptr<LOG_RECORD>& _plog_record);
+			void				_process_write_output();
+
+	// - output of the batch (used on the execution only : reused, the console is written synchronously)
+			shared_buffer		m_buf_output;
 
 protected:
 	virtual	result_code			_process_initializing(context& _context) override;
@@ -68,6 +73,7 @@ protected:
 
 		#if defined(_WIN32)
 			HANDLE				m_console_handle = INVALID_HANDLE_VALUE;
+			bool				m_is_console{ true };	// - false : redirected to a pipe or a file (WriteFile)
 		#endif
 
 };

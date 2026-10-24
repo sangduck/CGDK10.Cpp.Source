@@ -27,7 +27,7 @@ class observable_websocket_peer_executor_info :
 	public						Iobservable_websocket
 {
 protected:
-	explicit observable_websocket_peer_executor_info(const std::string_view _name);
+			observable_websocket_peer_executor_info();
 	virtual ~observable_websocket_peer_executor_info();
 
 public:
@@ -46,18 +46,18 @@ private:
 	virtual result_code			on_message(sMESSAGE_NETWORK& _msg);
 			result_code			on_message_server_button_toggle(sMESSAGE_HTTP_WEBSOCKET& _msg);
 
-			shared_buffer		make_webmessage_executor_list(const std::vector<server_admin::executor_snap>& _vector_executor_snap, uint64_t _flag);
-			shared_buffer		make_webmessage_schedulable_list(const std::vector<server_admin::schedulable_snap>& _vector_schedulable_info, uint64_t _flag);
-			shared_buffer		make_webmessage_executable_list(const std::vector<server_admin::factory_snap>& _vector_executable_info, uint64_t _flag);
+			shared_buffer		make_webmessage_executor_list(const std::vector<server_system::executor_snap>& _vector_executor_snap, uint64_t _flag);
+			shared_buffer		make_webmessage_schedulable_list(const std::vector<server_system::schedulable_snap>& _vector_schedulable_info, uint64_t _flag);
+			shared_buffer		make_webmessage_executable_list(const std::vector<server_system::factory_snap>& _vector_executable_info, uint64_t _flag);
 
 			//shared_buffer		make_webmessage_executor_list_add(uint64_t _flag);
 			//shared_buffer		make_webmessage_schedulable_list_add(uint64_t _flag);
 			//shared_buffer		make_webmessage_executable_list_add(uint64_t _flag);
 
-			shared_buffer		make_webmessage_executor_list_update(const std::vector<server_admin::executor_snap>& _vector_executor_snap, uint64_t _flag);
-			shared_buffer		make_webmessage_schedulable_list_update(const std::vector<server_admin::schedulable_snap>& _vector_schedulable, uint64_t _flag);
-			shared_buffer		make_webmessage_executable_list_update(const std::vector<server_admin::factory_snap>& _vector_factory_snap, uint64_t _flag);
+			shared_buffer		make_webmessage_executor_list_update(const std::vector<server_system::executor_snap>& _vector_executor_snap, uint64_t _flag);
+			shared_buffer		make_webmessage_schedulable_list_update(const std::vector<server_system::schedulable_snap>& _vector_schedulable, uint64_t _flag);
+			shared_buffer		make_webmessage_executable_list_update(const std::vector<server_system::factory_snap>& _vector_factory_snap, uint64_t _flag);
 
 public:
-			server_admin::instance_Iservice* m_pservice_entity = nullptr;
+			server_system::instance_service* m_pservice_entity = nullptr;
 };

@@ -1,4 +1,4 @@
-﻿#include "asio.h"
+#include "asio.h"
 
 
 asio::Isocket_tcp::Isocket_tcp(const boost::asio::any_io_executor& _executor) : 

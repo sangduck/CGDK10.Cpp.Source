@@ -2,15 +2,15 @@
 
 own_ptr<service> g_pservice;
 
-service::service() :
-	server_system::service_ex("update server"sv, LOG_FILE, CONFIGURE_FILE)
+service::service()
+	
 {
 	// 1) set server type
-	//server_setting_info().rank.role = SERVER_ROLE_ADMIN;
+	this->set_service_instance(make_service_instance<>(server_system::sRANK{ 0, 0, 0, 0 }));
 
 	// 2) resource manager
 	m_presource_manager = make_own<update::resource_manager>();
-	m_presource_manager->set_name("update_resource_mamanger"sv);
+	m_presource_manager->name("update_resource_mamanger"sv);
 	attach_child_object(m_presource_manager);
 
 	// 3) groups
@@ -22,6 +22,6 @@ service::service() :
 
 	// 4) acceptor
 	m_pacceptor_tcp = make_own<net::acceptor<socket_tcp>>();
-	m_pacceptor_tcp->set_name("acceptor_user"sv);
+	m_pacceptor_tcp->name("acceptor_user"sv);
 	attach_child_object(m_pacceptor_tcp);
 }

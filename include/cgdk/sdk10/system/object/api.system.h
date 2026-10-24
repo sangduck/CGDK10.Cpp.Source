@@ -33,11 +33,12 @@ namespace CGDK
 struct sVERSION
 {
 public:
+	ENABLE_STRUCT_SERIALIZABLE
+
 	uint32_t			build = 0;
 	uint16_t			minor = 0;
 	uint16_t			major = 0;
 
-public:
 	void	clear() noexcept
 	{
 		this->build = 0;
@@ -48,7 +49,9 @@ public:
 
 struct sVERSION_EX : public sVERSION
 {
-	static_string<64>	str_version;
+	ENABLE_STRUCT_SERIALIZABLE
+
+	std::string			str_version;
 	chrono::time::utc::time_point build_time;
 
 	void	clear() noexcept
@@ -182,6 +185,61 @@ namespace PROCESS
 	};
 };
 
+// 3) thread priority (api::set_current_thread_priority())
+//    - windows : THREAD_PRIORITY_LOWEST / BELOW_NORMAL / NORMAL / ABOVE_NORMAL / HIGHEST / TIME_CRITICAL (in the priority class of the process)
+//    - linux   : nice 19 / 10 / 0 / -10 / -20 of the thread. TIME_CRITICAL : SCHED_RR (real-time, priority 10 : above every normal thread,
+//                below the threaded IRQ handlers of the kernel). a raise needs CAP_SYS_NICE (or RLIMIT_NICE / RLIMIT_RTPRIO) :
+//                TIME_CRITICAL falls back to nice -20 without the permission.
+enum class eTHREAD_PRIORITY : int32_t
+{
+	DEFAULT			 = 0,	// not changed (the priority the thread was created with)
+	LOWEST			 = 1,
+	LOW				 = 2,
+	NORMAL			 = 3,
+	HIGH			 = 4,
+	HIGHEST			 = 5,
+	TIME_CRITICAL	 = 6,	// the top
+};
+
+[[nodiscard]] constexpr std::string_view to_string(eTHREAD_PRIORITY _priority) noexcept
+{
+	switch (_priority)
+	{
+	case eTHREAD_PRIORITY::LOWEST:			return "lowest";
+	case eTHREAD_PRIORITY::LOW:				return "low";
+	case eTHREAD_PRIORITY::NORMAL:			return "normal";
+	case eTHREAD_PRIORITY::HIGH:			return "high";
+	case eTHREAD_PRIORITY::HIGHEST:			return "highest";
+	case eTHREAD_PRIORITY::TIME_CRITICAL:	return "time_critical";
+	default:								return "default";
+	}
+}
+
+//! @brief "lowest", "low", "normal", "high", "highest", "time_critical" (case-insensitive, ' ' or '-' for '_'). otherwise : DEFAULT
+[[nodiscard]] inline eTHREAD_PRIORITY to_thread_priority(std::string_view _text) noexcept
+{
+	// 1) lower case, '_' for ' ' and '-'
+	char buf[32]{};
+	std::size_t length = 0;
+	for (char ch : _text)
+	{
+		if (length >= sizeof(buf))
+			return eTHREAD_PRIORITY::DEFAULT;
+		buf[length++] = (ch == ' ' || ch == '-') ? '_' : static_cast<char>((ch >= 'A' && ch <= 'Z') ? (ch - 'A' + 'a') : ch);
+	}
+	const std::string_view text(buf, length);
+
+	// 2) find
+	for (auto priority : { eTHREAD_PRIORITY::LOWEST, eTHREAD_PRIORITY::LOW, eTHREAD_PRIORITY::NORMAL, eTHREAD_PRIORITY::HIGH, eTHREAD_PRIORITY::HIGHEST, eTHREAD_PRIORITY::TIME_CRITICAL })
+	{
+		if (text == to_string(priority))
+			return priority;
+	}
+
+	// return)
+	return eTHREAD_PRIORITY::DEFAULT;
+}
+
 namespace api
 {
 	[[nodiscard]] SYSTEM::sINFO get_system_info() noexcept;
@@ -191,6 +249,10 @@ namespace api
 
 	[[nodiscard]] uint64_t		get_process_id();
 	[[nodiscard]] std::size_t	get_core_count() noexcept;
+	//! @brief pins the calling thread to a CPU (linux : pthread_setaffinity_np, windows : SetThreadAffinityMask). @return false failed (or _cpu out of range)
+	bool						set_current_thread_affinity(int _cpu) noexcept;
+	//! @brief sets the priority of the calling thread (see eTHREAD_PRIORITY). DEFAULT : nothing is changed. @return false failed (no permission ...)
+	bool						set_current_thread_priority(eTHREAD_PRIORITY _priority) noexcept;
 	[[nodiscard]] int64_t		get_memory_usage() noexcept;
 	[[nodiscard]] uint64_t		get_physical_memory_max() noexcept;
 	[[nodiscard]] uint64_t		get_max_open_files() noexcept;

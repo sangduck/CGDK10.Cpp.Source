@@ -31,20 +31,16 @@ namespace CGDK
 //
 //-----------------------------------------------------------------------------
 class net::io::Naddress :
-// inherited classes)
 	virtual public				net::io::Iaddress
 {
-// constructor/destructor)
 protected:
 			Naddress() noexcept {}
 	virtual	~Naddress() noexcept {}
 
-// public)
 public:
 	virtual	net::sockaddr		process_get_socket_address(std::error_code& _error_code) const noexcept override { CGASSERT_ERROR(false); _error_code = std::make_error_code(std::errc::bad_address); return net::sockaddr();}
 	virtual	net::sockaddr		process_get_peer_address(std::error_code& _error_code) const noexcept override { _error_code = this->m_endpoint_remote.exist() ? std::error_code() : std::make_error_code(std::errc::bad_address); return this->m_endpoint_remote;}
 
-// implementation)
 protected:
 			net::sockaddr		m_endpoint_remote;
 };

@@ -19,65 +19,54 @@
 #-----------------------------------------------------------------------------
 # setting
 #-----------------------------------------------------------------------------
-# 1) project name
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY ( VERSION 3.20 )
+
+# 2) project name
 PROJECT ( "CGDK10.system.object" )
 
-# 2) project version
+# 3) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
-
-# 4) default BUILD_TYPE
-IF (NOT DEFINED CMAKE_BULD_TYPE)
-	SET (CMAKE_BULD_TYPE "Debug")
-ENDIF()
-
-# 5) directories
-SET ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../../../lib/cgdk/sdk10/${DIST} )
-SET ( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../../../lib/cgdk/sdk10/${DIST} )
-SET ( CMAKE_RUNTIME_OTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../../execute )
-SET ( EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../execute )
-
-# 6) compile options
-set ( CMAKE_CXX_STANDARD 20)
-set ( CMAKE_CXX_STANDARD_REQUIRED ON)
-SET ( CMAKE_CXX_FLAGS "-DC_FLAGS -fexceptions -std=c++20" )
-SET ( CMAKE_CXX_FLAGS_DEBUG "-D_DEBUG -g1 -Wall -Wextra" )
-SET ( CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -Wall -Wextra" )
-
-# 7) include directories
-INCLUDE_DIRECTORIES(
-	${CMAKE_CURRENT_SOURCE_DIR}/../../../../include
-	./
-)
+# 4) common build rules (platform, compile options, output name/directory)
+INCLUDE ( ${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/cgdk.cmake )
 
 
 #-----------------------------------------------------------------------------
 # source files
 #-----------------------------------------------------------------------------
+# 1) common (linux & windows)
 SET (SRC_FILES
+
 #...
 pch.cpp
 
 #common
-${CMAKE_CURRENT_SOURCE_DIR}/../../common/cgdk_info.cpp
+${CGDK_COMMON_DIR}/cgdk_info.cpp
+
+#template instantiation
 
 #definitions
 definitions.cgdk.cpp
 definitions.string_function.cpp
+string_functions.cpp
 definitions.factory.cpp
 definitions.execute.cpp
 definitions.schedulable.cpp
 definitions.object.cpp
+definitions.admin.cpp
 
 #api
 api.queue_executable.cpp
-api.io_context.epoll.cpp
+api.io_context.Nepoll.cpp
+api.io_context.epoll_queued.cpp
+api.io_context.epoll_direct.cpp
+api.io_context.uring.cpp
+api.io_context.uring_cq.cpp
 api.file.cpp
 api.file_ex.cpp
 api.file.linux.cpp
@@ -86,8 +75,11 @@ api.system.linux.cpp
 api.thread.cpp
 api.threads.cpp
 functions.cpp
+chrono.cpp
 chrono_time.cpp
 context.cpp
+context.json.cpp
+Ireferenceable.cpp
 
 #archive
 archive.file.cpp
@@ -99,6 +91,9 @@ object.Ninitializable.cpp
 object.Npausable.cpp
 object.Nstartable.cpp
 
+#class
+#class_manager.cpp
+
 #executor
 Iexecutor.cpp
 executor.list_priority.cpp
@@ -106,9 +101,13 @@ executor.manager.cpp
 executor.io_context.cpp
 executor.io_context_threads.cpp
 executor.queue_list.cpp
+executor.queue_list_threads.cpp
 executor.strand.cpp
 executor.scheduler.cpp
 executor_system.cpp
+
+#coroutine
+coroutine.cpp
 
 #message transmitter
 Nmessage_transmitter.cpp
@@ -136,6 +135,8 @@ updatable.executable_batch.cpp
 #factory
 Ifactory.cpp
 factory.manager.cpp
+factory.manager.print.cpp
+factory.manager.print_sub.cpp
 factory.memory_block.cpp
 
 #dump
@@ -153,6 +154,7 @@ log.stream.cpp
 log.archive.cpp
 log.functions.cpp
 log.record.cpp
+log.record.process.cpp
 
 #compress
 util.compress_zip.cpp
@@ -161,12 +163,13 @@ util.compress_zip.cpp
 util.edc.check_sum.cpp
 util.edc.crc.cpp
 util.edc.md5.cpp
-util.crypt.base64.cpp
-
+util.base64.cpp
 )
 
-#zLib
-SET (SRC_FILES_ZLIB
+# 2) linux only
+SET (SRC_FILES_LINUX
+buffer.explicit_instantiation.cpp
+#ZLIB
 zlib/adler32.c
 zlib/compress.c
 zlib/crc32.c
@@ -183,40 +186,46 @@ zlib/uncompr.c
 zlib/zutil.c
 )
 
-#fmt
-SET (SRC_FILES_FMT
-${CMAKE_CURRENT_SOURCE_DIR}/../../../../include/cgdk/sdk10/system/object/fmt/src/format.cc
-${CMAKE_CURRENT_SOURCE_DIR}/../../../../include/cgdk/sdk10/system/object/fmt/src/os.cc
+# 3) windows only
+SET (SRC_FILES_WINDOWS
+allocator_manager.cpp
+api.file.android.cpp
+api.file.windows_native.cpp
+api.io_context.iocp_direct.cpp
+api.io_context.iocp_queued.cpp
+api.io_context.Niocp.cpp
+api.io_context.rio.cpp
+api.system.android.cpp
+api.system.windows.cpp
+log_source.cpp
+signal_handler.cpp
 )
 
 
 #-----------------------------------------------------------------------------
 # compile
 #-----------------------------------------------------------------------------
-# 1) set variable
-IF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
-	SET (BUILD_MESSAGE "Debug")
-	SET (BUILD_TYPE "Debug")
-ELSEIF (${CMAKE_BUILD_TYPE} MATCHES "Debug_Dynamic")
-	SET (BUILD_MESSAGE "Debug_Dynamic")
-	SET (BUILD_TYPE "Debug_Dynamic")
-ELSEIF (${CMAKE_BUILD_TYPE} MATCHES "Release")
-	SET (BUILD_MESSAGE "Release")
-	SET (BUILD_TYPE "Release")
-ELSEIF (${CMAKE_BUILD_TYPE} MATCHES "Release_Dynamic")
-	SET (BUILD_MESSAGE "Release_Dynamic")
-	SET (BUILD_TYPE "Release_Dynamic")
-ELSE ()
-	MESSAGE ("CMAKE_BUILD_TYPE is not defined")
+# 1) library
+CGDK_ADD_LIBRARY ( CGDK10.system.object STATIC
+	SOURCES         ${SRC_FILES}
+	LINUX_SOURCES   ${SRC_FILES_LINUX}
+	WINDOWS_SOURCES ${SRC_FILES_WINDOWS}
+	PCH             pch.h
+	SVN_VERSION
+)
+
+# - zlib is vendored third-party : silence its intentional -Wimplicit-fallthrough (do not touch upstream source)
+IF (NOT MSVC)
+	SET_SOURCE_FILES_PROPERTIES (
+		zlib/adler32.c zlib/compress.c zlib/crc32.c zlib/deflate.c
+		zlib/gzclose.c zlib/gzlib.c zlib/gzread.c zlib/gzwrite.c
+		zlib/infback.c zlib/inffast.c zlib/inflate.c zlib/inftrees.c
+		zlib/trees.c zlib/uncompr.c zlib/zutil.c
+		PROPERTIES COMPILE_OPTIONS "-Wno-implicit-fallthrough"
+	)
 ENDIF ()
 
-# 2) messages
-MESSAGE (STATUS "compile ${PROJECT_NAME}")
-MESSAGE (STATUS "  - configure['${BUILD_MESSAGE}']")
-
-# 3) configure file
-#CONFIGURE_FILE ( version.h.in version.h )
-
-# 4) add library
-ADD_LIBRARY(${PROJECT_NAME}_linux.${BUILD_TYPE} STATIC ${SRC_FILES} ${SRC_FILES_ZLIB} ${SRC_FILES_FMT})
-TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME}_linux.${BUILD_TYPE} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:pch.h>")
+# 2) build alias for convenience
+IF (TARGET ${CGDK_TARGET})
+	ADD_CUSTOM_TARGET ( object DEPENDS ${CGDK_TARGET} )
+ENDIF ()

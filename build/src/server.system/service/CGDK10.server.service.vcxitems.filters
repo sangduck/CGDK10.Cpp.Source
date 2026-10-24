@@ -1,0 +1,266 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.system_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.time_event.object.service_destroy.cpp">
+      <Filter>time_event</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.time_event.object.service_init.cpp">
+      <Filter>time_event</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.time_event.object.service_start.cpp">
+      <Filter>time_event</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.time_event.object.service_stop.cpp">
+      <Filter>time_event</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.time_event.schedule.service_destroy.cpp">
+      <Filter>time_event</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.time_event.schedule.service_init.cpp">
+      <Filter>time_event</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.time_event.schedule.service_start.cpp">
+      <Filter>time_event</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.time_event.schedule.service_stop.cpp">
+      <Filter>time_event</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.admin_info.binder.cpp">
+      <Filter>admin_info</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.admin_info.connective.cpp">
+      <Filter>admin_info</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.admin_info.factory.cpp">
+      <Filter>admin_info</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.admin_info.time_event.cpp">
+      <Filter>admin_info</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.Nservice.cpp">
+      <Filter>service</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.Nservice_application.cpp">
+      <Filter>service</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.cpp">
+      <Filter>service</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)api.manager_performance_query.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)api.performance_counter.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)api.server.process_info.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)api.server_status_handle.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)api.service.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)api.service_handle.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.Nstatic_service_logger.cpp">
+      <Filter>service</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.definitions.admin.protocol.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.definitions.admin.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.definitions.admin.server_info.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.group_socket.cpp">
+      <Filter>service\host_manager\admin_server</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.socket.client.cpp">
+      <Filter>service\service_instance\admin_client</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.socket.server.cpp">
+      <Filter>service\host_manager\admin_server</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.service_instance_local.cpp">
+      <Filter>service\service_instance\instance</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.service_instance_manager.cpp">
+      <Filter>service\service_instance\instance</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.host_instance_local.cpp">
+      <Filter>service\host_manager\instance</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.host_instance_manager.cpp">
+      <Filter>service\host_manager\instance</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.service_Ninstance.cpp">
+      <Filter>service\service_instance\instance</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.host_Ninstance.cpp">
+      <Filter>service\host_manager\instance</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.definitions.admin.message.network.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.definitions.admin.message.object.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.definitions.admin.message.server.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.definitions.admin.message.admin.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.definitions.admin.message.admin_instance.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.service_functions.cpp">
+      <Filter>service\service_instance\instance</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.service_instance_local.serialize.cpp">
+      <Filter>service\service_instance\instance</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="time_event">
+      <UniqueIdentifier>{4ce12480-2db3-4bea-a067-05f7f6ec1653}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="admin_info">
+      <UniqueIdentifier>{eb3db767-34d2-403b-aeb1-0809ef9368ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="service">
+      <UniqueIdentifier>{d0d60a6a-4802-4ccd-97e4-4a7443edbee4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api">
+      <UniqueIdentifier>{e08a0488-e608-4363-8503-d6ee9a32e15e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="service.service_instance">
+      <UniqueIdentifier>{dd27a53a-ba76-405a-8412-375b49d8ae16}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="service\host_manager">
+      <UniqueIdentifier>{8afdd41a-ac53-4393-9e15-f9c50c7e6db3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="service\service_instance">
+      <UniqueIdentifier>{dfbdf0bb-2006-44dd-b594-556eb43eae32}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="service\service_instance\instance">
+      <UniqueIdentifier>{9bed6463-c375-41d0-a905-804059b168a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="service\server">
+      <UniqueIdentifier>{8f46031f-acdf-4c6a-98bc-eb53fedd5952}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="service\service_instance\admin_client">
+      <UniqueIdentifier>{3c9fe35b-fe20-44ed-b084-6ddd9b57492f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="service\host_manager\admin_server">
+      <UniqueIdentifier>{421d6b27-7aa1-467f-8d84-4d87cf535361}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="service\host_manager\instance">
+      <UniqueIdentifier>{453429c0-4c57-466b-bff2-c7e582646a4d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.definitions.admin.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.definitions.admin.protocol.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.admin_Info.binder.h">
+      <Filter>admin_info</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.admin_info.connective.h">
+      <Filter>admin_info</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.admin_info.factory.h">
+      <Filter>admin_info</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.admin_info.time_event.h">
+      <Filter>admin_info</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\api.manager_performance_query.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\api.performance_counter.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\api.process_info.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\api.server_status_handle.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\api.service.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\api.service_handle.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.time_event.object.service_destroy.h">
+      <Filter>time_event</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.time_event.object.service_init.h">
+      <Filter>time_event</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.time_event.object.service_start.h">
+      <Filter>time_event</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.time_event.object.service_stop.h">
+      <Filter>time_event</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.time_event.schedule.service_destroy.h">
+      <Filter>time_event</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.time_event.schedule.service_init.h">
+      <Filter>time_event</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.time_event.schedule.service_start.h">
+      <Filter>time_event</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.time_event.schedule.service_stop.h">
+      <Filter>time_event</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.Iservice.h">
+      <Filter>service</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.Nservice.h">
+      <Filter>service</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.Nservice_application.h">
+      <Filter>service</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.Nstatic_service_logger.h">
+      <Filter>service</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.service.h">
+      <Filter>service</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.service_appilcation.h">
+      <Filter>service</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server.Iservice_component.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server_admin.socket.client.h">
+      <Filter>service\service_instance\admin_client</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server_admin.socket.server.h">
+      <Filter>service\host_manager\admin_server</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server_admin.group_socket.h">
+      <Filter>service\host_manager\admin_server</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server_admin.service_instance_manager.h">
+      <Filter>service\service_instance\instance</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server_admin.service_instance_local.h">
+      <Filter>service\service_instance\instance</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server_admin.service_instance.h">
+      <Filter>service\service_instance\instance</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server_admin.host_instance.h">
+      <Filter>service\host_manager\instance</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server_admin.host_instance_local.h">
+      <Filter>service\host_manager\instance</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server_admin.host_instance_manager.h">
+      <Filter>service\host_manager\instance</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server_admin.host_Ninstance.h">
+      <Filter>service\host_manager\instance</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\server_admin.service_Ninstance.h">
+      <Filter>service\service_instance\instance</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\service\read_me.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)CMakeLists.txt" />
+  </ItemGroup>
+</Project>

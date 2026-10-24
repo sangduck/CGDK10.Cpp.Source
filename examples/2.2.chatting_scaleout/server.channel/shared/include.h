@@ -16,24 +16,32 @@
 //*****************************************************************************
 
 #pragma once
-//-----------------------------------------------------------------------------
-//
-// service
-//
-//-----------------------------------------------------------------------------
-
 //-----------------------------------------------------------------
-// 1. Definitions
+// 1. setting
 //-----------------------------------------------------------------
-#if defined(_DEBUG) && !defined(NDEBUG)
-	#define	SERVER_CONFIGURE	L"debug"
-#else
-	#define	SERVER_CONFIGURE	L"release"
-#endif
+// definition) 
+#define	LOG_FILE		"log/chatting_scaleoutserver_channel_manager_{}{}{}-{}{}{}.log"sv
+#define	CONFIGURE_FILE	"configure/chatting_scaleoutserver_channel_manager.json"sv
 
 
 //-----------------------------------------------------------------
-// 2. Header files - Engine
+// 2. definitions
+//-----------------------------------------------------------------
+namespace server_channel_manager
+{
+	class socket;
+}
+
+namespace user
+{
+	class group;
+	class group_immigration;
+	class socket;
+}
+
+
+//-----------------------------------------------------------------
+// 3. Header files - Engine
 //-----------------------------------------------------------------
 // 1) Engine 
 #include "cgdk/sdk10/net.socket.h"
@@ -46,58 +54,26 @@ using namespace CGDK;
 
 
 //-----------------------------------------------------------------
-// 3. 
-//-----------------------------------------------------------------
-namespace channel
-{
-	class manager;
-
-	class Igroup;
-	class group_chatting;
-	class group_waiting;
-}
-
-namespace user
-{
-	class manager;
-
-	class group_immigration;
-	class socket;
-}
-
-
-//-----------------------------------------------------------------
 // 4. 
 //-----------------------------------------------------------------
-const uint32_t	CGNOTIFY_SERVER_UPDATE		 = (eMESSAGE::USER | 1);
-
-const uint32_t	CGNOTIFY_CHANNEL_ADD		 = (eMESSAGE::USER | 2);
-const uint32_t	CGNOTIFY_CHANNEL_REMOVE		 = (eMESSAGE::USER | 3);
-const uint32_t	CGNOTIFY_CHANNEL_UPDATE		 = (eMESSAGE::USER | 4);
-
-
-//-----------------------------------------------------------------
-// 5. 
-//-----------------------------------------------------------------
-// 1) definitions
+// 1) common
 #include "../../common/definitions.h"
 #include "../../common/definition_message.h"
 #include "../../common/Igroup_list.h"
 
-// 2) user
+// 2) definitions
+#include "chatting_channel.definition.h"
+
+// 3) user
 #include "user.socket.h"
 #include "user.group_immigration.h"
 #include "user.group.h"
-#include "user.manager.h"
 
-// 3) channels
-#include "channel_Igroup.h"
-#include "channel_group_waiting.h"
-#include "channel_group_chatting.h"
-#include "channel_manager.h"
+// 4) channels
+#include "server_chatting_manager.socket.h"
 
-// 4) service
+// 5) service
 #include "service.h"
 
-// 5) service object
+// 6) service entity
 extern own_ptr<service> g_pservice;

@@ -1,0 +1,22 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/windows/unit_test/" Id="6f1c2a5e-3b7d-4e8a-9c41-2d5b8e7f0a13">
+    <Project Path="unit_test\unit_test.server_system.log\unit_test.server_system.log.vs18.vcxproj" Id="e91301e0-42e5-4d1f-963c-ec1ea6788ae2" />
+    <Project Path="unit_test\unit_test.server_system.service\unit_test.server_system.service.vs18.vcxproj" Id="93943afd-87fa-48d6-8c6e-2029378f82d8" />
+    <Project Path="unit_test\unit_test.server_system.time_event\unit_test.server_system.time_event.vs18.vcxproj" Id="b7d4e2a1-5c3f-4e8b-a9d6-1f2e3c4b5a60" />
+  </Folder>
+  <Folder Name="/windows/" Id="de28dc24-b24c-4944-90ae-24afe40703cf">
+    <Project Path="log\CGDK10.server.log.vs18.vcxproj" Id="eea8b3fc-6c30-4451-b6bd-2188981c13a9" />
+    <Project Path="time_event\CGDK10.server.time_event.vs18.vcxproj" Id="45d845b1-4739-4cc6-9df7-f3ed871d61a2" />
+    <Project Path="mfc_controls/CGDK10.server.mfc_controls.vs18.vcxproj" Id="324eea7d-a3f6-4d89-838b-64c11b5e7224" />
+    <Project Path="service\CGDK10.server.service.vs18.vcxproj" Id="f99a8e26-8807-4731-8198-ec942ffc8912" />
+  </Folder>
+  <Project Path="..\common\cgdk_info.shared.vcxitems" Id="f2b5df8c-26a7-4f26-bd80-933bb4870b0a" />
+  <Project Path="log\CGDK10.server.log.vcxitems" Id="eeda7395-fa2e-4547-8a0f-8e53ddbe5ee0" />
+  <Project Path="time_event\CGDK10.server.time_event.vcxitems" Id="0e0509ab-a620-481c-9974-7a762e860e9e" />
+  <Project Path="group\CGDK10.server.group.vcxitems" Id="dff329a0-d36c-4683-b97c-7528bfbd54b7" />
+  <Project Path="mfc_controls\CGDK10.server.mfc_controls.shared.vcxitems" Id="b42e3cf8-ec9c-4300-b744-1dffa78d1d66" />
+  <Project Path="service\CGDK10.server.service.vcxitems" Id="6d98abab-e188-465a-9a75-142b888e4908" />
+</Solution>

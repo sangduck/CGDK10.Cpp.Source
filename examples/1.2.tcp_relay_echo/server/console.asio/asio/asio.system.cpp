@@ -1,4 +1,4 @@
-﻿#include "asio.h"
+#include "asio.h"
 #if defined(__linux__)
 #include <sys/resource.h>
 #endif
@@ -57,13 +57,16 @@ void asio::system::run_executor()
 
 void asio::system::process_run_executor()
 {
-	// declare) 
-	boost::system::error_code ec;
-
 	for(;;)
 	{
-		// - run
-		this->io_service.run(ec);
+		try
+		{
+			// - run
+			this->io_service.run();
+		}
+		catch(...)
+		{
+		}
 
 		if (this->m_is_thread_run)
 			this->io_service.restart();

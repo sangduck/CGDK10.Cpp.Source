@@ -1,21 +1,29 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 CGDK::update::UPDATABLE_ID _get_unique_updatable_id() noexcept;
 void _get_md5(CGDK::FILE_HANDLE _file_handle, CGDK::edc::md5& _md5, uint64_t _end);
 void _get_md5_to_end (CGDK::FILE_HANDLE _file_handle, CGDK::edc::md5& _md5, uint64_t _end);
 
+// closes a file handle when leaving the scope (normal return or exception)
+struct _file_handle_closer
+{
+	CGDK::FILE_HANDLE handle;
+	~_file_handle_closer() { CGDK::api::file::close(this->handle); }
+};
+
 
 const CGDK::sUPDATABLE_FILE_COMPLETION_INFO& CGDK::resource::updatable::file_stream::get_meta_completion()
 {
-	scoped_lock(m_cs_info)
+	SCOPED_LOCK(m_lockable_info)
 	{
-		if (this->m_md5_pos > this->m_meta_info.size)
+		if (this->m_md5_pos < this->m_meta_info.size)
 		{
 			// - make file
 			auto file_handle = CGDK::api::file::open(this->m_full_path.string(), eFILE_OPERATION::READ);
 
 			// check) 
 			THROW_IF(file_handle == INVALID_FILE_HANDLE, throwable::failure(eRESULT::FAIL_TO_OPEN, 0, "fail to to open file"sv));
+			_file_handle_closer file_closer{ file_handle };
 
 			// - get md5
 			_get_md5_to_end(file_handle, this->m_md5_file, this->m_md5_pos);
@@ -24,9 +32,6 @@ const CGDK::sUPDATABLE_FILE_COMPLETION_INFO& CGDK::resource::updatable::file_str
 
 			// - update pos
 			this->m_md5_pos = this->m_meta_info.size;
-
-			// - close file
-			CGDK::api::file::close(file_handle);
 		}
 	}
 
@@ -77,10 +82,10 @@ CGDK::shared_buffer CGDK::resource::updatable::file_stream::get_block(uint64_t _
 	// declare)
 	CGDK::shared_buffer buf_block;
 
-	scoped_lock(this->m_cs_info)
+	SCOPED_LOCK(this->m_lockable_info)
 	{
 		// check)
-		RETURN_IF(_pos > this->m_meta_info.size, CGDK::shared_buffer());
+		RETURN_IF(_pos > this->m_meta_info.size, buf_block);
 
 		// 1) get index
 		auto index = _pos / m_meta_info.block_size;
@@ -110,13 +115,18 @@ CGDK::shared_buffer CGDK::resource::updatable::file_stream::get_block(uint64_t _
 		// 4) reserver room
 		buf_block.append<sMETA_FILE_BLOCK>();
 
-		// 5) read block
+		// 5) read block using cached file handle
 		{
-			// - make file
-			auto file_handle = CGDK::api::file::open(this->m_full_path.c_str(), eFILE_OPERATION::READ);
-
-			// check) 
-			THROW_IF(file_handle == INVALID_FILE_HANDLE, throwable::failure(eRESULT::FAIL_TO_OPEN, 0, "fail to to open file"sv));
+			// - ensure cached file is open
+			FILE_HANDLE file_handle;
+			{
+				SCOPED_LOCK(this->m_lock_file_handle)
+				{
+					file_handle = this->m_cached_file_handle;
+					THROW_IF(file_handle == INVALID_FILE_HANDLE,
+							 throwable::failure(eRESULT::FAIL_TO_OPEN, 0, "cached file not open"sv));
+				}
+			}
 
 			// - prepare md5
 			if (this->m_md5_pos < _pos)
@@ -125,7 +135,11 @@ CGDK::shared_buffer CGDK::resource::updatable::file_stream::get_block(uint64_t _
 			}
 
 			// check)
-			RETURN_IF(_pos == this->m_meta_info.size, CGDK::shared_buffer());
+			if (_pos == this->m_meta_info.size)
+			{
+				buf_block.clear();
+				return buf_block;
+			}
 
 			// - set file pos
 			{
@@ -150,9 +164,6 @@ CGDK::shared_buffer CGDK::resource::updatable::file_stream::get_block(uint64_t _
 				// check)
 				THROW_IF(size_read != meta_file_block.size, throwable::failure(eRESULT::FAIL, 0, ""sv));
 			}
-
-			// - close file
-			CGDK::api::file::close(file_handle);
 		}
 
 		// 6) add md5
@@ -169,14 +180,18 @@ CGDK::shared_buffer CGDK::resource::updatable::file_stream::get_block(uint64_t _
 		}
 		else
 		{
-			// - alloc shared buffer
-			auto temp_buf = alloc_shared_buffer(meta_file_block.size * 2);
+			// - reuse compression buffer instead of allocating new one each time
+			if (this->m_compression_buffer.get_remained_size() < meta_file_block.size * 2)
+			{
+				this->m_compression_buffer = alloc_shared_buffer(meta_file_block.size * 2);
+			}
+			this->m_compression_buffer.clear();
 
-			// declare) 
+			// declare)
 			buffer_view buf_temp_source(buf_block.data() + sizeof(sMETA_FILE_BLOCK), meta_file_block.size);
 
 			// - compress block
-			auto temp_compressed = CGDK::compress::zip(buffer_view(temp_buf.data(), temp_buf.get_remained_size()), buf_temp_source);
+			auto temp_compressed = CGDK::compress::zip(buffer_view(this->m_compression_buffer.data(), this->m_compression_buffer.get_remained_size()), buf_temp_source);
 
 			// - 만약 압축된 크기가 원본의 90%보다 작을 경우에만 압축을 적용한다.
 			if ((buf_temp_source.size() / 10 * 9) > temp_compressed.size())
@@ -210,6 +225,31 @@ CGDK::shared_buffer CGDK::resource::updatable::file_stream::get_block(uint64_t _
 
 	// return) 
 	return buf_block;
+}
+
+void CGDK::resource::updatable::file_stream::_open_cached_file()
+{
+	SCOPED_LOCK(this->m_lock_file_handle)
+	{
+		if (this->m_cached_file_handle == INVALID_FILE_HANDLE)
+		{
+			this->m_cached_file_handle = CGDK::api::file::open(this->m_full_path.c_str(), eFILE_OPERATION::READ);
+			THROW_IF(this->m_cached_file_handle == INVALID_FILE_HANDLE,
+					 throwable::failure(eRESULT::FAIL_TO_OPEN, 0, "fail to open cached file"sv));
+		}
+	}
+}
+
+void CGDK::resource::updatable::file_stream::_close_cached_file() noexcept
+{
+	SCOPED_LOCK(this->m_lock_file_handle)
+	{
+		if (this->m_cached_file_handle != INVALID_FILE_HANDLE)
+		{
+			CGDK::api::file::close(this->m_cached_file_handle);
+			this->m_cached_file_handle = INVALID_FILE_HANDLE;
+		}
+	}
 }
 
 void CGDK::resource::updatable::file_stream::process_resource_prepare(std::string_view _path_base, std::string_view _path, std::string_view _filename, resource::eOPTION _flag, uint64_t _block_size)
@@ -248,17 +288,15 @@ void CGDK::resource::updatable::file_stream::process_resource_prepare(std::strin
 		// - open file
 		auto file_handle = CGDK::api::file::open(full_file_path.c_str(), eFILE_OPERATION::READ);
 
-		// check) 
+		// check)
 		THROW_IF(file_handle == INVALID_FILE_HANDLE, throwable::failure(eRESULT::FAIL_TO_OPEN, 0, "fail to to open file"sv));
+		_file_handle_closer file_closer{ file_handle };
 
 		// - get file length
 		size_file = CGDK::api::file::get_length(file_handle);
-
-		// - close file
-		CGDK::api::file::close(file_handle);
 	}
 
-	// 3) 
+	// 3)
 	CGDK::resource::sUPDATABLE_FILE_META_INFO file_meta_info;
 	file_meta_info.id = _get_unique_updatable_id(); // update::UPDATABLE_ID
 	file_meta_info.size = size_file;
@@ -275,18 +313,18 @@ void CGDK::resource::updatable::file_stream::process_resource_prepare(std::strin
 	// decl0are)
 	std::vector<shared_buffer> vector_buffer;
 
-	// 4) file block 
+	// 4) file block
 	vector_buffer.resize(file_meta_info.size / file_meta_info.block_size + 1);
 
 	// 5) set!
-	scoped_lock(this->m_cs_info)
+	SCOPED_LOCK(this->m_lockable_info)
 	{
 		this->m_full_path = std::move(full_file_path);
 		this->m_path = std::move(_path);
 		this->m_filename = std::move(_filename);
 		this->m_flag = _flag;
 
-		// - 
+		// -
 		this->m_md5_pos = 0;
 		this->m_md5_file.initialize();
 
@@ -295,6 +333,9 @@ void CGDK::resource::updatable::file_stream::process_resource_prepare(std::strin
 
 		this->m_vector_buffer = std::move(vector_buffer);
 	}
+
+	// 6) open cached file for streaming reads
+	this->_open_cached_file();
 }
 
 void CGDK::resource::updatable::file_stream::process_resource_load()
@@ -304,7 +345,7 @@ void CGDK::resource::updatable::file_stream::process_resource_load()
 	uint64_t block_size;
 
 	// 1) move
-	scoped_lock(this->m_cs_info)
+	SCOPED_LOCK(this->m_lockable_info)
 	{
 		// check)
 		CGASSERT_ERROR(this->m_meta_info.filename.empty());
@@ -320,7 +361,7 @@ void CGDK::resource::updatable::file_stream::process_resource_load()
 
 		// - get file meta info
 		size_file = m_meta_info.size;
-		block_size = m_meta_info.size;
+		block_size = m_meta_info.block_size;
 	}
 
 	// check)
@@ -348,7 +389,7 @@ void CGDK::resource::updatable::file_stream::process_resource_load()
 	THROW_IF(vector_buffer.size() != block_count, throwable::failure(eRESULT::FAIL, 0, "invalid operation"sv));
 
 	// 4) succes!
-	scoped_lock(this->m_cs_info)
+	SCOPED_LOCK(this->m_lockable_info)
 	{
 		m_vector_buffer = std::move(vector_buffer);
 	}
@@ -356,7 +397,10 @@ void CGDK::resource::updatable::file_stream::process_resource_load()
 
 void CGDK::resource::updatable::file_stream::process_resource_clear() noexcept
 {
-	scoped_lock(this->m_cs_info)
+	// 1) close cached file handle
+	this->_close_cached_file();
+
+	SCOPED_LOCK(this->m_lockable_info)
 	{
 		// - ....
 		this->m_full_path.clear();

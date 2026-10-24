@@ -31,7 +31,7 @@ namespace CGDK
 //       도착하였을 때 그 Lambda 함수를 호출해 준다.
 //
 //-----------------------------------------------------------------------------
-template <class TSOURCE=Imessageable>
+template <class TSOURCE = Imessageable>
 class message_remote_request : 
 	virtual public				Imessageable
 {
@@ -59,7 +59,8 @@ protected:
 			uint32_t			m_request_serial = 0;
 
 	// 3) Request map
-			lockable<std::map<uint32_t, object_ptr<CRequest>>>	m_map_request;
+	mutable	lock_object			m_lockable_map_request;
+			std::map<uint32_t, object_ptr<CRequest>> m_map_request;
 };
 
 template <class TSOURCE>
@@ -83,7 +84,7 @@ inline shared_buffer message_remote_request<TSOURCE>::request_message(const shar
 	temp_buffer.front<uint32_t>() = temp_buffer.size_;
 
 	// 4) 추가한다.
-	scoped_lock(this->m_map_request)
+	SCOPED_LOCK(this->m_lockable_map_request)
 	{
 		// -Request Serial을 얻는다.
 		uint32_t request_serial = this->m_request_serial++;
@@ -111,7 +112,7 @@ result_code message_remote_request<TSOURCE>::process_message(sMESSAGE& _msg)
 	// check) Response일 때만 message를 처리한다.
 	if(msg_network.buf_message.front<uint32_t>(4)==eMESSAGE::NETWORK::SOCKET::REMOTE_RESPONSE)
 	{
-		// 2) Resquestor의 ID를 확인한다.
+		// 2) Requestor의 ID를 확인한다.
 		int request_id = msg_network.buf_message.front<int>(8);
 
 		// check)
@@ -126,7 +127,7 @@ result_code message_remote_request<TSOURCE>::process_message(sMESSAGE& _msg)
 		// declare) 
 		object_ptr<CRequest> prequest;
 
-		scoped_lock(this->m_map_request)
+		SCOPED_LOCK(this->m_lockable_map_request)
 		{
 			// - Request를 찾는다.
 			auto iter = this->m_map_request.find(request_serial);

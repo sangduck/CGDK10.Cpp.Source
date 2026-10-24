@@ -22,59 +22,32 @@ namespace CGDK
 {
 //-----------------------------------------------------------------------------
 //
-// template<class TSOCKET> 
-// net::acceptor<TSOCKEET>
-//
+// net::acceptor<TSOCKET> - for http socket
 //
 //-----------------------------------------------------------------------------
 template <class TSOCKET>
 class net::acceptor<TSOCKET, typename std::enable_if<std::is_base_of<net::io::Nhttp_server, TSOCKET>::value>::type> :
-// inherited classes) 
-	public						net::io::connective::acceptor::Ntcp_secure,
+	public						net::io::connective::acceptor::Ntcp_ssl,
 	public						Nmessage_transmitter,
 	public						net::io::connectable_manager::list<TSOCKET>
 {
-// definitions)
-	using	TBASE_ACCEPTOR = net::io::connective::acceptor::Ntcp_secure;
-
-// constructor/destructor) 
 public:
-			acceptor()
+			acceptor() 
 			{
 				// check) 
-				static_assert(std::is_base_of_v<Icryptable, TSOCKET>, "secured socket must have 'Icryptable' interface (dereive 'net::io::connect_requestable::Ntcp_secure' or 'net::io::Nsocket_secure')");
-			}
-			acceptor(std::string_view _name)
-			{
-				// check) 
-				static_assert(std::is_base_of_v<Icryptable, TSOCKET>, "secured socket must have 'Icryptable' interface (dereive 'net::io::connect_requestable::Ntcp_secure' or 'net::io::Nsocket_secure')");
+				static_assert(std::is_base_of_v<net::io::Nsocket_ssl, TSOCKET>, "secured socket must have 'net::io::Nsocket_ssl' interface (derive 'net::io::Nsocket_ssl')");
 
-				// 1) Name이 없을 경우 acceptor의 Name을 설정한다.
-				if (_name.empty() == false)
-				{
-					set_name(_name);
-				}
-				else
-				{
-					// declare) 
-					char temp[MAX_NAME_LENGTH];
+				std::string temp_name("acceptor.http<");
+				temp_name += typeid(TSOCKET).name();
+				temp_name += ">"sv;
 
-					// - 기본 acceptor의 Name을 설정한다.
-					__sprintf(temp, "acceptor http<%s>", typeid(TSOCKET).name());
-
-					// - 기본 이름을 설정한다.
-					set_name(temp);
-				}
+				this->name(temp_name);
 			}
 	virtual	~acceptor() noexcept {}
 
-// public) 
 protected:
 	virtual	object_ptr<net::io::Iconnectable> process_alloc_connectable() override { return alloc_object<TSOCKET>(); }
-	virtual result_code			_process_destroy() noexcept override { auto result = net::io::connective::acceptor::Ntcp_secure::_process_destroy(); reset_message_transmitter(); return result; }
-
-protected:
-	// 1) default Port
+	virtual result_code			_process_destroy() noexcept override { auto result = net::io::connective::acceptor::Ntcp_ssl::_process_destroy(); reset_message_transmitter(); return result; }
 	virtual	uint16_t			process_get_default_port() noexcept override { return this->get_ssl_context().exist() ? 443 : 80; }
 };
 

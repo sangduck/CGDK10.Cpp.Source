@@ -46,7 +46,7 @@ namespace api
 		uint32_t				_error_control	 = SERVICE_ERROR_NORMAL) noexcept;
 	bool service_uninstall() noexcept;
 
-// 2) start/stop/pause/Contiune
+// 2) start/stop/pause/Continue
 bool service_start (std::string_view _str_service_name, uint32_t _dwNumServiceArgs, const char** _lpServiceArgVectors) noexcept;
 bool service_start (std::wstring_view _str_service_name, uint32_t _dwNumServiceArgs, const wchar_t** _lpServiceArgVectors) noexcept;
 bool service_stop (std::string_view  _str_service_name) noexcept;

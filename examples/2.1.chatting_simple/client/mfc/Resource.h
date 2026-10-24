@@ -1,6 +1,6 @@
-ï»¿//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ì—ì„œ ìƒì„±í•œ í¬í•¨ íŒŒì¼ìž…ë‹ˆë‹¤.
-// chattingclientmfc.rcì—ì„œ ì‚¬ìš©ë˜ê³  ìžˆìŠµë‹ˆë‹¤.
+//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++¿¡¼­ »ý¼ºÇÑ Æ÷ÇÔ ÆÄÀÏÀÔ´Ï´Ù.
+// chattingclientmfc.rc¿¡¼­ »ç¿ëµÇ°í ÀÖ½À´Ï´Ù.
 //
 #define IDS_ABOUTBOX                    101
 #define IDD_CHATTING_CLIENTMFC_DIALOG   102
@@ -26,7 +26,7 @@
 #define IDC_STATIC_CHATTING_NICKNAME_TAG 1069
 #define IDC_STATIC_CHATTING_NICKNAME    1070
 #define IDC_SPIN_ACCOUNT_ID             1071
-#define IDC_STATIC_CHATTING_SEPERATOR   1072
+#define IDC_STATIC_CHATTING_SEPARATOR   1072
 #define IDC_BUTTON_CLOSE                1073
 #define IDC_STATIC_CHATTING_SEPERATOR2  1074
 #define IDC_STATIC_CHANNEL_NAME_TAG     1076

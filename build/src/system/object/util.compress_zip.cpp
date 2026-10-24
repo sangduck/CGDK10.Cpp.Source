@@ -8,7 +8,7 @@ std::string_view _get_zip_error_string(int _err_no) noexcept
 {
 	switch (_err_no)
 	{
-	case	Z_ERRNO:			return "erro no"sv;
+	case	Z_ERRNO:			return "error no"sv;
 	case	Z_STREAM_ERROR:		return "stream error"sv;
 	case	Z_DATA_ERROR:		return "data error"sv;
 	case	Z_MEM_ERROR:		return "memory error"sv;
@@ -17,7 +17,6 @@ std::string_view _get_zip_error_string(int _err_no) noexcept
 	default:					return "unknowned error"sv;
 	}
 }
-
 
 buffer_view compress::zip(buffer_view _buf_dest, const_buffer_view _buf_source)
 {
@@ -52,7 +51,8 @@ shared_buffer compress::zip(const_buffer_view _buf_source)
 		throw throwable::failure(eRESULT::RUNTIME_ERROR, result, _get_zip_error_string(result));
 
 	// return) 
-	return buf_dest ^ length;
+	buf_dest ^= length;
+	return buf_dest;
 }
 
 buffer_view compress::unzip(buffer_view _buf_dest, const_buffer_view _buf_source)
@@ -94,7 +94,8 @@ shared_buffer compress::unzip(const_buffer_view _buf_source)
 	} while (result == Z_BUF_ERROR);
 
 	// return) 
-	return buf_dest ^ size_decompressed;
+	buf_dest ^= size_decompressed;
+	return buf_dest;
 }
 
 

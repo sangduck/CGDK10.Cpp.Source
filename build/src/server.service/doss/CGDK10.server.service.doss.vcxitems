@@ -15,26 +15,15 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.depot.group.socket.immigration.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.depot.socket.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.Ientity.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.Irepository.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.Itransactable.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.manager_repository.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.messages.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.Ndepot.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.statistics.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project_CGDK\CGDK10.C++\include\cgdk\sdk10\server.service\doss\server.service.doss.entity_command.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project_CGDK\CGDK10.C++\include\cgdk\sdk10\server.service\doss\server.service.doss.entity_session.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service.doss.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\..\CGDK\CGDK10.Cpp\include\cgdk\sdk10\server.service.doss.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.definitions.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.definition_protocol.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.depot.group_socket_immigration.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.depot.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.depot.socket.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.depot_restore.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.entity_session.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.entity_transactable.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.Idepot.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.Ientity.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.Irepository.h" />
@@ -52,7 +41,18 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.statistics.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\..\..\project_CGDK\CGDK10.C++\include\cgdk\sdk10\server.service\doss\server.service.doss.entity_command.inl" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.depot.group.socket.immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.depot.socket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.Ientity.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.Irepository.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.Itransactable.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.manager_repository.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.messages.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.Ndepot.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.service.doss.statistics.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.entity_transactable.inl" />
     <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.repository.Nhub.inl" />
     <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.repository.orm.inl" />
     <None Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.service\doss\server.service.doss.repository.rdb.inl" />

@@ -1,4 +1,4 @@
-﻿#ifndef PCH_H
+#ifndef PCH_H
 #define PCH_H
 
 #include "framework.h"
@@ -9,7 +9,7 @@ extern own_ptr<test_tcp_echo_client> g_ptest_tcp_echo_client;
 
 struct PACKET_HEADER_BASE
 {
-	short seperator_ = 0;
+	short separator_ = 0;
 	short size_ = 0;
 
 	operator size_t() const noexcept { return (size_t)size_; }

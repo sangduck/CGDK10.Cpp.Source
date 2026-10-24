@@ -3,8 +3,7 @@
 namespace CGDK
 {
 
-template <>
-std::string_view to_string<char>(eSCHEDULABLE_TYPE _executor_type) noexcept
+std::string_view to_string(eSCHEDULABLE_TYPE _executor_type) noexcept
 {
 	std::string_view result;
 
@@ -19,17 +18,15 @@ std::string_view to_string<char>(eSCHEDULABLE_TYPE _executor_type) noexcept
 	return result;
 }
 
-template <>
-std::wstring_view to_string<wchar_t>(eSCHEDULABLE_TYPE _executor_type) noexcept
+std::string_view to_string(eSCHEDULE_OVERRUN _overrun) noexcept
 {
-	std::wstring_view result;
+	std::string_view result;
 
-	switch (_executor_type)
+	switch (_overrun)
 	{
-	case	eSCHEDULABLE_TYPE::DEFAULT:	result = L"default";		break;
-	case	eSCHEDULABLE_TYPE::SYSTEM:	result = L"system";			break;
-	case	eSCHEDULABLE_TYPE::USER:	result = L"user";			break;
-	default:							result = L"";				break;
+	case	eSCHEDULE_OVERRUN::CATCH_UP:	result = "catch_up";		break;
+	case	eSCHEDULE_OVERRUN::SKIP:		result = "skip";			break;
+	default:								result = "";				break;
 	}
 
 	return result;

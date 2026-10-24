@@ -41,12 +41,12 @@ public:
 	virtual	~function() noexcept {}
 
 public:
-			void				set_function(const TEXECUTE& _fucntion) noexcept { scoped_lock(this->m_lockable_completion) { this->m_function_completion = _fucntion; } }
-			void				set_function(TEXECUTE&& _fucntion) noexcept { scoped_lock(this->m_lockable_completion) { this->m_function_completion = std::move(_fucntion); } }
-	[[nodiscard]] TEXECUTE		get_function() const noexcept { scoped_lock(this->m_lockable_completion) { return this->m_function_completion; } }
+			void				set_function(const TEXECUTE& _function) noexcept { std::lock_guard lock(this->m_lockable_completion); this->m_function_completion = _function; }
+			void				set_function(TEXECUTE&& _function) noexcept { std::lock_guard lock(this->m_lockable_completion); this->m_function_completion = std::move(_function); }
+	[[nodiscard]] TEXECUTE		get_function() const noexcept { std::lock_guard lock(this->m_lockable_completion); return this->m_function_completion; }
 
 private:
-			lockable<>			m_lockable_completion;
+			lock_object			m_lockable_completion;
 			TEXECUTE			m_function_completion;
 private:
 	virtual	intptr_t			process_execute(intptr_t, size_t) override { return this->process_execute_result<decltype(this->m_function_completion())>();}

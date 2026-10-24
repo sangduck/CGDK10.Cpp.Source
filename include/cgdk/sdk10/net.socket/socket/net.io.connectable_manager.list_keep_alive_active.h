@@ -37,9 +37,9 @@ namespace CGDK
 //    3) 만약 socket별로 keep Alive를 하고 싶다면 이것을 쓰지 말고 socket에 
 //       keep alive Add-On을 상속받는 것이 좋다.
 //    4) enable_keep_alive()함수와 disable_keep_alive()를 사용하여 keep alive기능을
-//       켜고 끌수 있다.
+//       켜고 끌 수 있다.
 //       하지만 acceptor차원에서 제공해주는 keep alive는 socket별로 keep alive
-//       기능을 켜고 끌수는 없다.
+//       기능을 켜고 끌 수는 없다.
 //    5) set_keep_alive_time_out()함수를 사용하여 keep alive 타임아웃 시간을 설정할 
 //       수 있다. (기본값은 2분(120000tick)으로 설정되어 있다.)
 //    6) SetPingInterval()함수를 사용하여 Ping을 전송하는 간격을 설정할 수 있다.
@@ -51,7 +51,6 @@ namespace CGDK
 
 template <class TCONNECTABLE=net::io::Iconnectable>
 class net::io::connectable_manager::list_keep_alive_active : 
-// inherited classes)
 	public						list_keep_alive_passive<TCONNECTABLE>
 {
 // constructor/destructor)
@@ -98,7 +97,7 @@ intptr_t net::io::connectable_manager::list_keep_alive_active<TCONNECTABLE>::pro
 	buffer_ping.append<tick::time_point>(tick_now);
 
 	// 3) 모든 connectable을 돌아가며 keep Alive 테스트를 수행한다.
-	scoped_lock(this->m_list_connectable)
+	SCOPED_LOCK(this->m_list_connectable)
 	{
 		for(auto& iter:this->m_list_connectable)
 		{

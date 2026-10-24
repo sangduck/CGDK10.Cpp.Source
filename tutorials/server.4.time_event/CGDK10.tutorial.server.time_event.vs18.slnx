@@ -1,0 +1,8 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="time_event.01.basic\tutorial.time_event.basic.vs18.vcxproj" Id="abceca56-f264-40e8-ad44-296426e3bbaa" />
+  <Project Path="time_event.02.entity\tutorial.time_event.entity.vs18.vcxproj" Id="e5d67fb5-e4d0-4939-86b6-f7762ec38344" />
+  <Project Path="time_event.03.entity_event\tutorial.time_event.entity_event.vs18.vcxproj" Id="9694fe3c-68ee-4424-9b23-b3dcf49225a6" />
+</Solution>

@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="definitions">
+      <UniqueIdentifier>{364ee956-efa0-4cb8-a60e-a5d652b8dfd9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="net.io">
+      <UniqueIdentifier>{f3c7d099-e0cb-4ed1-ad0b-6d5462c18a47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="net.io\interfaces">
+      <UniqueIdentifier>{89e1132d-75a5-4a90-97c6-424e1720f1fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="net.io\components">
+      <UniqueIdentifier>{37c12131-aced-4c09-8a70-772d081d99b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="templates">
+      <UniqueIdentifier>{68ceef3f-92c5-472e-bcce-9565621ca242}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.definitions.kafka.cpp">
+      <Filter>definitions</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.kafka.Nclient.cpp">
+      <Filter>net.io\components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.kafka.Nconsumer.cpp">
+      <Filter>net.io\components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.kafka.Nproducer.cpp">
+      <Filter>net.io\components</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket.kafka.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.kafka\net.definitions.kafka.h">
+      <Filter>definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.kafka\net.io.kafka.Iconsumable.h">
+      <Filter>net.io\interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.kafka\net.io.kafka.Imessageable.h">
+      <Filter>net.io\interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.kafka\net.io.kafka.Iproducer.h">
+      <Filter>net.io\interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.kafka\net.io.kafka.Iproducible.h">
+      <Filter>net.io\interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.kafka\net.io.kafka.Nclient.h">
+      <Filter>net.io\components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.kafka\net.io.kafka.Nconsumer.h">
+      <Filter>net.io\components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.kafka\net.io.kafka.Nproducer.h">
+      <Filter>net.io\components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.kafka\net.kafka.consumer.h">
+      <Filter>templates</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.kafka\net.kafka.producer.h">
+      <Filter>templates</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

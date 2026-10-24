@@ -1,8 +1,8 @@
-ï»¿//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ì—ì„œ ìƒì„±í•œ í¬í•¨ íŒŒì¼ìž…ë‹ˆë‹¤.
-// tutorial.group.chatting.client.mfc.rcì—ì„œ ì‚¬ìš©ë˜ê³  ìžˆìŠµë‹ˆë‹¤.
+//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++¿¡¼­ »ý¼ºÇÑ Æ÷ÇÔ ÆÄÀÏÀÔ´Ï´Ù.
+// tutorial.group.chatting.client.mfc.rc¿¡¼­ »ç¿ëµÇ°í ÀÖ½À´Ï´Ù.
 //
-#define IDD_TUTORIALGROUPCHATTINGCLIENTCONSOLEWINDOWSVS16_DIALOG 102
+#define IDD_TUTORIALGROUPCHATTINGCLIENTCONSOLEWINDOWS_DIALOG 102
 #define IDR_MAINFRAME                   128
 #define IDC_LIST_CHATTING               1000
 #define IDC_EDIT_CHATTING               1001

@@ -1,0 +1,8 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="server\console\CGDK10.game_mmo_field.server.console.vs18.vcxproj" Id="218ea6a6-833a-404a-91fd-c14cd3afa6ae" />
+  <Project Path="server\shared\CGDK10.game_mmo_field.server.vcxitems" Id="82d66db1-0bd3-4fe2-84d2-dabe60985c00" />
+  <Project Path="server\mfc\CGDK10.game_mmo_field.server.mfc.vs18.vcxproj" Id="fcf365a5-edbc-473a-a1f9-30126473c72d" />
+</Solution>

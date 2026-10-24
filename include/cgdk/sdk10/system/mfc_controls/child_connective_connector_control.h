@@ -25,7 +25,7 @@ namespace CGDK
 // CChild_connective_connector_control
 //
 // 1. CChild_connective_connector_control란!
-//    1) Connective Connector의 기본 조작용 콘트롤
+//    1) Connective Connector의 기본 조작용 컨트롤
 // 
 // 
 //-----------------------------------------------------------------------------

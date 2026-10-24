@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                                Web Classes                                *
+//*                             server.query.http                             *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -37,12 +37,17 @@ public:
 	typedef	querier	QUERIER;
 
 public:
-	// 1) execute_query/post_execute_query/Cancel
-			void				execute_query(const std::string_view _command);
-			template <class TFIRST, class... TARGS>
-			void				execute_query(const std::string_view _format, TFIRST _first, TARGS... _args);
+		// 1) execute_query/post_execute_query/Cancel
+			//    - execute_query()      : without 'co_await' executed as before. with 'co_await' the coroutine is resumed when the response is received. (execute_result)
+			//    - execute_query_sync() : always executed at once (waits for the response)
+			execute_result<void> execute_query(const std::string_view _command);
+			void				execute_query_sync(const std::string_view _command);
 
-			// 2) execute
+		// coroutine) called once after the request is completed (used by 'co_await execute_query()')
+			void				_set_function_on_complete(std::function<void()>&& _function);
+			void				_process_on_complete();
+
+		// 2) execute
 			void				post_execute_query(const std::string_view _command);
 			template <class TQUERY = query>
 			void				post_execute_query(const std::string_view _command, const std::function<void(result_code,TQUERY*)>& _response);
@@ -64,22 +69,47 @@ public:
 
 	// 2) ....
 			std::recursive_mutex m_lockable_state_query;
+			std::function<void()> m_function_on_complete;
 };
 
-template <class TFIRST, class... TARGS>
-void query::http::query::execute_query(const std::string_view _format, TFIRST _first, TARGS... _args)
+inline query::execute_result<void> query::http::query::execute_query(const std::string_view _command)
 {
-	// check) _format shouldn't be nullptr
-	CGASSERT_ERROR(_format.empty() == false);
+	// 1) out of a coroutine: executed at once (same as before)
+	if (!is_deferred_execution())
+	{
+		this->execute_query_sync(_command);
+		return execute_result<void>::executed();
+	}
 
-	// declare) 
-	auto buf_query_string = alloc_shared_buffer(65536);
+	// 2) in a coroutine: deferred ('co_await' sends the request and resumes the coroutine when the response is received)
+	auto pquery = object_ptr<query>(this);
+	std::string command_sync(_command);
+	std::string command(_command);
 
-	// 1) Generate trace Message
-	auto str_length = __sprintf(buf_query_string.data<char>(), 65536, _format.data(), _first, _args...);
+	return execute_result<void>::deferred(
+		[pquery, command = std::move(command_sync)]() { pquery->execute_query_sync(command); },
+		[pquery, command = std::move(command)](std::function<void()>&& _on_complete) { pquery->_set_function_on_complete(std::move(_on_complete)); pquery->post_execute_query(command); });
+}
 
-	// 2) execute_query
-	this->execute_query(std::string_view(buf_query_string.data<char>(), str_length));
+inline void query::http::query::_set_function_on_complete(std::function<void()>&& _function)
+{
+	SCOPED_LOCK(this->m_lockable_state_query)
+	{
+		this->m_function_on_complete = std::move(_function);
+	}
+}
+
+inline void query::http::query::_process_on_complete()
+{
+	std::function<void()> function;
+
+	SCOPED_LOCK(this->m_lockable_state_query)
+	{
+		function = std::exchange(this->m_function_on_complete, nullptr);
+	}
+
+	if (function)
+		function();
 }
 
 template <class TQUERY>

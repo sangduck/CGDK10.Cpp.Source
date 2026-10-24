@@ -25,7 +25,7 @@ namespace CGDK
 // time_event::entity_start_iteration_end
 //
 // 1. time_event::entity_start_iteration_end이란?
-//    1) 시작과 종료시 실행될 Event가 설정되며 그 사이에 기간 동안 일정 간격으로  
+//    1) 시작과 종료 시 실행될 Event가 설정되며 그 사이에 기간 동안 일정 간격으로  
 //       Event함수를 호출하는 객체이다.
 //    2) 쉽게 말해서 CStartEnd와 CIteration를 합한 것이며 설정 함수 역시 두 클래스
 //       와 동일하다.

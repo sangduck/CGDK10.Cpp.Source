@@ -1,7 +1,7 @@
-ï»¿#pragma once
+#pragma once
 
 #ifndef __AFXWIN_H__
-	#error "PCHì— ëŒ€í•´ ì´ íŒŒì¼ì„ í¬í•¨í•˜ê¸° ì „ì— 'pch.h'ë¥¼ í¬í•¨í•©ë‹ˆë‹¤."
+	#error "PCH¿¡ ´ëÇØ ÀÌ ÆÄÀÏÀ» Æ÷ÇÔÇÏ±â Àü¿¡ 'pch.h'¸¦ Æ÷ÇÔÇÕ´Ï´Ù."
 #endif
 
 #include "resource.h"

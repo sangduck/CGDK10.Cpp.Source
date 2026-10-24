@@ -19,18 +19,19 @@
 #-----------------------------------------------------------------------------
 # Setting
 #-----------------------------------------------------------------------------
-# 1) Project name
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY( VERSION 3.20 )
+
+# 2) Project name
 PROJECT ( "CGDK10" )
 
-# 2) Project version
+# 3) Project version
 SET ( PROJECT_VERSION_MAJOR 0 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 set ( DEFAULT_BULD_TYPE debug )
-
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.10 )
 
 
 #-----------------------------------------------------------------------------

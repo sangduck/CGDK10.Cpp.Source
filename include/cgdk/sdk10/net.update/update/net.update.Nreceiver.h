@@ -17,6 +17,9 @@
 //*****************************************************************************
 
 #pragma once
+#include <condition_variable>
+#include <deque>
+#include <thread>
 // ----------------------------------------------------------------------------
 //
 // CGDK::update::Nreceiver
@@ -33,12 +36,12 @@ public:
 	virtual ~Nreceiver() noexcept;
 
 public:
-			void				set_root_path(std::string_view _root_path);
+			void				set_root_path(const std::string& _root_path);
 			void				set_root_path(std::string&& _root_path) noexcept;
 			std::string			get_root_path() const noexcept { return m_path_root;}
 			bool				have_root_path() const noexcept { return m_path_root.empty() == false; }
 
-			object_ptr<md5_caching> get_md5_caching() const noexcept { return m_pmd5_caching; }
+			auto				get_md5_caching() const noexcept -> object_ptr<md5_caching>	 { return m_pmd5_caching; }
 			void				set_md5_caching(md5_caching* _pmd5_caching) noexcept { m_pmd5_caching = _pmd5_caching; }
 
 
@@ -51,6 +54,11 @@ public:
 			auto				get_begin_time() const noexcept { return this->m_total_tick_begin; }
 			auto				get_end_time() const noexcept { return this->m_total_tick_end; }
 			float				get_period_bytes_per_second() const noexcept { return this->m_period_transfered_bytes_per_sec; }
+
+			// - worker queue: md5, decompression and file I/O run on a serial worker (system executor), never on the
+			//   socket's receive thread. A receive thread that is this many block bytes ahead of the worker waits.
+			std::size_t			get_queue_limit_bytes() const noexcept { return this->m_queue_limit_bytes.load(std::memory_order_relaxed); }
+			void				set_queue_limit_bytes(std::size_t _bytes) noexcept { this->m_queue_limit_bytes.store(_bytes, std::memory_order_relaxed); }
 
 protected:
 	virtual	void				on_update_begin(const sUPDATE_REQUEST_INFO& /*_info*/) {}
@@ -76,9 +84,9 @@ protected:
 
 private:
 			std::string			m_path_root;
-			RECEIVER_ID			m_receiver_id;
+			RECEIVER_ID			m_receiver_id{ 0 };
 
-			lockable<>			m_cs_map_updatable;
+			lock_object			m_lockable_map_updatable;
 			sUPDATE_REQUEST_INFO m_update_info;
 
 			// statistics)
@@ -89,9 +97,9 @@ private:
 			chrono::time::utc::time_point m_total_tick_begin;
 			chrono::time::utc::time_point m_total_tick_end;
 
-			std::atomic<uint64_t> m_period_transfered_bytes;
-			chrono::time::utc::time_point m_period_tick_last;
-			float				 m_period_transfered_bytes_per_sec;
+			std::atomic<uint64_t> m_period_transfered_bytes{ 0 };
+			std::atomic<int64_t> m_period_tick_last_ms{ 0 };
+			std::atomic<float>	 m_period_transfered_bytes_per_sec{ 0.0f };
 
 			std::map<UPDATABLE_ID, object_ptr<update::Ireceivable>> m_map_updatable_receive;
 			object_ptr<md5_caching> m_pmd5_caching;
@@ -104,4 +112,42 @@ private:
 
 			void				process_close_updatable(update::Ireceivable* _pupdatable, eRESULT _result) noexcept;
 
+			// - work item executed on the serial worker (system executor). The network thread only parses messages and
+			//   enqueues these, so md5, decompression, file I/O and every change of the update state happen off the
+			//   socket's receive thread, in message order.
+			struct sWORK
+			{
+				enum class eTYPE { UPDATE_BEGIN, UPDATE_END, UPDATABLE_PREPARE, UPDATABLE_BEGIN, UPDATABLE_BLOCK, UPDATABLE_CLOSE, CANCEL_ALL };
+
+				eTYPE				type = eTYPE::CANCEL_ALL;
+				SENDER_ID			sender_id = 0;
+				RECEIVER_ID			receiver_id = 0;
+				UPDATABLE_ID		updatable_id = 0;
+				sUPDATE_REQUEST_INFO update_request_info;
+				resource::sUPDATABLE_FILE_META_INFO file_meta_info;
+				resource::sMETA_FILE_BLOCK meta_file_block;
+				shared_buffer		buf_data;
+				uint64_t			pos_begin = 0;
+				resource::eFILE_FLAG file_flag = resource::eFILE_FLAG::NONE;
+				eRESULT				result = eRESULT::SUCCESS;
+			};
+
+			void				process_enqueue(sWORK&& _work);
+			void				process_drain_queue();
+			void				process_wait_idle() noexcept;
+			void				process_work(sWORK& _work);
+			void				process_work_update_begin(sWORK& _work);
+			void				process_work_update_end(sWORK& _work);
+			void				process_work_updatable_prepare(sWORK& _work);
+			void				process_work_updatable_begin(sWORK& _work);
+			void				process_work_updatable_block(sWORK& _work);
+			void				process_work_updatable_close(sWORK& _work);
+
+			lock_object			m_lockable_queue;
+			std::condition_variable_any m_cv_queue;
+			std::deque<sWORK>	m_queue_work;
+			std::size_t			m_queue_bytes = 0;
+			std::atomic<std::size_t> m_queue_limit_bytes{ 32 * 1024 * 1024 };
+			bool				m_is_draining = false;
+			std::atomic<std::thread::id> m_thread_id_worker;
 };

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 class group_test :
 	public group::list_sender<socket_tcp>,
@@ -12,7 +12,7 @@ public:
 public:
 	virtual	void	on_execute() override;
 
-			lockable<>		m_cs_buf_send;
+			lock_object		m_lockable_buf_send;
 			shared_buffer	m_buf_send;
 			std::atomic<uint64_t> m_queued_messages{0};
 			void	_alloc_buf_queue();

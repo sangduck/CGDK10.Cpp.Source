@@ -1,4 +1,4 @@
-ï»¿#include "asio.h"
+#include "asio.h"
 
 
 asio::Nsocket_tcp::Nsocket_tcp() :
@@ -18,7 +18,7 @@ asio::Nsocket_tcp::~Nsocket_tcp() noexcept
 	}
 }
 
-void asio::Nsocket_tcp::process_connect_complate()
+void asio::Nsocket_tcp::process_connect_complete()
  {
 	// 1) set socket state ESOCKET_STATUE::ESTABLISHED
 	{
@@ -39,7 +39,7 @@ void asio::Nsocket_tcp::process_connect_complate()
 	// 2) on connect
 	this->on_connect();
 
-	// 3) ê¸°ì¡´ì˜ bufferê°€ ìˆìœ¼ë©´ ì§€ìš´ë‹¤.
+	// 3) ±âÁ¸ÀÇ buffer°¡ ÀÖÀ¸¸é Áö¿î´Ù.
 	if (this->m_received_msg.data())
 	{
 		::free(this->m_received_msg.data());

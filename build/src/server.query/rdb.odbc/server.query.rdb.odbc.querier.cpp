@@ -18,38 +18,9 @@ query::rdb::odbc::querier::querier()
 	this->register_querier();
 }
 
-query::rdb::odbc::querier::querier(const std::string_view _name) : Nnameable(_name)
-{
-	// 1) Set Object type
-	this->set_object_type(eOBJECT_TYPE::QUERIER_DB_SQL);
-
-	// 2) Register Querier to Manager
-	this->register_querier();
-}
-
 query::rdb::odbc::querier::~querier() noexcept
 {
-	// 1) eOBJECT_STATE::RUNNING 상태일 때만 eOBJECT_STATE::STOP_PENDING 상태로 변경한다.
-	if (set_object_state_if(eOBJECT_STATE::RUNNING, eOBJECT_STATE::STOP_PENDING) == true)
-	{
-		// - process_stop함수를 호출한다.
-		this->process_stop();
-
-		// - 상태를 eOBJECT_STATE::STOPPED로 변경한다.
-		this->set_object_state(eOBJECT_STATE::STOPPED);
-	}
-
-	// 2) eOBJECT_STATE::STOPPED 상태일 때만 eOBJECT_STATE::DESTROYING_PENDING로 상태를 바꾼다.
-	if (this->set_object_state_if(eOBJECT_STATE::STOPPED, eOBJECT_STATE::DESTROYING_PENDING) == true)
-	{
-		// - process_destroy 함수를 호출한다.
-		this->process_destroy();
-
-		// - 상태를 eOBJECT_STATE::NONE로 변경한다.
-		this->set_object_state(eOBJECT_STATE::NONE);
-	}
-
-	// 3) unregister
+	// 1) unregister
 	this->unregister_querier();
 }
 
@@ -74,8 +45,11 @@ circular_list<object_ptr<query::rdb::odbc::session>> query::rdb::odbc::querier::
 
 	for(std::size_t i = 0; i<_count_data_source; ++i)
 	{
-		// 1) allocate data_source ojbect
+		// 1) allocate data_source object
 		auto pdata_source = make_object<query::rdb::odbc::data_source>();
+
+		// - 'SET SESSION wait_timeout' on connecting (option)
+		pdata_source->m_session_wait_timeout = this->m_session_wait_timeout;
 
 		// 2) open data_source
 		pdata_source->open(_connection_string);
@@ -126,7 +100,7 @@ circular_list<object_ptr<query::rdb::odbc::session>> query::rdb::odbc::querier::
 	// 3) error trace
 	if (e.reason<eRESULT>() != eRESULT::SUCCESS)
 	{
-		// trace) outpur oledb error recoreds
+		// trace) output oledb error records
 		_log(DEFAULT_LOGGER, static_cast<object_ptr<LOG_RECORD>>(e));
 	}
 
@@ -145,11 +119,14 @@ result_code query::rdb::odbc::querier::process_start(context& _context)
 	// trace) 
 	LOG_PROGRESS << "@ <BEGIN> start QUERIER_RDB_ODBC["sv << name() << "]"sv;
 
+	//-----------------------------------------------------------------
+	// 1. prepare
+	//-----------------------------------------------------------------
 	// declare)
 	auto str_name = this->name();
 	context context_old	 = _context;
 
-	// 2) change context now
+	// 1) change context now
 	if (str_name.empty() == false)
 	{
 		auto& context_find = _context[str_name];
@@ -160,6 +137,9 @@ result_code query::rdb::odbc::querier::process_start(context& _context)
 		}
 	}
 
+	//-----------------------------------------------------------------
+	// 2. get parameters
+	//-----------------------------------------------------------------
 	try
 	{
 		// 3) call on_starting
@@ -194,7 +174,7 @@ result_code query::rdb::odbc::querier::process_start(context& _context)
 		
 	// declare) 
 	circular_list<object_ptr<session>> list_session;
-	object_ptr<Iexecutor> pexecutor = dynamic_pointer_cast<Iexecutor>(m_pexecutor);
+	object_ptr<Iexecutor> pexecutor = dynamic_pointer_cast<Iexecutor>(this->m_pexecutor);
 	own_ptr<Iexecutor> pexecutor_own;
 
 	// declare) 
@@ -204,7 +184,7 @@ result_code query::rdb::odbc::querier::process_start(context& _context)
 	// declare) 
 	std::string str_connection_string;
 
-	if (_context.type() == eCONTEXT_VALUE_TYPE::BUFFER_)
+	if (_context.type() == context::value_type_t::buffer_)
 	{
 		// - get parameter
 		parameter = _context.v.value_buffer.front<START_PARAMETER>();
@@ -214,81 +194,188 @@ result_code query::rdb::odbc::querier::process_start(context& _context)
 	}
 	else
 	{
-		// - "connection_string"
-		str_connection_string = (std::string)_context.find("connection_string"sv, "connection string"sv, "connectionstring"sv);
-
 		// - "connection parameters"
-		if (str_connection_string.empty())
+		if (auto& context_connection_string = _context.find("connection_string", "connection string", "connectionstring"); context_connection_string.is_valid())
 		{
-			str_provider = (std::string)_context["provider"sv];
-			parameter.data_source = (std::string)_context.find("data_source"sv, "data source"sv, "datasource"sv, "server"sv, "filename"sv);
-			parameter.user_id = (std::string)_context.find("user_id"sv, "user id"sv, "userid"sv, "uid"sv);
-			parameter.password = (std::string)_context.find("password"sv, "pwd"sv);
-			parameter.initial_catalog = (std::string)_context.find("initial_catalog"sv, "initial catalog"sv, "initialcatalog"sv, "database"sv);
-			parameter.character_set = (std::string)_context.find("charset"sv, "char_set"sv, "char set"sv, "character_set"sv, "character set"sv);
-			parameter.options = (std::string)_context.find("option"sv, "options"sv);
+			str_connection_string = (std::string&&)context_connection_string;
+		}
+		else
+		{
+			str_provider = (std::string&&)_context["provider"sv];
+			parameter.data_source = (std::string&&)_context.find("data_source", "data source", "datasource", "server", "filename");
+			parameter.user_id = (std::string&&)_context.find("user_id", "user id", "userid", "uid");
+			parameter.password = (std::string&&)_context.find("password", "pwd");
+			parameter.initial_catalog = (std::string&&)_context.find("initial_catalog", "initial catalog", "initialcatalog", "database");
+			parameter.character_set = (std::string&&)_context.find("charset", "char_set", "char set", "character_set", "character set");
+			parameter.options = (std::string&&)_context.find("option", "options");
 		}
 
 		// - session Per Source
-		auto value_find = _context["session"sv];
-
-		if (value_find.is_valid())
+		if (auto& context_find = _context["session"]; context_find.is_valid())
 		{
-			parameter.count_session = value_find;
+			parameter.count_session = context_find;
 
 			// trace)
 			LOG_INFO << "  + parameter['session']: "sv << parameter.count_session;
 		}
 
 		// - data Source Count
-		value_find = _context.find("data_source_count"sv, "data source count"sv, "datasourcecount"sv);
-
-		// - set data_source_ount if key exist
-		if (value_find.is_valid())
+		if (auto& context_find = _context.find("data_source_count", "data source count", "datasourcecount"); context_find.is_valid())
 		{
-			parameter.count_data_source = value_find;
+			parameter.count_data_source = context_find;
 
 			// trace)
 			LOG_INFO << "  + parameter['data_source_count']: "sv << parameter.count_data_source;
 		}
 	}
 
-	// 7) get _provider 'connection_string' 
+	// 7-1) keepalive / session wait timeout (options. both disabled by default)
+	//      "keepalive":            { "enable": true, "interval": 300, "query": "SELECT 1" }
+	//      "session_wait_timeout": { "enable": true, "timeout": 1800 }
+	{
+		// - default
+		START_PARAMETER option;
+
+		if (_context.type() == context::value_type_t::buffer_)
+		{
+			option.keepalive_enable = parameter.keepalive_enable;
+			option.keepalive_interval = parameter.keepalive_interval;
+			option.keepalive_query = parameter.keepalive_query;
+			option.session_wait_timeout_enable = parameter.session_wait_timeout_enable;
+			option.session_wait_timeout = parameter.session_wait_timeout;
+		}
+		else
+		{
+			// - "keepalive"
+			if (auto& context_keepalive = _context["keepalive"sv]; context_keepalive.is_valid())
+			{
+				if (auto& context_find = context_keepalive["enable"sv]; context_find.is_valid())
+					option.keepalive_enable = static_cast<bool>(context_find);
+				if (auto& context_find = context_keepalive["interval"sv]; context_find.is_valid())
+					option.keepalive_interval = static_cast<uint32_t>(context_find);
+				if (auto& context_find = context_keepalive["query"sv]; context_find.is_valid())
+					option.keepalive_query = (std::string&&)context_find;
+			}
+
+			// - "session_wait_timeout"
+			if (auto& context_wait_timeout = _context["session_wait_timeout"sv]; context_wait_timeout.is_valid())
+			{
+				if (auto& context_find = context_wait_timeout["enable"sv]; context_find.is_valid())
+					option.session_wait_timeout_enable = static_cast<bool>(context_find);
+				if (auto& context_find = context_wait_timeout["timeout"sv]; context_find.is_valid())
+					option.session_wait_timeout = static_cast<uint32_t>(context_find);
+			}
+		}
+
+		// check) the value must be bigger than 0 (0 : default)
+		if (option.keepalive_interval == 0)
+			option.keepalive_interval = START_PARAMETER().keepalive_interval;
+		if (option.session_wait_timeout == 0)
+			option.session_wait_timeout = START_PARAMETER().session_wait_timeout;
+		if (option.keepalive_query.empty())
+			option.keepalive_query = "SELECT 1";
+
+		// 1) set (0 : disabled)
+		this->m_keepalive_interval = option.keepalive_enable ? chrono::tick::duration(std::chrono::seconds(option.keepalive_interval)) : chrono::tick::duration::zero();
+		this->m_keepalive_query = option.keepalive_query;
+		this->m_session_wait_timeout = option.session_wait_timeout_enable ? option.session_wait_timeout : 0;
+
+		// trace)
+		if (option.keepalive_enable)
+			LOG_INFO << "  + parameter['keepalive']: enable (interval: "sv << option.keepalive_interval << "s, query: '"sv << option.keepalive_query << "')"sv;
+		if (option.session_wait_timeout_enable)
+			LOG_INFO << "  + parameter['session_wait_timeout']: enable (timeout: "sv << option.session_wait_timeout << "s, MySQL/MariaDB)"sv;
+
+		// check) the keepalive must be done before the server closes the idle connection
+		if (option.keepalive_enable && option.session_wait_timeout_enable && option.keepalive_interval >= option.session_wait_timeout)
+			LOG_WARNING << "  ! (warning) keepalive 'interval'("sv << option.keepalive_interval << "s) must be shorter than session_wait_timeout 'timeout'("sv << option.session_wait_timeout << "s) ("sv << name() << ")"sv;
+	}
+	// 8) internal options
+	{
+		// - session Per Source
+		auto& context_find = _context.find("logging_warning_info"
+			, "logging warning info"
+			, "logging_warning"
+			, "logging warning");
+
+		if (context_find.is_valid())
+		{
+			std::string str_find = context_find;
+
+			// - true면 재접속을 활성화한다.
+			if (CGDK::__stricmp(str_find, "true") == 0
+				|| CGDK::__stricmp(str_find, "enable") == 0)
+			{
+				// - ...
+				this->enable_logging_warning_info();
+
+				// trace)
+				LOG_INFO << "  + parameter['logging_warning_info']: 'enable'"sv;
+			}
+			// - false면 재접속을 비활성화한다.
+			else if (CGDK::__stricmp(str_find, "false") == 0
+				|| CGDK::__stricmp(str_find, "disable") == 0)
+			{
+				// - ...
+				this->disable_logging_warning_info();
+
+				// trace)
+				LOG_INFO << "  + parameter['logging_warning_info']: 'disable'"sv;
+			}
+			// - default면 기본 값을 사용한다. (기본값은 true이다.)
+			else if (CGDK::__stricmp(str_find, "default") == 0)
+			{
+				// - set as default
+				this->enable_logging_warning_info(true);
+
+				// trace)
+				LOG_INFO << "  + parameter['logging_warning_info']: 'default'[enable]"sv;
+			}
+		}
+	}
+
+	//-----------------------------------------------------------------
+	// 3. prepare sessions
+	//-----------------------------------------------------------------
 	{
 		// declare) 
 		auto str_initial = alloc_shared_buffer(8192);
 		auto str_output = alloc_shared_buffer(8192);
 		bool is_access = false;
 
-		// - if key "connection_string" exist
-		if (str_connection_string.empty() == false)
+		// 9) get _provider 'connection_string' 
 		{
-			str_initial.append_text(static_cast<std::string_view>(str_connection_string));
-			str_initial.append<char>(0);
-			str_output.append_text(static_cast<std::string_view>(str_connection_string));
-			str_output.append<char>(0);
-		}
-		else
-		{
-			get_connection_string(this, str_initial, str_output, parameter, str_provider, is_access);
-		}
-
-		// - session count
-		if (parameter.count_session == 0)
-		{
-			if (is_access == false)
-				parameter.count_session = 32;
+			// - if key "connection_string" exist
+			if (str_connection_string.empty() == false)
+			{
+				str_initial.append_text(static_cast<std::string_view>(str_connection_string));
+				str_initial.append<char>(0);
+				str_output.append_text(static_cast<std::string_view>(str_connection_string));
+				str_output.append<char>(0);
+			}
 			else
-				parameter.count_session = 1;
-		}
+			{
+				get_connection_string(this, str_initial, str_output, parameter, str_provider, is_access);
+			}
 
-		// - saturate 'parameter.count_session' and 'data_source count'
-		SATURATE(parameter.count_session, 1, 1024);
-		SATURATE(parameter.count_data_source, 1, 1024);
+			// - session count
+			if (parameter.count_session == 0)
+			{
+				if (is_access == false)
+					parameter.count_session = 32;
+				else
+					parameter.count_session = 1;
+			}
+
+			// - saturate 'parameter.count_session' and 'data_source count'
+			SATURATE(parameter.count_session, 1, 1024);
+			SATURATE(parameter.count_data_source, 1, 1024);
+		}
 
 		// trace) 
 		LOG_INFO << "  > trying to creating session("sv << name() << ")..."sv;
 
+		// 10) prepare sessions and connect
 		try
 		{
 			// - create session
@@ -301,12 +388,11 @@ result_code query::rdb::odbc::querier::process_start(context& _context)
 				LOG_PROGRESS << "@ <TERMINATE> start QUERIER_RDB_ODBC["sv << str_name << "]: connection string is invalid [P2] (connection_string: "sv << str_output.data<char>() << ")"sv;
 
 				// throw) 
-				throw throwable::failure(eRESULT::INVALID_ARGUMENT, 0, __format(
-					"<TERMINATE> start QUERIER_RDB_ODBC[{}]: connection string is invalid [P2] (connection_string: {})",
-					(str_name.empty() == false) ? str_name.data() : "",
-					(str_output.data() != nullptr) ? str_output.data() : "-")
-				);
+				throw throwable::failure(eRESULT::INVALID_ARGUMENT, 0, std::string("<TERMINATE> start QUERIER_RDB_ODBC[") + ((str_name.empty() == false) ? str_name.data() : "") + "]: connection string is invalid [P2] (connection_string: " + ((str_output.data() != nullptr) ? str_output.data() : "-") + ")");
 			}
+
+			// trace) 
+			LOG_INFO << "  - created session: "sv << list_session.size();
 		}
 		catch (...)
 		{
@@ -324,84 +410,44 @@ result_code query::rdb::odbc::querier::process_start(context& _context)
 		}
 	}
 
-	// 8) interal options
-	{
-		// - session Per Source
-		auto value_find = _context.find("logging_warning_info"sv
-									  , "logging warning info"sv
-									  , "logging_warning"sv
-									  , "logging warning"sv);
-
-		if (value_find.is_valid())
-		{
-			std::string str_find = value_find;
-
-			// - true면 재접속을 활성화한다.
-			if (__stricmp(str_find, "true"sv) == 0
-			 || __stricmp(str_find, "enable"sv) == 0)
-			{
-				// - ...
-				this->enable_logging_warning_info();
-
-				// trace)
-				LOG_INFO << "  + parameter['logging_warning_info']: 'enable'"sv;
-			}
-			// - false면 재접속을 비활성화한다.
-			else if (__stricmp(str_find, "false"sv) == 0
-				  || __stricmp(str_find, "disable"sv) == 0)
-			{
-				// - ...
-				this->disable_logging_warning_info();
-
-				// trace)
-				LOG_INFO << "  + parameter['logging_warning_info']: 'disable'"sv;
-			}
-			// - default면 기본 값을 사용한다. (기본값은 true이다.)
-			else if (__stricmp(str_find, "default"sv) == 0)
-			{
-				// - set as default
-				this->enable_logging_warning_info(true);
-
-				// trace)
-				LOG_INFO << "  + parameter['logging_warning_info']: 'default'[enable]"sv;
-			}
-		}
-	}
-
+	// 11) create executor
 	try
 	{
-		// 7) executor가 nullptr이면 새로 생성한다.
+		// - executor가 nullptr이면 새로 생성한다.
 		if(pexecutor == nullptr)
 		{
 			// - executor Thread를 생성한다.
-			auto temp_executor = make_own<executor::io_context_threads>("own"sv);
+			auto temp_executor = make_own<executor::queue_list_threads>();
+
+			// - set name
+			temp_executor->name("own"sv);
 
 			// - thread를 시작한다.
-			temp_executor->start({ list_session.size() + 1 });
+			temp_executor->start({ static_cast<int>(list_session.size() + 1) });
 
 			// - executor를 설정.
 			pexecutor = temp_executor;
 			pexecutor_own = std::move(temp_executor);
 		}
 
-		// check) Thread Pool 이 있다면 Thread의 갯수를 확인한다.
+		// check) Thread Pool 이 있다면 Thread의 개수를 확인한다.
 
-		// 8) Thread Pool이 있는지 확인한다.
+		// - Thread Pool이 있는지 확인한다.
 		auto pthread_pool = dynamic_pointer_cast<api::threads>(pexecutor);
 
-		// check) Thread Pool 이 있다면 thread의 갯수를 확인한다.
+		// check) Thread Pool 이 있다면 thread의 개수를 확인한다.
 		if (pthread_pool.exist())
 		{
-			// - trace) thread의 갯수가 현재 session 수보다 적으면 경고한다.
+			// - trace) thread의 개수가 현재 session 수보다 적으면 경고한다.
 			EXECUTE_IF(pthread_pool->reserved_size() < list_session.size() + 1, LOG_INFO << "  ! (warning) thread count is too small. at least "sv << list_session.size() + 1 << " is needed.  ("sv << name() << ")!"sv);
 		}
 
-		// 9) executor를 설정한다.
-		this->m_stack_session.swap(list_session);
+		// - executor를 설정한다.
+		this->m_stack_sessions.swap(list_session);
 		this->m_pexecutor = std::move(pexecutor);
 		this->m_pexecutor_own = std::move(pexecutor_own);
-		this->m_count_session_created	+= (long)this->m_stack_session.size();
-		this->statistics_on_create_session(this->m_stack_session.size());
+		this->m_count_session_created += (long)this->m_stack_sessions.size();
+		this->statistics_on_create_session(this->m_stack_sessions.size());
 	}
 	catch (std::exception& e)
 	{
@@ -432,7 +478,7 @@ result_code query::rdb::odbc::querier::process_start(context& _context)
 
 
 	//-----------------------------------------------------------------
-	// 4. ChildnAcceptPreparedOnStart만큼 Accept걸기.
+	// 4. child objects
 	//-----------------------------------------------------------------
 	// declare)
 	auto iter = this->m_container.begin();
@@ -449,6 +495,15 @@ result_code query::rdb::odbc::querier::process_start(context& _context)
 		// 2) stet state to 'eOBJECT_STATE::RUNNING'
 		this->set_object_state(eOBJECT_STATE::RUNNING);
 
+		// - keepalive (option) : checks every 1/4 of the interval (1s ~ 60s)
+		if (this->m_keepalive_interval > chrono::tick::duration::zero())
+		{
+			auto tick_check = std::clamp<chrono::tick::duration>(this->m_keepalive_interval / 4, std::chrono::seconds(1), std::chrono::seconds(60));
+			auto pschedulable = make_own<schedulable::executable_function<>>();
+			pschedulable->start({ [this] { this->process_keepalive(); }, tick_check });
+			this->m_pschedulable_keepalive = std::move(pschedulable);
+		}
+
 		// 3) on_start 함수를 호출한다.
 		this->on_start(_context);
 	}
@@ -461,8 +516,16 @@ result_code query::rdb::odbc::querier::process_start(context& _context)
 		}
 
 		// - 모든 Query가 완료되고 모든 session이 완료되도록 기다린다.
-		while (this->m_queue_query.empty() == false || this->m_count_session_created != this->m_stack_session.size())
+		//   (m_queue_query / m_stack_sessions는 executor thread가 lock 안에서 바꾼다 -> lock 안에서 읽는다)
+		for (;;)
 		{
+			bool is_done = false;
+			SCOPED_LOCK(this->m_lockable_query)
+			{
+				is_done = this->m_queue_query.empty() && this->m_count_session_created == this->m_stack_sessions.size();
+			}
+			BREAK_IF(is_done);
+
 			std::this_thread::sleep_for(1ms);
 		}
 
@@ -470,25 +533,28 @@ result_code query::rdb::odbc::querier::process_start(context& _context)
 		pexecutor.reset();
 		pexecutor_own.destroy();
 
-		scoped_lock(this->m_lockable_query)
+		// declare) the queued queries are released out of the lock (their destructors can run any code)
+		circular_list<QUEUED_QUERY> queue_released;
+
+		SCOPED_LOCK(this->m_lockable_query)
 		{
 			// - 먼저 Querier를 Reset한다.(이걸 하지 않으면 무한 free된다.)
-			for (auto& iter_session : this->m_stack_session)
+			for (auto& iter_session : this->m_stack_sessions)
 			{
 				iter_session->m_pquerier.reset();
 			}
 
 			// Statistics)
-			this->statistics_on_destroy_session(this->m_stack_session.size());
+			this->statistics_on_destroy_session(this->m_stack_sessions.size());
 
 			// - session을 clear한다.
-			this->m_stack_session.clear();
+			this->m_stack_sessions.clear();
 
 			// - 생성된 수를 0개로 설정한다.
 			this->m_count_session_created = 0;
 
 			// - Query를 clear한다.
-			this->m_queue_query.clear();
+			this->m_queue_query.swap(queue_released);
 		}
 
 		// - on_stop 함수를 호출한다.(on_starting()함수와 짝함수이므로 호출된다.)
@@ -510,12 +576,10 @@ result_code query::rdb::odbc::querier::process_start(context& _context)
 	// Notify) Message 날리기..
 	transmit_message(sMESSAGE_NOTIFY(eMESSAGE::SERVER::QUERY::OPEN, 0, reinterpret_cast<uintptr_t>(this)));
 
-	// trace) 
-	LOG_INFO << "  - created session: "sv << m_count_session_created;
 
 
 	//-----------------------------------------------------------------
-	// 5. 마무리
+	// 5. end
 	//-----------------------------------------------------------------
 	// 1) Context 원상 복구한다.
 	_context = context_old;
@@ -532,6 +596,15 @@ result_code query::rdb::odbc::querier::process_stop() noexcept
 	// Message) Message 날리기..
 	transmit_message(sMESSAGE_NOTIFY(eMESSAGE::SERVER::QUERY::CLOSING, 0, reinterpret_cast<uintptr_t>(this)));
 
+	// 1-1) stop the keepalive (waits until the running keepalive is finished)
+	if (this->m_pschedulable_keepalive.exist())
+	{
+		this->m_pschedulable_keepalive->stop();
+		this->m_pschedulable_keepalive.reset();
+	}
+	{
+		std::lock_guard lock(this->m_lockable_keepalive);
+	}
 	// 1) on_stopping 함수를 호출한다.
 	try
 	{
@@ -548,7 +621,7 @@ result_code query::rdb::odbc::querier::process_stop() noexcept
 	}
 
 	//// 3) 모든 Query가 완료되고 모든 session이 완료되도록 기다린다.
-	//while(m_queue_query.empty()==false || m_count_session_created!=this->m_stack_session.size())
+	//while(m_queue_query.empty()==false || m_count_session_created!=this->m_stack_sessions.size())
 	//{
 	//	Sleep(1);
 	//}
@@ -557,19 +630,19 @@ result_code query::rdb::odbc::querier::process_stop() noexcept
 	this->m_pexecutor.reset();
 	this->m_pexecutor_own.destroy();
 
-	//scoped_lock(this->m_lockable_query)
+	//SCOPED_LOCK(this->m_lockable_query)
 	//{
 	//	// 5) 먼저 Querier를 Reset한다.(이걸 하지 않으면 무한 free된다.)
-	//	for(auto& iter:this->m_stack_session)
+	//	for(auto& iter:this->m_stack_sessions)
 	//	{
 	//		iter->m_pquerier.reset();
 	//	}
 
 	//	// Statistics)
-	//	statistics_on_destroy_session(this->m_stack_session.size());
+	//	statistics_on_destroy_session(this->m_stack_sessions.size());
 
 	//	// 6) session을 clear한다.
-	//	this->m_stack_session.clear();
+	//	this->m_stack_sessions.clear();
 
 	//	// 7) 생성된 수를 0개로 설정한다.
 	//	this->m_count_session_created	 = 0;
@@ -623,7 +696,7 @@ result_code query::rdb::odbc::querier::start(const std::string_view _connection_
 {
 	try
 	{
-		// check) _connection_string가 empty면 안됀다.
+		// check) _connection_string가 empty면 안 된다.
 		THROW_IF(_connection_string.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT, 0, "parameter '_connection_string' is empty"sv));
 	}
 	catch (throwable::failure& _e)
@@ -665,7 +738,7 @@ result_code query::rdb::odbc::querier::start(Iexecutor* _pexecutor, const std::s
 {
 	try
 	{
-		// check) _connection_string가 empty면 안됀다.
+		// check) _connection_string가 empty면 안 된다.
 		THROW_IF(_connection_string.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT, 0, "parameter '_connection_string' is empty"sv));
 	}
 	catch (throwable::failure& _e)
@@ -697,7 +770,7 @@ result_code query::rdb::odbc::querier::start(Iexecutor* _pexecutor, const std::s
 	// declare) 
 	context context_setting;
 
-	// 2) set paprameters
+	// 2) set parameters
 	context_setting["connection_string"sv] = static_cast<std::string_view>(_connection_string);
 	context_setting["session"sv] = _count_session;
 	context_setting["data_source_count"sv] = _count_data_source;
@@ -801,10 +874,13 @@ result_code query::rdb::odbc::querier::start(const std::string_view _provider, c
 
 void query::rdb::odbc::querier::cancel_queries() noexcept
 {
+	// declare) the canceled queries are released out of the lock (their destructors can run any code)
+	circular_list<QUEUED_QUERY> queue_canceled;
+
 	// 1) session을 clear한다.
-	scoped_lock(this->m_lockable_query)
+	SCOPED_LOCK(this->m_lockable_query)
 	{
-		this->m_queue_query.clear();
+		this->m_queue_query.swap(queue_canceled);
 	}
 }
 
@@ -816,17 +892,17 @@ object_ptr<query::rdb::session_t> query::rdb::odbc::querier::alloc_session()
 	// declare)
 	object_ptr<session_t> psession;
 
-	// scoped_lock) 
-	scoped_lock_named(this->m_lockable_query, cs)
+	// SCOPED_LOCK) 
+	SCOPED_LOCK_NAMED(this->m_lockable_query, cs)
 	{
 		// 1) session이 있을 경우 하나의 session을 얻는다.
-		if (this->m_stack_session.empty() == false)
+		if (this->m_stack_sessions.empty() == false)
 		{
 			// - 일단 DBConnection을 얻는다.
-			psession = std::move(this->m_stack_session.front());
+			psession = std::move(this->m_stack_sessions.front());
 
 			// - DBConnection을 하나 뽑아낸다.
-			this->m_stack_session.pop_front();
+			this->m_stack_sessions.pop_front();
 
 			// - session에 querier를 설정한다.
 			psession->m_pquerier = this;
@@ -836,25 +912,89 @@ object_ptr<query::rdb::session_t> query::rdb::odbc::querier::alloc_session()
 
 			// - 사용수를 증가시킨다.
 			++psession->m_count_requested;
+
+			// statistics)
+			this->statistics_on_alloc_session();
 		}
 		// 2) session이 없을 경우 대기한다.
 		else
 		{
-			// declare) 
-			std::condition_variable_any cv_complete;
+			// declare) shared with the queued function (it can be called or released after this frame is gone)
+			struct WAIT_SESSION
+			{
+				object_ptr<session> psession;
+				std::condition_variable_any cv_complete;
+				bool is_done = false;
+			};
+			auto pwait = std::make_shared<WAIT_SESSION>();
+
+			// - ticket : its deleter wakes up this thread when the queued function is released without being called
+			//   (cancel_queries(), rollback of start)
+			std::shared_ptr<void> pticket(nullptr, [this, pwait](void*)
+				{
+					SCOPED_LOCK(this->m_lockable_query)
+					{
+						pwait->is_done = true;
+						pwait->cv_complete.notify_one();
+					}
+				});
 
 			// - push 
-			this->m_queue_query.emplace_back({ [&](object_ptr<session>&& _psession)
+			//   free_session() calls this out of the lock. so hands over the session under the lock
+			this->m_queue_query.emplace_back({ [this, pwait, pticket = std::move(pticket)](object_ptr<session>&& _psession)
 				{
-					psession = std::move(_psession);
-					cv_complete.notify_one();
+					SCOPED_LOCK(this->m_lockable_query)
+					{
+						pwait->psession = std::move(_psession);
+						pwait->is_done = true;
+						pwait->cv_complete.notify_one();
+					}
 				}});
 
-			// - session을 얻을 때까지 wait한다.
-			cv_complete.wait(cs);
-		}
+			// notify) thread block
+			scoped_thread_block thread_block;
 
-		// statistics) 
+			// - session을 얻을 때까지 wait한다.
+			pwait->cv_complete.wait(cs, [&] { return pwait->is_done; });
+
+			// check) the queued function is released without being called
+			THROW_IF(pwait->psession.empty(), throwable::failure(eRESULT::CANCEL, 0, "session allocation is canceled"sv));
+
+			// - get session (statistics: counted by free_session() which handed it over)
+			psession = std::move(pwait->psession);
+		}
+	}
+
+	// return)
+	return psession;
+}
+
+object_ptr<query::rdb::session_t> query::rdb::odbc::querier::try_alloc_session()
+{
+	// check) object_state() must be 'eOBJECT_STATE::RUNNING' or 'eOBJECT_STATE::START_PENDING'
+	THROW_IF(this->get_object_state() != eOBJECT_STATE::RUNNING && this->get_object_state() != eOBJECT_STATE::START_PENDING, throwable::failure(eRESULT::NOT_READY, 0, "querier is not ready (state is must be 'eOBJECT_STATE::RUNNING' or 'eOBJECT_STATE::START_PENDING')"sv));
+
+	// declare)
+	object_ptr<session_t> psession;
+
+	SCOPED_LOCK(this->m_lockable_query)
+	{
+		// check) 지금 쓸 수 있는 session이 없다. (기다리지 않는다)
+		if (this->m_stack_sessions.empty())
+			return psession;
+
+		// 1) session을 하나 꺼낸다.
+		psession = std::move(this->m_stack_sessions.front());
+		this->m_stack_sessions.pop_front();
+
+		// check)
+		CGASSERT_ERROR(psession.exist());
+
+		// - session의 querier를 설정하고 요청 수를 증가시킨다.
+		psession->m_pquerier = this;
+		++psession->m_count_requested;
+
+		// statistics)
 		this->statistics_on_alloc_session();
 	}
 
@@ -862,7 +1002,7 @@ object_ptr<query::rdb::session_t> query::rdb::odbc::querier::alloc_session()
 	return psession;
 }
 
-void query::rdb::odbc::querier::post_alloc_session(std::function<void(session_t*)>&& _lambda)
+void query::rdb::odbc::querier::post_alloc_session(std::function<void(session_t*)>&& _lambda, std::function<void()>&& _on_cancel)
 {
 	// check) is ready?
 	THROW_IF(this->get_object_state() != eOBJECT_STATE::RUNNING && this->get_object_state() != eOBJECT_STATE::START_PENDING, throwable::failure(eRESULT::NOT_READY, 0, std::string_view("querier is not started")));
@@ -872,6 +1012,9 @@ void query::rdb::odbc::querier::post_alloc_session(std::function<void(session_t*
 	public:
 		virtual	intptr_t process_execute(intptr_t, std::size_t) override
 		{
+			// - executed (not canceled)
+			this->m_is_pending = false;
+
 			// 1) get session
 			auto psession = std::move(this->m_psession);
 
@@ -885,12 +1028,28 @@ void query::rdb::odbc::querier::post_alloc_session(std::function<void(session_t*
 			return 1;
 		}
 
+		virtual	void on_cancel() noexcept override
+		{
+			// check)
+			RETURN_IF(!this->m_on_cancel);
+
+			try
+			{
+				this->m_on_cancel();
+			}
+			catch (...)
+			{
+			}
+		}
+
 		std::function<void(session_t*)> m_lambda;
+		std::function<void()> m_on_cancel;
 	};
 
 	// 1) create query object
 	auto pexecutable_query = make_object<executable_query>();
 	pexecutable_query->m_lambda = std::move(_lambda);
+	pexecutable_query->m_on_cancel = std::move(_on_cancel);
 
 	// 2) post  
 	this->process_post_alloc_session(std::move(pexecutable_query));
@@ -907,20 +1066,23 @@ void query::rdb::odbc::querier::process_post_alloc_session(object_ptr<Iexecutabl
 	// check) m_pexecutor must not be nullptr
 	THROW_IF(pexecutor.empty(), throwable::failure(eRESULT::NOT_READY, 0, "executor is nullptr"sv));
 
-	// 2) post
-	scoped_lock_named(this->m_lockable_query, cs)
+	// declare)
+	object_ptr<session> psession;
+
+	// 2) get the session or queue the query
+	SCOPED_LOCK(this->m_lockable_query)
 	{
 		// 1) session이 있을 경우 하나의 session을 얻는다.
-		if (this->m_stack_session.empty() == false)
+		if (this->m_stack_sessions.empty() == false)
 		{
 			// - 일단 DBConnection을 얻는다.
-			auto psession = std::move(this->m_stack_session.front());
+			psession = std::move(this->m_stack_sessions.front());
 
 			// check) psession은 반드시 nullptr이 아니어야 한다.
 			CGASSERT_ERROR(psession.exist());
 
 			// - DBConnection을 하나 뽑아낸다.
-			this->m_stack_session.pop_front();
+			this->m_stack_sessions.pop_front();
 
 			// - session에 querier를 설정한다.
 			psession->m_pquerier = this;
@@ -928,45 +1090,155 @@ void query::rdb::odbc::querier::process_post_alloc_session(object_ptr<Iexecutabl
 			// - 사용수를 증가시킨다.
 			++psession->m_count_requested;
 
-			// - set session
-			_pexecutable->m_psession = std::move(psession);
-
-			// - post!
-			try 
-			{
-				pexecutor->post(std::move(_pexecutable));
-			}
-			catch (...)
-			{
-				// - rollcack
-				psession = std::move(_pexecutable->m_psession);
-
-				// - reset
-				psession->m_pquerier.reset();
-
-				// - push back session
-				this->m_stack_session.push_back(std::move(psession));
-
-				// reraise)
-				throw;
-			}
+			// statistics) before post (the session can be freed on the executor before post() returns)
+			this->statistics_on_alloc_session();
 		}
 		// 2) session이 없을 경우 대기한다.
 		else
 		{
-			// - push
-			this->m_queue_query.emplace_back({[=](object_ptr<session>&& _psession)
+			// - push (statistics: counted by free_session() which hands the session over)
+			//   free_session() calls it out of the lock. not posted : canceled when the executable is released (the session goes back to the pool)
+			this->m_queue_query.emplace_back({[this, pexecutor, pexecutable = _pexecutable](object_ptr<session>&& _psession)
 				{
-					_pexecutable->m_psession = std::move(_psession);
-					pexecutor->post(std::move(_pexecutable));
-				}});
-		}
+					pexecutable->m_psession = std::move(_psession);
 
-		// statistics) 
-		this->statistics_on_alloc_session();
+					bool is_posted = false;
+					try
+					{
+						is_posted = pexecutor->post(object_ptr<Iexecutable>(pexecutable));
+					}
+					catch (...)
+					{
+					}
+
+					if (is_posted == false)
+						LOG_ERROR << "(err ) query::rdb::odbc: fail to post the queued query. it is canceled ("sv << this->name() << ")"sv;
+				}});
+
+			// - pending : canceled if it is released without being executed (cancel_queries(), refused by the executor)
+			_pexecutable->m_is_pending = true;
+
+			// return) posted by free_session() when a session is freed
+			return;
+		}
 	}
+
+	// 3) post out of the lock
+	//    - nothing out of the querier must run holding 'm_lockable_query'. (an executor running the query at once,
+	//      or the old session of '_pexecutable' released by the assignment can get into alloc_session() and wait
+	//      holding the lock. the recursive lock is released only one level by the wait -> dead-lock)
+	_pexecutable->m_psession = std::move(psession);
+
+	// - pending : canceled if it is released without being executed
+	//   (exactly one of them happens : executed, canceled, or the exception to the caller)
+	_pexecutable->m_is_pending = true;
+
+	// - post a copy ('_pexecutable' keeps it alive here. 'pexecutable' is moved if the executor took it)
+	object_ptr<Iexecutable> pexecutable = _pexecutable;
+	bool is_posted = false;
+	std::exception_ptr pexception;
+
+	try
+	{
+		is_posted = pexecutor->post(std::move(pexecutable));
+	}
+	catch (...)
+	{
+		pexception = std::current_exception();
+	}
+
+	// check) posted
+	RETURN_IF(is_posted);
+
+	// check) the executor took it but failed : executed or canceled by the executor (not reported to the caller)
+	if (pexecutable.empty())
+	{
+		LOG_ERROR << "(err ) query::rdb::odbc: fail to post the query ("sv << this->name() << ")"sv;
+		return;
+	}
+
+	// - rollback : not posted. not canceled (the caller gets the exception)
+	//   releasing the session returns it by free_session() (to a waiting query or to the pool)
+	_pexecutable->m_is_pending = false;
+	_pexecutable->m_psession.reset();
+
+	// reraise)
+	if (pexception)
+		std::rethrow_exception(pexception);
+
+	throw throwable::failure(eRESULT::NOT_READY, 0, "the executor refused the query (stopped)"sv);
 }
 
+void query::rdb::odbc::querier::process_keepalive() noexcept
+{
+	// check)
+	RETURN_IF(this->m_keepalive_interval <= chrono::tick::duration::zero());
+
+	// check)
+	RETURN_IF(this->get_object_state() != eOBJECT_STATE::RUNNING);
+
+	// check) the previous keepalive is still running
+	std::unique_lock lock_keepalive(this->m_lockable_keepalive, std::try_to_lock);
+	RETURN_IF(lock_keepalive.owns_lock() == false);
+
+	try
+	{
+		// declare)
+		auto tick_now = chrono::tick::now();
+		std::vector<object_ptr<session>> vector_session;
+
+		// 1) takes the sessions idle for 'keepalive_interval' out of the pool (same as alloc_session)
+		SCOPED_LOCK(this->m_lockable_query)
+		{
+			for (auto iter = this->m_stack_sessions.begin(); iter != this->m_stack_sessions.end(); )
+			{
+				if (tick_now - (*iter)->m_tick_last_used < this->m_keepalive_interval)
+				{
+					++iter;
+					continue;
+				}
+
+				auto psession = std::move(*iter);
+				iter = this->m_stack_sessions.erase(iter);
+
+				// - returned to the pool by session::process_dispose() when it is released
+				psession->m_pquerier = this;
+				this->statistics_on_alloc_session();
+
+				vector_session.push_back(std::move(psession));
+			}
+		}
+
+		// 2) ping (reconnects the broken one)
+		for (auto& iter : vector_session)
+		{
+			// - alive
+			if (iter->ping(this->m_keepalive_query))
+				continue;
+
+			// - broken : reconnect now (before it is used)
+			LOG_WARNING << "(warn) query::rdb::odbc: keepalive failed. reconnecting ("sv << this->name() << ")"sv;
+
+			try
+			{
+				iter->reopen();
+				iter->m_tick_last_used = chrono::tick::now();
+
+				LOG_INFO << "  - reconnected by keepalive ("sv << this->name() << ")"sv;
+			}
+			catch (...)
+			{
+				LOG_ERROR << "(err ) query::rdb::odbc: fail to reconnect by keepalive ("sv << this->name() << ")"sv;
+			}
+		}
+
+		// 3) returns the sessions to the pool (session::process_dispose() -> free_session())
+		vector_session.clear();
+	}
+	catch (...)
+	{
+	}
+}
 void query::rdb::odbc::querier::free_session(session* _psession) noexcept
 {
 	// check) _psession must not be nullptr
@@ -978,19 +1250,22 @@ void query::rdb::odbc::querier::free_session(session* _psession) noexcept
 	// statistics) 
 	this->statistics_on_free_session();
 
+	// - last used time (keepalive)
+	_psession->m_tick_last_used = chrono::tick::now();
+
 	// declare) 
 	QUEUED_QUERY pqueued_query;
 
-	scoped_lock(this->m_lockable_query)
+	SCOPED_LOCK(this->m_lockable_query)
 	{
-		// 1) 더이상 queuing된 query가 없으면 session을 stack시킨다.
+		// 1) 더 이상 queuing된 query가 없으면 session을 stack시킨다.
 		if(this->m_queue_query.empty())
 		{
 			// - session을 Reset한다.
 			_psession->m_pquerier.reset();
 
 			// - session을 스택시킨다.
-			this->m_stack_session.push_back(_psession);
+			this->m_stack_sessions.push_back(_psession);
 
 			// return)
 			return;
@@ -1005,11 +1280,11 @@ void query::rdb::odbc::querier::free_session(session* _psession) noexcept
 		// 4) 사용 수를 증가시킨다.
 		++_psession->m_count_requested;
 
-		// statostics) 
+		// statistics) the waiting path of alloc_session()/process_post_alloc_session() is counted only here
 		this->statistics_on_alloc_session();
 	}
 
-	// check) _psession이 nullptr이면 안됀다.
+	// check) _psession이 nullptr이면 안 된다.
 	CGASSERT_ERROR(_psession != nullptr);
 
 	// 8) execute queued query

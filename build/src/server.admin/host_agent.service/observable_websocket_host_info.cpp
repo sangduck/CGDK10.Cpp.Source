@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <charconv>
 
 void _append_key_value(shared_buffer& _buf_target, std::string_view _str_key, std::string_view _str_value);
 void _append_key_value(shared_buffer& _buf_target, std::string_view _str_key, std::size_t _value);
@@ -84,7 +85,7 @@ void _append_log_info(shared_buffer& _buf_out, const LOG_RECORD* _plog_record)
 	bool log_not_continue = (uint32_t)(_plog_record->type & log_type_t::continue_) == 0;
 
 	size_t pos = sizeof(COUNT_T);
-	size_t count_line = _plog_record->get_line_count();
+	size_t count_line = _plog_record->line_count();
 
 	// check)
 	CGASSERT_ERROR(count_line != 0);
@@ -97,10 +98,10 @@ void _append_log_info(shared_buffer& _buf_out, const LOG_RECORD* _plog_record)
 		if (log_not_continue)
 		{
 			// - style
-			_buf_out.append_text("<span style=\"color: silver;\">"sv);
+			_buf_out.append_text("<span style='color: silver;font-size:12px;'>"sv);
 
 			// - output data-time
-			_plog_record->process_append_text_date(_buf_out, eCHARACTER_SET::UTF8);
+			LOG_RECORD::append_text_date(_buf_out, _plog_record->time_occurred, eCHARACTER_SET::UTF8);
 
 			// - stype
 			_buf_out.append_text("</span>"sv);
@@ -108,42 +109,44 @@ void _append_log_info(shared_buffer& _buf_out, const LOG_RECORD* _plog_record)
 		else
 		{
 			// - output space
-			_buf_out.append_text("                      "sv);
+			_buf_out.append_text("<pre style='display:inline;font-size:12px;'>                     </pre>"sv);
 		}
 
 		// - style
-		_buf_out.append_text<char>("<span style=\"color:"sv);
+		_buf_out.append_text<char>("<span>"sv);
+		_buf_out.append_text<char>("<pre style='display:inline;font-size:12px;color:"sv);
 		_buf_out.append_text<char>(get_web_text_color(log_type, log_level));
 		if (log_level >= log_level_t::higher() || log_type == log_type_t::fatal) _buf_out.append_text<char>(";font-weight:bold"sv);
-		_buf_out.append_text<char>(";\">"sv);
+		_buf_out.append_text<char>(";'>"sv);
 
 		// - 메시지를 작성한다.
-		pos = _plog_record->process_get_message(_buf_out, pos, eCHARACTER_SET::UTF8);
+		pos = _plog_record->get_log_message(_buf_out, eCHARACTER_SET::UTF8, pos);
 
 		// - stype
-		_buf_out.append_text("</span>");
+		_buf_out.append_text("</pre></span>");
 	}
 
 	// 3) 출력한다.
 	for (--count_line; count_line != 0; --count_line)
 	{
 		// - newline + style(color)
-		_buf_out.append_text("<br><span style=\"color: blue;\">"sv);
+		_buf_out.append_text("<br>"sv);
 
 		// - output space
-		_buf_out.append_text("                      "sv);
+		_buf_out.append_text("<pre style='display:inline;font-size:12px;'>                     </pre>"sv);
 
 		// - style
-		_buf_out.append_text<char>("<span style=\"color:"sv);
+		_buf_out.append_text<char>("<span>"sv);
+		_buf_out.append_text<char>("<pre style='display:inline;font-size:12px;color:"sv);
 		_buf_out.append_text<char>(get_web_text_color(log_type, log_level));
 		if (log_level >= log_level_t::higher() || log_type == log_type_t::fatal) _buf_out.append_text<char>(";font-weight:bold"sv);
-		_buf_out.append_text<char>(";\">"sv);
+		_buf_out.append_text<char>(";'>"sv);
 
 		// - get next message
-		pos = _plog_record->process_get_message(_buf_out, pos, eCHARACTER_SET::UTF8);
+		pos = _plog_record->get_log_message(_buf_out, eCHARACTER_SET::UTF8, pos);
 
 		// - stype
-		_buf_out.append_text("</span>"sv);
+		_buf_out.append_text("</pre></span>"sv);
 	}
 }
 //----------------------------------------------------------------------------
@@ -151,13 +154,13 @@ void _append_log_info(shared_buffer& _buf_out, const LOG_RECORD* _plog_record)
 //----------------------------------------------------------------------------
 #define MAX_CANVAS_WITH_C 64
 
-void _append_service_instance_status_setting(buffer& _buf_dest, const server_admin::instance_Iservice* _pinstance_service)
+void _append_service_instance_status_setting(buffer& _buf_dest, const server_system::instance_service* _pinstance_service)
 {
-	const auto& setting = _pinstance_service->m_instance.setting;
+	const auto& setting = _pinstance_service->m_instance.info.setting;
 
 	// 2) "Name"
 	_buf_dest.append_text<char>("<td><span style='font-size:15px;font-weight:bold'><i class='fa fa-server'></i> "sv);
-	_buf_dest.append_text<char>(setting.nickname);
+	_buf_dest.append_text<char>(setting.name);
 	_buf_dest.append_text<char>("</span></td>"sv);
 
 	// 3) TYPE/UID
@@ -172,54 +175,54 @@ void _append_service_instance_status_setting(buffer& _buf_dest, const server_adm
 	_buf_dest.append_text<char>("<i class='xi-git-symbol'></i>"sv);
 	_buf_dest.append_text<char>(setting.revision.revision);
 	_buf_dest.append_text<char>(" <i class='fa fa-caret-down'></i><br><span style='font-size:11px'>"sv);
-	if (_pinstance_service->m_instance.status.state != eOBJECT_STATE::NONE)
+	if (_pinstance_service->m_instance.info.status.state != eOBJECT_STATE::NONE)
 	{
-		_buf_dest.append_text<char>("{}.{}.{}", setting.version.major, setting.version.minor, setting.version.build);
+		_buf_dest.append_text<char>(CGDK::stream_string(setting.version.major, ".", setting.version.minor, ".", setting.version.build));
 	}
 	_buf_dest.append_text<char>("</span></td>"sv);
 }
-void _append_service_instance_status_status_open(buffer& _buf_dest, const server_admin::instance_Iservice* _pinstance_service)
+void _append_service_instance_status_status_open(buffer& _buf_dest, const server_system::instance_service* _pinstance_service)
 {
 	// 1) get instance
-	auto id_instnace = reinterpret_cast<uint64_t>(static_cast<const server_admin::Iinstance*>(_pinstance_service));
+	auto id_instance = reinterpret_cast<uint64_t>(static_cast<const server_system::Iinstance*>(_pinstance_service));
 
 	// 2) get info
-	const auto& status = _pinstance_service->m_instance.status;
+	const auto& status = _pinstance_service->m_instance.info.status;
 
 	// 3) STATUS
-	_buf_dest.append_text<char>("<td id='hi_s{}'>"sv, id_instnace);
-	_buf_dest.append_text<char>(to_string<char>(status.state));
+	_buf_dest.append_text<char>(CGDK::stream_string("<td id='hi_s", id_instance, "'>"));
+	_buf_dest.append_text<char>(to_string(status.state));
 	_buf_dest.append_text<char>("</td>"sv);
 
 	// 4) PROCESSOR
 	_buf_dest.append_text<char>("<td>");
-	_buf_dest.append_text<char>("<canvas class='table_server_list_canvas' width='128px' height='100' id='hi_cv1{}'>"sv, id_instnace);
+	_buf_dest.append_text<char>(CGDK::stream_string("<canvas class='table_server_list_canvas' width='128px' height='100' id='hi_cv1", id_instance, "'>"));
 	_buf_dest.append_text<char>("</canvas>"sv);
 
 	// 5) MEMORY
 	_buf_dest.append_text<char>("<td>");
-	_buf_dest.append_text<char>("<canvas class='table_server_list_canvas' width='128px' height='100' id='hi_cv2{}'>"sv, id_instnace);
+	_buf_dest.append_text<char>(CGDK::stream_string("<canvas class='table_server_list_canvas' width='128px' height='100' id='hi_cv2", id_instance, "'>"));
 	_buf_dest.append_text<char>("</canvas>"sv);
 
 	// 6) SESSION
 	_buf_dest.append_text<char>("<td>"sv);
-	_buf_dest.append_text<char>("<canvas class='table_server_list_canvas' width='128px' height='100' id='hi_cv3{}'>"sv, id_instnace);
+	_buf_dest.append_text<char>(CGDK::stream_string("<canvas class='table_server_list_canvas' width='128px' height='100' id='hi_cv3", id_instance, "'>"));
 	_buf_dest.append_text<char>("</canvas>"sv);
 	_buf_dest.append_text<char>("</td>"sv);
 
 	// 7) NETWORK
 	_buf_dest.append_text<char>("<td>"sv);
-	_buf_dest.append_text<char>("<canvas class='table_server_list_canvas' width='128px' height='100' id='hi_cv4{}'>"sv, id_instnace);
+	_buf_dest.append_text<char>(CGDK::stream_string("<canvas class='table_server_list_canvas' width='128px' height='100' id='hi_cv4", id_instance, "'>"));
 	_buf_dest.append_text<char>("</canvas>"sv);
 	_buf_dest.append_text<char>("</td>"sv);
 }
-void _append_service_instance_status_status_close(buffer& _buf_dest, const server_admin::instance_Iservice* _pinstance_service)
+void _append_service_instance_status_status_close(buffer& _buf_dest, const server_system::instance_service* _pinstance_service)
 {
 	// 5) get instance
-	auto id_instnace = reinterpret_cast<uint64_t>(static_cast<const server_admin::Iinstance*>(_pinstance_service));
+	auto id_instance = reinterpret_cast<uint64_t>(static_cast<const server_system::Iinstance*>(_pinstance_service));
 
 	// 6) STATUS
-	_buf_dest.append_text<char>("<td id='hi_s{}'>"sv, id_instnace);
+	_buf_dest.append_text<char>(CGDK::stream_string("<td id='hi_s", id_instance, "'>"));
 	_buf_dest.append_text<char>("</td>"sv);
 
 	// 7) PROCESSOR
@@ -238,17 +241,17 @@ void _append_service_instance_status_status_close(buffer& _buf_dest, const serve
 	_buf_dest.append_text<char>("<td>"sv);
 	_buf_dest.append_text<char>("</td>"sv);
 }
-void _append_service_instance_status_info(buffer& _buf_dest, const server_admin::instance_Iservice* _pinstance_service)
+void _append_service_instance_status_info(buffer& _buf_dest, const server_system::instance_service* _pinstance_service)
 {
 	// - get info
-	const auto& setting = _pinstance_service->m_instance.setting;
+	const auto& setting = _pinstance_service->m_instance.info.setting;
 
 	// - PATHW
 	_buf_dest.append_text<char>("<td>"sv);
-	_buf_dest.append_text<char>(setting.str_path);
+	_buf_dest.append_text<char>(setting.path);
 	_buf_dest.append_text<char>("</td>"sv);
 }
-void _append_service_instance_status_close(buffer& _buf_dest, const server_admin::instance_Iservice* _pinstance_service)
+void _append_service_instance_status_close(buffer& _buf_dest, const server_system::instance_service* _pinstance_service)
 {
 	// 1) setting
 	_append_service_instance_status_setting(_buf_dest, _pinstance_service);
@@ -259,7 +262,7 @@ void _append_service_instance_status_close(buffer& _buf_dest, const server_admin
 	// 3) info
 	_append_service_instance_status_info(_buf_dest, _pinstance_service);
 }
-void _append_service_instance_status_open(buffer& _buf_dest, const server_admin::instance_Iservice* _pinstance_service)
+void _append_service_instance_status_open(buffer& _buf_dest, const server_system::instance_service* _pinstance_service)
 {
 	// 1) setting
 	_append_service_instance_status_setting(_buf_dest, _pinstance_service);
@@ -271,10 +274,10 @@ void _append_service_instance_status_open(buffer& _buf_dest, const server_admin:
 	_append_service_instance_status_info(_buf_dest, _pinstance_service);
 }
 
-shared_buffer _make_webmessage_service_instance_add(const server_admin::Iinstance* _pinstance)
+shared_buffer _make_webmessage_service_instance_add(const server_system::Iinstance* _pinstance)
 {
 	// 1) buffer
-	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
+	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE * 4);
 
 	// 2) append message head
 	buf_result.append_text<char>(MESSAGE_WEB_SERVER_LIST); // "SELI"
@@ -282,13 +285,13 @@ shared_buffer _make_webmessage_service_instance_add(const server_admin::Iinstanc
 	// 3) append message 
 	{
 		// - temporary buffer
-		auto buf_text = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
+		auto buf_text = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE * 4);
 
 		// - instance service
-		auto pinstance_service = dynamic_cast<const server_admin::instance_Iservice*>(_pinstance);
+		auto pinstance_service = dynamic_cast<const server_system::instance_service*>(_pinstance);
 
 		// - append tr data
-		if (pinstance_service->m_instance.status.state != eOBJECT_STATE::NONE)
+		if (pinstance_service->m_instance.info.status.state != eOBJECT_STATE::NONE)
 			_append_service_instance_status_open(buf_text, pinstance_service);
 		else
 			_append_service_instance_status_close(buf_text, pinstance_service);
@@ -297,7 +300,7 @@ shared_buffer _make_webmessage_service_instance_add(const server_admin::Iinstanc
 		buf_result.append<char>('A');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("tr{}", reinterpret_cast<uint64_t>(_pinstance));
+		auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(_pinstance));
 
 		// - append data
 		::_append_key_value(buf_result, tr_element_id, buf_text);
@@ -306,10 +309,10 @@ shared_buffer _make_webmessage_service_instance_add(const server_admin::Iinstanc
 	// 4) send message
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
-shared_buffer _make_webmessage_service_instance_remove(const server_admin::Iinstance* _pinstance)
+shared_buffer _make_webmessage_service_instance_remove(const server_system::Iinstance* _pinstance)
 {
 	// 1) get instance 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -324,7 +327,7 @@ shared_buffer _make_webmessage_service_instance_remove(const server_admin::Iinst
 		buf_result.append<char>('D');
 
 		// - tr node name
-		auto tr_element_id = NFMT::format("tr{}"sv, reinterpret_cast<uint64_t>(_pinstance));
+		auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(_pinstance));
 
 		// - append tr_element_id
 		buf_result.append_text<char>(tr_element_id);
@@ -334,7 +337,7 @@ shared_buffer _make_webmessage_service_instance_remove(const server_admin::Iinst
 	// 5) send message
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
-shared_buffer _make_webmessage_service_instance_update_open(server_admin::Iinstance* _pinstance, uint64_t /*_flag*/)
+shared_buffer _make_webmessage_service_instance_update_open(server_system::Iinstance* _pinstance, uint64_t /*_flag*/)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -345,16 +348,16 @@ shared_buffer _make_webmessage_service_instance_update_open(server_admin::Iinsta
 	// 3) append message 
 	{
 		// - temporary buffer
-		buffer buf_text = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
+		auto buf_text = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
 
 		// - append tr data
-		_append_service_instance_status_open(buf_text, dynamic_cast<server_admin::instance_Iservice*>(_pinstance));
+		_append_service_instance_status_open(buf_text, dynamic_cast<server_system::instance_service*>(_pinstance));
 
 		// - append command (A:Add, D:delete, U:update)
 		buf_result.append<char>('U');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("tr{}"sv, reinterpret_cast<uint64_t>(_pinstance));
+		auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(_pinstance));
 
 		// - append data
 		::_append_key_value(buf_result, tr_element_id, buf_text);
@@ -363,7 +366,7 @@ shared_buffer _make_webmessage_service_instance_update_open(server_admin::Iinsta
 	// 4) send message
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
-shared_buffer _make_webmessage_service_instance_state(server_admin::Iinstance* _pinstance, eOBJECT_STATE _instance_state, uint64_t /*_flag*/)
+shared_buffer _make_webmessage_service_instance_state(server_system::Iinstance* _pinstance, eOBJECT_STATE _instance_state, uint64_t /*_flag*/)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -377,16 +380,16 @@ shared_buffer _make_webmessage_service_instance_state(server_admin::Iinstance* _
 		buf_result.append<char>('U');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("hi_s{}"sv, reinterpret_cast<uint64_t>(_pinstance));
+		auto tr_element_id = CGDK::stream_string("hi_s", reinterpret_cast<uint64_t>(_pinstance));
 
 		// - append data
-		::_append_key_value(buf_result, tr_element_id, to_string<char>(_instance_state));
+		::_append_key_value(buf_result, tr_element_id, to_string(_instance_state));
 	}
 
 	// 4) send message
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
-shared_buffer _make_webmessage_service_instance_update_update(server_admin::Iinstance* _pinstance, uint64_t /*_flag*/)
+shared_buffer _make_webmessage_service_instance_update_update(server_system::Iinstance* _pinstance, uint64_t /*_flag*/)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -397,16 +400,16 @@ shared_buffer _make_webmessage_service_instance_update_update(server_admin::Iins
 	// 3) append message 
 	{
 		// - temporary buffer
-		buffer buf_text = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
+		auto buf_text = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
 
 		// - append tr data
-		_append_service_instance_status_open(buf_text, dynamic_cast<server_admin::instance_Iservice*>(_pinstance));
+		_append_service_instance_status_open(buf_text, dynamic_cast<server_system::instance_service*>(_pinstance));
 
 		// - append command (A:Add, D:delete, U:update)
 		buf_result.append<char>('U');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("tr{}"sv, reinterpret_cast<uint64_t>(_pinstance));
+		auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(_pinstance));
 
 		// - append data
 		::_append_key_value(buf_result, tr_element_id, buf_text);
@@ -415,10 +418,10 @@ shared_buffer _make_webmessage_service_instance_update_update(server_admin::Iins
 	// 4) send message
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
-shared_buffer _make_webmessage_service_instance_update_close(server_admin::Iinstance* _pinstance, uint64_t /*_flag*/)
+shared_buffer _make_webmessage_service_instance_update_close(server_system::Iinstance* _pinstance, uint64_t /*_flag*/)
 {
 	// 1) get instance 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -433,13 +436,13 @@ shared_buffer _make_webmessage_service_instance_update_close(server_admin::Iinst
 		buffer buf_text = buf_temp;
 
 		// - append tr data
-		_append_service_instance_status_close(buf_text, dynamic_cast<server_admin::instance_Iservice*>(_pinstance));
+		_append_service_instance_status_close(buf_text, dynamic_cast<server_system::instance_service*>(_pinstance));
 
 		// - append command (A:Add, D:delete, U:update)
 		buf_result.append<char>('U');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("tr{}"sv, reinterpret_cast<uint64_t>(_pinstance));
+		auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(_pinstance));
 
 		// - append data
 		::_append_key_value(buf_result, tr_element_id, buf_text);
@@ -448,7 +451,7 @@ shared_buffer _make_webmessage_service_instance_update_close(server_admin::Iinst
 	// 4) send message
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
-shared_buffer _make_webmessage_service_instance_cavas_process(server_admin::Iinstance* _pinstance, std::string_view _head, uint64_t value, uint64_t /*_flag*/)
+shared_buffer _make_webmessage_service_instance_cavas_process(server_system::Iinstance* _pinstance, std::string_view _head, uint64_t value, uint64_t /*_flag*/)
 {
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -462,7 +465,7 @@ shared_buffer _make_webmessage_service_instance_cavas_process(server_admin::Iins
 		buf_result.append<char>('V');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("{}{}"sv, _head, reinterpret_cast<uint64_t>(_pinstance));
+		auto tr_element_id = CGDK::stream_string(_head, reinterpret_cast<uint64_t>(_pinstance));
 
 		// - append element_id
 		buf_result.append_text<char>(tr_element_id);
@@ -480,7 +483,7 @@ shared_buffer _make_webmessage_service_instance_cavas_process(server_admin::Iins
 	// 5) send message
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
-shared_buffer _make_webmessage_service_instance_cavas_process(server_admin::Iinstance* _pinstance, std::string_view _head, std::vector<uint64_t>& _vector_values, uint64_t /*_flag*/)
+shared_buffer _make_webmessage_service_instance_cavas_process(server_system::Iinstance* _pinstance, std::string_view _head, std::vector<uint64_t>& _vector_values, uint64_t /*_flag*/)
 {
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -494,7 +497,7 @@ shared_buffer _make_webmessage_service_instance_cavas_process(server_admin::Iins
 		buf_result.append<char>('V');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("{}{}"sv, _head, reinterpret_cast<uint64_t>(_pinstance));
+		auto tr_element_id = CGDK::stream_string(_head, reinterpret_cast<uint64_t>(_pinstance));
 
 		// - append element_id
 		buf_result.append_text<char>(tr_element_id);
@@ -529,7 +532,7 @@ shared_buffer _make_web_message_log_count(std::array<size_t, MAX_LOG_TYPE>& _arr
 	auto plogger = service::get_logger();
 
 	// 2) get loc count
-	scoped_lock(plogger->get_count_lock())
+	SCOPED_LOCK(plogger->get_count_lock())
 	{
 		log_count_total = plogger->get_log_count();
 		array_log_count = plogger->_log_count();
@@ -557,7 +560,7 @@ shared_buffer _make_web_message_log_count(std::array<size_t, MAX_LOG_TYPE>& _arr
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_text.to_string<char>()));;
 }
 
-void _append_event_object(buffer& _buf_dest, const server_admin::time_event_snap& _time_event)
+void _append_event_object(buffer& _buf_dest, const server_system::time_event_snap& _time_event)
 {
 	// 1) "Name"
 	_buf_dest.append_text<char>("<td><span style='font-size:15px;font-weight:bold'><i class='xi-alarm-o'></i> "sv);
@@ -566,7 +569,7 @@ void _append_event_object(buffer& _buf_dest, const server_admin::time_event_snap
 
 	// 2) TYPE (ONCE/ITERATION/...)
 	_buf_dest.append_text<char>("<td>"sv);
-	_buf_dest.append_text<char>(to_string<char>(static_cast<time_event::eTYPE>(_time_event.updatable.entity_setting.type)));
+	_buf_dest.append_text<char>(to_string(static_cast<time_event::eTYPE>(_time_event.updatable.entity_setting.type)));
 	_buf_dest.append_text<char>("</td>"sv);
 
 	// 3) STATUS
@@ -641,7 +644,7 @@ shared_buffer _make_web_message_event_list()
 	auto ptime_event_entity_manager = time_event::entity_manager::instance();
 
 	// 4) append message 
-	scoped_lock(ptime_event_entity_manager->get_lockable())
+	SCOPED_LOCK(ptime_event_entity_manager->get_lockable())
 	{
 		// - 공통적으로 사용할 temporary buffer
 		auto buf_temp = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -652,10 +655,10 @@ shared_buffer _make_web_message_event_list()
 			buffer buf_text = buf_temp;
 
 			// - tr element id
-			auto tr_element_id = NFMT::format("tr{}"sv, reinterpret_cast<uint64_t>(iter.get()));
+			auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(iter.get()));
 
 			// - append tr data
-			_append_event_object(buf_text, server_admin::get_snap(iter));
+			_append_event_object(buf_text, server_system::get_snap(iter));
 
 			// - append command
 			buf_result.append<char>('A');
@@ -676,7 +679,7 @@ shared_buffer _make_web_message_event_list()
 	// 5) websocket message로 만들어 전송한다.
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
-shared_buffer _make_webmessage_host_info_event_add(const time_event::Ientity* _pentity, const server_admin::time_event_snap& _time_event)
+shared_buffer _make_webmessage_host_info_event_add(const time_event::Ientity* _pentity, const server_system::time_event_snap& _time_event)
 {
 	// 2) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -699,7 +702,7 @@ shared_buffer _make_webmessage_host_info_event_add(const time_event::Ientity* _p
 		buf_result.append<char>('A');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("tr{}", reinterpret_cast<uint64_t>(_pentity));
+		auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(_pentity));
 
 		// - append data
 		::_append_key_value(buf_result, tr_element_id, buf_text);
@@ -708,7 +711,7 @@ shared_buffer _make_webmessage_host_info_event_add(const time_event::Ientity* _p
 	// 5) send message
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
-shared_buffer _make_webmessage_host_info_event_update(const time_event::Ientity* _pentity, const server_admin::time_event_snap& _entity_snap, uint64_t /*_flag*/)
+shared_buffer _make_webmessage_host_info_event_update(const time_event::Ientity* _pentity, const server_system::time_event_snap& _entity_snap, uint64_t /*_flag*/)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -731,7 +734,7 @@ shared_buffer _make_webmessage_host_info_event_update(const time_event::Ientity*
 		buf_result.append<char>('U');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("tr{}"sv, reinterpret_cast<uint64_t>(_pentity));
+		auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(_pentity));
 
 		// - append data
 		::_append_key_value(buf_result, tr_element_id, buf_text);
@@ -757,7 +760,7 @@ shared_buffer _make_webmessage_host_info_event_remove(const time_event::Ientity*
 		buf_result.append<char>('D');
 
 		// - tr element id
-		auto tr_element_id = NFMT::format("tr{}"sv, reinterpret_cast<uint64_t>(_pentity));
+		auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(_pentity));
 
 		// - append tr_element_id
 		buf_result.append_text<char>(tr_element_id);
@@ -768,7 +771,7 @@ shared_buffer _make_webmessage_host_info_event_remove(const time_event::Ientity*
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-void process_service_instance_update(std::vector<shared_buffer>& _vector_send, server_admin::Iinstance* _pinstance, uint64_t _flag)
+void process_service_instance_update(std::vector<shared_buffer>& _vector_send, server_system::Iinstance* _pinstance, uint64_t _flag)
 {
 	//-----------------------------------------------------------------
 	// 설명) service instance 정보 update 처리 
@@ -781,20 +784,20 @@ void process_service_instance_update(std::vector<shared_buffer>& _vector_send, s
 	//-----------------------------------------------------------------
 	// 1) canvas 정보 update
 	// - casting
-	auto pinstnace_service = dynamic_cast<server_admin::instance_Iservice*>(_pinstance);
+	auto pinstnace_service = dynamic_cast<server_system::instance_service*>(_pinstance);
 
 	// - canvas 정보 update 
-	if (pinstnace_service->m_instance.status.state != eOBJECT_STATE::NONE)
+	if (pinstnace_service->m_instance.info.status.state != eOBJECT_STATE::NONE)
 	{
 		// - 
 		if (pinstnace_service->m_state_applied == eOBJECT_STATE::NONE)
 			_vector_send.push_back(_make_webmessage_service_instance_update_open(_pinstance, _flag));
 		else
-			_vector_send.push_back(_make_webmessage_service_instance_state(_pinstance, pinstnace_service->m_instance.status.state, _flag));
+			_vector_send.push_back(_make_webmessage_service_instance_state(_pinstance, pinstnace_service->m_instance.info.status.state, _flag));
 
-		if (pinstnace_service->m_instance.status.vector_process_status.empty() == false)
+		if (pinstnace_service->m_vector_process_status.empty() == false)
 		{
-			const auto& process_status = pinstnace_service->m_instance.status.vector_process_status.back();
+			const auto& process_status = pinstnace_service->m_vector_process_status.back();
 			_vector_send.push_back(_make_webmessage_service_instance_cavas_process(_pinstance, "hi_cv1"sv, process_status.usage_process, _flag));
 			_vector_send.push_back(_make_webmessage_service_instance_cavas_process(_pinstance, "hi_cv2"sv, process_status.bytes_memory_usage, _flag));
 			_vector_send.push_back(_make_webmessage_service_instance_cavas_process(_pinstance, "hi_cv3"sv, process_status.handle_count, _flag));
@@ -806,22 +809,22 @@ void process_service_instance_update(std::vector<shared_buffer>& _vector_send, s
 		_vector_send.push_back(_make_webmessage_service_instance_update_close(pinstnace_service, _flag));
 	}
 
-	// - update 상태 저장(이것ㅇs NONE -> OPEND 상태로 변경이 일어난 상태에서만 convas 정보 등의 추가 정보를 보내주기 위해...)
-	pinstnace_service->m_state_applied = pinstnace_service->m_instance.status.state;
+	// - update 상태 저장(이것ㅇs NONE -> OPEND 상태로 변경이 일어난 상태에서만 canvas 정보 등의 추가 정보를 보내주기 위해...)
+	pinstnace_service->m_state_applied = pinstnace_service->m_instance.info.status.state;
 }
 
-object_ptr<server_admin::Iinstance> find_instance(uint64_t _id)
+object_ptr<server_system::Iinstance> find_instance(uint64_t _id)
 {
 	// declare)
-	object_ptr<server_admin::Iinstance> pselected;
+	object_ptr<server_system::Iinstance> pselected;
 
 	// 1) get instance 
-	object_ptr<service> pservice = service::instance();
+	object_ptr<service> pservice = ::service::instance();
 
 	// 4) append message 
-	scoped_lock(service::pmanager_instance->m_cs_instance)
+	SCOPED_LOCK(::service::pmanager_instance->m_lockable_instance)
 	{
-		for (const auto& iter : service::pmanager_instance->m_map_instance)
+		for (const auto& iter : ::service::pmanager_instance->m_map_instance)
 		{
 			if (reinterpret_cast<uint64_t>(iter.second.get()) == _id)
 			{
@@ -844,7 +847,7 @@ object_ptr<time_event::Ientity> find_time_event_entity(uint64_t _id)
 	auto ptime_event_entity_manager = time_event::entity_manager::instance();
 
 	// 4) append message 
-	scoped_lock(ptime_event_entity_manager->get_lockable())
+	SCOPED_LOCK(ptime_event_entity_manager->get_lockable())
 	{
 		for (const auto& iter : *ptime_event_entity_manager)
 		{
@@ -860,12 +863,10 @@ object_ptr<time_event::Ientity> find_time_event_entity(uint64_t _id)
 	return ptime_event_entity;
 }
 
-observable_websocket_host_info::observable_websocket_host_info(const std::string_view _name) :
+observable_websocket_host_info::observable_websocket_host_info() :
 	m_is_count_log_count_updating(false),
 	m_array_log_count_last{ 0,0,0,0,0,0,0,0 }
 {
-	this->set_name(_name);
-
 	this->m_webpage_str_target = "webpage_host_info.htm"sv;
 }
 
@@ -873,13 +874,13 @@ observable_websocket_host_info::~observable_websocket_host_info()
 {
 }
 
-void observable_websocket_host_info::notify_to_web_controls_INSTANCE_ENTER(server_admin::Iinstance* _pinstance)
+void observable_websocket_host_info::notify_to_web_controls_INSTANCE_ENTER(server_system::Iinstance* _pinstance)
 {
 	// declare) 
 	shared_buffer buf_send;
 
 	// 1) get
-	scoped_lock(service::pmanager_instance->m_cs_instance)
+	SCOPED_LOCK(::service::pmanager_instance->m_lockable_instance)
 	{
 		buf_send = _make_webmessage_service_instance_add(_pinstance);
 	}
@@ -887,13 +888,13 @@ void observable_websocket_host_info::notify_to_web_controls_INSTANCE_ENTER(serve
 	// 2) send
 	this->send(buf_send);
 }
-void observable_websocket_host_info::notify_to_web_controls_INSTANCE_LEAVE(server_admin::Iinstance* _pinstance)
+void observable_websocket_host_info::notify_to_web_controls_INSTANCE_LEAVE(server_system::Iinstance* _pinstance)
 {
 	// declare) 
 	shared_buffer buf_send;
 
 	// 1) get
-	scoped_lock(service::pmanager_instance->m_cs_instance)
+	SCOPED_LOCK(::service::pmanager_instance->m_lockable_instance)
 	{
 		buf_send = _make_webmessage_service_instance_remove(_pinstance);
 	}
@@ -902,13 +903,13 @@ void observable_websocket_host_info::notify_to_web_controls_INSTANCE_LEAVE(serve
 	this->send(buf_send);
 }
 
-void observable_websocket_host_info::notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_admin::Iinstance* _pinstance, uint64_t _flag)
+void observable_websocket_host_info::notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_system::Iinstance* _pinstance, uint64_t _flag)
 {
 	// declare) 
 	std::vector<shared_buffer> vector_send;
 
 	// 1) get
-	scoped_lock(service::pmanager_instance->m_cs_instance)
+	SCOPED_LOCK(::service::pmanager_instance->m_lockable_instance)
 	{
 		process_service_instance_update(vector_send, _pinstance, _flag);
 	}
@@ -923,10 +924,10 @@ void observable_websocket_host_info::notify_to_web_controls_INSTANCE_STATUS_UPDA
 	// declare) 
 	std::vector<shared_buffer> vector_send;
 
-	scoped_lock(service::pmanager_instance->m_cs_instance)
+	SCOPED_LOCK(::service::pmanager_instance->m_lockable_instance)
 	{
 		// 1) get
-		for (auto& iter : service::pmanager_instance->m_map_instance)
+		for (auto& iter : ::service::pmanager_instance->m_map_instance)
 		{
 			process_service_instance_update(vector_send, iter.second, 0xffffffff);
 		}
@@ -965,7 +966,7 @@ void observable_websocket_host_info::process_web_service_instance_list(net::io::
 	std::vector<shared_buffer> vector_buf_send;
 
 	// 2) get instance 
-	object_ptr<server_admin::instance_manager> pmanager_instance = service::pmanager_instance;
+	object_ptr<server_system::instance_manager> pmanager_instance = ::service::pmanager_instance;
 
 	// 3) buffer
 	auto buf_result = alloc_shared_buffer(DEFAULT_BUFFER_FOR_WEB_PAGE);
@@ -975,7 +976,7 @@ void observable_websocket_host_info::process_web_service_instance_list(net::io::
 	buf_result.append_text<char>(MESSAGE_WEB_SERVER_LIST);
 
 	// 5) append message 
-	scoped_lock(pmanager_instance->m_cs_instance)
+	SCOPED_LOCK(pmanager_instance->m_lockable_instance)
 	{
 		for (const auto& iter : pmanager_instance->m_map_instance)
 		{
@@ -983,16 +984,16 @@ void observable_websocket_host_info::process_web_service_instance_list(net::io::
 			buffer buf_text = buf_temp;
 
 			// check) 
-			CONTINUE_IF(iter.second->get_instance_type() != server_admin::eINSTANCE_TYPE::SERVICE);
+			CONTINUE_IF(iter.second->get_instance_type() != ::eINSTANCE_TYPE::SERVICE);
 
 			// - get instance service
-			auto pinstance_service = dynamic_pointer_cast<server_admin::instance_Iservice>(iter.second);
+			auto pinstance_service = dynamic_pointer_cast<server_system::instance_service>(iter.second);
 
 			// check)
 			CGASSERT_ERROR(pinstance_service != nullptr);
 
 			// - append tr data
-			if (pinstance_service->m_instance.status.state != eOBJECT_STATE::NONE)
+			if (pinstance_service->m_instance.info.status.state != eOBJECT_STATE::NONE)
 				_append_service_instance_status_open(buf_text, pinstance_service);
 			else
 				_append_service_instance_status_close(buf_text, pinstance_service);
@@ -1001,7 +1002,7 @@ void observable_websocket_host_info::process_web_service_instance_list(net::io::
 			buf_result.append<char>('A');
 
 			// - tr node name
-			auto tr_element_id = NFMT::format("tr{}"sv, reinterpret_cast<uint64_t>(iter.second.get()));
+			auto tr_element_id = CGDK::stream_string("tr", reinterpret_cast<uint64_t>(iter.second.get()));
 			
 			// - append element id
 			buf_result.append_text<char>(tr_element_id);
@@ -1014,7 +1015,7 @@ void observable_websocket_host_info::process_web_service_instance_list(net::io::
 			// - append data
 			buf_result.append(buf_text.size(), buf_text.data());
 
-			if (pinstance_service->m_instance.status.state != eOBJECT_STATE::NONE && pinstance_service->m_instance.status.vector_process_status.empty() == false)
+			if (pinstance_service->m_instance.info.status.state != eOBJECT_STATE::NONE && pinstance_service->m_vector_process_status.empty() == false)
 			{
 				// - get count
 				std::vector<uint64_t> vector_data_1;
@@ -1022,8 +1023,8 @@ void observable_websocket_host_info::process_web_service_instance_list(net::io::
 				std::vector<uint64_t> vector_data_3;
 				std::vector<uint64_t> vector_data_4;
 				{
-					auto count = pinstance_service->m_instance.status.vector_process_status.size();
-					auto iter_data = pinstance_service->m_instance.status.vector_process_status.begin();
+					auto count = pinstance_service->m_vector_process_status.size();
+					auto iter_data = pinstance_service->m_vector_process_status.begin();
 					if (count > MAX_CANVAS_WITH_C)
 					{
 						iter_data += (count - MAX_CANVAS_WITH_C);
@@ -1031,7 +1032,7 @@ void observable_websocket_host_info::process_web_service_instance_list(net::io::
 					}
 				}
 
-				for (auto& iter_data : pinstance_service->m_instance.status.vector_process_status)
+				for (auto& iter_data : pinstance_service->m_vector_process_status)
 				{
 					vector_data_1.push_back(iter_data.usage_process);
 					vector_data_2.push_back(iter_data.bytes_memory_usage);
@@ -1063,7 +1064,7 @@ void observable_websocket_host_info::on_observer_registered(socket_websocket* _p
 	//-----------------------------------------------------------------
 	// 설명) register 
 	// 
-	//  처음 obeserver에 등록되게 되면
+	//  처음 observer에 등록되게 되면
 	// 
 	//   1) 먼저 message mediator로 등록한다.
 	//   2) 현재 service_list를 전송한다.
@@ -1086,7 +1087,7 @@ void observable_websocket_host_info::on_observer_registered(socket_websocket* _p
 
 uintptr_t observable_websocket_host_info::on_observer_unregistering(socket_websocket* _pobserver, observer_channel_t /*_ocid*/)
 {
-	// 1) uregister _pmenber
+	// 1) unregister _pmenber
 	_pobserver->unregister_messageable(this);
 
 	// return) 
@@ -1128,7 +1129,9 @@ result_code observable_websocket_host_info::on_message_time_event(sMESSAGE_HTTP_
 	auto message_type = _msg.buf_message.extract_text<char>(size(4));
 
 	// 2) get target id
-	auto element_id = __from_string<uint64_t>((_msg.buf_message + offset(2)).to_string<char>());
+	const auto str_element_id = (_msg.buf_message + offset(2)).to_string<char>();
+	uint64_t element_id = 0;
+	std::from_chars(str_element_id.data(), str_element_id.data() + str_element_id.size(), element_id);
 
 	// 3) find time event object
 	object_ptr<time_event::Ientity> ptime_event_entity = find_time_event_entity(element_id);
@@ -1200,13 +1203,15 @@ result_code observable_websocket_host_info::on_message_server_list(sMESSAGE_HTTP
 	auto message_type = _msg.buf_message.extract_text<char>(size(4));
 
 	// 2) get target id
-	auto element_id = __from_string<uint64_t>((_msg.buf_message + offset(2)).to_string<char>());
+	const auto str_element_id = (_msg.buf_message + offset(2)).to_string<char>();
+	uint64_t element_id = 0;
+	std::from_chars(str_element_id.data(), str_element_id.data() + str_element_id.size(), element_id);
 
 	// 3) find object
-	object_ptr<server_admin::Iinstance> pinstance = find_instance(element_id);
+	object_ptr<server_system::Iinstance> pinstance = find_instance(element_id);
 
 	// 4) 
-	auto pinstance_service = dynamic_pointer_cast<server_admin::instance_Iservice>(pinstance);
+	auto pinstance_service = dynamic_pointer_cast<server_system::instance_service>(pinstance);
 
 	// check)
 	RETURN_IF(pinstance_service.empty(), eRESULT::DONE);
@@ -1284,36 +1289,44 @@ result_code observable_websocket_host_info::on_message_server_list(sMESSAGE_HTTP
 
 void observable_websocket_host_info::add_time_event(time_event::Ientity* _pentity)
 {
-	this->send(_make_webmessage_host_info_event_add(_pentity, server_admin::get_snap(_pentity)));
+	this->send(_make_webmessage_host_info_event_add(_pentity, server_system::get_snap(_pentity)));
 }
 
-void observable_websocket_host_info::rempve_time_event(time_event::Ientity* _pentity)
+void observable_websocket_host_info::remove_time_event(time_event::Ientity* _pentity)
 {
 	this->send(_make_webmessage_host_info_event_remove(_pentity));
 }
 
 void observable_websocket_host_info::execute_time_event(time_event::Ientity* _pentity)
 {
-	this->send(_make_webmessage_host_info_event_update(_pentity, server_admin::get_snap(_pentity), 0));
+	this->send(_make_webmessage_host_info_event_update(_pentity, server_system::get_snap(_pentity), 0));
 }
 
 void observable_websocket_host_info::update_time_event(time_event::Ientity* _pentity)
 {
-	this->send(_make_webmessage_host_info_event_update(_pentity, server_admin::get_snap(_pentity), 0));
+	this->send(_make_webmessage_host_info_event_update(_pentity, server_system::get_snap(_pentity), 0));
 }
 
 void observable_websocket_host_info::add_log_records(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record)
 {
-	this->process_log(_vector_log_record);
+	this->process_send_logs(_vector_log_record);
 }
 
-void observable_websocket_host_info::process_log(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record)
+void observable_websocket_host_info::process_log(object_ptr<LOG_RECORD>&& _plog_record)
+{
+	// check)
+	RETURN_IF(_plog_record.empty());
+
+	this->process_send_logs({ std::move(_plog_record) });
+}
+
+void observable_websocket_host_info::process_send_logs(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record)
 {
 	// 1) send log message
 	this->send(_make_web_message_log("LOGS"sv, _vector_log_record));
 
 	// 2) send updating log count message
-	scoped_lock(service::get_logger()->get_count_lock())
+	SCOPED_LOCK(service::get_logger()->get_count_lock())
 	{
 		// check)
 		RETURN_IF(this->m_is_count_log_count_updating == true);
@@ -1336,7 +1349,7 @@ void observable_websocket_host_info::process_send_webmessage_log_count_update()
 	auto plogger = service::get_logger();
 
 	// 1) get loc count
-	scoped_lock(plogger->get_count_lock())
+	SCOPED_LOCK(plogger->get_count_lock())
 	{
 		// check)
 		CGASSERT_ERROR(this->m_is_count_log_count_updating == true);
@@ -1384,7 +1397,7 @@ void observable_websocket_host_info::process_send_webmessage_log_count_update()
 	this->send(make_shared_buffer(sWEBSOCKET_MESSAGE(buf_text.to_string<char>())));
 
 	// 5) re-request or stop
-	scoped_lock(plogger->get_count_lock())
+	SCOPED_LOCK(plogger->get_count_lock())
 	{
 		// - store last log count
 		this->m_array_log_count_last = array_log_count;

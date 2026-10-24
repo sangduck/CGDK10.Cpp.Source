@@ -15,9 +15,9 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(MSBuildThisFileDirectory)group_client.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_peer_client.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)group_peer_immigration.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)group_server.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_peer_server.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)group_websocket.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)group_websocket_immigration.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Igroup.cpp" />
@@ -33,8 +33,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)observable_websocket_system_info.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.Iinstance.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_host.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_Iservice.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_manager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_service.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_service_local.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_service_remote.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)service.cpp" />
@@ -56,12 +56,13 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_setting_htm.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_statistics_htm.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)webpage_time_event_info_htm.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_login_htm.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)definition_server.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)group_client.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_peer_client.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)group_peer_immigration.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)group_server.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_peer_server.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)group_websocket.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)group_websocket_immigration.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Igroup.h" />
@@ -78,8 +79,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)resource.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.Iinstance.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_host.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_Iservice.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_manager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_service.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_service_local.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_service_remote.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)service.h" />

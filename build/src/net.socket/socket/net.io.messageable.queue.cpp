@@ -32,9 +32,9 @@ result_code net::io::messageable::Nqueue::request_process_message(sMESSAGE& _msg
 	// declare)
 	sMESSAGE_NETWORK& msg = static_cast<sMESSAGE_NETWORK&>(_msg);
 
-	scoped_lock(this->m_lockable_queue_message)
+	SCOPED_LOCK(this->m_lockable_queue_message)
 	{
-		// 1) 현재 실행중일 경우 queuing 시킨 후 리턴한다.
+		// 1) 현재 실행 중일 경우 queuing 시킨 후 리턴한다.
 		if (this->m_flag_processing == true)
 		{
 			this->m_queue_message.push_back(msg);
@@ -62,9 +62,9 @@ result_code net::io::messageable::Nqueue::request_post_process_message(sMESSAGE_
 	// check) 
 	RETURN_IF(is_messageable_disabled(), eRESULT::FAIL_DISABLED);
 
-	scoped_lock(this->m_lockable_queue_message)
+	SCOPED_LOCK(this->m_lockable_queue_message)
 	{
-		// 1) 현재 실행중일 경우 queuing 시킨 후 리턴한다.
+		// 1) 현재 실행 중일 경우 queuing 시킨 후 리턴한다.
 		if (this->m_flag_processing == true)
 		{
 			this->m_queue_message.push_back(_msg);
@@ -77,12 +77,6 @@ result_code net::io::messageable::Nqueue::request_post_process_message(sMESSAGE_
 		this->m_flag_processing = true;
 	}
 
-	// 3) get executor
-	auto pexecutor = system_executor::executor();
-
-	// check)
-	RETURN_IF(pexecutor.empty(), eRESULT::NOT_READY);
-
 	// 3) make executable_object
 	auto pexecutable_post_messageable = make_object<executable_post_messageable>();
 
@@ -90,67 +84,75 @@ result_code net::io::messageable::Nqueue::request_post_process_message(sMESSAGE_
 	pexecutable_post_messageable->m_message_network = _msg;
 	pexecutable_post_messageable->m_pmessageable = this;
 
-	// 5) post execute
-	auto result = pexecutor->post(pexecutable_post_messageable);
+	// 5) post execute (system executor : 참조 count 없이 post한다)
+	auto result = system_executor::post(std::move(pexecutable_post_messageable));
 
-	// check)
-	RETURN_IF(result == false, eRESULT::FAIL);
+	// check) post 실패 (flag를 내린다)
+	if (result == false)
+	{
+		this->_reset_processing_flag();
+		return eRESULT::FAIL;
+	}
 
 	// return) 
 	return eRESULT::PENDED;
 }
 
+void net::io::messageable::Nqueue::_reset_processing_flag() noexcept
+{
+	SCOPED_LOCK(this->m_lockable_queue_message)
+	{
+		this->m_flag_processing = false;
+	}
+}
+
 result_code net::io::messageable::Nqueue::continue_process_message()
 {
-	// declare) 
+	// declare)
 	sMESSAGE_NETWORK* pmsg;
 
 	// 1) get front message
-	scoped_lock(this->m_lockable_queue_message)
-	{
-		pmsg = (this->m_queue_message.empty() == false)  ? &this->m_queue_message.front() : nullptr;
-	}
-
-	if (pmsg != nullptr)
-	{
-		for (;;)
-		{
-			// check)
-			CGASSERT_ERROR(this->m_flag_processing == true);
-
-			// - process_message
-			auto result = this->process_message(*pmsg);
-
-			// 3) pop message
-			scoped_lock(this->m_lockable_queue_message)
-			{
-				// - pop_front
-				this->m_queue_message.pop_front();
-
-				// check) 
-				RETURN_IF(result == eRESULT::PENDED, eRESULT::PENDED);
-
-				// check) 
-				BREAK_IF(this->m_queue_message.empty());
-
-				// - get front
-				pmsg = &this->m_queue_message.front();
-			}
-		}
-	}
-
-	// 4) done...
-	scoped_lock(this->m_lockable_queue_message)
+	//    - 비어 있으면 같은 lock 안에서 flag를 내린다.
+	//      (lock을 풀었다가 다시 잡아서 내리면 그 사이 다른 thread가 queuing한 메시지(flag가 true라 queuing만 함)가 처리되지 않고 남는다)
+	SCOPED_LOCK(this->m_lockable_queue_message)
 	{
 		// check)
 		CGASSERT_ERROR(this->m_flag_processing == true);
 
-		// - set flag false
-		this->m_flag_processing = false;
+		if (this->m_queue_message.empty())
+		{
+			this->m_flag_processing = false;
+			return eRESULT::DONE;
+		}
+
+		pmsg = &this->m_queue_message.front();
 	}
 
-	// return) 
-	return eRESULT::DONE;
+	for (;;)
+	{
+		// - process_message (lock 밖. 이 node는 pop_front 전까지 그대로다)
+		auto result = this->process_message(*pmsg);
+
+		// 2) pop message
+		SCOPED_LOCK(this->m_lockable_queue_message)
+		{
+			// - pop_front
+			this->m_queue_message.pop_front();
+
+			// check)
+			RETURN_IF(result == eRESULT::PENDED, eRESULT::PENDED);
+
+			// check) 다 처리했으면 같은 lock 안에서 flag를 내리고 끝낸다.
+			if (this->m_queue_message.empty())
+			{
+				this->m_flag_processing = false;
+				return eRESULT::DONE;
+			}
+
+			// - get front
+			pmsg = &this->m_queue_message.front();
+		}
+	}
 }
 
 result_code net::io::messageable::Nqueue::process_message(sMESSAGE& _msg)

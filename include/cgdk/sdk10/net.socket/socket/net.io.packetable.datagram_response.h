@@ -34,17 +34,14 @@ namespace CGDK
  */
  //-----------------------------------------------------------------------------
 class net::io::packetable::Ndatagram_response : 
-// inherited classes)
 	virtual public				net::io::Ipacketable,
-	virtual public				Imessageable,
+	virtual public				CGDK::Imessageable,
 	virtual public				net::io::Isend_request,
 	virtual public				net::io::statistics::Nsocket
 {
-// public)
 public:
 			bool				send_ack( uint32_t _Serial, const net::sockaddr& _address);
 
-// implementation)
 public:
 	virtual	std::size_t			process_packet( shared_buffer& _buffer, const net::sockaddr& _address) override;
 	virtual	void				process_reset_packetable() noexcept override { this->reset_message_history();}

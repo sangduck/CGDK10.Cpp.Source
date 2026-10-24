@@ -3,75 +3,57 @@
 #*                      Cho sanghyun's Game Classes II                       *
 #*                      Ver 10.0 / release 2019.12.11                        *
 #*                                                                           *
-#*                         CMake - CGDK.net.socket                           *
-#*                                                                           *
-#*                                                                           *
-#*                                                                           *
+#*                      CMake - CGDK10.net.socket.socket                     *
 #*                                                                           *
 #*  This Program is programmed by Cho SangHyun. sangduck@cgcii.co.kr         *
 #*  Best for Game Developement and Optimized for Game Developement.          *
 #*                                                                           *
-#*                (c) 2016 Cho Sanghyun All right reserved.                  *
+#*                (c) 2003. Cho Sanghyun. All right reserved.                *
 #*                          http://www.CGCII.co.kr                           *
 #*                                                                           *
 #*****************************************************************************
 
-# ----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 # setting
-# ----------------------------------------------------------------------------
-# 1) project name
-PROJECT ( "CGDK10.net.socket" )
+#-----------------------------------------------------------------------------
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY ( VERSION 3.20 )
 
-# 2) project version
+# 2) project name
+PROJECT ( "CGDK10.net.socket.socket" )
+
+# 3) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
-
-# 4) default BUILD_TYPE
-IF (NOT DEFINED CMAKE_BULD_TYPE)
-	SET (CMAKE_BULD_TYPE "Debug")
-ENDIF()
-
-# 5) directories
-SET ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../../../lib/cgdk/sdk10/${DIST} )
-SET ( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../../../lib/cgdk/sdk10/${DIST} )
-SET ( CMAKE_RUNTIME_OTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../../execute )
-SET ( EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../execute )
-
-# 6) compile options
-set ( CMAKE_CXX_STANDARD 20)
-set ( CMAKE_CXX_STANDARD_REQUIRED ON)
-SET ( CMAKE_CXX_FLAGS "-DC_FLAGS -fexceptions -std=c++20" )
-SET ( CMAKE_CXX_FLAGS_DEBUG "-D_DEBUG -g1 -Wall -Wextra" )
-SET ( CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -Wall -Wextra" )
-
-# 7) include directories
-INCLUDE_DIRECTORIES(
-	${CMAKE_CURRENT_SOURCE_DIR}/../../../../include
-	./
-)
+# 4) common build rules (platform, compile options, output name/directory)
+INCLUDE ( ${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/cgdk.cmake )
 
 
-# ----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 # source files
-# ----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+# 1) common (linux & windows)
 SET (SRC_FILES
+
 # ...
 pch.cpp
 
 #common
-${CMAKE_CURRENT_SOURCE_DIR}/../../common/cgdk_info.cpp
+${CGDK_COMMON_DIR}/cgdk_info.cpp
 
 #definitions
 net.definitions.socket.cpp
 
 #net.api
 api.net.socket.cpp
+
+#net.emergency
+net.emergency.acceptor.cpp
+net.emergency.manager.cpp
 
 #net.io.interfaces
 net.io.Ibinder.cpp
@@ -101,6 +83,9 @@ net.io.connectable.tcp.cpp
 
 # net.io.connective
 net.io.connective.acceptor_tcp.cpp
+net.io.connective.acceptor_tcp.process.cpp
+net.io.connective.acceptor_tcp.uring.cpp
+net.io.connective.acceptor_tcp.parameters.cpp
 net.io.connective.connector_tcp.cpp
 net.io.connective.manager.cpp
 
@@ -115,13 +100,12 @@ net.io.messageable.queue.cpp
 # net.io.receivable
 net.io.receivable.datagram.epoll.cpp
 net.io.receivable.stream.cpp
-net.io.receivable.stream_crypt.cpp
-net.io.receivable.stream_crypt.epoll.cpp
 net.io.receivable.stream.epoll.cpp
+net.io.receivable.stream.uring.cpp
 net.io.receivable.stream_queue.epoll.cpp
 
 # net.io.restore
-net.io.restorable.clinet.cpp
+net.io.restorable.client.cpp
 net.io.restorable.server.cpp
 net.io.restore_manager.cpp
 net.io.retransferable.cpp
@@ -135,9 +119,9 @@ net.io.sendable.tcp_sync.epoll.cpp
 net.io.sendable.tcp_sync_buffered.epoll.cpp
 net.io.sendable.tcp_async.epoll.cpp
 net.io.sendable.tcp_async_gather.epoll.cpp
+net.io.sendable.tcp_async_gather.uring.cpp
 net.io.sendable.tcp_async_gather_buffered.epoll.cpp
-net.io.sendable.tcp_crypt.cpp
-net.io.sendable.tcp_crypt.epoll.cpp
+net.io.sendable.tcp_async_gather_buffered.uring.cpp
 net.io.sendable.udp.epoll.cpp
 
 # sender
@@ -147,11 +131,8 @@ net.io.sender.stream.cpp
 net.io.socket.cpp
 net.io.socket.tcp.cpp
 net.io.socket.udp.cpp
-net.io.socket_secure.epoll.cpp
 
 # net.io
-net.io.tcp_client_crypt.cpp
-net.io.tcp_server_crypt.cpp
 net.io.udp_resend.cpp
 
 # net.ip
@@ -167,39 +148,55 @@ net.send_queue.cpp
 net.message.cpp
 
 #net.io.Statistics
-net.statistics.cpp
+net.statistics.connective.cpp
+net.statistics.socket.cpp
+net.statistics.traffic.cpp
+)
 
+# 2) linux only
+SET (SRC_FILES_LINUX
 
 )
 
+# 3) windows only
+SET (SRC_FILES_WINDOWS
+net.io.receivable.datagram.iocp.cpp
+net.io.receivable.executable_receive.cpp
+net.io.receivable.stream.iocp.cpp
+net.io.receivable.stream.rio.cpp
+net.io.receivable.stream_queue.iocp.cpp
+net.io.receivable.stream_queue.rio.cpp
+net.io.sendable.executable_send_buffer.cpp
+net.io.sendable.executable_send_buffer_list.cpp
+net.io.sendable.gathering_queue.cpp
+net.io.sendable.gathering_queue_buffered.cpp
+net.io.sendable.tcp_async_gather_buffered_raw.iocp.cpp
+net.io.sendable.tcp_async_gather_raw.iocp.cpp
+net.io.sendable.tcp_sync.iocp.cpp
+net.io.sendable.tcp_async.rio.cpp
+net.io.sendable.tcp_async_gather.iocp.cpp
+net.io.sendable.tcp_async_gather.rio.cpp
+net.io.sendable.tcp_async_gather_buffered.iocp.cpp
+net.io.sendable.tcp_async.iocp.cpp
+net.io.sendable.tcp_sync_buffered.iocp.cpp
+net.io.sendable.udp.iocp.cpp
+net.io.sendable.udp.rio.cpp
+)
 
-# ----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
 # compile
-# ----------------------------------------------------------------------------
-# 1) set variable
-IF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
-	SET (BUILD_MESSAGE "Debug")
-	SET (BUILD_TYPE "Debug")
-ELSEIF (${CMAKE_BUILD_TYPE} MATCHES "Debug_Dynamic")
-	SET (BUILD_MESSAGE "Debug_Dynamic")
-	SET (BUILD_TYPE "Debug_Dynamic")
-ELSEIF (${CMAKE_BUILD_TYPE} MATCHES "Release")
-	SET (BUILD_MESSAGE "Release")
-	SET (BUILD_TYPE "Release")
-ELSEIF (${CMAKE_BUILD_TYPE} MATCHES "Release_Dynamic")
-	SET (BUILD_MESSAGE "Release_Dynamic")
-	SET (BUILD_TYPE "Release_Dynamic")
-ELSE ()
-	MESSAGE (SEND_ERROR "'CMAKE_BUILD_TYPE' is not mathed")
+#-----------------------------------------------------------------------------
+# 1) library
+CGDK_ADD_LIBRARY ( CGDK10.net.socket STATIC
+	SOURCES         ${SRC_FILES}
+	LINUX_SOURCES   ${SRC_FILES_LINUX}
+	WINDOWS_SOURCES ${SRC_FILES_WINDOWS}
+	PCH             pch.h
+	SVN_VERSION
+)
+
+# 2) build alias for convenience
+IF (TARGET ${CGDK_TARGET})
+	ADD_CUSTOM_TARGET ( socket DEPENDS ${CGDK_TARGET} )
 ENDIF ()
-
-# 2) messages
-MESSAGE (STATUS "compile ${PROJECT_NAME}")
-MESSAGE (STATUS "  - configure['${BUILD_MESSAGE}']")
-
-# 3) configure file
-#CONFIGURE_FILE ( version.h.in version.h )
-
-# 4) add library
-ADD_LIBRARY(${PROJECT_NAME}_linux.${BUILD_TYPE} STATIC ${SRC_FILES})
-TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME}_linux.${BUILD_TYPE} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:pch.h>")

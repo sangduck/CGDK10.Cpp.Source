@@ -19,19 +19,19 @@
 #-----------------------------------------------------------------------------
 # setting
 #-----------------------------------------------------------------------------
-# 1) project name
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY( VERSION 3.20 )
+
+# 2) project name
 PROJECT ( "CGDK10.tutorial.query" )
 
-# 2) project version
+# 3) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 SET ( DEFAULT_BUILD_TYPE Debug )
-
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
 
 
 #-----------------------------------------------------------------------------
@@ -50,22 +50,37 @@ ADD_SUBDIRECTORY (query.03.rdb_multiple_result)
 ADD_SUBDIRECTORY (query.04.rdb_alloc_query)
 
 # 5) redis
-ADD_SUBDIRECTORY (query.05.redis)
+ADD_SUBDIRECTORY (query.05.schema)
 
-# 6) http
-ADD_SUBDIRECTORY (query.06.http)
+# 6) redis
+ADD_SUBDIRECTORY (query.06.redis)
 
-# 7) ex.rdb_blob
+# 7) http
+ADD_SUBDIRECTORY (query.07.http)
+
+# 8) kafka
+#ADD_SUBDIRECTORY (query.08.kafka)
+
+# 9) rdb coroutine
+ADD_SUBDIRECTORY (query.09.rdb_coroutine)
+
+# 10) redis coroutine
+ADD_SUBDIRECTORY (query.10.redis_coroutine)
+
+# 11) http coroutine
+ADD_SUBDIRECTORY (query.11.http_coroutine)
+
+# ex1) ex.rdb_blob
 ADD_SUBDIRECTORY (query.ex01.rdb_blob)
 
-# 8) ex.rdb_varchar_max
+# ex2) ex.rdb_varchar_max
 ADD_SUBDIRECTORY (query.ex02.rdb_varchar_max)
 
-# 9) ex.rdb_transaction
+# ex3) ex.rdb_transaction
 ADD_SUBDIRECTORY (query.ex03.rdb_transaction)
 
-# 10) ex.initializing_querier
+# ex4) ex.initializing_querier
 ADD_SUBDIRECTORY( query.ex05.initializing_querier)
 
-# 11) ex.struct_get_value
+# ex5) ex.struct_get_value
 ADD_SUBDIRECTORY( query.ex06.query.struct_get_value)

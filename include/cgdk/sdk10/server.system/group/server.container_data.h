@@ -54,7 +54,7 @@ public:
 
 public:
 			OBJECT_SET() : pobject() {}
-			OBJECT_SET(_TOBJECT* _pobject, typename _TOBJECT::TOBJECT_CHANNEL _ocid) : pobject(_pobject) {}
+			OBJECT_SET(_TOBJECT* _pobject) : pobject(_pobject) {}
 };
 
 

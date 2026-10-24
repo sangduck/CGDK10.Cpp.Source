@@ -85,11 +85,11 @@ struct DUMP_INFO
 	// 2) 발생한 Thread
     uint32_t					thread_id;
 
-	// 3) occure datetime 
-	chrono::time::utc::time_point time_occure_first;
-	chrono::time::utc::time_point time_occure_last;
+	// 3) occurred datetime 
+	chrono::time::utc::time_point time_occurred_first;
+	chrono::time::utc::time_point time_occurred_last;
 
-	// 4) occure times
+	// 4) occurred times
 	size_t						count_times;
 
 	// 5) 발행한 내용
@@ -103,9 +103,9 @@ struct DUMP_INFO
 
 public:
 #if defined(_MSC_VER)
-	DUMP_INFO() noexcept : id(0), thread_id(0), time_occure_first(), time_occure_last(), count_times(0), sExceptionRecords(), sContextRecord(), dump_filename() {}
+	DUMP_INFO() noexcept : id(0), thread_id(0), time_occurred_first(), time_occurred_last(), count_times(0), sExceptionRecords(), sContextRecord(), dump_filename() {}
 #else
-	DUMP_INFO() noexcept : id(0), thread_id(0), time_occure_first(), time_occure_last(), count_times(0), dump_filename() {}
+	DUMP_INFO() noexcept : id(0), thread_id(0), time_occurred_first(), time_occurred_last(), count_times(0), dump_filename() {}
 #endif
 };
 
@@ -137,15 +137,16 @@ public:
 namespace statistics
 {
 
+// - written by the thread itself and read by other threads (manager, monitor) => atomic
 struct thread
 {
-	THREAD_ID			id_thread = 0;			// thread id
+	std::atomic<THREAD_ID>	id_thread{ THREAD_ID{} };	// thread id
 
-	uint64_t			count_executed = 0;		// executed count
-	uint64_t			count_error = 0;		// error count
+	std::atomic<uint64_t>	count_executed{ 0 };	// executed count
+	std::atomic<uint64_t>	count_error{ 0 };		// error count
 
-	chrono::tick::time_point tick_last_execute = chrono::tick::duration::zero();	// tick last executed
-	bool				is_executing = false;	// is processing execution now?
+	std::atomic<chrono::tick::time_point> tick_last_execute{ chrono::tick::time_point(chrono::tick::duration::zero()) };	// tick last executed
+	std::atomic<bool>		is_executing{ false };	// is processing execution now?
 };
 
 
@@ -165,17 +166,15 @@ enum class eEXECUTOR_TYPE : int32_t
 };
 
 // 2) to_string functions
-template <class T>	[[nodiscard]] std::basic_string_view<T>	to_string(eEXECUTOR_TYPE _character_set) noexcept;
-template <>			[[nodiscard]] std::string_view			to_string<char>(eEXECUTOR_TYPE _character_set) noexcept;
-template <>			[[nodiscard]] std::wstring_view			to_string<wchar_t>(eEXECUTOR_TYPE _character_set) noexcept;
+[[nodiscard]] std::string_view to_string(eEXECUTOR_TYPE _character_set) noexcept;
 
 namespace statistics
 {
 	struct unit_executor
 	{
-		chrono::tick::time_point tick_snap = chrono::tick::time_point::max();
-		int						thread_count = 0;
-		std::atomic<int64_t>	count_execute = 0;
+		chrono::tick::time_point tick_snap = (chrono::tick::time_point::max)();
+		std::atomic<int>		thread_count{ 0 };
+		std::atomic<int64_t>	count_execute{ 0 };
 
 		unit_executor() noexcept;
 		unit_executor(const unit_executor& rhs) noexcept;
@@ -185,9 +184,9 @@ namespace statistics
 
 	struct unit_executor_snap
 	{
-		chrono::tick::time_point tick_snap = chrono::tick::time_point::max();
-		int						thread_count = 0;
-		int64_t					count_execute = 0;
+		chrono::tick::time_point tick_snap = (chrono::tick::time_point::max)();
+		int						thread_count{ 0 };
+		int64_t					count_execute{ 0 };
 
 		unit_executor_snap& operator = (const unit_executor& _copy) noexcept;
 		void reset() noexcept;
@@ -197,8 +196,8 @@ namespace statistics
 	{
 	public:
 		std::string				name;
-		uint64_t				id = 0;
-		eEXECUTOR_TYPE			type = eEXECUTOR_TYPE::USER;
+		uint64_t				id{ 0 };
+		eEXECUTOR_TYPE			type{ eEXECUTOR_TYPE::USER };
 
 		unit_executor			now;
 

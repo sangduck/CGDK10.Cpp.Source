@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                                Redis Classes                              *
+//*                            server.query.redis                             *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -21,7 +21,7 @@
 namespace CGDK
 {
 //-----------------------------------------------------------------------------
-// 1. RESP data
+// 1. resp_data
 //-----------------------------------------------------------------------------
 class resp_data
 {
@@ -32,17 +32,13 @@ public:
 	virtual	~resp_data() noexcept {}
 
 public:
-	// 1) result Type
 			eRESP_DATA_TYPE		type;
 
-	// 2) result Value
 			std::string_view	str_value;
 			shared_buffer		buf_store;
 
-	// 3) Child result (Array의 경우 Child result를 가진다.)
 			std::vector<resp_data> vector_child;
 
-	// 4) Operator overriding
 	[[nodiscard]] resp_data&	operator[](int _index) noexcept	{ return vector_child.at(_index);}
 	[[nodiscard]] auto			begin() noexcept { return vector_child.begin();}
 	[[nodiscard]] auto			begin() const noexcept { return vector_child.begin();}
@@ -58,7 +54,6 @@ public:
 
 			resp_data& operator = (resp_data&& _rhs) noexcept { type = _rhs.type; str_value = std::move(_rhs.str_value); buf_store = std::move(_rhs.buf_store); vector_child = std::move(_rhs.vector_child); pos_processing = _rhs.pos_processing; _rhs.type = eRESP_DATA_TYPE::NONE_; _rhs.pos_processing = 0; return *this; }
 
-	// 5) 진행상황 정보
 			int64_t				pos_processing;
 };
 

@@ -30,5 +30,6 @@ public:
 			void				unregister_user	(socket* _psocket) noexcept;
 
 protected:
-			lockable<std::unordered_map<ACCOUNT_ID, object_ptr<socket>>> m_container_user;
+			lock_object			m_lockable_container_user;
+			std::unordered_map<ACCOUNT_ID, object_ptr<socket>> m_container_user;
 };

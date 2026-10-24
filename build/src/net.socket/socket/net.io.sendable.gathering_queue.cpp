@@ -30,7 +30,8 @@ void net::io::sendable::QUEUE_SEND::push_back(const buffer_view _buffer, object_
 		// - get pbuffer and pnode
 		auto& buffer_now = this->array_buffer.back();
 
-		if ((buffer_now.buf + buffer_now.len) == _buffer.data())
+		// - expand only when it follows the last buffer in memory and has the same owner (the owner keeps the memory)
+		if ((buffer_now.buf + buffer_now.len) == _buffer.data() && this->array_node.back().powner == _powner)
 		{
 			// - expand only
 			auto size_added = _buffer.size();

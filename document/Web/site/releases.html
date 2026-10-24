@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>릴리즈 노트 · CGDK10 기술 문서</title>
+<meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - 소스 기준 기술 설명·빌드·릴리즈 노트">
+<link rel="icon" href="assets/CGCII_logo.PNG">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
+  <div class="ver">Game Server Engine</div>
+  <ul>
+    <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
+    <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
+    <li class="sub"><a href="pool.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Pool system</a></li>
+    <li class="sub"><a href="object.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l6 3v7l-6 3-6-3v-7z"/><path d="M2 4.5l6 3 6-3M8 7.5v7"/></svg>Object system</a></li>
+    <li class="sub"><a href="log.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h6l3 3v10H4z"/><path d="M6.5 8h4M6.5 10.5h4M6.5 5.5h2"/></svg>Log system</a></li>
+    <li class="sub"><a href="socket.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1.5v3.5M10 1.5v3.5"/><path d="M3.5 5h9v3.5a4.5 4.5 0 0 1-9 0z"/><path d="M8 13v1.5"/></svg>Socket system</a></li>
+    <li class="sub"><a href="socket.io_uring.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 1.5L3.5 9h4.5l-1 5.5L12.5 7H8z"/></svg>io_uring</a></li>
+    <li class="sub"><a href="socket.uds.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.6-1.6a2.8 2.8 0 0 1 4 4L11 8.5"/><path d="M9 11.5l-1.6 1.6a2.8 2.8 0 0 1-4-4L5 7.5"/></svg>UDS (같은 host 접속)</a></li>
+    <li class="sub"><a href="socket.send.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 1.5L7 9"/><path d="M14.5 1.5l-4.5 13-2.2-5.3L2.5 6z"/></svg>send 최적화</a></li>
+    <li class="sub"><a href="socket.recv.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9.5v4h12v-4"/><path d="M8 2v8M5 7.5l3 3 3-3"/></svg>Receive 최적화</a></li>
+    <li class="sub"><a href="p2p.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="8" cy="12" r="2"/><path d="M5.6 5.2l1.6 5.2M10.4 5.2l-1.6 5.2M6 4h4"/></svg>P2P system</a></li>
+    <li class="sub"><a href="update.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5V5.2h-2.7"/></svg>Update system</a></li>
+    <li class="sub"><a href="server.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="4.5" rx="1"/><rect x="2" y="9.5" width="12" height="4.5" rx="1"/><path d="M4.5 4.25h.01M4.5 11.75h.01"/></svg>Server system</a></li>
+    <li class="sub"><a href="group.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 2.8a2.3 2.3 0 0 1 0 4.4M13.5 14c0-1.8-1-3.1-2.5-3.6"/></svg>Group system</a></li>
+    <li class="sub"><a href="query.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Query system</a></li>
+    <li class="head"><a href="build.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-3.8 3.8L2.8 12.2a1.4 1.4 0 0 0 2 2l5.9-3.9a3 3 0 0 0 3.8-3.8l-2 2-2-2z"/></svg>빌드 · 플랫폼</a></li>
+    <li class="head"><a href="tests.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5.5 8.2l2 2 3.2-4"/></svg>단위 테스트 · CI</a></li>
+    <li class="head"><a href="benchmarks.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V9M8 13.5V4M13 13.5V7"/><path d="M1.5 13.5h13"/></svg>벤치마크</a></li>
+    <li class="sub"><a href="benchmarks.push.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4 3 3 6-6"/><path d="M10.5 5.5h4v4"/></svg>큰 묶음 push 처리량</a></li>
+    <li class="sub"><a href="benchmarks.cork.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h8M2 11.5h5"/><path d="M12 9.5l2 2-2 2"/></svg>send cork · 서버 push</a></li>
+    <li class="head"><a href="samples.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4"/></svg>예제 · 튜토리얼</a></li>
+    <li class="head"><a href="releases.html" class="cur"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h5.5l6.5 6.5-5.5 5.5L2 8z"/><circle cx="5.2" cy="5.2" r=".9"/></svg>릴리즈 노트</a></li>
+    <li class="head"><a href="status.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3M8 11.5h.01"/></svg>미구현 · 알려진 문제</a></li>
+  </ul>
+</aside>
+<main>
+<h1 id="releases">릴리즈 노트</h1>
+<p class="muted">출처: <code>release_note.txt</code>(항목 머리 <code>&lt;rev&gt;(&lt;yyyy.mm.dd&gt;)</code> 또는 날짜), <code>document/handover/CGDK10.handover.2026-10.md</code>, svn 로그.</p>
+
+<div class="rel">
+<h3>2026.10.22 <span class="mono">r11391 ~ r11415</span></h3>
+<ul>
+  <li><b>비 TLS <code>factory::object_pool&lt;T&gt;</code> 삭제</b> (r11415) — 사용처 없음, 통계 TLS 분기가 컴파일되지 않고 <code>Npoolable</code> 과 타입도 맞지 않던 코드. <code>eFACTORY_GC_TYPE::POOLING</code> 은 <code>object_pool_tls</code> 의 gc 모드로 남는다. 삭제 전 측정한 <a href="pool.html#pool-bench">풀 성능 비교</a>(new/delete · tcmalloc · object_pool_tls, 버전별) 를 Pool system 절에 추가.</li>
+  <li><b>TCP socket option</b> (r11394) — <code>sSOCKET_OPTION_TCP</code>, <code>Isocket::socket_option() / apply_socket_option()</code>: TCP_NODELAY, TCP_QUICKACK, SO_BUSY_POLL, TCP_NOTSENT_LOWAT, TCP Fast Open. 기본값은 아무것도 켜지 않음(TCP_NODELAY 만 종전처럼 true, <code>connectable::Ntcp::m_enable_tcp_nodelay</code> 는 <code>socket_option().tcp_nodelay</code> 로 대체). acceptor <code>"socket_option"</code>·<code>"tcp_fastopen"</code>(Linux 는 sysctl <code>net.ipv4.tcp_fastopen</code> 에 2 필요), connect_requestable·connector <code>"socket_option"</code>. <b>START_PARAMETER 구조체 크기 변경 → 사용하는 쪽 전체 재빌드.</b> <code>test_socket_option.cpp</code> 12개, tutorial ex15.</li>
+  <li><b>io_uring 백엔드</b> (r11393) — <code>api::io_context_uring</code>, raw syscall, 커널 5.13+, <code>CGDK_IO_URING=1</code>, 불가 시 epoll fallback. executor thread CPU affinity.</li>
+  <li><b>Linux 소켓 성능 요소</b> (r11393~r11398) — SOCK_NONBLOCK / accept4, <code>enable_explicit_socket_buffer_size</code>, 수신 버퍼 축소 hysteresis(r11345 이후 recv 당 ~700 B 로 떨어지던 회귀 수정), MSG_ZEROCOPY(io_uring), UDP recvmmsg/sendmmsg, acceptor <code>"cpu_affinity"</code> / <code>"tcp_defer_accept"</code>. <b>r11392 이전 Linux UDP 수신 불가 수정.</b> <code>test_linux_io.cpp</code>, <code>bench_linux_io.cpp</code>.</li>
+  <li><b>접속 중 close 경합</b> (r11395~r11397) — SYN 상태 close 와 connect 완료 thread 의 경합을 disconnect 1회로 정리. 풀 재사용 socket 의 <code>socket_option()</code> 초기화(r11400).</li>
+  <li><b>net.update</b> (r11391) — receiver 작업 직렬 executor 큐, 32 MiB 한도·backpressure, stop 30 s 드레인.</li>
+  <li><b>후속 수정</b> (r11402~r11414) — Ntcp_reconnect 즉시 실패 시 재접속 예약(r11404), accept↔attach 사이 fd 재사용 창(r11414), connector UDS(r11406), 그룹 null 역참조·container 콜백 UAF(r11402, r11409, r11410), object pool 종료 TLS 잔여 누수(r11411~r11412), <code>_buffer_unreal.h</code> 결함 3건(r11408), Linux Release/Debug 동시 configure 시 <code>svn_version.h.tmp</code> 경합(r11403), connector bind(any:0) EADDRINUSE 묻힘 = 부하 시 accept 정체 원인(r11413).</li>
+</ul>
+</div>
+<div class="rel">
+<h3>2026.10.21 <span class="mono">r11386 ~ r11390</span></h3>
+<ul>
+  <li><b>net::emergency</b> — 비상 acceptor <code>net::emergency::acceptor&lt;T&gt;</code> 와 signal 처리기 <code>manager</code>(종료 / 비상 / 강제 종료), <code>executor::make_io_context_threads()</code>, <code>acceptor::Ntcp::process_get_connectable_io_context()</code>, examples/1.6.emergency_signal.</li>
+  <li><b>Linux UDS 같은 host 접속</b> (r11386~r11390) — acceptor <code>enable_uds</code> / <code>uds_only</code>, 클라이언트 loopback 시 UDS 우선, <code>sockaddr::is_unix()</code>. 측정(Linux): 저부하 지연 p50 16.7 → 9.3 µs, pipeline +26%, 접속 2.2만/s → 17.5만/s(raw 1 thread 접속 TCP 18 µs vs UDS 3.6 µs). UDS 없는 서버로 loopback 접속 시 시도 비용 ~2.5 µs/접속. tutorial ex14, <code>test_uds.cpp</code> 24개.</li>
+  <li><b>epoll 핸들 수명 버그</b> (r11387~r11388) — connect 완료 뒤 <code>set_event</code> 와 다른 thread close 의 경합으로 닫힌 fd 번호를 받은 다른 socket 이 SYN 에서 멈춤, SYN/BINDED close 후 <code>m_epoll_handle</code> 잔류로 남의 fd detach, acceptor stop 직후 해제 시 pure virtual call. 진단: <code>/proc/&lt;pid&gt;/fdinfo/&lt;epoll fd&gt;</code> 의 <code>events: 40000000</code> = ONESHOT 소진.</li>
+</ul>
+</div>
+<div class="rel">
+<h3>2026.10 상순~중순 <span class="mono">r11332 ~ r11385</span></h3>
+<ul>
+  <li><b>그룹 락 1~3단계</b> (r11343~r11360) — 락 순서 규칙, leave_all/sender 스냅샷, array_seat 0번부터, <code>group_lock_object</code> + <code>send_defer</code>, lazy COW 멤버 스냅샷. 옛 send cork API 삭제(r11362).</li>
+  <li><b>epoll 송신 큐 한도</b> (r11361) — 보내는 thread 가 가져간 묶음은 한도에 세지 않음.</li>
+  <li><b>log</b> (r11332, r11338) — 허브 락프리 MPSC, 자식 스냅샷, <code>Nlogger_async</code>, 파일 로거 자체 쓰기.</li>
+  <li><b>object pool</b> (r11348) — 중앙 스택 32개 chain 배치 이동, 종료 후 반환 UAF.</li>
+  <li><b>server.query</b> — ODBC 대기·취소 결과 정확히 1회(<code>on_cancel</code>), 락 밖 실행, 통계 게이지; redis 공유/전용 소유, FIFO, push+send 세션 락(r11335, r11346).</li>
+  <li><b>doss</b> (r11333, r11337, r11342) — <code>session::destroy()</code> UAF, checkin→command→checkout gtest.</li>
+  <li><b>정리</b> (r11372~r11385) — 미사용 헤더·OLEDB 제거(ODBC 단일), 버그 36건.</li>
+</ul>
+</div>
+<div class="rel"><h3>2024.02.24</h3><ul><li>구조체 query 튜토리얼 추가.</li></ul></div>
+<div class="rel"><h3>2023.09.10</h3><ul><li>구조체를 이용한 query 의 <code>get_value</code> 추가.</li></ul></div>
+<div class="rel"><h3>2023.07.31 <span class="mono">r9719</span></h3><ul><li>TLS pool GC 를 더 자주, thread idle 시 thread 별 처리. 사용 메모리 대폭 감소.</li></ul></div>
+<div class="rel"><h3>2023.07.26 <span class="mono">r9654</span></h3><ul><li>executor <code>post</code> 를 SFINAE 에서 <code>make_executable</code> 방식으로. <code>strand</code> 추가.</li></ul></div>
+<div class="rel"><h3>2023.07.23 <span class="mono">r9654</span></h3><ul><li><code>receive_pending</code> 삭제. Windows i/o 에서 buffer_view 대신 WSABUF. vcpkg(openssl, gperftools, gtest). sendable 전송 경로 최적화(own 을 r-value 로, raw pointer vector).</li></ul></div>
+
+
+<footer>CGDK10 · 소스 기준 정리 (r11415, 2026-10-22) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+</main>
+</div>
+</body>
+</html>

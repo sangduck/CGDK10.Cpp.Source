@@ -1,51 +1,52 @@
 #include "pch.h"
 #include "bcrypt/node_blf.h"
+#include <openssl/rand.h>
+#include <openssl/crypto.h>
 
 
 namespace CGDK
 {
 
-const char* error = ":";
-void strcpy_error(char* _destination)
+// internal helpers (not exported)
+namespace
 {
-	*(uint16_t*)_destination = *(uint16_t*)error;
-}
- 
-void encode_base64(uint8_t* _buffer, uint8_t* data, size_t _data_len)
+
+constexpr size_t BCRYPT_HASH_LEN = 60;	// "$2b$10$" (7) + salt (22) + hash (31)
+
+void encode_base64(uint8_t* _buffer, const uint8_t* data, size_t _data_len)
 {
 	static const uint8_t base64_code[] = "./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-	uint8_t* bp = _buffer;
-	uint8_t* p = data;
+	const uint8_t* p = data;
 	uint8_t c1, c2;
 	while (p < data + _data_len)
 	{
 		c1 = *p++;
-		*bp++ = base64_code[(c1 >> 2)];
+		*_buffer++ = base64_code[(c1 >> 2)];
 		c1 = (c1 & 0x03) << 4;
 		if (p >= data + _data_len)
 		{
-			*bp++ = base64_code[c1];
+			*_buffer++ = base64_code[c1];
 			break;
 		}
 		c2 = *p++;
 		c1 |= (c2 >> 4) & 0x0f;
-		*bp++ = base64_code[c1];
+		*_buffer++ = base64_code[c1];
 		c1 = (c2 & 0x0f) << 2;
 		if (p >= data + _data_len)
 		{
-			*bp++ = base64_code[c1];
+			*_buffer++ = base64_code[c1];
 			break;
 		}
 		c2 = *p++;
 		c1 |= (c2 >> 6) & 0x03;
-		*bp++ = base64_code[c1];
-		*bp++ = base64_code[c2 & 0x3f];
+		*_buffer++ = base64_code[c1];
+		*_buffer++ = base64_code[c2 & 0x3f];
 	}
-	*bp = '\0';
+	*_buffer = '\0';
 }
 
-void decode_base64(uint8_t* _buffer, size_t _buffer_len, const uint8_t* _data)
+bool decode_base64(uint8_t* _buffer, size_t _buffer_len, const uint8_t* _data)
 {
 	static const uint8_t index_64[128] = {
 		255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
@@ -63,56 +64,59 @@ void decode_base64(uint8_t* _buffer, size_t _buffer_len, const uint8_t* _data)
 		51, 52, 53, 255, 255, 255, 255, 255
 	};
 
-	#define CHAR64(c)  ( (c) > 127 ? 255 : index_64[(c)])
+	auto char64 = [](uint8_t c) -> uint8_t { return (c > 127) ? 255 : index_64[c]; };
 
 	uint8_t* bp = _buffer;
-	const uint8_t* p = _data;
 	uint8_t c1, c2, c3, c4;
 	while (bp < _buffer + _buffer_len)
 	{
-		c1 = CHAR64(*p);
-		c2 = CHAR64(*(p + 1));
+		c1 = char64(*_data);
+		if (c1 == 255)
+			return false;
+		c2 = char64(*(_data + 1));
+		if (c2 == 255)
+			return false;
 
-		// Invalid data
-		if (c1 == 255 || c2 == 255)
-			break;
-
-		*bp++ = (c1 << 2) | ((c2 & 0x30) >> 4);
+		*bp++ = static_cast<uint8_t>((c1 << 2) | ((c2 & 0x30) >> 4));
 
 		if (bp >= _buffer + _buffer_len)
 			break;
 
-		c3 = CHAR64(*(p + 2));
-
+		c3 = char64(*(_data + 2));
 		if (c3 == 255)
-			break;
+			return false;
 
-		*bp++ = ((c2 & 0x0f) << 4) | ((c3 & 0x3c) >> 2);
+		*bp++ = static_cast<uint8_t>(((c2 & 0x0f) << 4) | ((c3 & 0x3c) >> 2));
 
 		if (bp >= _buffer + _buffer_len)
 			break;
 
-		c4 = CHAR64(*(p + 3));
-
+		c4 = char64(*(_data + 3));
 		if (c4 == 255)
-			break;
+			return false;
 
-		*bp++ = ((c3 & 0x03) << 6) | c4;
+		*bp++ = static_cast<uint8_t>(((c3 & 0x03) << 6) | c4);
 
-		p += 4;
+		_data += 4;
 	}
 
-	#undef CHAR64
+	return true;
 }
 
-void encode_salt(char* _out_salt, uint8_t* _csalt, char _minor, size_t _csalt_len, int _rounds)
+bool is_supported_minor(char _minor) noexcept
+{
+	// 'y' (php/crypt_blowfish) is identical to 'b'
+	return _minor == 'a' || _minor == 'b' || _minor == 'y';
+}
+
+void encode_salt(char* _out_salt, const uint8_t* _csalt, char _minor, size_t _csalt_len, int _rounds)
 {
 	_out_salt[0] = '$';
 	_out_salt[1] = BCRYPT_VERSION;
 	_out_salt[2] = _minor;
 	_out_salt[3] = '$';
 
-    // Max rounds are 31
+	// Max rounds are 31
 #ifdef _WIN32
 	_snprintf_s(_out_salt + 4, 5, 4, "%2.2u$", ((uint32_t)_rounds) & 0x001F);
 #else
@@ -122,48 +126,41 @@ void encode_salt(char* _out_salt, uint8_t* _csalt, char _minor, size_t _csalt_le
 	encode_base64((uint8_t*)_out_salt + 7, _csalt, _csalt_len);
 }
 
-void bcrypt_gensalt(char* _out_salt, char _minor, int _rounds, uint8_t* _seed) 
+// returns the hashed string ("$2b$..", 60 chars) or empty string on invalid setting(salt)
+std::string node_bcrypt(std::string_view _key, std::string_view _setting)
 {
-	if (_rounds < 4)
-		_rounds = 4;
-	else if (_rounds > 31)
-		_rounds = 31;
+	// - '_key'/'_setting' are string_view (may not be NUL terminated) - copy them.
+	//   (the key must be followed by NUL. minor 'a'/'b' hash the terminating NUL too.)
+	std::string key_buffer(_key);
+	const std::string setting(_setting.substr(0, std::min<size_t>(_setting.size(), 64)));
 
-	encode_salt(_out_salt, _seed, _minor, BCRYPT_MAXSALT, _rounds);
-}
+	// - wipe the key copy on every return path
+	struct cleanse_on_exit
+	{
+		std::string& buffer;
+		~cleanse_on_exit() { if (!buffer.empty()) OPENSSL_cleanse(buffer.data(), buffer.size()); }
+	} cleanse_key{ key_buffer };
 
-void node_bcrypt(char* _out_encrypted, std::string_view _key, std::string_view _salt)
-{
-	// - 
-	const char* salt = _salt.data();
+	const char* salt = setting.c_str();
 
-	// 1) discard "$" identifier
-	salt++;
+	// 1) "$" identifier
+	if (salt[0] != '$')
+		return {};
+	++salt;
 
 	// 2) check version - '2'
-	if (*salt > BCRYPT_VERSION)
-	{
-		// how do i handle errors ? return ':'
-		strcpy_error(_out_encrypted);
-		return;
-	}
+	if (salt[0] != BCRYPT_VERSION)
+		return {};
 
 	// 3) check for minor versions
-	uint8_t minor;
+	char minor;
 	if (salt[1] != '$')
 	{
-		// - minor version
-		 switch (salt[1])
-		 {
-		 case 'a': /* 'ab' should not yield the same as 'abab' */
-		 case 'b': /* cap input length at 72 bytes */
-				 minor = salt[1];
-				 salt++;
-				 break;
-		 default:
-				 strcpy_error(_out_encrypted);
-				 return;
-		 }
+		if (!is_supported_minor(salt[1]))
+			return {};
+
+		minor = salt[1];
+		++salt;
 	}
 	else
 	{
@@ -171,59 +168,54 @@ void node_bcrypt(char* _out_encrypted, std::string_view _key, std::string_view _
 	}
 
 	// 4) discard version + "$" identifier
+	if (salt[1] != '$')
+		return {};
 	salt += 2;
 
-	if (salt[2] != '$')
-	{
-		// out of sync with passwd entry
-		strcpy_error(_out_encrypted);
-		return;
-	}
+	// 5) rounds - exactly 2 digits + "$"
+	if (salt[0] < '0' || salt[0] > '9' || salt[1] < '0' || salt[1] > '9' || salt[2] != '$')
+		return {};
 
-	// 6) computer power doesn't increase linear, 2^x should be fine
-	int n = atoi(salt);
-	if (n > 31 || n < 0)
-	{
-		strcpy_error(_out_encrypted);
-		return;
-	}
+	const int n = (salt[0] - '0') * 10 + (salt[1] - '0');
+	if (n > 31)
+		return {};
 
-	// 7) rounds
-	uint32_t rounds;
-	uint8_t logr = (uint8_t)n;
-	if ((rounds = (uint32_t) 1 << logr) < BCRYPT_MINROUNDS)
-	{
-		strcpy_error(_out_encrypted);
-		return;
-	}
+	// 6) rounds
+	const uint8_t logr = static_cast<uint8_t>(n);
+	const uint32_t rounds = static_cast<uint32_t>(1) << logr;
+	if (rounds < BCRYPT_MINROUNDS)
+		return {};
 
-	// 8) discard num rounds + "$" identifier
+	// 7) discard num rounds + "$" identifier
 	salt += 3;
 
-	if (strlen(salt) * 3 / 4 < BCRYPT_MAXSALT)
-	{
-		strcpy_error(_out_encrypted);
-		return;
-	}
+	// check) need 22 base64 chars for 16 bytes salt
+	if (strlen(salt) < 22)
+		return {};
 
 	// we dont want the base64 salt but the raw data
 	uint8_t csalt[BCRYPT_MAXSALT];
-	decode_base64(csalt, BCRYPT_MAXSALT, (const uint8_t*)salt);
-	uint8_t salt_len = BCRYPT_MAXSALT;
+	if (!decode_base64(csalt, BCRYPT_MAXSALT, reinterpret_cast<const uint8_t*>(salt)))
+		return {};
+	const uint8_t salt_len = BCRYPT_MAXSALT;
 
 	// declare)
-	const uint8_t* key_data = reinterpret_cast<const uint8_t*>(_key.data());
-	auto key_len = _key.size();
+	const uint8_t* key_data = reinterpret_cast<const uint8_t*>(key_buffer.c_str());
+	size_t key_len = key_buffer.size();
 
-	if (minor <= 'a')
+	if (minor == 0 || minor == 'a')
 	{
-		key_len = key_len + (minor >= 'a' ? 1 : 0);
+		// - 'a' includes the NUL ('ab' should not yield the same as 'abab')
+		key_len = key_len + ((minor == 'a') ? 1 : 0);
+
+		// - original implementation stores key_len in uint8_t (wraparound)
+		key_len = static_cast<uint8_t>(key_len);
 	}
 	else
 	{
 		// cap key_len at the actual maximum supported length here to avoid integer wraparound
 		if (key_len > 72)
-			key_len =72;
+			key_len = 72;
 
 		key_len++; // include the NUL
 	}
@@ -239,7 +231,7 @@ void node_bcrypt(char* _out_encrypted, std::string_view _key, std::string_view _
 		blowfish_expand_0state(&state, csalt, salt_len);
 	}
 
- 	// this can be precomputed later
+	// this can be precomputed later
 	uint8_t ciphertext[4 * BCRYPT_BLOCKS + 1] = "OrpheanBeholderScryDoubt";
 
 	uint32_t cdata[BCRYPT_BLOCKS];
@@ -266,67 +258,86 @@ void node_bcrypt(char* _out_encrypted, std::string_view _key, std::string_view _
 		ciphertext[4 * i + 0] = cdata[i] & 0xff;
 	}
 
+	char encrypted[BCRYPT_HASH_LEN + 8]{};
 	{
 		uint32_t i = 0;
-		_out_encrypted[i++] = '$';
-		_out_encrypted[i++] = BCRYPT_VERSION;
+		encrypted[i++] = '$';
+		encrypted[i++] = BCRYPT_VERSION;
 		if (minor)
-			_out_encrypted[i++] = minor;
-		_out_encrypted[i++] = '$';
+			encrypted[i++] = minor;
+		encrypted[i++] = '$';
 
 	#ifdef _WIN32
-		_snprintf_s(_out_encrypted + i, 5, 4, "%2.2u$", logr & 0x001F);
+		_snprintf_s(encrypted + i, 5, 4, "%2.2u$", logr & 0x001F);
 	#else
-		snprintf(_out_encrypted + i, 5, "%2.2u$", logr & 0x001F);
+		snprintf(encrypted + i, 5, "%2.2u$", logr & 0x001F);
 	#endif
-		encode_base64((uint8_t*)_out_encrypted + i + 3, csalt, BCRYPT_MAXSALT);
-		encode_base64((uint8_t*)_out_encrypted + strlen(_out_encrypted), ciphertext, 4 * BCRYPT_BLOCKS - 1);
-		memset(&state, 0, sizeof(state));
-		memset(ciphertext, 0, sizeof(ciphertext));
-		memset(csalt, 0, sizeof(csalt));
-		memset(cdata, 0, sizeof(cdata));
+		encode_base64((uint8_t*)encrypted + i + 3, csalt, BCRYPT_MAXSALT);
+		encode_base64((uint8_t*)encrypted + strlen(encrypted), ciphertext, 4 * BCRYPT_BLOCKS - 1);
 	}
+
+	std::string result(encrypted);
+
+	OPENSSL_cleanse(&state, sizeof(state));
+	OPENSSL_cleanse(ciphertext, sizeof(ciphertext));
+	OPENSSL_cleanse(csalt, sizeof(csalt));
+	OPENSSL_cleanse(cdata, sizeof(cdata));
+	OPENSSL_cleanse(encrypted, sizeof(encrypted));
+
+	return result;
+}
+
 }
 
 std::string crypt::bcrypt::hash_password(std::string_view _password, std::string_view _salt)
 {
-	std::string hashed_password(61, '\0');
-	node_bcrypt(&hashed_password[0], _password, _salt);
-	hashed_password.resize(60);
-	return hashed_password;
-}
+	auto hashed_password = node_bcrypt(_password, _salt);
 
-void arc4random_buf(void* buf, size_t nbytes)
-{
-	for (size_t n = 0; n < nbytes; ++n)
-	{
-		((char*)(buf))[n] = rand() % 256;
-	}
+	// check)
+	THROW_IF(hashed_password.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT, 0, std::string_view("bcrypt: invalid salt")));
+
+	return hashed_password;
 }
 
 std::string crypt::bcrypt::generate_hash(std::string_view _password, int _rounds, char _minor)
 {
-	// 1) 
-	unsigned char seed[17]{};
-	arc4random_buf(seed, 16);
+	// check)
+	THROW_IF(!is_supported_minor(_minor), throwable::failure(eRESULT::INVALID_ARGUMENT, 0, std::string_view("bcrypt: unsupported minor version")));
 
-	// declare) 
-	char salt[_SALT_LEN];
+	// - rounds (log2) 4 ~ 31
+	if (_rounds < 4)
+		_rounds = 4;
+	else if (_rounds > 31)
+		_rounds = 31;
 
-	bcrypt_gensalt(salt, _minor, _rounds, seed);
+	// 1) random salt (CSPRNG)
+	uint8_t seed[BCRYPT_MAXSALT]{};
+	THROW_IF(RAND_bytes(seed, static_cast<int>(sizeof(seed))) != 1, throwable::failure(eRESULT::FAIL, 0, std::string_view("bcrypt: RAND_bytes failed")));
 
-	std::string hashed_password(61, '\0');
-	node_bcrypt(&hashed_password[0], _password, salt);
-	hashed_password.resize(60);
-	return hashed_password;
+	// 2) encode salt
+	char salt[_SALT_LEN]{};
+	encode_salt(salt, seed, _minor, BCRYPT_MAXSALT, _rounds);
+	OPENSSL_cleanse(seed, sizeof(seed));
+
+	// 3) hash
+	return hash_password(_password, salt);
 }
 
 bool crypt::bcrypt::check_password(std::string_view _password, std::string_view _hashed_password)
 {
-	std::string got(61, '\0');
-	node_bcrypt(&got[0], _password, _hashed_password);
-	got.resize(60);
-	return _hashed_password == got;
+	// check) "$2a$"/"$2b$"/"$2y$" = 60, "$2$" = 59
+	if (_hashed_password.size() != BCRYPT_HASH_LEN && _hashed_password.size() != BCRYPT_HASH_LEN - 1)
+		return false;
+
+	// 1) hash with same setting
+	const auto got = node_bcrypt(_password, _hashed_password);
+
+	// check)
+	if (got.size() != _hashed_password.size())
+		return false;
+
+	// 2) constant time compare
+	return CRYPTO_memcmp(got.data(), _hashed_password.data(), got.size()) == 0;
 }
 
 

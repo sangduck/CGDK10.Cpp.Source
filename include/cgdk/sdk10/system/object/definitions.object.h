@@ -24,7 +24,7 @@
 //    1) initialize	eOBJECT_STATE::NONE    ->eOBJECT_STATE::INITIALIZING_PENDING ->eOBJECT_STATE::STOPPED
 //    2) start		eOBJECT_STATE::STOPPED ->eOBJECT_STATE::START_PENDING        ->eOBJECT_STATE::RUNNING
 //    3) stop		eOBJECT_STATE::RUNNING ->eOBJECT_STATE::STOP_PENDING		 ->eOBJECT_STATE::STOPPED
-//    4) Destory	eOBJECT_STATE::STOPPED ->eOBJECT_STATE::DESTROYING_PENDING   ->eOBJECT_STATE::NONE
+//    4) Destroy	eOBJECT_STATE::STOPPED ->eOBJECT_STATE::DESTROYING_PENDING   ->eOBJECT_STATE::NONE
 //    5) pause		eOBJECT_STATE::RUNNING ->eOBJECT_STATE::PAUSE_PENDING		 ->eOBJECT_STATE::PAUSED
 //    6) continue	eOBJECT_STATE::PAUSED  ->eOBJECT_STATE::CONTINUE_PENDING	 ->eOBJECT_STATE::RUNNING
 //
@@ -83,7 +83,7 @@ enum class  eRESULT : int
 	FAIL									 = 0x03000000,	// 0x3******* Fail
 	FAIL_DISABLED							 = 0x03000001,
 	TIME_OUT								 = 0x03000012,
-	ALEADY_EXIST							 = 0x03000003,
+	ALREADY_EXIST							 = 0x03000003,
 	EXPIRED									 = 0x03000014,
 	NOT_EXIST								 = 0x03000005,
 	NOT_READY								 = 0x03000006,
@@ -92,8 +92,11 @@ enum class  eRESULT : int
 	INVALID_MEMBER							 = 0x03000019,
 	INVALID_PASSWORD						 = 0x0300001a,
 	INVALID_PLATFORM						 = 0x0300001b,
-	ALEADY_EXIST_NICKNAME					 = 0x0300001c,
-	ALEADY_DONE								 = 0x0300001d,
+	ALREADY_EXIST_NICKNAME					 = 0x0300001c,
+	ALREADY_DONE								 = 0x0300001d,
+	ALEADY_EXIST [[deprecated("use ALREADY_EXIST")]] = ALREADY_EXIST,
+	ALEADY_EXIST_NICKNAME [[deprecated("use ALREADY_EXIST_NICKNAME")]] = ALREADY_EXIST_NICKNAME,
+	ALEADY_DONE [[deprecated("use ALREADY_DONE")]] = ALREADY_DONE,
 	API_FAILURE								 = 0x0300001e,
 	FAIL_TO_ACCEPT_SOCKET					 = 0x0300001f,
 	FAIL_TO_ATTACHING_TO_EXECUTOR			 = 0x03000020,
@@ -110,7 +113,12 @@ enum class  eRESULT : int
 	EXCEED_RETRY_LIMIT						 = 0x0301002b,
 	NO_MEMBER_INFO							 = 0x0301002c,
 	RETRY_OUT								 = 0x0301002d,
-	FULL									 = 0x0301002e,
+	EXCEED_THREAD_COUNT						 = 0x0301002e,
+	FULL									 = 0x0301002f,
+	FAIL_TO_INITIALIZE_SSL_CONTEXT			 = 0x03010030,	// SSL context 초기화 실패
+	FAIL_TO_USE_SSL_CERTIFICATION_FILE		 = 0x03010031,	// SSL certification file의 적용에 실패했습니다.
+	FAIL_TO_USE_SSL_PRIVATE_KEY				 = 0x03010032,	// SSL private key의 적용에 실패했습니다.
+	FAIL_TO_CHECK_SSL_PUBLIC_KEY			 = 0x03010033,	// SSL public key의 확인에 실패했습니다.
 	_FAIL_USER								 = 0x030f0000,	// 0x030f**** for user definition
 
 	// - Cancel = canceling
@@ -144,6 +152,8 @@ enum class  eRESULT : int
 	INVALID_CHECK_KEY						 = 0x03200018,
 	INVALID_RESOURCE						 = 0x03200019,
 	FORMAT_ERROR							 = 0x0320001a,
+	KEY_LENGTH_ERROR						 = 0x0320001b,
+
 	_ERROR_USER								 = 0x032f0000,	// 0x032f**** for user definition
 
 	// - Exception of process
@@ -156,7 +166,8 @@ enum class  eRESULT : int
 	ABNORMAL_STATE							 = 0x03400006,
 	BUFFER_INVALID							 = 0x034d0007,
 	BUFFER_INVALID_STRING					 = 0x034d0008,
-	UNEXPECTED_EXCEPTION					 = 0x034d0000,
+	UNEXPECTED_EXCEPTION					 = 0x034d0009,
+	NOT_IMPLEMENTED							 = 0x034d000a,
 	_EXCEPTION_USER							 = 0x034f0000,	// 0x034f**** for user definition
 
 	PROCESS									 = 0x03500000,	// 0x5*** Process
@@ -215,7 +226,7 @@ enum class  eOBJECT_TYPE : uint32_t
 	EXECUTABLE_LIST							 = 0x00110013,
 	EXECUTABLE_EXECUTABLE					 = 0x00110014,
 	EXECUTABLE_SOCKET						 = 0x00110015,
-	EXECUTABLE_CONNECT_REQUSTABLE			 = 0x00110016,
+	EXECUTABLE_CONNECT_REQUESTABLE			 = 0x00110016,
 	EXECUTABLE_RECEIVE						 = 0x00110017,
 	EXECUTABLE_RECEIVING					 = 0x00110018,
 	EXECUTABLE_RECEIVED						 = 0x00110019,
@@ -295,7 +306,7 @@ enum class  eOBJECT_TYPE : uint32_t
 	BOUNDING_CYLINDER						 = (BOUNDING | 0x0006),
 	BOUNDING_CONE							 = (BOUNDING | 0x0007),
 	BOUNDING_CAPSULE						 = (BOUNDING | 0x0008),
-	BOUNDING_CONVAX							 = (BOUNDING | 0x0009),
+	BOUNDING_CONVEX							 = (BOUNDING | 0x0009),
 	BOUNDING_LINE							 = (BOUNDING | 0x000a),
 	BOUNDING_SEGMENT						 = (BOUNDING | 0x000b),
 	BOUNDING_CIRCLE							 = (BOUNDING | 0x000c),
@@ -305,7 +316,7 @@ enum class  eOBJECT_TYPE : uint32_t
 	BOUNDING_PLANE							 = (BOUNDING | 0x0010),
 	BOUNDING_PLANES							 = (BOUNDING | 0x0011),
 	BOUNDING_TERRAIN						 = (BOUNDING | 0x0012),
-	BOUNDING_POTAL							 = (BOUNDING | 0x0013),
+	BOUNDING_PORTAL							 = (BOUNDING | 0x0013),
 
 	// 9) resource
 	RESOURCE								 = 0x011000000,
@@ -415,7 +426,7 @@ enum class  eOBJECT_TYPE : uint32_t
 	UI_LISTVIEW							 	 = (eOBJECT_TYPE::UI | 0x1000),   //  [9/8/2016 BSH_CGCIII]
 	UI_IMAGE							 	 = (eOBJECT_TYPE::UI | 0x1100),   //  [9/27/2016 BSH_CGCIII]
 
-	// 17) refernece 
+	// 17) reference 
 	REFERENCE								 = 0x019000000,
 	REFERENCE_SPHERE						 = (eOBJECT_TYPE::REFERENCE | 0x0001),
 	REFERENCE_ELLIPSOID						 = (eOBJECT_TYPE::REFERENCE | 0x0002),
@@ -424,7 +435,7 @@ enum class  eOBJECT_TYPE : uint32_t
 	REFERENCE_CYLINDER						 = (eOBJECT_TYPE::REFERENCE | 0x0005),
 	REFERENCE_CONE							 = (eOBJECT_TYPE::REFERENCE | 0x0006),
 	REFERENCE_CAPSULE						 = (eOBJECT_TYPE::REFERENCE | 0x0007),
-	REFERENCE_CONVAX						 = (eOBJECT_TYPE::REFERENCE | 0x0008),
+	REFERENCE_CONVEX						 = (eOBJECT_TYPE::REFERENCE | 0x0008),
 	REFERENCE_LINE							 = (eOBJECT_TYPE::REFERENCE | 0x0009),
 	REFERENCE_SEGMENT						 = (eOBJECT_TYPE::REFERENCE | 0x000a),
 	REFERENCE_CIRCLE						 = (eOBJECT_TYPE::REFERENCE | 0x000b),
@@ -450,18 +461,13 @@ enum class  eOBJECT_TYPE : uint32_t
 [[nodiscard]] constexpr eOBJECT_TYPE operator | (eOBJECT_TYPE _lhs, eOBJECT_TYPE _rhs) noexcept { return static_cast<eOBJECT_TYPE>(static_cast<uint32_t>(_lhs) | static_cast<uint32_t>(_rhs));}
 [[nodiscard]] constexpr eOBJECT_TYPE operator & (eOBJECT_TYPE _lhs, uint32_t _rhs) noexcept { return static_cast<eOBJECT_TYPE>(static_cast<uint32_t>(_lhs) && _rhs);}
 [[nodiscard]] constexpr eOBJECT_TYPE operator | (eOBJECT_TYPE _lhs, uint32_t _rhs) noexcept { return static_cast<eOBJECT_TYPE>(static_cast<uint32_t>(_lhs) || _rhs);}
-																				  
-template <class T>	[[nodiscard]] std::basic_string_view<T>	to_string(eOBJECT_STATE _eState) noexcept;
-template <>			[[nodiscard]] std::string_view			to_string<char>(eOBJECT_STATE _eState) noexcept;
-template <>			[[nodiscard]] std::wstring_view			to_string<wchar_t>(eOBJECT_STATE _eState) noexcept;
-
-template <class T>	[[nodiscard]] std::basic_string_view<T>	to_string(eRESULT _result) noexcept;
-template <>			[[nodiscard]] std::string_view			to_string<char>(eRESULT _result) noexcept;
-template <>			[[nodiscard]] std::wstring_view			to_string<wchar_t>(eRESULT _result) noexcept;
-
-template <class T>	[[nodiscard]] std::basic_string_view<T>	to_string(eOBJECT_TYPE _type) noexcept;
-template <>			[[nodiscard]] std::string_view			to_string<char>(eOBJECT_TYPE _type) noexcept;
-template <>			[[nodiscard]] std::wstring_view			to_string<wchar_t>(eOBJECT_TYPE _type) noexcept;
+						
+namespace CGDK
+{
+	[[nodiscard]] std::string_view to_string(eOBJECT_STATE _state) noexcept;
+	[[nodiscard]] std::string_view to_string(eRESULT _result) noexcept;
+	[[nodiscard]] std::string_view to_string(eOBJECT_TYPE _type) noexcept;
+}
 
 
 //-----------------------------------------------------------------------------
@@ -543,7 +549,7 @@ public:
 	[[nodiscard]] constexpr operator uint64_t() const noexcept { return static_cast<uint64_t>(value);}
 
 private:
-	[[nodiscard]] static uint64_t _generate() noexcept { static std::atomic<uint64_t> sid(0); uint64_t temp = ++sid; if (temp == 0) temp = ++sid; return temp; }
+	[[nodiscard]] static uint64_t _generate() noexcept { static std::atomic<uint64_t> sid(0); uint64_t temp = (sid.fetch_add(1, std::memory_order_relaxed) + 1); if (temp == 0) temp = (sid.fetch_add(1, std::memory_order_relaxed) + 1); return temp; }
 
 public:
 			uint64_t	value;
@@ -585,6 +591,7 @@ public:
 
 public:
 	constexpr sMAC_ADDRESS() noexcept : sll_mac(0) {}
+	constexpr sMAC_ADDRESS(const sMAC_ADDRESS& _copy) noexcept : sll_mac(_copy.sll_mac) {}
 
 public:	
 	[[nodiscard]] constexpr bool empty() const noexcept	{ return sll_mac == 0;}
@@ -606,17 +613,7 @@ public:
 
 namespace CGDK
 {
-	template <class T>[[nodiscard]] std::basic_string_view<T> to_string(T* _str_address, std::size_t _max_length, const sMAC_ADDRESS& _mac_address) noexcept;
-	template<> [[nodiscard]] std::string_view to_string<char>(char* _str_address, std::size_t _max_length, const sMAC_ADDRESS& _mac_address) noexcept;
-	template<> [[nodiscard]] std::wstring_view to_string<wchar_t>(wchar_t* _str_address, std::size_t _max_length, const sMAC_ADDRESS& _mac_address) noexcept;
-
-	template <class T>
-	[[nodiscard]] std::basic_string<T>
-	to_string(const sMAC_ADDRESS& _address) noexcept { T temp_str[256]; return std::basic_string<T>(CGDK::to_string(temp_str, 256, _address)); }
-
-	template <class T, class Allocator = std::allocator<T>>
-	[[nodiscard]] std::basic_string<T, std::char_traits<T>, Allocator>
-	to_string(const sMAC_ADDRESS& _mac_address, const Allocator& _allocator) noexcept { T temp_str[256]; return std::basic_string<T, std::char_traits<T>, Allocator>(to_string<T>(temp_str, 256, _mac_address), _allocator); }
+	[[nodiscard]] std::string to_string(const sMAC_ADDRESS& _mac_address) noexcept;
 }
 
 namespace std

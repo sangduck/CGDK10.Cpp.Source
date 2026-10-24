@@ -8,7 +8,7 @@ FILE_HANDLE api::file::open(std::string_view _filename, eFILE_OPERATION _operati
 	// check)
 	CGASSERT_ERROR(_filename != nullptr);
 
-	// check) _filename이 nullptr이면 안됀다.
+	// check) _filename이 nullptr이면 안 된다.
 	RETURN_IF(_filename == nullptr, INVALID_FILE_HANDLE);
 
 	// Declare) 
@@ -55,12 +55,12 @@ FILE_HANDLE api::file::open(std::string_view _filename, eFILE_OPERATION _operati
 		hFile = fopen(_filename.data(), strAccess);
 	}
 
-	// 2) 파일 열기에 실패한 경우 eFILE_LOCATION::INTERNAL 플래그가 설정되어 있다면 INTERNAL 디렉토리에서 열기를 시도한다.
+	// 2) 파일 열기에 실패한 경우 eFILE_LOCATION::INTERNAL 플래그가 설정되어 있다면 INTERNAL 디렉터리에서 열기를 시도한다.
 	if (hFile == INVALID_FILE_HANDLE && (_file_location & eFILE_LOCATION::INTERNAL) != eFILE_LOCATION::NONE)
 	{
 	}
 
-	// 3) 파일 열기에 실패한 경우 eFILE_LOCATION::EXTERNAL 플래그가 설정되어 있다면 EXTERNAL 디렉토리에서 열기를 시도한다.
+	// 3) 파일 열기에 실패한 경우 eFILE_LOCATION::EXTERNAL 플래그가 설정되어 있다면 EXTERNAL 디렉터리에서 열기를 시도한다.
 	if (hFile == INVALID_FILE_HANDLE && (_file_location & eFILE_LOCATION::EXTERNAL) != eFILE_LOCATION::NONE)
 	{
 	}
@@ -74,7 +74,7 @@ FILE_HANDLE api::file::open(std::string_view _filename, eFILE_OPERATION _operati
 			char	temp_string[MAX_STRING_LENGTH];
 
 			// - String을 만든다.
-			__sprintf(temp_string, "%s/%s", iter.c_str(), _filename);
+			std::snprintf(temp_string, std::size(temp_string), std::string_view("%s/%s").data(), iter.c_str(), _filename);
 
 			// - open file
 			hFile = fopen(temp_string, strAccess);
@@ -100,30 +100,6 @@ FILE_HANDLE api::file::open(std::wstring_view _filename, eFILE_OPERATION _operat
 	return	api::file::open(temp, _operation, _file_location);
 }
 
-FILE_HANDLE api::file::open(std::u16string_view _filename, eFILE_OPERATION _operation, eFILE_LOCATION _file_location)
-{
-	// Declare) 
-	wchar_t	temp[MAX_STRING_LENGTH]{};
-
-	// 1) 문자열을 Converting한다.
-	__convert_string(temp, _filename.data());
-
-	// 2) open
-	return	api::file::open(temp, _operation, _file_location);
-}
-
-FILE_HANDLE api::file::open(std::u32string_view _filename, eFILE_OPERATION _operation, eFILE_LOCATION _file_location)
-{
-	return	api::file::open(reinterpret_cast<const char*>(_filename.data()), _operation, _file_location);
-}
-
-void api::file::close(FILE_HANDLE _handle_file)
-{
-	// check) FileHandle이 INVALID_FILE_HANDLE이면 안됀다.
-	RETURN_IF(_handle_file==INVALID_FILE_HANDLE);
-
-	// 1) close한다.
-	fclose(_handle_file);
 }
 
 size_t api::file::Read(FILE_HANDLE _handle_file, size_t _size, void* _data)

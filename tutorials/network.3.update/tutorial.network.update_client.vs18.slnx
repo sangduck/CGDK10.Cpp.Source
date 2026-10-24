@@ -1,0 +1,8 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="update.01.simple_update\client.console\tutorial.network.update_simple_update_client.console.vs18.vcxproj" Id="808831ab-820e-4060-8697-9369ecaa5e16" />
+  <Project Path="update.02.resource_mamager\client.console\tutorial.update.resource_manager.client.console.vs18.vcxproj" Id="43493701-032a-4bfb-b6f3-f31a940f14d9" />
+  <Project Path="update.03.update_service\client.console\tutorial.update.update_service.client.console.vs18.vcxproj" Id="7bd5a624-9f0f-4fbb-8d07-7c546c249ec1" />
+</Solution>

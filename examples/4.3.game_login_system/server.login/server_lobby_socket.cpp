@@ -16,16 +16,16 @@ void ServerLobby::CSocket::OnConnect(CGNet::IO::IConnective* /*_pConnective*/)
 	CGLOG(g_pLog, eLOG_TYPE::INFO_, eLOG_LEVEL::HIGHER, _CGTEXT("> Lobby Server Connected [{}]"), CGNetAPI::AddressToString<_CHAR>(GetPeerAddress()).c_str());
 
 	// View)
-	g_pService->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_LOBBYSERVER_CONNECT, (DWORD_PTR)this));
+	g_pservice->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_LOBBYSERVER_CONNECT, (DWORD_PTR)this));
 
 	// 1) Enter groupUserImmigration
-	g_pService->m_pgroupServerLobbyImmigration->EnterMember(this);
+	g_pservice->m_pgroupServerLobbyImmigration->EnterMember(this);
 }
 
 void ServerLobby::CSocket::OnDisconnect(uint32_t /*_Reason*/)
 {
 	// View)
-	g_pService->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_LOBBYSERVER_DISCONNECT, (DWORD_PTR)this));
+	g_pservice->NotifyMessage(CGMSG_NOTIFY(CGMESSAGE::WINDOWS::NOTIFY_UPDATE, CGNOTIFY_LOBBYSERVER_DISCONNECT, (DWORD_PTR)this));
 
 	// 1) Leave from group
 	LeaveGroup();

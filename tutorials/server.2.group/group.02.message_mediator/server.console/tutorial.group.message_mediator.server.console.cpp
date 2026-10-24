@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 #include "cgdk/sdk10/server.group.h"
 #include "../../define_message.h"
 
@@ -35,18 +35,18 @@ protected:
 		// trace) 
 		std::cout << "on_member_entered>> member entered id:"sv << _pmember->m_member_serial << '\n';
 
-		// 1) ìƒˆë¡œìš´ Memberê°€ ë“¤ì–´ì˜¤ë©´ thisë¥¼ ë©”ì‹œì§€ ì „ë‹¬ì²˜ë¡œ ë“±ë¡í•œë‹¤.
+		// 1) »õ·Î¿î Member°¡ µé¾î¿À¸é this¸¦ ¸Ş½ÃÁö Àü´ŞÃ³·Î µî·ÏÇÑ´Ù.
 		_pmember->register_messageable(this);
 
-		// 2) ëª¨ë“  group ë©¤ë²„ì— Message ì „ì†¡
+		// 2) ¸ğµç group ¸â¹ö¿¡ Message Àü¼Û
 		send(alloc_shared_buffer(256) << uint32_t() << uint32_t(eMESSAGE_TYPE::ENTER_MEMBER) << _pmember->m_member_serial << "test_id"sv << SET_LENGTH());
 	}
 	virtual	uintptr_t on_member_leaving(socket_tcp* _pmember, uintptr_t /*_param*/) override
 	{
-		// ëª¨ë“  group ë©¤ë²„ì— Message ì „ì†¡
+		// ¸ğµç group ¸â¹ö¿¡ Message Àü¼Û
 		send(alloc_shared_buffer(12) << uint32_t(12) << uint32_t(eMESSAGE_TYPE::LEAVE_MEMBER) << _pmember->m_member_serial);
 
-		// 2) message mediatorì—ì„œ ë“±ë¡ í•´ì œí•œë‹¤.
+		// 2) message mediator¿¡¼­ µî·Ï ÇØÁ¦ÇÑ´Ù.
 		_pmember->unregister_messageable(this);
 
 		// trace)
@@ -60,13 +60,13 @@ protected:
 		// 1) source
 		auto psource = _msg.get_source<socket_tcp>();
 
-		// 2) psourceì—ê²Œ ë°›ì€ message ìˆ˜ë¥¼ ì¦ê°€í•œë‹¤.
+		// 2) psource¿¡°Ô ¹ŞÀº message ¼ö¸¦ Áõ°¡ÇÑ´Ù.
 		++psource->m_received_message;
 
 		// trace)
 		std::cout << "message received! ("sv << psource->m_received_message << ")"sv << std::endl;
 
-		// 3) member ì „ì²´ì—ê²Œ ë©”ì‹œì§€ë¥¼ ì „ë‹¬í•œë‹¤.
+		// 3) member ÀüÃ¼¿¡°Ô ¸Ş½ÃÁö¸¦ Àü´ŞÇÑ´Ù.
 		send(_msg.buf_message);
 
 		// return) 
@@ -79,16 +79,16 @@ int g_member_serial = 0;
 
 void socket_tcp::on_connect()
 {
-	// 1) ì ‘ì†í•˜ë©´ ë¨¼ì € Member Serialì„ ì¨ë„£ëŠ”ë‹¤.
+	// 1) Á¢¼ÓÇÏ¸é ¸ÕÀú Member SerialÀ» ½á³Ö´Â´Ù.
 	m_member_serial = g_member_serial++;
 
-	// 2) groupì— Enterì‹œí‚¨ë‹¤.
+	// 2) group¿¡ Enter½ÃÅ²´Ù.
 	g_pgroup->enter(this);
 }
 
 void socket_tcp::on_disconnect(uint64_t /*_disconnect_reason*/)
 {
-	// 1) ì ‘ì†ì´ ì¢…ë£Œë˜ë©´ groupì—ì„œ ë‚˜ê°„ë‹¤.
+	// 1) Á¢¼ÓÀÌ Á¾·áµÇ¸é group¿¡¼­ ³ª°£´Ù.
 	leave_group();
 }
 
@@ -109,22 +109,22 @@ int main()
 	// trace) 
 	std::cout << "CGCII tutorial.group.server 02..."sv << std::endl;
 
-	// 1) group ê°ì²´ë¥¼ ìƒì„±í•œë‹¤ / create group object
+	// 1) group °´Ã¼¸¦ »ı¼ºÇÑ´Ù / create group object
 	g_pgroup = make_own<group_simple>();
 
-	// 2) groupì— ì…ì¥ ê°€ëŠ¥í•˜ê²Œ ì„¤ì •í•œë‹¤ / enable entering of group object
+	// 2) group¿¡ ÀÔÀå °¡´ÉÇÏ°Ô ¼³Á¤ÇÑ´Ù / enable entering of group object
 	g_pgroup->enable_member_enter();
 
-	// 3) Acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤ / create acceptor object
+	// 3) Acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù / create acceptor object
 	auto pacceptor = make_own<net::acceptor<socket_tcp>>();
 
-	// 4) 20000ë²ˆ í¬íŠ¸ì— Listenì„ ì‹œì‘í•œë‹¤ / start listening on 20000 port
+	// 4) 20000¹ø Æ÷Æ®¿¡ ListenÀ» ½ÃÀÛÇÑ´Ù / start listening on 20000 port
 	pacceptor->start({{ net::ip::tcp::v6(), 20000 }});
 
-	// 5) ESCë¥¼ ëˆŒëŸ¬ ì¢…ë£Œí•˜ê¸°ë¥¼ ê¸°ë‹¤ë¦°ë‹¤. / waiting input ESC key and exit 
+	// 5) ESC¸¦ ´­·¯ Á¾·áÇÏ±â¸¦ ±â´Ù¸°´Ù. / waiting input ESC key and exit 
 	while(_getch() != 27);
 
-	// 6) Acceptorë¥¼ ë‹«ëŠ”ë‹¤ / close acceptor
+	// 6) Acceptor¸¦ ´İ´Â´Ù / close acceptor
 	pacceptor->stop();
 
 	return 0;

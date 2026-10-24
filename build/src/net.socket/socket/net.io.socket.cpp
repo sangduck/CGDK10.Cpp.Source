@@ -15,12 +15,9 @@ void net::io::socket::Nbase::process_prepare_socket(ADDRESS_FAMILY _address_fami
 	// 2) socket을 Closed로 한다.
 	this->socket_state(eSOCKET_STATE::CLOSED);
 
-	// 3) reset valuse
+	// 3) reset values
 	this->m_last_socket_error = 0;
 	this->m_disconnect_reason = 0;
-
-	// 4) I/O Pending Status를...
-	this->m_io_pending_receive = 0;
 
 	// 5) set 'is client socket' false
 	this->m_is_client_socket = false;
@@ -31,10 +28,16 @@ void net::io::socket::Nbase::process_prepare_socket(ADDRESS_FAMILY _address_fami
 
 	// 7) reset shutdown handle
 	this->set_epoll_handle(native_handle());
+
+	// 8) reset io_uring completion (decided again in process_start_io. no op of the last connection is in flight : they held the socket)
+	CGASSERT_ERROR(this->m_count_io_inflight.load(std::memory_order_acquire) == 0);
+	this->m_is_io_completion = false;
+	this->m_is_receiving_op = false;
 #endif
 
 	// 9)
 	this->m_is_exception_on_send_overflow = false;
+	this->m_is_send_overflow_closing = false;
 
 
 	// 10) 통계정보를 reset한다.
@@ -102,6 +105,14 @@ void net::io::socket::Nbase::process_prepare_socket(ADDRESS_FAMILY _address_fami
 	if(this->m_ppacketable != nullptr)
 	{
 		this->m_ppacketable->process_reset_packetable();
+	}
+
+	// 20.1) Icryptable : drop the cryptor left by the previous session.
+	//       (the socket object is reused from the pool without re-construction,
+	//        cryption_type is kept : the acceptor sets it again on every accept.)
+	if(auto pcryptable = dynamic_cast<Icryptable*>(this); pcryptable != nullptr)
+	{
+		pcryptable->process_reset_cryptor();
 	}
 
 	// 21) reset socket을 수행한다.

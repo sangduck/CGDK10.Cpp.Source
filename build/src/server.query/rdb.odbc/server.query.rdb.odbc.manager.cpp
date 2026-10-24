@@ -4,7 +4,8 @@ namespace CGDK::query::rdb::odbc
 {
 
 // declare) 
-lockable<std::vector<ODBC_DRIVER_INFO>>	g_vector_odbc_driver_info;
+lock_object g_lockable_vector_odbc_driver_info;
+std::vector<ODBC_DRIVER_INFO> g_vector_odbc_driver_info;
 
 void init_odbc_driver()
 {
@@ -68,7 +69,7 @@ std::string_view find_odbc_driver(std::string_view _first)
 	for (auto& iter : g_vector_odbc_driver_info)
 	{
 		// - to lower
-		std::string str_iter_lower = __to_lower<char>(iter.driver);
+		std::string str_iter_lower = __to_lower(iter.driver);
 
 		// - find _first
 		auto pos = str_iter_lower.find(_first, 0);
@@ -89,7 +90,7 @@ std::string_view find_odbc_driver(std::string_view _first, std::string_view _sec
 	for (auto& iter : g_vector_odbc_driver_info)
 	{
 		// - to lower
-		std::string str_iter_lower = __to_lower<char>(iter.driver);
+		std::string str_iter_lower = __to_lower(iter.driver);
 
 		// - find _first
 		auto pos = str_iter_lower.find(_first, 0);
@@ -111,12 +112,12 @@ std::string_view find_odbc_driver(std::string_view _first, std::string_view _sec
 	return std::string_view();
 }
 
-std::string_view find_odbc_driver(std::string_view _first, std::string_view _second, std::string_view _thrid)
+std::string_view find_odbc_driver(std::string_view _first, std::string_view _second, std::string_view _third)
 {
 	for (auto& iter : g_vector_odbc_driver_info)
 	{
 		// - to lower
-		std::string str_iter_lower = __to_lower<char>(iter.driver);
+		std::string str_iter_lower = __to_lower(iter.driver);
 
 		// - find _first
 		auto pos = str_iter_lower.find(_first, 0);
@@ -130,7 +131,7 @@ std::string_view find_odbc_driver(std::string_view _first, std::string_view _sec
 			CONTINUE_IF(pos >= str_iter_lower.size())
 
 			// - find _third
-			pos = str_iter_lower.find(_thrid, pos);
+			pos = str_iter_lower.find(_third, pos);
 
 			// check) 
 			CONTINUE_IF(pos >= str_iter_lower.size())
@@ -144,12 +145,12 @@ std::string_view find_odbc_driver(std::string_view _first, std::string_view _sec
 	return std::string_view();
 }
 
-std::string_view find_odbc_driver(std::string_view _first, std::string_view _second, std::string_view _thrid, std::string_view _forth)
+std::string_view find_odbc_driver(std::string_view _first, std::string_view _second, std::string_view _third, std::string_view _forth)
 {
 	for (auto& iter : g_vector_odbc_driver_info)
 	{
 		// - to lower
-		std::string str_iter_lower = __to_lower<char>(iter.driver);
+		std::string str_iter_lower = __to_lower(iter.driver);
 
 		// - find _first
 		auto pos = str_iter_lower.find(_first, 0);
@@ -163,7 +164,7 @@ std::string_view find_odbc_driver(std::string_view _first, std::string_view _sec
 			CONTINUE_IF(pos >= str_iter_lower.size())
 
 			// - find _third
-			pos = str_iter_lower.find(_thrid, pos);
+			pos = str_iter_lower.find(_third, pos);
 
 			// check) 
 			CONTINUE_IF(pos >= str_iter_lower.size())
@@ -186,7 +187,7 @@ std::string_view find_odbc_driver(std::string_view _first, std::string_view _sec
 std::string_view get_suitable_odbc_provider(eDB_PROVIDER _provider)
 {
 	// check) 
-	scoped_lock(g_vector_odbc_driver_info)
+	SCOPED_LOCK(g_lockable_vector_odbc_driver_info)
 	{
 		if (g_vector_odbc_driver_info.empty())
 		{
@@ -220,6 +221,12 @@ std::string_view get_suitable_odbc_provider(eDB_PROVIDER _provider)
 	case	eDB_PROVIDER::MYSQL_8:				temp = find_odbc_driver("mysql", "8.0", "ansi"); break;
 	case	eDB_PROVIDER::MYSQL_8_ANSI:			temp = find_odbc_driver("mysql", "8.0", "ansi"); break;
 	case	eDB_PROVIDER::MYSQL_8_UNICODE:		temp = find_odbc_driver("mysql", "8.0", "unicode"); break;
+	case	eDB_PROVIDER::MYSQL_9:				temp = find_odbc_driver("mysql", "9.0", "ansi"); break;
+	case	eDB_PROVIDER::MYSQL_9_ANSI:			temp = find_odbc_driver("mysql", "9.0", "ansi"); break;
+	case	eDB_PROVIDER::MYSQL_9_UNICODE:		temp = find_odbc_driver("mysql", "9.0", "unicode"); break;
+	case	eDB_PROVIDER::MYSQL_9_7:			temp = find_odbc_driver("mysql", "9.7", "ansi"); break;
+	case	eDB_PROVIDER::MYSQL_9_7_ANSI:		temp = find_odbc_driver("mysql", "9.7", "ansi"); break;
+	case	eDB_PROVIDER::MYSQL_9_7_UNICODE:	temp = find_odbc_driver("mysql", "9.7", "unicode"); break;
 	case	eDB_PROVIDER::MARIADB:				temp = find_odbc_driver("mariadb", "odbc"); break;
 	case	eDB_PROVIDER::MARIADB_3_1:			temp = find_odbc_driver("mariadb", "odbc", "3.1"); break;
 	case	eDB_PROVIDER::EXCEL:				temp = find_odbc_driver("microsoft excel driver"); break;
@@ -243,171 +250,213 @@ std::tuple<std::string_view, std::string_view, bool, int> get_suitable(std::stri
 	int select_character_set = 0;
 
 	// is _provider "dsn"
-	if (__stricmp(_provider, "dsn"sv) == 0)
+	if (CGDK::__stricmp(_provider, "dsn") == 0)
 	{
 		str_provider_suitable = "{SQLOLEDB}";
 		str_initial_option = "";
 	}
 	// is _provider "sqlserver"
-	else if (__stricmp(_provider, "sqlserver"sv) == 0 || __stricmp(_provider, "sql_server"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "sqlserver") == 0 || CGDK::__stricmp(_provider, "sql_server") == 0)
 	{
 		str_provider_suitable = get_suitable_odbc_provider(eDB_PROVIDER::SQL_SERVER);	// "{SQL Server}";
 		str_initial_option = "";
 	}
 	// is _provider "sqlserver_native"
-	else if (__stricmp(_provider, "sqlserver_native"sv) == 0 || __stricmp(_provider, "sql_server_native"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "sqlserver_native") == 0 || CGDK::__stricmp(_provider, "sql_server_native") == 0)
 	{
 		str_provider_suitable = get_suitable_odbc_provider(eDB_PROVIDER::SQL_SERVER_NATIVE);	// "{SQL Server}";
 		str_initial_option = "";
 	}
 	// is _provider "sql_server_18"
-	else if (__stricmp(_provider, "sqlserver_18"sv) == 0 || __stricmp(_provider, "sql_server_18"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "sqlserver_18") == 0 || CGDK::__stricmp(_provider, "sql_server_18") == 0)
 	{
 		str_provider_suitable = "{SQL Server}"sv;
 		str_initial_option = "";
 	}
 	// is _provider "sql_server_odbc"
-	else if (__stricmp(_provider, "sqlserver_odbc"sv) == 0 || __stricmp(_provider, "sql_server_odbc"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "sqlserver_odbc") == 0 || CGDK::__stricmp(_provider, "sql_server_odbc") == 0)
 	{
 		str_provider_suitable = get_suitable_odbc_provider(eDB_PROVIDER::SQL_SERVER_ODBC);	// "{ODBC Driver for SQL Server}";
 		str_initial_option = "";
 	}
 	// is _provider "mysql"
-	else if (__stricmp(_provider, "mysql"sv) == 0 || __stricmp(_provider, "my_sql"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql") == 0 || CGDK::__stricmp(_provider, "my_sql") == 0)
 	{
 		str_provider_suitable = get_suitable_odbc_provider(eDB_PROVIDER::MYSQL);	// "{MySQL ODBC Driver}";	
-		str_initial_option = ";option=67108872"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 1;
 	}
 	// is _provider "mysql_ansi"
-	else if (__stricmp(_provider, "mysql_ansi"sv) == 0 || __stricmp(_provider, "my_sql_ansi"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_ansi") == 0 || CGDK::__stricmp(_provider, "my_sql_ansi") == 0)
 	{
 		str_provider_suitable = get_suitable_odbc_provider(eDB_PROVIDER::MYSQL_ANSI);	// "{MySQL ODBC ANSI Driver}";	
-		str_initial_option = ";option=67108872"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 1;
 	}
 	// is _provider "mysql_unicode"
-	else if (__stricmp(_provider, "mysql_unicode"sv) == 0 || __stricmp(_provider, "my_sql_unicode"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_unicode") == 0 || CGDK::__stricmp(_provider, "my_sql_unicode") == 0)
 	{
 		str_provider_suitable = get_suitable_odbc_provider(eDB_PROVIDER::MYSQL_UNICODE);	// "{MySQL ODBC Driver}";	
-		str_initial_option = ";option=67108872"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 2;
 	}
 	// is _provider "mysql_3_5"
-	else if (__stricmp(_provider, "mysql_3_5"sv) == 0 || __stricmp(_provider, "my_sql_3_5"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_3_5") == 0 || CGDK::__stricmp(_provider, "my_sql_3_5") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 3.5 Driver}"sv;
-		str_initial_option = ";option=67108872"; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 1;
 	}
 	// is _provider "mysql_5_1"
-	else if (__stricmp(_provider, "mysql_5_1"sv) == 0 || __stricmp(_provider, "my_sql_5_1"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_5_1") == 0 || CGDK::__stricmp(_provider, "my_sql_5_1") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 5.1 Driver}"sv;
-		str_initial_option = ";option=67108872"; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 1;
 	}
 	// is _provider "mysql_5_1_ansi"
-	else if (__stricmp(_provider, "mysql_5_1_ansi"sv) == 0 || __stricmp(_provider, "my_sql_5_1_ansi"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_5_1_ansi") == 0 || CGDK::__stricmp(_provider, "my_sql_5_1_ansi") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 5.1 ANSI Driver}"sv;
-		str_initial_option = ";option=67108872"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 1;
 	}
 	// is _provider "mysql_5_1_unicode"
-	else if (__stricmp(_provider, "mysql_5_1_unicode"sv) == 0 || __stricmp(_provider, "my_sql_5_1_unicode"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_5_1_unicode") == 0 || CGDK::__stricmp(_provider, "my_sql_5_1_unicode") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 5.1 UNICODE Driver}"sv;
-		str_initial_option = ";option=67108872"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 2;
 	}
 	// is _provider "mysql_5_2"
-	else if (__stricmp(_provider, "mysql_5_2"sv) == 0 || __stricmp(_provider, "my_sql_5_2"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_5_2") == 0 || CGDK::__stricmp(_provider, "my_sql_5_2") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 5.2 Driver}"sv;
-		str_initial_option = ";option=67108872"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 1;
 	}
 	// is _provider "mysql_5_2_ansi"
-	else if (__stricmp(_provider, "mysql_5_2_ansi"sv) == 0 || __stricmp(_provider, "my_sql_5_2_ansi"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_5_2_ansi") == 0 || CGDK::__stricmp(_provider, "my_sql_5_2_ansi") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 5.2 ANSI Driver}"sv;
-		str_initial_option = ";option=67108872"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 1;
 	}
 	// is _provider "mysql_5_2_unicode"
-	else if (__stricmp(_provider, "mysql_5_2_unicode"sv) == 0 || __stricmp(_provider, "my_sql_5_2_unicode"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_5_2_unicode") == 0 || CGDK::__stricmp(_provider, "my_sql_5_2_unicode") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 5.2 UNICODE Driver}"sv;
-		str_initial_option = ";option=67108872"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 2;
 	}
 	// is _provider "mysql_5_3"
-	else if (__stricmp(_provider, "mysql_5_3"sv) == 0 || __stricmp(_provider, "my_sql_5_3"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_5_3") == 0 || CGDK::__stricmp(_provider, "my_sql_5_3") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 5.3 Driver}"sv;
-		str_initial_option = ";option=67108872"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 1;
 	}
 	// is _provider "mysql_5_3_ansi"
-	else if (__stricmp(_provider, "mysql_5_3_ansi"sv) == 0 || __stricmp(_provider, "my_sql_5_3_ansi"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_5_3_ansi") == 0 || CGDK::__stricmp(_provider, "my_sql_5_3_ansi") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 5.3 ANSI Driver}"sv;
-		str_initial_option = ";option=67108872"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 1;
 	}
 	// is _provider "mysql_5_3_unicode"
-	else if (__stricmp(_provider, "mysql_5_3_unicode"sv) == 0 || __stricmp(_provider, "my_sql_5_3_unicode"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_5_3_unicode") == 0 || CGDK::__stricmp(_provider, "my_sql_5_3_unicode") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 5.3 UNICODE Driver}"sv;
-		str_initial_option = ";option=67108872"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 2;
 	}
 	// is _provider "mysql_8"
-	else if (__stricmp(_provider, "mysql_8"sv) == 0 || __stricmp(_provider, "my_sql_8"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_8") == 0 || CGDK::__stricmp(_provider, "my_sql_8") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 8.0 Driver}"sv;
-		str_initial_option = ";option=67108872"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 1;
 	}
 	// is _provider "mysql_8_ansi"
-	else if (__stricmp(_provider, "mysql_8_ansi"sv) == 0 || __stricmp(_provider, "my_sql_8_ansi"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_8_ansi") == 0 || CGDK::__stricmp(_provider, "my_sql_8_ansi") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 8.0 ANSI Driver}"sv;
-		str_initial_option = ";option=67108872"; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
 		select_character_set = 1;
 	}
 	// is _provider "mysql_8_unicode"
-	else if (__stricmp(_provider, "mysql_8_unicode"sv) == 0 || __stricmp(_provider, "my_sql_8_unicode"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mysql_8_unicode") == 0 || CGDK::__stricmp(_provider, "my_sql_8_unicode") == 0)
 	{
 		str_provider_suitable = "{MySQL ODBC 8.0 UNICODE Driver}"sv;
-		str_initial_option = ";option=67108872"; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		str_initial_option = ";option=67108872;NO_SSPS=0"; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 8
+		select_character_set = 2;
+	}
+	// is _provider "mysql_9"
+	else if (CGDK::__stricmp(_provider, "mysql_9") == 0 || CGDK::__stricmp(_provider, "my_sql_9") == 0)
+	{
+		str_provider_suitable = "{MySQL ODBC 9.0 Driver}"sv;
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 9
+		select_character_set = 1;
+	}
+	// is _provider "mysql_9_ansi"
+	else if (CGDK::__stricmp(_provider, "mysql_9_ansi") == 0 || CGDK::__stricmp(_provider, "my_sql_9_ansi") == 0)
+	{
+		str_provider_suitable = "{MySQL ODBC 9.0 ANSI Driver}"sv;
+		str_initial_option = ";option=67108872;NO_SSPS=0"; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 9
+		select_character_set = 1;
+	}
+	// is _provider "mysql_9_unicode"
+	else if (CGDK::__stricmp(_provider, "mysql_9_unicode") == 0 || CGDK::__stricmp(_provider, "my_sql_9_unicode") == 0)
+	{
+		str_provider_suitable = "{MySQL ODBC 9.0 UNICODE Driver}"sv;
+		str_initial_option = ";option=67108872;NO_SSPS=0"; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 9
+		select_character_set = 2;
+	}
+	// is _provider "mysql_9.7"
+	else if (CGDK::__stricmp(_provider, "mysql_9_7") == 0 || CGDK::__stricmp(_provider, "my_sql_9_7") == 0)
+	{
+		str_provider_suitable = "{MySQL ODBC 9.7 Driver}"sv;
+		str_initial_option = ";option=67108872;NO_SSPS=0"sv; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 9.7
+		select_character_set = 1;
+	}
+	// is _provider "mysql_9_7_ansi"
+	else if (CGDK::__stricmp(_provider, "mysql_9_7_ansi") == 0 || CGDK::__stricmp(_provider, "my_sql_9_7_ansi") == 0)
+	{
+		str_provider_suitable = "{MySQL ODBC 9.7 ANSI Driver}"sv;
+		str_initial_option = ";option=67108872;NO_SSPS=0"; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 9.7
+		select_character_set = 1;
+	}
+	// is _provider "mysql_9_7_unicode"
+	else if (CGDK::__stricmp(_provider, "mysql_9_7_unicode") == 0 || CGDK::__stricmp(_provider, "my_sql_9_7_unicode") == 0)
+	{
+		str_provider_suitable = "{MySQL ODBC 9.7 UNICODE Driver}"sv;
+		str_initial_option = ";option=67108872;NO_SSPS=0"; // {MULTI_STATEMENTS} 67108864 + {BIG_PACKETS} 9.7
 		select_character_set = 2;
 	}
 	// is _provider "mariadb"
-	else if (__stricmp(_provider, "mariadb"sv) == 0 || __stricmp(_provider, "maria_db"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mariadb") == 0 || CGDK::__stricmp(_provider, "maria_db") == 0)
 	{
 		str_provider_suitable = get_suitable_odbc_provider(eDB_PROVIDER::MARIADB);
 		str_initial_option = ""sv;
 	}
 	// is _provider "mariadb_3_1"
-	else if (__stricmp(_provider, "mariadb_3_1"sv) == 0 || __stricmp(_provider, "maria_db_3_1"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "mariadb_3_1") == 0 || CGDK::__stricmp(_provider, "maria_db_3_1") == 0)
 	{
 		str_provider_suitable = get_suitable_odbc_provider(eDB_PROVIDER::MARIADB_3_1);
 		str_initial_option = ""sv;
 	}
 	// is _provider "SQLOLEDB.1"
-	else if (__stricmp(_provider, "SQLOLEDB.1"sv) == 0 || __stricmp(_provider, "SQLOLEDB"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "SQLOLEDB.1") == 0 || CGDK::__stricmp(_provider, "SQLOLEDB") == 0)
 	{
 		str_provider_suitable = "{SQLOLEDB}"sv;
 		str_initial_option = "";
 	}
 	// is _provider "MSDASQL.1"
-	else if (__stricmp(_provider, "MSDASQL.1"sv) == 0 || __stricmp(_provider, "MSDASQL"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "MSDASQL.1") == 0 || CGDK::__stricmp(_provider, "MSDASQL") == 0)
 	{
 	}
 	// is _provider "excel"
-	else if (__stricmp(_provider, "excel"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "excel") == 0)
 	{
 		str_provider_suitable = get_suitable_odbc_provider(eDB_PROVIDER::EXCEL);
 		str_initial_option = ""sv;
@@ -415,7 +464,7 @@ std::tuple<std::string_view, std::string_view, bool, int> get_suitable(std::stri
 		is_access = true;
 	}
 	// is _provider "access"
-	else if (__stricmp(_provider, "access"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "access") == 0)
 	{
 		str_provider_suitable = get_suitable_odbc_provider(eDB_PROVIDER::ACCESS);
 		str_initial_option = ""sv;
@@ -423,7 +472,7 @@ std::tuple<std::string_view, std::string_view, bool, int> get_suitable(std::stri
 		is_access = true;
 	}
 	// is _provider "access_dbase"
-	else if (__stricmp(_provider, "access_dbase"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "access_dbase") == 0)
 	{
 		str_provider_suitable = get_suitable_odbc_provider(eDB_PROVIDER::ACCESS_DBASE);
 		str_initial_option = ""sv;
@@ -431,7 +480,7 @@ std::tuple<std::string_view, std::string_view, bool, int> get_suitable(std::stri
 		is_access = true;
 	}
 	// is _provider "access_text"
-	else if (__stricmp(_provider, "access_text"sv) == 0)
+	else if (CGDK::__stricmp(_provider, "access_text") == 0)
 	{
 		str_provider_suitable = get_suitable_odbc_provider(eDB_PROVIDER::ACCESS_TEXT);
 		str_initial_option = ""sv;
@@ -467,7 +516,7 @@ void get_connection_string(querier* _pquerier, shared_buffer& _str_initial, shar
 			// trace) 
 			LOG_FATAL << "@ failed QUERIER_RDB_ODBC[" << _pquerier->name() << "]: cann't find odbc driver for provider '"sv << _str_provider << "'"sv;
 
-			scoped_lock(g_vector_odbc_driver_info)
+			SCOPED_LOCK(g_lockable_vector_odbc_driver_info)
 			{
 				if (g_vector_odbc_driver_info.empty() == false)
 				{
@@ -599,7 +648,7 @@ void get_connection_string(querier* _pquerier, shared_buffer& _str_initial, shar
 		// - set 'UNICODE'
 		case	2:
 				{
-					LOG_WARNING << "  (!) unicode ODBC dirver is selected but character_set is not assined unicode set('utf8','euckr', etc)"sv;
+					LOG_WARNING << "  (!) unicode ODBC driver is selected but character_set is not assigned unicode set('utf8','euckr', etc)"sv;
 					LOG_WARNING << "      this can cause error on getting string. set 'character_set' parameter as unicode set "sv;
 				}
 				break;

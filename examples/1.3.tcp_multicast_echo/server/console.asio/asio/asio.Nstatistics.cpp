@@ -1,4 +1,4 @@
-﻿#include "asio.h"
+#include "asio.h"
 
 
 std::atomic<uint64_t> asio::Nstatistics::statistics_connect_keep{ 0 };

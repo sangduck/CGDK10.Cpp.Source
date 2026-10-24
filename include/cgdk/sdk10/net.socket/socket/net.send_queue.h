@@ -31,8 +31,8 @@ namespace CGDK
  @ref		
  @details	\n
 
- 다중쓰레드에서 각각 전송할 경우 전송의 순서를 보장하기 힘든 경우 사용한다.
- 다른 쓰레드에서 전송하더라도 queue에 저장된 순서로 전송되는 것이 보장된다.
+ 다중스레드에서 각각 전송할 경우 전송의 순서를 보장하기 힘든 경우 사용한다.
+ 다른 스레드에서 전송하더라도 queue에 저장된 순서로 전송되는 것이 보장된다.
  또 sender를 각 전송마다 설정하므로 다른 sender에 전송도 순서를 보장할 수 있다.
  */
 //-----------------------------------------------------------------------------
@@ -56,10 +56,10 @@ public:
 			void				send() noexcept;
 
 protected:
-			lockable<>			m_cs_vector_send_queued;
+			lock_object			m_cs_vector_send_queued;
 			std::vector<SENDING> m_vector_send_queued;
 
-			lockable<>			m_cs_vector_send_sending;
+			lock_object			m_cs_vector_send_sending;
 			std::vector<SENDING> m_vector_send_sending;
 };
 

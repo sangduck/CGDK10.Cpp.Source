@@ -3,8 +3,7 @@
 namespace CGDK
 {
 
-template <>
-std::string_view to_string<char>(eEXECUTOR_TYPE _executor_type) noexcept
+std::string_view to_string(eEXECUTOR_TYPE _executor_type) noexcept
 {
 	std::string_view result;
 
@@ -19,29 +18,13 @@ std::string_view to_string<char>(eEXECUTOR_TYPE _executor_type) noexcept
 	return result;
 }
 
-template <>
-std::wstring_view to_string<wchar_t>(eEXECUTOR_TYPE _executor_type) noexcept
-{
-	std::wstring_view result;
-
-	switch (_executor_type)
-	{
-	case	eEXECUTOR_TYPE::DEFAULT:	result = L"default";		break;
-	case	eEXECUTOR_TYPE::SYSTEM:		result = L"system";			break;
-	case	eEXECUTOR_TYPE::USER:		result = L"user";			break;
-	default:							result = L"";				break;
-	}
-
-	return result;
-}
-
 statistics::unit_executor::unit_executor() noexcept
 {
 }
 
 statistics::unit_executor::unit_executor(const unit_executor& _rhs) noexcept :
 	tick_snap(_rhs.tick_snap),
-	thread_count(_rhs.thread_count),
+	thread_count(_rhs.thread_count.load()),
 	count_execute(_rhs.count_execute.load())
 {
 }
@@ -49,7 +32,7 @@ statistics::unit_executor::unit_executor(const unit_executor& _rhs) noexcept :
 statistics::unit_executor& statistics::unit_executor::operator=(const statistics::unit_executor& _rhs) noexcept
 {
 	tick_snap = _rhs.tick_snap;
-	thread_count = _rhs.thread_count;
+	thread_count = _rhs.thread_count.load();
 	count_execute = _rhs.count_execute.load();
 
 	return *this;

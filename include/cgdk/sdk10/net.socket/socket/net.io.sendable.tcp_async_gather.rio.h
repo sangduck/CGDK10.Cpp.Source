@@ -71,7 +71,7 @@ protected:
 			NODE				m_temp_queued_send;
 			bool				m_flag_sending = false;
 
-			lockable<>			m_lockable_sending;
+	mutable	lock_object			m_lockable_sending;
 			void				_process_prepare_send_buffers();
 };
 

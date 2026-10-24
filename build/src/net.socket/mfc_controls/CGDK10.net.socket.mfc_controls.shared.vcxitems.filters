@@ -50,7 +50,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)child_traffic_info_mini.cpp">
       <Filter>child controls</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)dalog_connectable_status.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_connectable_status.cpp">
       <Filter>dialog</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)dialog_connective_status.cpp">

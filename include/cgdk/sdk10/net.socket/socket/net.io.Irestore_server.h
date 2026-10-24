@@ -28,7 +28,7 @@ namespace CGDK
 //-----------------------------------------------------------------------------
 class net::io::Irestore_server :
 	public						net::io::connectable::tcp::Ndefault,
-	virtual public				net::io::messageable::Nbase,
+	virtual public				net::io::Imessageable,
 	virtual public				net::io::Isender
 {
 protected:

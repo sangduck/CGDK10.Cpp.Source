@@ -38,7 +38,7 @@ public:
 			void				register_event(own_ptr<Ievent>&& _pevent);
 			void				unregister_event(Ievent* _pentity) noexcept;
 			void				unregister_event_all() noexcept;
-	[[nodiscard]] std::size_t	get_event_count() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<std::vector<own_ptr<time_event::Ievent>>>&>(this->m_vector_event)); return this->m_vector_event.size(); }
+	[[nodiscard]] std::size_t	get_event_count() const noexcept { std::lock_guard lock(this->m_lockable_vector_event); return this->m_vector_event.size(); }
 	[[nodiscard]] auto			get_front_next_time() noexcept { return (this->m_queue_event.empty() == false) ? this->m_queue_event.front()->event_status().time_next : chrono::time::utc::time_point(chrono::time::duration::zero()); }
 
 			entity&				operator  = (own_ptr<Ievent>&& _pevent);
@@ -67,11 +67,12 @@ protected:
 	virtual void				_process_resume() override;
 
 protected:
-			lockable<std::vector<own_ptr<time_event::Ievent>>> m_vector_event;
+	mutable	lock_object			m_lockable_vector_event;
+			std::vector<own_ptr<time_event::Ievent>> m_vector_event;
 			std::vector<object_ptr<time_event::Ievent>> m_queue_event;
 
 			void				_pop_heap() noexcept;
-			void				_push_heap(time_event::Ievent* _schecule);
+			void				_push_heap(time_event::Ievent* _schedule);
 			bool				_process_erase_event_from_heap(time_event::Ievent* _pevent) noexcept;
 };																				  
 

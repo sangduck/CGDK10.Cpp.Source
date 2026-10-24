@@ -17,6 +17,8 @@
 //*****************************************************************************
 
 #pragma once
+
+#include "cgdk/sdk10/lib_path.h"
 //----------------------------------------------------------------------------
 //
 // definitions
@@ -35,20 +37,8 @@ namespace CGDK
 	{
 		namespace io
 		{
-			namespace socket
-			{
-				class Nsocket_secure;
-			}
-
-			namespace receivable
-			{
-				class Nstream_crypt;
-			}
-
 			namespace connect_requestable
 			{
-				class Ntcp_secure;
-				class Ntcp_reconnect_secure;
 				class Nhttp;
 			}
 
@@ -56,10 +46,6 @@ namespace CGDK
 			{
 				class Nhttp;
 			}
-
-			class Nsocket_secure;
-			class Ntcp_client_crypt;
-			class Ntcp_crypt;
 
 			class Nhttp_server;
 			class Nhttp_client;
@@ -87,7 +73,7 @@ namespace CGDK
 //----------------------------------------------------------------------------
 // 1) object system
 #include "cgdk/sdk10/net.socket.h"
-#include "cgdk/sdk10/system.util.crypt.h"
+#include "cgdk/sdk10/net.socket.crypt.h"
 
 // 2) definitions
 #include "cgdk/sdk10/net.socket/socket.http/net.definitions.http.h"
@@ -106,17 +92,12 @@ namespace CGDK
 // Component Classes
 //----------------------------------------------------------------------------
 // 1) connect_requestable
-#include "cgdk/sdk10/net.socket/socket.http/net.io.connect_requestable.tcp_ssl.h"
-#include "cgdk/sdk10/net.socket/socket.http/net.io.connect_requestable.tcp_reconnect_ssl.h"
 #include "cgdk/sdk10/net.socket/socket.http/net.io.connect_requestable.http.h"
 
-// 2) acceptor
-#include "cgdk/sdk10/net.socket/socket.http/net.io.connective.acceptor_ssl.h"
-
-// 3) sender
+// 2) sender
 #include "cgdk/sdk10/net.socket/socket.http/net.io.sender.http.h"
 
-// 4) http
+// 3) http
 #include "cgdk/sdk10/net.socket/socket.http/net.io.Nhttp_server.h"
 #include "cgdk/sdk10/net.socket/socket.http/net.io.Nhttp_client.h"
 
@@ -125,10 +106,8 @@ namespace CGDK
 // templates
 //----------------------------------------------------------------------------
 // 1) acceptor & connector
-#include "cgdk/sdk10/net.socket/socket.http/net.acceptor.secure.h"
 #include "cgdk/sdk10/net.socket/socket.http/net.acceptor.http.h"
 #include "cgdk/sdk10/net.socket/socket.http/net.connector.http.h"
-
 
 // 2) socket - http server/ http client
 #include "cgdk/sdk10/net.socket/socket.http/net.socket.http_client.h"
@@ -188,15 +167,13 @@ namespace CGDK
 		// WinSDK 10
 		#if WDK_NTDDI_VERSION >= NTDDI_WIN10
 			#ifdef NDEBUG
-				#pragma message("[CGDK10] 'CGDK10.net.socket.http_Windows10.0_x64_Release.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.net.socket.http_Windows10.0_x64_Release.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.net.socket.http_Windows10.0_x64_Release.lib")
 			#else
-				#pragma message("[CGDK10] 'CGDK10.net.socket.http_Windows10.0_x64_Debug.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.net.socket.http_Windows10.0_x64_Debug.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.net.socket.http_Windows10.0_x64_Debug.lib")
 			#endif
 		// Error - No supported
 		#else
-			#error "[CGDK10] Not supported Windonws SDK version (Need Windows SDK 10.0 or higher)"
+			#error "[CGDK10] Not supported Windows SDK version (Need Windows SDK 10.0 or higher)"
 		#endif
 
 	#else

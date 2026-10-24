@@ -29,7 +29,6 @@ class doss::repository::orm :
 {
 public:
 			orm();
-			orm(const std::string_view _name);
 	virtual	~orm() noexcept;
 
 protected:

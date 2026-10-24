@@ -16,25 +16,31 @@ bool net::io::sendable::Nudp::process_sendable( const buffer_view _buffer, objec
 	// 
 	//    1) 일단 Overlapped I/O에 사용될 executable를 Pool에서 할당받는다.
 	//    2) 할당 받은 send executable에 sender와 Senderable 그리고 Original
-	//       값을 저장시켜놓는다.(나중에 완료시 사용을 위해)
+	//       값을 저장시켜놓는다.(나중에 완료 시 사용을 위해)
 	//    3) executable를 넣어 Overlapped로 WSASend()함수를 호출한다.
 	//    4) 만약 WSASend가  실패했을 경우 모두를 rollback시킨다.
 	//
 	//-----------------------------------------------------------------
 	// check) _buffer.size()이 0이 아닌가?
-	CGASSERT(_buffer.size() != 0, false);
+	CGASSERT_FATAL(_buffer.size() != 0);
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	RETURN_IF(_buffer.size() == 0, false);
+	if(_buffer.size() == 0)
+		return false;
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	CGASSERT(_buffer.data() != nullptr, false);
+	CGASSERT_ERROR(_buffer.data() != nullptr);
 
 	// check) _buffer.data()가 NULL이 아닌가?
-	THROW_IF(_buffer.data() == nullptr, throwable::failure(eRESULT::INVALID_MESSAGE_BUFFER_IS_NULL, 0, "buffer.data is null ('net::io::sendable::Ntcp_sync_buffered::process_sendable')"sv));
+	if(_buffer.data() == nullptr)
+		return false;
 
 	// 4) Invalid socket인가?
-	ERROR_RETURN_IF_INVALID_SOCKET(false, LOG_DEBUG << "(err ) CGDK.net.socket: socket handle is INVALID_HANDLE " __CGFUNCTION__)
+	if(this->native_handle() == INVALID_SOCKET)
+	{
+		LOG_DEBUG << "(err ) CGDK.net.socket: socket handle is INVALID_HANDLE " __CGFUNCTION__;
+		return false;
+	}
 
 
 	//-----------------------------------------------------------------
@@ -62,7 +68,7 @@ bool net::io::sendable::Nudp::process_sendable( const buffer_view _buffer, objec
 
 
 	//-----------------------------------------------------------------
-	// 2. Overlapeed I/O로 send한다.
+	// 2. Overlapped I/O로 send한다.
 	//-----------------------------------------------------------------
 	// 1) send 한다.
 	auto result = api::socket::send_to_async(this->native_handle(), &pexecutable->m_wsabuf, 1, nullptr, (::sockaddr*)&pexecutable->m_sockaddr, _address.length, pexecutable.get());

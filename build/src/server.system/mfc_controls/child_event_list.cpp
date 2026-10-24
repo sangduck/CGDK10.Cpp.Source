@@ -9,7 +9,7 @@ CChild_event_list::CChild_event_list(time_event::entity_manager* _pentity_manage
 	: CChildDialog(IDD_DIALOG_EVENT_LIST, pParent),
 	m_bEnableControl(TRUE)
 {
-	SetEventManager(_pentity_manager);
+	this->SetEventManager(_pentity_manager);
 }
 
 CChild_event_list::~CChild_event_list()
@@ -36,65 +36,63 @@ BEGIN_MESSAGE_MAP(CChild_event_list, CChildDialog)
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST_EVENT, &CChild_event_list::OnNMDblclkListEvent)
 END_MESSAGE_MAP()
 
-
-// CChild_event_list message handlers
 BOOL CChild_event_list::CreateChild(time_event::entity_manager* _pentity_manager, CWnd* _pWnd)
 {
 	// 1) Event Manager를 설정한다.
-	SetEventManager(_pentity_manager);
+	this->SetEventManager(_pentity_manager);
 
 	// 2) 윈도우를 생성한다.
-	auto result = Create(IDD_DIALOG_EVENT_LIST, _pWnd);
+	auto result = this->Create(IDD_DIALOG_EVENT_LIST, _pWnd);
 
 	// check) 생성에 실패했으면 FALSE를 Return한다.
 	RETURN_IF(result == FALSE, FALSE);
 
 	// 3) Show Window를 한다.
-	ShowWindow(SW_SHOW);
+	this->ShowWindow(SW_SHOW);
 
 	// return) 성공!!!
-	return	TRUE;
+	return TRUE;
 }
 
 
 void CChild_event_list::SetEventManager(time_event::entity_manager* _pentity_manager)
 {
 	// 1) 값을 설정한다.
-	scoped_lock(m_cs_event_manager)
+	SCOPED_LOCK(this->m_lockable_event_manager)
 	{
-		m_pentity_manager = _pentity_manager;
+		this->m_pentity_manager = _pentity_manager;
 	}
 
 	// 2) Update한다.
-	if(m_hWnd != nullptr)
+	if(this->m_hWnd != nullptr)
 	{
-		PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);
+		this->PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);
 	}
 }
 
 void CChild_event_list::EnableControl(BOOL _bEnable)
 {
-	m_bEnableControl = _bEnable;
+	this->m_bEnableControl = _bEnable;
 
-	RETURN_IF(GetSafeHwnd() == nullptr);
+	RETURN_IF(this->GetSafeHwnd() == nullptr);
 
-	BOOL is_enable = IsWindowEnabled();
+	BOOL is_enable = this->IsWindowEnabled();
 
-	GetDlgItem(IDC_BUTTON_make_object_EVENT)->EnableWindow(_bEnable && is_enable);
-	GetDlgItem(IDC_BUTTON_DELETE_EVENT)->EnableWindow(_bEnable && is_enable);
-	GetDlgItem(IDC_BUTTON_suspend_time_event)->EnableWindow(_bEnable && is_enable);
-	GetDlgItem(IDC_BUTTON_resume_time_event)->EnableWindow(_bEnable && is_enable);
-	GetDlgItem(IDC_CHECK_DELETE_DONE_EVENT)->EnableWindow(_bEnable && is_enable);
+	this->GetDlgItem(IDC_BUTTON_make_object_EVENT)->EnableWindow(_bEnable && is_enable);
+	this->GetDlgItem(IDC_BUTTON_DELETE_EVENT)->EnableWindow(_bEnable && is_enable);
+	this->GetDlgItem(IDC_BUTTON_suspend_time_event)->EnableWindow(_bEnable && is_enable);
+	this->GetDlgItem(IDC_BUTTON_resume_time_event)->EnableWindow(_bEnable && is_enable);
+	this->GetDlgItem(IDC_CHECK_DELETE_DONE_EVENT)->EnableWindow(_bEnable && is_enable);
 }
 		   
 
 void CChild_event_list::UpdateEvent(int _iIndex)
 {
 	// check)
-	RETURN_IF(_iIndex<0 || _iIndex >= m_listctrlEvent.GetItemCount());
+	RETURN_IF(_iIndex<0 || _iIndex >= this->m_listctrlEvent.GetItemCount());
 
 	// 1) Connective를 얻는다.
-	auto* pevent = (time_event::Ientity*)m_listctrlEvent.GetItemData(_iIndex);
+	auto* pevent = (time_event::Ientity*)this->m_listctrlEvent.GetItemData(_iIndex);
 
 	// check) pConnective가 nullptr이면 그냥 되돌린다.
 	RETURN_IF(pevent == nullptr);
@@ -111,24 +109,26 @@ void CChild_event_list::UpdateEvent(int _iIndex)
 	// [0] "Name"
 	list_item.iSubItem		 = 0;
 	list_item.pszText		 = (TCHAR*)pevent->name().data();
-	m_listctrlEvent.SetItem(&list_item);
+	this->m_listctrlEvent.SetItem(&list_item);
 
 	// [1] "Type"
 	list_item.iSubItem		 = 1;
 	wsprintf(text, TEXT("%llu"), pevent->entity_setting().type);
 	list_item.pszText		 = text;
-	m_listctrlEvent.SetItem(&list_item);
+	this->m_listctrlEvent.SetItem(&list_item);
 
 
 	// [2] "State"
 	list_item.iSubItem		 = 2;
-	list_item.pszText		 = (TCHAR*)to_string<TCHAR>(pevent->entity_status().state).data();
-	m_listctrlEvent.SetItem(&list_item);
+	wsprintf(text, TEXT("%hs"), to_string(pevent->entity_status().state).data());
+	list_item.pszText = text;
+	this->m_listctrlEvent.SetItem(&list_item);
 
 	// [3] "Setter"
 	list_item.iSubItem		 = 3;
-	list_item.pszText		 = (TCHAR*)to_string<TCHAR>(pevent->entity_setting().setter).data();
-	m_listctrlEvent.SetItem(&list_item);
+	wsprintf(text, TEXT("%hs"), to_string(pevent->entity_setting().setter).data());
+	list_item.pszText = text;
+	this->m_listctrlEvent.SetItem(&list_item);
 
 	// [4] "Set Time"
 	list_item.iSubItem		 = 4;
@@ -148,15 +148,15 @@ void CChild_event_list::UpdateEvent(int _iIndex)
 				temp_tm.tm_hour,
 				temp_tm.tm_min,
 				temp_tm.tm_sec);
-			list_item.pszText	 = text;
+			list_item.pszText = text;
 		}
 		else
 		{
-			list_item.pszText	 = const_cast<TCHAR*>(TEXT("-"));
+			list_item.pszText = const_cast<TCHAR*>(TEXT("-"));
 		}
 	}
-	list_item.pszText		 = text;
-	m_listctrlEvent.SetItem(&list_item);
+	list_item.pszText = text;
+	this->m_listctrlEvent.SetItem(&list_item);
 
 	// [5] "Next Time"
 	list_item.iSubItem = 5;
@@ -185,7 +185,7 @@ void CChild_event_list::UpdateEvent(int _iIndex)
 			list_item.pszText = const_cast<TCHAR*>(TEXT("-"));
 		}
 	}
-	m_listctrlEvent.SetItem(&list_item);
+	this->m_listctrlEvent.SetItem(&list_item);
 
 	// [6] "Try Time"
 	list_item.iSubItem = 6;
@@ -209,19 +209,19 @@ void CChild_event_list::UpdateEvent(int _iIndex)
 		}
 		else
 		{
-			list_item.pszText	 = const_cast<TCHAR*>(TEXT("-"));
+			list_item.pszText = const_cast<TCHAR*>(TEXT("-"));
 		}
 	}
-	m_listctrlEvent.SetItem(&list_item);
+	this->m_listctrlEvent.SetItem(&list_item);
 
 	// [7] "Try"
-	list_item.iSubItem		 = 7;
+	list_item.iSubItem = 7;
 	wsprintf(text, TEXT("%lld"), pevent->entity_status().count_try.load());
-	list_item.pszText		 = text;
-	m_listctrlEvent.SetItem(&list_item);
+	list_item.pszText = text;
+	this->m_listctrlEvent.SetItem(&list_item);
 
 	// [8] "Exe Time"
-	list_item.iSubItem		 = 8;
+	list_item.iSubItem = 8;
 	{
 		chrono::time::local::time_point	time_executed = pevent->entity_status().time_last_succeeded;
 
@@ -236,35 +236,35 @@ void CChild_event_list::UpdateEvent(int _iIndex)
 				temp_tm.tm_hour,
 				temp_tm.tm_min,
 				temp_tm.tm_sec);
-			list_item.pszText	 = text;
+			list_item.pszText = text;
 		}
 		else
 		{
-			list_item.pszText	 = const_cast<TCHAR*>(TEXT("-"));
+			list_item.pszText = const_cast<TCHAR*>(TEXT("-"));
 		}
 	}
-	m_listctrlEvent.SetItem(&list_item);
+	this->m_listctrlEvent.SetItem(&list_item);
 				
 	// [9] "Succeeded"
-	list_item.iSubItem		 = 9;
+	list_item.iSubItem = 9;
 	wsprintf(text, TEXT("%lld"), pevent->entity_status().count_succeeded.load());
-	list_item.pszText		 = text;
-	m_listctrlEvent.SetItem(&list_item);
+	list_item.pszText = text;
+	this->m_listctrlEvent.SetItem(&list_item);
 
 	// [10] "Failed"
-	list_item.iSubItem		 = 10;
+	list_item.iSubItem = 10;
 	wsprintf(text, TEXT("%lld"), pevent->entity_status().count_failed.load());
-	list_item.pszText		 = text;
-	m_listctrlEvent.SetItem(&list_item);
+	list_item.pszText = text;
+	this->m_listctrlEvent.SetItem(&list_item);
 }
 
 void CChild_event_list::UpdateEventManager()
 {
 	// check) 윈도우가 생성되어 있지 않으면 끝낸다.
-	RETURN_IF(m_hWnd == nullptr)
+	RETURN_IF(this->m_hWnd == nullptr)
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
-	RETURN_IF(IsWindowEnabled() == FALSE)
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
+	RETURN_IF(this->IsWindowEnabled() == FALSE)
 
 
 	//-----------------------------------------------------------------
@@ -273,9 +273,9 @@ void CChild_event_list::UpdateEventManager()
 	// declare) 
 	object_ptr<time_event::entity_manager> pentity_manager;
 	
-	scoped_lock(m_cs_event_manager)
+	SCOPED_LOCK(this->m_lockable_event_manager)
 	{
-		pentity_manager = m_pentity_manager;
+		pentity_manager = this->m_pentity_manager;
 	}
 
 
@@ -285,7 +285,7 @@ void CChild_event_list::UpdateEventManager()
 	if(pentity_manager.empty())
 	{
 		// 1) 모조리 지운다.
-		m_listctrlEvent.DeleteAllItems();
+		this->m_listctrlEvent.DeleteAllItems();
 
 		// return) 
 		return;
@@ -296,12 +296,12 @@ void CChild_event_list::UpdateEventManager()
 	// 3. List를 다시 setting한다.
 	//-----------------------------------------------------------------
 	// 1) Redraw Off
-	m_listctrlEvent.SetRedraw(FALSE);
+	this->m_listctrlEvent.SetRedraw(FALSE);
 
 	// declare) 
 	int index = 0;
 	
-	scoped_lock(pentity_manager->get_lockable())
+	SCOPED_LOCK(pentity_manager->get_lockable())
 	{
 		// 2) Event Manager의 Iterator의 begin과 end를 얻는다.
 		auto iter = pentity_manager->begin();
@@ -316,87 +316,87 @@ void CChild_event_list::UpdateEventManager()
 			CONTINUE_IF(pevent == nullptr);
 
 			// 4) 접속종료된 Connectable을 제거한다. 
-			while(index <m_listctrlEvent.GetItemCount())
+			while(index < this->m_listctrlEvent.GetItemCount())
 			{
 				// - Connectable을 얻는다.
-				time_event::Ientity* pEventCompare = (time_event::Ientity*)m_listctrlEvent.GetItemData(index);
+				time_event::Ientity* pEventCompare = (time_event::Ientity*)this->m_listctrlEvent.GetItemData(index);
 
 				// check) 같으면 끝낸다~
 				BREAK_IF(pEventCompare == pevent);
 
 				// - 지운다~
-				m_listctrlEvent.DeleteItem(index);
+				this->m_listctrlEvent.DeleteItem(index);
 			}
 
 			// 5) 기존에 있는 것 혹은 새로 추가된 것을 업데이트 한다.
-			if(index>= m_listctrlEvent.GetItemCount())
+			if(index>= this->m_listctrlEvent.GetItemCount())
 			{
 				// - 새로 추가한다.
-				m_listctrlEvent.InsertItem(index, TEXT(""));
-				m_listctrlEvent.SetItemData(index, (DWORD_PTR)pevent);
+				this->m_listctrlEvent.InsertItem(index, TEXT(""));
+				this->m_listctrlEvent.SetItemData(index, (DWORD_PTR)pevent);
 			}
 
 			// 6) 값을 업데이트한다.
-			UpdateEvent(index);
+			this->UpdateEvent(index);
 		}
 	}
 
 	// 7) 아직도 남은 것들은 모조리 지운다.
-	for(int	Count= m_listctrlEvent.GetItemCount()-index; Count>0; Count--)
+	for(int	Count= this->m_listctrlEvent.GetItemCount()-index; Count>0; Count--)
 	{
-		m_listctrlEvent.DeleteItem(index);
+		this->m_listctrlEvent.DeleteItem(index);
 	}
 
 	// 8) Event Count를 표시한다.
-	SetDlgItemInt(IDC_STATIC_EVENT_COUNT, static_cast<int>(pentity_manager->size()));
+	this->SetDlgItemInt(IDC_STATIC_EVENT_COUNT, static_cast<int>(pentity_manager->size()));
 
 	// 9) IDC_CHECK_DELETE_DONE_EVENT Check Box를 설정한다.
 	((CButton*)GetDlgItem(IDC_CHECK_DELETE_DONE_EVENT))->SetCheck(pentity_manager->is_delete_done_entity() ? BST_CHECKED : BST_UNCHECKED);
 	
 	// 10) Redraw Off
-	m_listctrlEvent.SetRedraw(TRUE);
+	this->m_listctrlEvent.SetRedraw(TRUE);
 }
 
 
 BOOL CChild_event_list::OnInitDialog()
 {
-	CChildDialog::OnInitDialog();
+	this->CChildDialog::OnInitDialog();
 
 
 	//-----------------------------------------------------------------
 	// 1. control 초기화.
 	//-----------------------------------------------------------------
 	// 1) Acceptor Info
-	m_listctrlEvent.InsertColumn(0, TEXT("Name"),					LVCFMT_LEFT,	200, 0);
-	m_listctrlEvent.InsertColumn(1, TEXT("Type"),					LVCFMT_LEFT,	 90, 1);
-	m_listctrlEvent.InsertColumn(2, TEXT("Status"),					LVCFMT_LEFT,	 70, 2);
-	m_listctrlEvent.InsertColumn(3, TEXT("Setter"),					LVCFMT_LEFT,	 60, 3);
-	m_listctrlEvent.InsertColumn(4, TEXT("Set Time"),				LVCFMT_LEFT,	120, 4);
-	m_listctrlEvent.InsertColumn(5, TEXT("Next Time"),				LVCFMT_LEFT,	120, 5);
-	m_listctrlEvent.InsertColumn(6, TEXT("Last Try Time "),			LVCFMT_LEFT,	120, 6);
-	m_listctrlEvent.InsertColumn(7, TEXT("Try"),					LVCFMT_RIGHT,	 40, 7);
-	m_listctrlEvent.InsertColumn(8, TEXT("Last Succeeded Time "),	LVCFMT_LEFT,	120, 8);
-	m_listctrlEvent.InsertColumn(9, TEXT("Success"),				LVCFMT_RIGHT,	 40, 9);
-	m_listctrlEvent.InsertColumn(10,TEXT("Fail"),					LVCFMT_RIGHT,	 40, 10);
-	m_listctrlEvent.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
+	this->m_listctrlEvent.InsertColumn(0, TEXT("Name"),					LVCFMT_LEFT,	200, 0);
+	this->m_listctrlEvent.InsertColumn(1, TEXT("Type"),					LVCFMT_LEFT,	 90, 1);
+	this->m_listctrlEvent.InsertColumn(2, TEXT("Status"),				LVCFMT_LEFT,	 70, 2);
+	this->m_listctrlEvent.InsertColumn(3, TEXT("Setter"),				LVCFMT_LEFT,	 60, 3);
+	this->m_listctrlEvent.InsertColumn(4, TEXT("Set Time"),				LVCFMT_LEFT,	120, 4);
+	this->m_listctrlEvent.InsertColumn(5, TEXT("Next Time"),			LVCFMT_LEFT,	120, 5);
+	this->m_listctrlEvent.InsertColumn(6, TEXT("Last Try Time "),		LVCFMT_LEFT,	120, 6);
+	this->m_listctrlEvent.InsertColumn(7, TEXT("Try"),					LVCFMT_RIGHT,	 40, 7);
+	this->m_listctrlEvent.InsertColumn(8, TEXT("Last Succeeded Time "),	LVCFMT_LEFT,	120, 8);
+	this->m_listctrlEvent.InsertColumn(9, TEXT("Success"),				LVCFMT_RIGHT,	 40, 9);
+	this->m_listctrlEvent.InsertColumn(10,TEXT("Fail"),					LVCFMT_RIGHT,	 40, 10);
+	this->m_listctrlEvent.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
 
 	// 2) enable
-	BOOL	is_enable	 = IsWindowEnabled();
-	GetDlgItem(IDC_BUTTON_make_object_EVENT)->EnableWindow(m_bEnableControl && is_enable);
-	GetDlgItem(IDC_BUTTON_DELETE_EVENT)->EnableWindow(m_bEnableControl && is_enable);
-	GetDlgItem(IDC_BUTTON_suspend_time_event)->EnableWindow(m_bEnableControl && is_enable);
-	GetDlgItem(IDC_BUTTON_resume_time_event)->EnableWindow(m_bEnableControl && is_enable);
-	GetDlgItem(IDC_CHECK_DELETE_DONE_EVENT)->EnableWindow(m_bEnableControl && is_enable);
+	BOOL is_enable = this->IsWindowEnabled();
+	this->GetDlgItem(IDC_BUTTON_make_object_EVENT)->EnableWindow(this->m_bEnableControl && is_enable);
+	this->GetDlgItem(IDC_BUTTON_DELETE_EVENT)->EnableWindow(this->m_bEnableControl && is_enable);
+	this->GetDlgItem(IDC_BUTTON_suspend_time_event)->EnableWindow(this->m_bEnableControl && is_enable);
+	this->GetDlgItem(IDC_BUTTON_resume_time_event)->EnableWindow(this->m_bEnableControl && is_enable);
+	this->GetDlgItem(IDC_CHECK_DELETE_DONE_EVENT)->EnableWindow(this->m_bEnableControl && is_enable);
 
 
 	//-----------------------------------------------------------------
 	// 2. 값설정.
 	//-----------------------------------------------------------------
 	// 1) 설정하기.
-	PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);
+	this->PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);
 
 	// 2) Timer 설정하기
-	SetTimer(0, 500, NULL);
+	this->SetTimer(0, 500, NULL);
 
 	// return) 
 	return TRUE;  // return TRUE unless you set the focus to a control
@@ -404,33 +404,33 @@ BOOL CChild_event_list::OnInitDialog()
 
 void CChild_event_list::OnEnable(BOOL is_enable)
 {
-	CChildDialog::OnEnable(is_enable);
+	this->CChildDialog::OnEnable(is_enable);
 
-	GetDlgItem(IDC_STATIC_EVENT_COUNT)->EnableWindow(is_enable);
+	this->GetDlgItem(IDC_STATIC_EVENT_COUNT)->EnableWindow(is_enable);
 
-	GetDlgItem(IDC_BUTTON_make_object_EVENT)->EnableWindow(m_bEnableControl && is_enable);
-	GetDlgItem(IDC_BUTTON_DELETE_EVENT)->EnableWindow(m_bEnableControl && is_enable);
-	GetDlgItem(IDC_BUTTON_suspend_time_event)->EnableWindow(m_bEnableControl && is_enable);
-	GetDlgItem(IDC_BUTTON_resume_time_event)->EnableWindow(m_bEnableControl && is_enable);
-	GetDlgItem(IDC_CHECK_DELETE_DONE_EVENT)->EnableWindow(m_bEnableControl && is_enable);
+	this->GetDlgItem(IDC_BUTTON_make_object_EVENT)->EnableWindow(this->m_bEnableControl && is_enable);
+	this->GetDlgItem(IDC_BUTTON_DELETE_EVENT)->EnableWindow(this->m_bEnableControl && is_enable);
+	this->GetDlgItem(IDC_BUTTON_suspend_time_event)->EnableWindow(this->m_bEnableControl && is_enable);
+	this->GetDlgItem(IDC_BUTTON_resume_time_event)->EnableWindow(this->m_bEnableControl && is_enable);
+	this->GetDlgItem(IDC_CHECK_DELETE_DONE_EVENT)->EnableWindow(this->m_bEnableControl && is_enable);
 
-	m_listctrlEvent.EnableWindow(is_enable);
+	this->m_listctrlEvent.EnableWindow(is_enable);
 
-	GetDlgItem(IDC_STATIC_T1)->EnableWindow(is_enable);
-	GetDlgItem(IDC_STATIC_T2)->EnableWindow(is_enable);
-	GetDlgItem(IDC_STATIC_T3)->EnableWindow(is_enable);
+	this->GetDlgItem(IDC_STATIC_T1)->EnableWindow(is_enable);
+	this->GetDlgItem(IDC_STATIC_T2)->EnableWindow(is_enable);
+	this->GetDlgItem(IDC_STATIC_T3)->EnableWindow(is_enable);
 }
 
 void CChild_event_list::OnDestroy()
 {
 	// 1) EventManager를 reset한다.
-	scoped_lock(m_cs_event_manager)
+	SCOPED_LOCK(this->m_lockable_event_manager)
 	{
-		m_pentity_manager.reset();
+		this->m_pentity_manager.reset();
 	}
 
 	// 2) 부모 Class의 on_destroy
-	__super::OnDestroy();
+	this->__super::OnDestroy();
 }
 
 LRESULT CChild_event_list::OnCGMessageNotify(WPARAM _wParam, LPARAM /*_lParam*/)
@@ -445,7 +445,7 @@ LRESULT CChild_event_list::OnCGMessageNotify(WPARAM _wParam, LPARAM /*_lParam*/)
 			break;
 	case	CGUPDATE:
 			{
-				UpdateEventManager();
+				this->UpdateEventManager();
 			}
 			break;
 	};
@@ -456,7 +456,7 @@ LRESULT CChild_event_list::OnCGMessageNotify(WPARAM _wParam, LPARAM /*_lParam*/)
 
 void CChild_event_list::OnSizing(UINT fwSide, LPRECT pRect)
 {
-	__super::OnSizing(fwSide, pRect);
+	this->__super::OnSizing(fwSide, pRect);
 
 	// 1) Width의 한계를 설정한다.
 
@@ -467,39 +467,39 @@ void CChild_event_list::OnSize(UINT nType, int cx, int cy)
 {
 	__super::OnSize(nType, cx, cy);
 
-	if(m_listctrlEvent.m_hWnd!=NULL)
+	if(this->m_listctrlEvent.m_hWnd!=NULL)
 	{
-		CRect	tempRectOriginal;
-		GetClientRect(tempRectOriginal);
+		CRect tempRectOriginal;
+		this->GetClientRect(tempRectOriginal);
 
 		// TODO: Add your message handler code here
-		CRect	tempRect;
-		m_listctrlEvent.GetWindowRect(tempRect);
+		CRect tempRect;
+		this->m_listctrlEvent.GetWindowRect(tempRect);
 
-		ScreenToClient(tempRect);
+		this->ScreenToClient(tempRect);
 
-		tempRect.left	 = 0;
-		tempRect.right	 = tempRectOriginal.right;
-		tempRect.bottom	 = tempRectOriginal.bottom;
+		tempRect.left = 0;
+		tempRect.right = tempRectOriginal.right;
+		tempRect.bottom = tempRectOriginal.bottom;
 
-		m_listctrlEvent.MoveWindow(tempRect);
+		this->m_listctrlEvent.MoveWindow(tempRect);
 	}
 }
 void CChild_event_list::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent==0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
-		RETURN_IF(IsWindowEnabled() == FALSE)
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
+		RETURN_IF(this->IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
-		RETURN_IF(IsWindowVisible() == FALSE)
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
+		RETURN_IF(this->IsWindowVisible() == FALSE)
 
 		// 1) 상태를 Update한다.
-		UpdateEventManager();
+			this->UpdateEventManager();
 	}
 	
-	CChildDialog::OnTimer(nIDEvent);
+	this->CChildDialog::OnTimer(nIDEvent);
 }
 
 void CChild_event_list::OnBnClickedButtonNewEvent()
@@ -511,24 +511,24 @@ void CChild_event_list::OnBnClickedButtonDeleteEvent()
 	// declare) 
 	object_ptr<time_event::entity_manager> pentity_manager;
 	
-	scoped_lock(m_cs_event_manager)
+	SCOPED_LOCK(this->m_lockable_event_manager)
 	{
 		// - setting...
-		pentity_manager = m_pentity_manager;
+		pentity_manager = this->m_pentity_manager;
 	}
 
 	// check) pEventManagr가 nullptr이면 그냥 끝낸다.
 	RETURN_IF(pentity_manager.empty())
 
 	// Redraw Off
-	m_listctrlEvent.SetRedraw(FALSE);
+	this->m_listctrlEvent.SetRedraw(FALSE);
 
-	for(int i=0 ;i<m_listctrlEvent.GetItemCount() ;++i)
+	for(int i=0 ;i< this->m_listctrlEvent.GetItemCount() ;++i)
 	{
-		if(m_listctrlEvent.GetItemState(i, LVIS_SELECTED))
+		if(this->m_listctrlEvent.GetItemState(i, LVIS_SELECTED))
 		{
 			// 1) Connectable을 얻는다.
-			auto* pobject = (time_event::Ientity*)m_listctrlEvent.GetItemData(i);
+			auto* pobject = (time_event::Ientity*)this->m_listctrlEvent.GetItemData(i);
 
 			// check) pobject가 nullptr일 수는 없다.
 			CGASSERT_ERROR(pobject != nullptr);
@@ -537,18 +537,18 @@ void CChild_event_list::OnBnClickedButtonDeleteEvent()
 			pentity_manager->unregister_entity(pobject);
 
 			// 3) Item을 지운다.
-			m_listctrlEvent.DeleteItem(i);
+			this->m_listctrlEvent.DeleteItem(i);
 
-			// 4) 지웠으니 하나를 다시 물린다.(++될것을 감안한 것임...)
+			// 4) 지웠으니 하나를 다시 물린다.(++될 것을 감안한 것임...)
 			--i;
 		}
 	}
 
 	// 6) Event Count를 써넣는다.
-	SetDlgItemInt(IDC_STATIC_EVENT_COUNT, static_cast<int>(pentity_manager->size()));
+	this->SetDlgItemInt(IDC_STATIC_EVENT_COUNT, static_cast<int>(pentity_manager->size()));
 
 	// Redraw Off
-	m_listctrlEvent.SetRedraw(TRUE);
+	this->m_listctrlEvent.SetRedraw(TRUE);
 }
 
 void CChild_event_list::OnBnClickedCheckDeleteDoneEvent()
@@ -556,17 +556,17 @@ void CChild_event_list::OnBnClickedCheckDeleteDoneEvent()
 	// declare) 
 	object_ptr<time_event::entity_manager> pentity_manager;
 	
-	scoped_lock(m_cs_event_manager)
+	SCOPED_LOCK(this->m_lockable_event_manager)
 	{
 		// - setting...
-		pentity_manager = m_pentity_manager;
+		pentity_manager = this->m_pentity_manager;
 	}
 
 	// check) pentity_manager가 nullptr이면 그냥 끝낸다.
 	RETURN_IF(pentity_manager.empty())
 
 	// 1) DeleteDonEvent 상태를 설정한다.
-	scoped_lock(pentity_manager->get_lockable())
+	SCOPED_LOCK(pentity_manager->get_lockable())
 	{
 		pentity_manager->enable_delete_done_entity(((CButton*)GetDlgItem(IDC_CHECK_DELETE_DONE_EVENT))->GetCheck() == BST_CHECKED);
 	}
@@ -577,27 +577,27 @@ void CChild_event_list::OnBnClickedButtonSuspendEvent()
 	// declare) 
 	object_ptr<time_event::entity_manager> pentity_manager;
 	
-	scoped_lock(m_cs_event_manager)
+	SCOPED_LOCK(this->m_lockable_event_manager)
 	{
 		// - setting...
-		pentity_manager = m_pentity_manager;
+		pentity_manager = this->m_pentity_manager;
 	}
 
 	// check) pentity_manager가 nullptr이면 그냥 끝낸다.
 	RETURN_IF(pentity_manager.empty())
 
-	scoped_lock(pentity_manager->get_lockable())
+	SCOPED_LOCK(pentity_manager->get_lockable())
 	{
-		POSITION pos = m_listctrlEvent.GetFirstSelectedItemPosition();
+		POSITION pos = this->m_listctrlEvent.GetFirstSelectedItemPosition();
 		while(pos)
 		{
-			int	nItem = m_listctrlEvent.GetNextSelectedItem(pos);
+			int	nItem = this->m_listctrlEvent.GetNextSelectedItem(pos);
 
 			// 1) Connectable을 얻는다.
-			auto* pobject_find = (time_event::Ientity*)m_listctrlEvent.GetItemData(nItem);
+			auto* pobject_find = (time_event::Ientity*)this->m_listctrlEvent.GetItemData(nItem);
 
 			// check) pobject_find이 nullptr일 수는 없다.
-			CGASSERT_ERROR(pobject_find != nullptr);
+			CGASSERT_FATAL(pobject_find != nullptr);
 
 			// check) 찾지 못했으면 끝낸다.
 			CONTINUE_IF(pentity_manager->_is_exist(pobject_find) == false);
@@ -616,27 +616,27 @@ void CChild_event_list::OnBnClickedButtonResumeEvent()
 	// declare) 
 	object_ptr<time_event::entity_manager> pentity_manager;
 	
-	scoped_lock(m_cs_event_manager)
+	SCOPED_LOCK(this->m_lockable_event_manager)
 	{
-		pentity_manager = m_pentity_manager;
+		pentity_manager = this->m_pentity_manager;
 	}
 
 	// check) pentity_manager가 nullptr이면 그냥 끝낸다.
 	RETURN_IF(pentity_manager.empty())
 
-	scoped_lock(pentity_manager->get_lockable())
+	SCOPED_LOCK(pentity_manager->get_lockable())
 	{
-		POSITION pos = m_listctrlEvent.GetFirstSelectedItemPosition();
+		POSITION pos = this->m_listctrlEvent.GetFirstSelectedItemPosition();
 
 		while(pos)
 		{
-			int	nItem = m_listctrlEvent.GetNextSelectedItem(pos);
+			int	nItem = this->m_listctrlEvent.GetNextSelectedItem(pos);
 
 			// 1) Connectable을 얻는다.
-			auto* pobject_find = (time_event::Ientity*)m_listctrlEvent.GetItemData(nItem);
+			auto* pobject_find = (time_event::Ientity*)this->m_listctrlEvent.GetItemData(nItem);
 
 			// check) pobject_find이 nullptr일 수는 없다.
-			CGASSERT_ERROR(pobject_find != nullptr);
+			CGASSERT_FATAL(pobject_find != nullptr);
 
 			// check) 찾지 못했으면 끝낸다.
 			CONTINUE_IF(pentity_manager->_is_exist(pobject_find) == false);
@@ -647,7 +647,7 @@ void CChild_event_list::OnBnClickedButtonResumeEvent()
 	}
 
 	// 3) Update한다.
-	PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);
+	this->PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);
 }
 
 void CChild_event_list::OnNMDblclkListEvent(NMHDR* pNMHDR, LRESULT *pResult)
@@ -660,13 +660,13 @@ void CChild_event_list::OnNMDblclkListEvent(NMHDR* pNMHDR, LRESULT *pResult)
 	// declare) 
 	object_ptr<time_event::Ientity>	pevent;
 
-	scoped_lock(m_cs_event_manager)
+	SCOPED_LOCK(this->m_lockable_event_manager)
 	{
 		// check) EventManager가 nullptr이면 끝낸다.
-		RETURN_IF(m_pentity_manager.empty());
+		RETURN_IF(this->m_pentity_manager.empty());
 
 		// - Event object를 얻는다.
-		pevent = (time_event::Ientity*)m_listctrlEvent.GetItemData(pNMItemActivate->iItem);
+		pevent = (time_event::Ientity*)this->m_listctrlEvent.GetItemData(pNMItemActivate->iItem);
 	}
 
 	// check) pevent가 nullptr이면 끝낸다.

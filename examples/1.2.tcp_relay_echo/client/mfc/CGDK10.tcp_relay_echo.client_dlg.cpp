@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "framework.h"
 #include "CGDK10.tcp_relay_echo.client.mfc.h"
 #include "CGDK10.tcp_relay_echo.client_dlg.h"
@@ -46,7 +46,7 @@ BEGIN_MESSAGE_MAP(Ctcp_relay_echo_client_dlg, CDialogEx)
 END_MESSAGE_MAP()
 #pragma warning(default:4407)
 
-// Ctcp_relay_echo_client_dlg ë©”ì‹œì§€ ì²˜ë¦¬ê¸°
+// Ctcp_relay_echo_client_dlg ¸Ş½ÃÁö Ã³¸®±â
 BOOL Ctcp_relay_echo_client_dlg::OnInitDialog()
 {
 	//-----------------------------------------------------------------
@@ -59,9 +59,9 @@ BOOL Ctcp_relay_echo_client_dlg::OnInitDialog()
 
 
 	//-----------------------------------------------------------------
-	// 2. ì‹œì‘
+	// 2. ½ÃÀÛ
 	//-----------------------------------------------------------------
-	// 1) tester ê°ì²´ ìƒì„±
+	// 1) tester °´Ã¼ »ı¼º
 	g_ptest_tcp_relay_echo_client = make_own<test_tcp_relay_echo_client>();
 
 	// 2) tester start
@@ -69,7 +69,7 @@ BOOL Ctcp_relay_echo_client_dlg::OnInitDialog()
 
 
 	//-----------------------------------------------------------------
-	// 2. control ì„¤ì •.
+	// 2. control ¼³Á¤.
 	//-----------------------------------------------------------------
 	// 1) Connective
 	m_child_connective_info.CreateChild(&g_ptest_tcp_relay_echo_client->m_pconnector_socket->statistics_get_connective_info_total(), this);
@@ -109,14 +109,14 @@ BOOL Ctcp_relay_echo_client_dlg::OnInitDialog()
 	m_ctrl_tooltip.SetDelayTime(TTDT_AUTOMATIC, 100);
 
 	//-----------------------------------------------------------------
-	// 6. Timerì„¤ì •.
+	// 6. Timer¼³Á¤.
 	//-----------------------------------------------------------------
-	// 1) Statisticsë¥¼ ìœ„í•œ Timer
+	// 1) Statistics¸¦ À§ÇÑ Timer
 	SetTimer(1, 1000, NULL);
 
 
 	// return) 
-	return TRUE;  // í¬ì»¤ìŠ¤ë¥¼ ì»¨íŠ¸ë¡¤ì— ì„¤ì •í•˜ì§€ ì•Šìœ¼ë©´ TRUEë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.
+	return TRUE;  // Æ÷Ä¿½º¸¦ ÄÁÆ®·Ñ¿¡ ¼³Á¤ÇÏÁö ¾ÊÀ¸¸é TRUE¸¦ ¹İÈ¯ÇÕ´Ï´Ù.
 }
 
 void Ctcp_relay_echo_client_dlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -124,19 +124,19 @@ void Ctcp_relay_echo_client_dlg::OnSysCommand(UINT nID, LPARAM lParam)
 	CDialogEx::OnSysCommand(nID, lParam);
 }
 
-// ëŒ€í™” ìƒìì— ìµœì†Œí™” ë‹¨ì¶”ë¥¼ ì¶”ê°€í•  ê²½ìš° ì•„ì´ì½˜ì„ ê·¸ë¦¬ë ¤ë©´
-//  ì•„ë˜ ì½”ë“œê°€ í•„ìš”í•©ë‹ˆë‹¤.  ë¬¸ì„œ/ë·° ëª¨ë¸ì„ ì‚¬ìš©í•˜ëŠ” MFC ì• í”Œë¦¬ì¼€ì´ì…˜ì˜ ê²½ìš°ì—ëŠ”
-//  í”„ë ˆì„ì›Œí¬ì—ì„œ ì´ ì‘ì—…ì„ ìë™ìœ¼ë¡œ ìˆ˜í–‰í•©ë‹ˆë‹¤.
+// ´ëÈ­ »óÀÚ¿¡ ÃÖ¼ÒÈ­ ´ÜÃß¸¦ Ãß°¡ÇÒ °æ¿ì ¾ÆÀÌÄÜÀ» ±×¸®·Á¸é
+//  ¾Æ·¡ ÄÚµå°¡ ÇÊ¿äÇÕ´Ï´Ù.  ¹®¼­/ºä ¸ğµ¨À» »ç¿ëÇÏ´Â MFC ¾ÖÇÃ¸®ÄÉÀÌ¼ÇÀÇ °æ¿ì¿¡´Â
+//  ÇÁ·¹ÀÓ¿öÅ©¿¡¼­ ÀÌ ÀÛ¾÷À» ÀÚµ¿À¸·Î ¼öÇàÇÕ´Ï´Ù.
 
 void Ctcp_relay_echo_client_dlg::OnPaint()
 {
 	if (IsIconic())
 	{
-		CPaintDC dc(this); // ê·¸ë¦¬ê¸°ë¥¼ ìœ„í•œ ë””ë°”ì´ìŠ¤ ì»¨í…ìŠ¤íŠ¸ì…ë‹ˆë‹¤.
+		CPaintDC dc(this); // ±×¸®±â¸¦ À§ÇÑ µğ¹ÙÀÌ½º ÄÁÅØ½ºÆ®ÀÔ´Ï´Ù.
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		// í´ë¼ì´ì–¸íŠ¸ ì‚¬ê°í˜•ì—ì„œ ì•„ì´ì½˜ì„ ê°€ìš´ë°ì— ë§ì¶¥ë‹ˆë‹¤.
+		// Å¬¶óÀÌ¾ğÆ® »ç°¢Çü¿¡¼­ ¾ÆÀÌÄÜÀ» °¡¿îµ¥¿¡ ¸ÂÃä´Ï´Ù.
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
@@ -144,7 +144,7 @@ void Ctcp_relay_echo_client_dlg::OnPaint()
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
 
-		// ì•„ì´ì½˜ì„ ê·¸ë¦½ë‹ˆë‹¤.
+		// ¾ÆÀÌÄÜÀ» ±×¸³´Ï´Ù.
 		dc.DrawIcon(x, y, m_hIcon);
 	}
 	else
@@ -153,8 +153,8 @@ void Ctcp_relay_echo_client_dlg::OnPaint()
 	}
 }
 
-// ì‚¬ìš©ìê°€ ìµœì†Œí™”ëœ ì°½ì„ ë„ëŠ” ë™ì•ˆì— ì»¤ì„œê°€ í‘œì‹œë˜ë„ë¡ ì‹œìŠ¤í…œì—ì„œ
-//  ì´ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•©ë‹ˆë‹¤.
+// »ç¿ëÀÚ°¡ ÃÖ¼ÒÈ­µÈ Ã¢À» ²ô´Â µ¿¾È¿¡ Ä¿¼­°¡ Ç¥½ÃµÇµµ·Ï ½Ã½ºÅÛ¿¡¼­
+//  ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÕ´Ï´Ù.
 HCURSOR Ctcp_relay_echo_client_dlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
@@ -199,7 +199,7 @@ void Ctcp_relay_echo_client_dlg::OnAboutCGDKinfo()
 
 void Ctcp_relay_echo_client_dlg::OnBnClickedCancel()
 {
-	// 1) ëª¨ë“  ì†Œì¼“ì˜ ì ‘ì†ì„ ëŠê³  ì²˜ë¦¬ë¥¼ ì¢…ë£Œí•œë‹¤.
+	// 1) ¸ğµç ¼ÒÄÏÀÇ Á¢¼ÓÀ» ²÷°í Ã³¸®¸¦ Á¾·áÇÑ´Ù.
 	g_ptest_tcp_relay_echo_client.reset();
 
 	// 2) OnOK~
@@ -212,13 +212,13 @@ void Ctcp_relay_echo_client_dlg::ReadServerAddress()
 	TCHAR strAddress[256];
 	int port;
 
-	// 1) Address Stringì„ ì–»ëŠ”ë‹¤.
+	// 1) Address StringÀ» ¾ò´Â´Ù.
 	GetDlgItemText(IDC_EDIT_ADDRESS, strAddress, 256);
 
-	// 2) Portë¥¼ ì½ëŠ”ë‹¤.
-	port = GetDlgItemInt(IDC_EDIT_PORT);	// - Portë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) Port¸¦ ÀĞ´Â´Ù.
+	port = GetDlgItemInt(IDC_EDIT_PORT);	// - Port¸¦ ¼³Á¤ÇÑ´Ù.
 
-	// 3) Addressë¡œ ë³€í™˜í•œë‹¤.
+	// 3) Address·Î º¯È¯ÇÑ´Ù.
 	g_ptest_tcp_relay_echo_client->m_endpoint_connect = from_string(strAddress);
 	g_ptest_tcp_relay_echo_client->m_endpoint_connect.port(static_cast<uint16_t>(port));
 }
@@ -286,16 +286,16 @@ void Ctcp_relay_echo_client_dlg::OnBnClickedButtonClosesocketAll()
 
 void Ctcp_relay_echo_client_dlg::OnCbnSelchangeComboMessageSize()
 {
-	// 1) ìƒˆë¡œ ì„ íƒí•œ ê°’ì„ ì½ì–´ì˜¨ë‹¤.
+	// 1) »õ·Î ¼±ÅÃÇÑ °ªÀ» ÀĞ¾î¿Â´Ù.
 	std::size_t	selected = m_comboMessageSize.GetCurSel();
 
-	// 2) ìƒˆë¡œ ì„ íƒí•œ ê°’ì„ ì¨ë„£ëŠ”ë‹¤.
+	// 2) »õ·Î ¼±ÅÃÇÑ °ªÀ» ½á³Ö´Â´Ù.
 	g_ptest_tcp_relay_echo_client->set_message_size(selected);
 }
 
 void Ctcp_relay_echo_client_dlg::OnBnClickedButtonSingleSend()
 {
-	g_ptest_tcp_relay_echo_client->request_send_immidiately();
+	g_ptest_tcp_relay_echo_client->request_send_immediately();
 }
 
 void Ctcp_relay_echo_client_dlg::OnBnClickedButtonPool()

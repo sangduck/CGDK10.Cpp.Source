@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.http.h"
+#include "cgdk/sdk10/net.socket.http.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -12,25 +12,25 @@ int main()
 	// trace) 
 	std::cout << "start client [tut.socket.05.http.client]..."sv << '\n';
 
-	// 1) http requet ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) http requet °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto phttp_request = make_object<net::http_request>();
 
-	// 2) http request ë‚´ìš©ì„ ì„¤ì •í•œë‹¤.
+	// 2) http request ³»¿ëÀ» ¼³Á¤ÇÑ´Ù.
 	//phttp_request->set_request("https://www.naver.com"sv);
 	//phttp_request->set_request("http://www.google.com"sv);
 	//phttp_request->set_request("https://127.0.0.1"sv);
 	//phttp_request->set_request("ws://127.0.0.1"sv);
 	phttp_request->set_request("http://127.0.0.1"sv);
 
-	// 3) http response í•¨ìˆ˜ë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) http response ÇÔ¼ö¸¦ ¼³Á¤ÇÑ´Ù.
 	phttp_request->set_function([](sMESSAGE_HTTP_RESPONSE& _response)
 	{
-		// ì„¤ëª…) chunked ì‘ë‹µì¼ ê²½ìš° ì´ í•¨ìˆ˜ëŠ” ì—¬ëŸ¬ë²ˆ í˜¸ì¶œ ë  ìˆ˜ ìˆë‹¤.
+		// ¼³¸í) chunked ÀÀ´äÀÏ °æ¿ì ÀÌ ÇÔ¼ö´Â ¿©·¯ ¹ø È£Ãâ µÉ ¼ö ÀÖ´Ù.
 
-		// - ì„±ê³µ ì‹¤íŒ¨ ì—¬ë¶€ë¥¼ ì¶œë ¥í•œë‹¤.
+		// - ¼º°ø ½ÇÆĞ ¿©ºÎ¸¦ Ãâ·ÂÇÑ´Ù.
 		std::cout << " http response : "sv << _response.status_message << '\n';
 
-		// - contentsë¥¼ ì¶œë ¥í•œë‹¤.
+		// - contents¸¦ Ãâ·ÂÇÑ´Ù.
 		for(const auto& iter: _response.contents)
 			std::cout << ' ' << std::string_view(iter);
 
@@ -38,15 +38,15 @@ int main()
 		std::cout << '\n';
 	});
 
-	// 4) http ì ‘ì† ìš”ì²­! (ë¹„ë™ê¸° ì²˜ë¦¬ì´ë¯€ë¡œ ì™„ë£Œê¹Œì§€ ëŒ€ê¸°í•˜ë ¤ë©´ wait()í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•˜ë©´ ëœë‹¤.)
+	// 4) http Á¢¼Ó ¿äÃ»! (ºñµ¿±â Ã³¸®ÀÌ¹Ç·Î ¿Ï·á±îÁö ´ë±âÇÏ·Á¸é wait()ÇÔ¼ö¸¦ »ç¿ëÇÏ¸é µÈ´Ù.)
 	phttp_request->request();
 
-	// 5) ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+	// 5) ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 	while (_getch() != 27);
 
 	// trace) 
 	std::cout << "stop server [tut.socket.05.http.client]..."sv << '\n';
 
-	// end) ì¢…ë£Œ
+	// end) Á¾·á
 	return 0;
 }

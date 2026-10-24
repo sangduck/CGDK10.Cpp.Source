@@ -70,7 +70,11 @@ bool net::io::receivable::Ndatagram::prepare_receive()
 	// check) io_context가 없으면 잘못된 것이다.
 	CGASSERT_ERROR(pio_context.exist());
 
-	// 3) Event를 설정한다.
+	// 3) the executable of the socket (executable_socket::process_execute => process_execute_epoll). it was never set for UDP : no event reached the socket
+	CGASSERT_ERROR(this->m_pexecutable_socket.exist());
+	this->m_pexecutable_socket->set_socket(this);
+
+	// 4) set event
 	return pio_context->set_event(native_handle(), EPOLLET | EPOLLIN | EPOLLERR, this->m_pexecutable_socket);
 
 	// return)
@@ -80,54 +84,121 @@ bool net::io::receivable::Ndatagram::prepare_receive()
 
 intptr_t net::io::receivable::Ndatagram::process_complete_receivable( uintptr_t /*_result*/, std::size_t /*_transferred*/, shared_buffer& /*_buffer*/, const net::sockaddr& /*_address*/)
 {
-	// check) 
+	// check)
 	CGASSERT(socket_state() != eSOCKET_STATE::SYN, intptr_t(1));
 
 	// 1) get socket handle
 	auto handle_socket = this->native_handle();
 
-	// 2) get message
-	while (true)
+	// check)
+	RETURN_IF(handle_socket == INVALID_SOCKET, EPOLLIN);
+
+	//-----------------------------------------------------------------
+	// recvmmsg : up to COUNT_RECEIVE_BATCH_MAX datagrams in one syscall. (a FIONREAD and a recvfrom per datagram before)
+	//  - the batch adapts : a full batch doubles the next one, a partial one is the next size (at least 1).
+	//    (a socket with a datagram per event allocates one buffer, a busy one up to the max)
+	//  - a buffer per datagram (the pool) : a message kept by the application keeps only its own buffer.
+	//  - EPOLLET : drained until there is nothing more. (the edge is lost otherwise)
+	//  - an exception of a message closes nothing (UDP) : logged, the rest of the batch is processed.
+	//-----------------------------------------------------------------
+	const auto size_message = this->m_message_buffer_size;
+
+	for (;;)
 	{
-		// - get next pended message size
-		std::size_t size_pended = api::socket::get_pending_read_buffer(native_handle());
+		// 2) prepare the batch
+		const int count_batch = this->m_count_receive_batch;
 
-		// check)
-		CGASSERT_ERROR(size_pended <= static_cast<std::size_t>(api::socket::get_max_message_size(handle_socket)));
+		shared_buffer	array_buffer[COUNT_RECEIVE_BATCH_MAX];
+		net::sockaddr	array_address[COUNT_RECEIVE_BATCH_MAX];
+		::iovec			array_iovec[COUNT_RECEIVE_BATCH_MAX];
+		::mmsghdr		array_message[COUNT_RECEIVE_BATCH_MAX]{};
 
-		// check)
-		BREAK_IF(size_pended == 0);
+		for (int i = 0; i < count_batch; ++i)
+		{
+			array_buffer[i] = alloc_shared_buffer(size_message);
+			array_iovec[i].iov_base = array_buffer[i].data();
+			array_iovec[i].iov_len = size_message;
+			array_message[i].msg_hdr.msg_name = &array_address[i];
+			array_message[i].msg_hdr.msg_namelen = static_cast<socklen_t>(sizeof(array_address[i].bytes_));
+			array_message[i].msg_hdr.msg_iov = &array_iovec[i];
+			array_message[i].msg_hdr.msg_iovlen = 1;
+		}
 
-		// - alloc shared buffer
-		auto buffer_receive = alloc_shared_buffer(size_pended);
+		// 3) receive
+		const int count_received = ::recvmmsg(handle_socket, array_message, static_cast<unsigned int>(count_batch), MSG_DONTWAIT, nullptr);
 
-		// declare) 
-		net::sockaddr address_peer;
+		// check) nothing more (EAGAIN) or an error (not fatal for UDP : the next event receives again)
+		if (count_received <= 0)
+		{
+			if (count_received < 0)
+			{
+				const auto error_code = api::get_last_error();
 
-		// - set sockaddr length
-		address_peer.length = sizeof(net::sockaddr);
+				if (error_code != EAGAIN && error_code != EWOULDBLOCK && error_code != EINTR)
+					this->m_last_socket_error = error_code;
+			}
 
-		// - receive datagram data
-		auto bytes_transfered = ::recvfrom(handle_socket, buffer_receive.data(), this->m_message_buffer_size, MSG_DONTWAIT, reinterpret_cast<::sockaddr*>(&address_peer), reinterpret_cast<::socklen_t*>(&address_peer.length));
+			// - the next event starts with a small batch
+			this->m_count_receive_batch = 1;
 
-		// check) ...
-		BREAK_IF(bytes_transfered <= 0);
+			// break)
+			break;
+		}
 
-		// - set length
-		buffer_receive.set_size(bytes_transfered);
+		// 4) process the datagrams
+		for (int i = 0; i < count_received; ++i)
+		{
+			auto& buffer_receive = array_buffer[i];
+			auto& address_peer = array_address[i];
+			const auto bytes_transfered = static_cast<std::size_t>(array_message[i].msg_len);
 
-		// statistics)
-		this->statistics_on_receive_bytes(bytes_transfered);
+			// - set length (a datagram longer than the buffer is truncated : as before)
+			buffer_receive.set_size(bytes_transfered);
+			address_peer.length = static_cast<int>(array_message[i].msg_hdr.msg_namelen);
 
-		// - call process_on_receive (일반적으로 여기서 하는 역할은 거의 없다.)
-		this->process_on_receive(buffer_receive, address_peer);
+			// statistics)
+			this->statistics_on_receive_bytes(bytes_transfered);
 
-		// - process message
-		//    - 여기서 Return해 오는 값은 다음 message를 받기위해 대음에 필요로 하는 메모리 용량이다.
-		//    - 주어지는 &buffer_receive에 진행된 Memory과 남은 Size등이 되돌아 온다.
-		//      따라서 buffer_receive은 받은 데이터 그대로 사용하면 된다.
-		//    - Exception이 발생가능하다.
-		this->process_packet(buffer_receive, address_peer);
+			try
+			{
+				// - call process_on_receive
+				this->process_on_receive(buffer_receive, address_peer);
+
+				// - process message
+				this->process_packet(buffer_receive, address_peer);
+			}
+			catch (std::exception& e)
+			{
+				// trace)
+				LOG_DEBUG << "(excp) CGDK.net.socket: exception on processing a datagram (dropped) : "sv << e.what() << " " __CGFUNCTION__ ""sv;
+
+				// - call 'exception handler'
+				throwable::execute_exception_handler(this, e, __FUNCTION__);
+			}
+			catch (...)
+			{
+				// trace)
+				LOG_DEBUG << "(excp) CGDK.net.socket: exception on processing a datagram (dropped) " __CGFUNCTION__ ""sv;
+
+				// declare)
+				throwable::failure e(eRESULT::EXCEPTION);
+
+				// - call 'exception handler'
+				throwable::execute_exception_handler(this, e, __FUNCTION__);
+			}
+		}
+
+		// 5) adapt the batch : partial => the queue is drained (the next batch is the count received)
+		if (count_received < count_batch)
+		{
+			this->m_count_receive_batch = (count_received > 1) ? count_received : 1;
+
+			// break)
+			break;
+		}
+
+		// - full => a larger batch next
+		this->m_count_receive_batch = (count_batch * 2 < COUNT_RECEIVE_BATCH_MAX) ? count_batch * 2 : COUNT_RECEIVE_BATCH_MAX;
 	}
 
 	// return)

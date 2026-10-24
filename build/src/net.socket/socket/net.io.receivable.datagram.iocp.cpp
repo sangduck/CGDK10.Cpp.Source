@@ -93,9 +93,9 @@ bool net::io::receivable::Ndatagram::prepare_receive()
 		// 1) add_reference처리.
 		//
 		//     receive를 걸기 전에 반드시 먼저 add_ref()를 해줘야 한다.
-		//     왜냐하면 receive가 다른 Thread에서 완료를 할수도 있기 때문에
+		//     왜냐하면 receive가 다른 Thread에서 완료를 할 수도 있기 때문에
 		//     그렇게 되면 Reference count가 증가되기 전에 감소해서 할당
-		//     해제 될 수도 있기 때문에 Error 발생시 다시 release()하는
+		//     해제 될 수도 있기 때문에 Error 발생 시 다시 release()하는
 		//     한이 있더라도 먼저 add_reference를 해야 한다.
 		//-----------------------------------------------------------------
 		add_ref();
@@ -122,15 +122,15 @@ bool net::io::receivable::Ndatagram::prepare_receive()
 			this->statistics_on_increase_async_receiveing();
 
 			// 6) receive한다.
-			while(false == api::socket::recv_from_async(
-				this->native_handle(),							// - socket Handle
+			while(false == this->_call_receiving([&](CGSOCKET _handle_socket) { return api::socket::recv_from_async(	// - the handle is read under the receiving lock (close changes it under the same lock)
+				_handle_socket,									// - socket Handle
 				pexecutable->get_wsabuf(),						// - WSABUF
 				1,												// - buffer count
 				pexecutable->reset_and_get_ptr_bytes_reiced(),	// - Received Byte
 				pexecutable->reset_and_get_ptr_flags(),			// - Flag
 				pexecutable->sockaddr_pointer(),				// - Address
 				pexecutable->sockaddr_length(),					// - Address length
-				pexecutable))									// - LPWSAOVERLAPPED
+				pexecutable); }))									// - LPWSAOVERLAPPED
 			{
 				// declare)
 				int	error_code = api::get_last_error();
@@ -167,8 +167,8 @@ bool net::io::receivable::Ndatagram::prepare_receive()
 		// exception) receive중 Exception이 발생한 경우.
 		//
 		// * new CGExecutable::CReceive() 중 Exception발생가능성이 있다.
-		// * temp_executable->receive_buffer().alloc_object(message_size); 중 alloc_object()함수 수행중 Exception발생가능성 있다.
-		// * recv_from()함수 호출 실패시 Throw된다.
+		// * temp_executable->receive_buffer().alloc_object(message_size); 중 alloc_object()함수 수행 중 Exception발생가능성 있다.
+		// * recv_from()함수 호출 실패 시 Throw된다.
 		// * process_packet 호출 과정 중 Exception발생 가능성 있다.
 		//-----------------------------------------------------------------
 		catch(std::exception& e)
@@ -239,7 +239,7 @@ intptr_t net::io::receivable::Ndatagram::process_complete_receivable( uintptr_t 
 			// - process_packet을 수행한다.(UDP에서는 Return Value가 의미없어서 받지 않는다.)
 			this->process_packet(_buffer, _address);
 		}
-		// 2) Error발생시 on_fail_receive를 수행함.
+		// 2) Error발생 시 on_fail_receive를 수행함.
 		// - 이런 경우는 거의 대부분 connect reset일 때 발생한다.
 		// - 따라서 이부분은 connect reset을 Report하는 Option을 켰을 때에만 동작한다.
 		else
@@ -272,9 +272,9 @@ intptr_t net::io::receivable::Ndatagram::process_complete_receivable( uintptr_t 
 	//   Debug Mode에서는 ASSERT를 걸어준다.
 	//
 	//   * 대략 다음의 경우에서 Exception이 발생할 수 있다.
-	//     - OnReceiv()함수 수행시 Exception~
-	//     - PrecessPacket수행시 Exception~
-	//     - OnFailPacket 수행시 Exception~
+	//     - OnReceiv()함수 수행 시 Exception~
+	//     - PrecessPacket수행 시 Exception~
+	//     - OnFailPacket 수행 시 Exception~
 	//---------------------------------------------------------
 	catch(std::exception& e)
 	{
@@ -326,15 +326,15 @@ intptr_t net::io::receivable::Ndatagram::process_complete_receivable( uintptr_t 
 	pexecutable->set_receive_buffer(alloc_shared_buffer(get_message_size()) ^ get_message_size());
 
 	// 4) receive한다.
-	while(false == api::socket::recv_from_async(
-		this->native_handle(),							// - socket Handle
+	while(false == this->_call_receiving([&](CGSOCKET _handle_socket) { return api::socket::recv_from_async(	// - the handle is read under the receiving lock (close changes it under the same lock)
+		_handle_socket,									// - socket Handle
 		pexecutable->get_wsabuf(),						// - WSABUF
 		1,												// - buffer count
 		pexecutable->reset_and_get_ptr_bytes_reiced(),	// - Received Byte
 		pexecutable->reset_and_get_ptr_flags(),			// - Flag
 		(::sockaddr*)&_address,							// - Address
 		pexecutable->sockaddr_length(),					// - Address length
-		pexecutable))									// - LPWSAOVERLAPPED
+		pexecutable); }))									// - LPWSAOVERLAPPED
 	{
 		// declare)
 		int	error_code = api::get_last_error();

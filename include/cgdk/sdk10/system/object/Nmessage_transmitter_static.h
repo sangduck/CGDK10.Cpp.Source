@@ -31,7 +31,7 @@
 class CGDK::Nmessage_transmitter_static : virtual public Imessage_transmitter
 {
 public:
-	[[nodiscard]] static object_ptr<Imessageable> get_messageable() noexcept { return get_messageable_static();}
+	[[nodiscard]] static object_ptr<Imessageable> get_messageable() noexcept { std::lock_guard lock(lockable()); return get_messageable_static();}
 
 	static	object_ptr<Imessageable> reset_dispatchable_static() noexcept;
 	static	bool				register_messageable_static(const object_ptr<Imessageable>& _pmessageable) { return register_messageable_static(object_ptr<Imessageable>(_pmessageable));}
@@ -39,7 +39,8 @@ public:
 	static	int					unregister_messageable_static(Imessageable* _pmessageable=nullptr) noexcept;
 
 private:
-	[[nodiscard]] static lockable<object_ptr<Imessageable>>& get_messageable_static() noexcept { static lockable<object_ptr<Imessageable>> pmessageable; return pmessageable;}
+	[[nodiscard]] static lock_object& lockable() noexcept { static lock_object lockable_pmessageable; return lockable_pmessageable; }
+	[[nodiscard]] static object_ptr<Imessageable>& get_messageable_static() noexcept { static object_ptr<Imessageable> pmessageable; return pmessageable;}
 
 protected:
 	virtual	result_code			process_transmit_message(sMESSAGE& _msg) override;

@@ -24,3 +24,10 @@
 // 2) shared_buffer
 #include "cgdk/buffers/_shared_buffer.h"
 #include "cgdk/buffers/_make_shared_buffer.h"
+
+#if defined(_CGDK) && !defined(_MSC_VER) && !defined(CGDK_BUFFER_HEADER_ONLY) && !defined(CGDK_BUFFER_BUILD_EXPLICIT_INSTANTIATION)
+namespace CGDK
+{
+	extern template class _shared_buffer<buffer>;
+}
+#endif

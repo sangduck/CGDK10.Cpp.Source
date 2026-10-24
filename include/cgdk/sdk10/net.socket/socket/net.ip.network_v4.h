@@ -45,9 +45,7 @@ public:
 	[[nodiscard]] constexpr network_v4 canonical() const noexcept { return network_v4(network(), netmask()); }
 	[[nodiscard]] constexpr bool is_host() const noexcept { return prefix_length_ == 32; }
 	[[nodiscard]] constexpr bool is_subnet_of(const network_v4& _other) const noexcept;
-	template<class TALLOCATOR = std::allocator<char>>
-	[[nodiscard]] std::basic_string<char, std::char_traits<char>, TALLOCATOR>
-								to_string(const TALLOCATOR& _allocator = TALLOCATOR()) const;
+	[[nodiscard]] std::string to_string() const;
 
 public:
 			address_v4			address_;

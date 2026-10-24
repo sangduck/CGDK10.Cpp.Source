@@ -29,9 +29,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\net.io.sender.resp.h">
       <Filter>net.io</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.querier.h">
-      <Filter>querier</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.session.h">
       <Filter>session</Filter>
     </ClInclude>
@@ -46,6 +43,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.definitions.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\net.definitions.resp.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query.redis.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.query\redis\server.query.redis.querier.h">
+      <Filter>querier</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="querier">

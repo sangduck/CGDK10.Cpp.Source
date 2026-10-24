@@ -29,7 +29,6 @@
 #include <atomic>
 
 #if defined(_WIN32)
-	//#define	LOCKFREE_SELF_STACK		lockfree_self_stack
 	#define	LOCKFREE_SELF_STACK		locked_self_stack
 #elif defined(__ANDROID__)
 	#define	LOCKFREE_SELF_STACK		locked_self_stack
@@ -89,5 +88,3 @@
 
 // 2) CGDK locked container
 #include "cgdk/sdk10/common/locked_self_stack.h"
-//#include "cgdk/sdk10/common/lockfree_self_stack.h"
-//#include "cgdk/sdk10/common/lockfree_self_stack_64.h"

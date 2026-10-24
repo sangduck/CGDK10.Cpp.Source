@@ -1,4 +1,4 @@
-﻿; CGDK10.server.web.controls.MFC.vs16.def : DLL에 대한 모듈 매개 변수를 선언합니다.
+; CGDK10.server.web.controls.MFC.def : DLL에 대한 모듈 매개 변수를 선언합니다.
 
 LIBRARY
 

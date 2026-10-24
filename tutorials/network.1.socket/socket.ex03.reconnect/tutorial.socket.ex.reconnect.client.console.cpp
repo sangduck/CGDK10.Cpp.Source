@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -7,34 +7,34 @@
 
 using namespace CGDK;
 
-// 1) ì¬ì ‘ì† ê°€ëŠ¥í•œ socket í´ë˜ìŠ¤ë¥¼ ì •ì˜í•œë‹¤.
+// 1) ÀçÁ¢¼Ó °¡´ÉÇÑ socket Å¬·¡½º¸¦ Á¤ÀÇÇÑ´Ù.
 class socket_tcp_client : public net::socket::tcp_client_reconnect<>
 {
-	// (v) ì ‘ì† ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_connect() override
 	{
 		std::cout << " @ connected"sv<< '\n';
 	}
 
-	// (v) ì ‘ì† ì‹¤íŒ¨ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½ÇÆĞ ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_fail_connect(uint64_t /*_disconnect_reason*/) override
 	{
 		std::cout << " @ fail to connecting"sv << '\n';
 	}
 
-	// (v) ì ‘ì† ì‹¤íŒ¨ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½ÇÆĞ ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_request_reconnect(net::io::Iconnective* /*_pconnective*/) override
 	{
 		std::cout << " @ try reconnectting"sv << '\n';
 	}
 
-	// (v) ì ‘ì† ì¢…ë£Œ ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó Á¾·á ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_disconnect(uint64_t) override
 	{
 		std::cout << " @ disconnected"sv<< '\n';
 	}
 
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜.
+	// (v) ¸Ş½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö.
 	virtual result_code on_message(sMESSAGE_NETWORK& /*_msg*/) override
 	{
 		// return)
@@ -52,60 +52,60 @@ int main()
 	std::cout << " 'X' key: closesocket with disable reconnecting"sv << '\n';
 	std::cout << " 'ESC' key: terminate"sv << '\n';
 
-	// 2) ì ‘ì†ì„ ì‹œë„í•  'socket_tcp_client' ì†Œì¼“ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 2) Á¢¼ÓÀ» ½ÃµµÇÒ 'socket_tcp_client' ¼ÒÄÏ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto psocket = make_own<socket_tcp_client>();
 
-	// 3) ì¬ì ‘ì†ì„ enableí•œë‹¤.
-	psocket->enable_reconnect(true); // ì¬ì ‘ì† ê¸°ëŠ¥ í™œì„±í™”
-	psocket->set_reconnect_interval(5s); // ì¬ì ‘ì† ê°„ê²©ì€ 5ì´ˆ
+	// 3) ÀçÁ¢¼ÓÀ» enableÇÑ´Ù.
+	psocket->enable_reconnect(true); // ÀçÁ¢¼Ó ±â´É È°¼ºÈ­
+	psocket->set_reconnect_interval(5s); // ÀçÁ¢¼Ó °£°İÀº 5ÃÊ
 
-	// 3) 20000ë²ˆ í¬íŠ¸ì—ì„œ ì ‘ì†ì„ ì‹œë„í•œë‹¤. (ip::addressë‚˜ resolverë¡œ ì„¤ì •ì´ ê°€ëŠ¥í•˜ë‹¤.)
+	// 3) 20000¹ø Æ÷Æ®¿¡¼­ Á¢¼ÓÀ» ½ÃµµÇÑ´Ù. (ip::address³ª resolver·Î ¼³Á¤ÀÌ °¡´ÉÇÏ´Ù.)
 	psocket->start({{ net::ip::address_v4::loopback(), 20000 }});
 
-	// 4) ë©”ì‹œì§€ ë¬´í•œ ë£¨í”„~
+	// 4) ¸Ş½ÃÁö ¹«ÇÑ ·çÇÁ~
 	for(;;)
 	{
-		// - key ëˆŒë €ë‚˜?
+		// - key ´­·¶³ª?
 		if(_kbhit())
 		{
-			// - Keyë¥¼ ì½ëŠ”ë‹¤.
+			// - Key¸¦ ÀĞ´Â´Ù.
 			int	ch = _getch();
 
-			// - ESCí‚¤ë¥¼ ëˆ„ë¥´ë©´ ì ‘ì†ì„ ì¢…ë£Œí•œë‹¤.
+			// - ESCÅ°¸¦ ´©¸£¸é Á¢¼ÓÀ» Á¾·áÇÑ´Ù.
 			if (ch == 27)
 			{
 				break;
 			}
-			// - Zí‚¤ ëˆ„ë¥´ë©´ ì ‘ì†ì¢…ë£Œ ìš”ì²­í•©ë‹ˆë‹¤. (ê³§ ì¬ì ‘ì†ë©ë‹ˆë‹¤.)
+			// - ZÅ° ´©¸£¸é Á¢¼ÓÁ¾·á ¿äÃ»ÇÕ´Ï´Ù. (°ğ ÀçÁ¢¼ÓµË´Ï´Ù.)
 			else if(ch=='z' || ch=='Z')
 			{
 				// - send
 				psocket->closesocket();
 			}
-			// - Xí‚¤ ëˆ„ë¥´ë©´ ì¬ì ‘ì†ê¸°ëŠ¥ì„ ë„ê³  ì ‘ì†ì¢…ë£Œ ìš”ì²­í•©ë‹ˆë‹¤.
+			// - XÅ° ´©¸£¸é ÀçÁ¢¼Ó±â´ÉÀ» ²ô°í Á¢¼ÓÁ¾·á ¿äÃ»ÇÕ´Ï´Ù.
 			else if (ch == 'x' || ch == 'X')
 			{
-				// - ë¨¼ì € ì¬ì ‘ì† ê¸°ëŠ¥ì„ ëˆë‹¤.
+				// - ¸ÕÀú ÀçÁ¢¼Ó ±â´ÉÀ» ²ö´Ù.
 				psocket->disable_reconnect();
 
-				// - ì ‘ì†ì¢…ë£Œ
+				// - Á¢¼ÓÁ¾·á
 				psocket->closesocket();
 			}
 		}
 
-		// - 1ms ìŠ¬ë¦½í•œë‹¤. (CPUë¥¼ ë„ˆë¬´ ë§ì´ ë¨¹ìœ¼ë¯€ë¡œ...)
+		// - 1ms ½½¸³ÇÑ´Ù. (CPU¸¦ ³Ê¹« ¸¹ÀÌ ¸ÔÀ¸¹Ç·Î...)
 		std::this_thread::sleep_for(1ms);
 	}
 
-	// 5) ë¨¼ì € ì¬ì ‘ì† ê¸°ëŠ¥ì„ ëˆë‹¤.
+	// 5) ¸ÕÀú ÀçÁ¢¼Ó ±â´ÉÀ» ²ö´Ù.
 	psocket->disable_reconnect();
 
-	// 6) socketì„ closeí•œë‹¤.
+	// 6) socketÀ» closeÇÑ´Ù.
 	psocket->closesocket();
 
 	// trace) 
 	std::cout << "stop client [tut.socket.01.tcp_simple.client]..."sv << '\n';
 
-	// end) ì¢…ë£Œ
+	// end) Á¾·á
 	return 0;
 }

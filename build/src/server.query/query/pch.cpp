@@ -17,7 +17,7 @@ namespace CGDK
 	int								g_statistics_db_time = 0;
 
 	// 2) DBQuerier Manager
-	lockable<>						__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL3 + 1)	query::manager_querier::m_lockable_create;
+	lock_object						__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL3 + 1)	query::manager_querier::m_lockable_create;
 	own_ptr<query::manager_querier>	__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL3 + 1)	query::manager_querier::m_pinstance;
 }
 

@@ -27,8 +27,8 @@
 //-----------------------------------------------------------------------------
 template <class TTYPE> struct SCGLIST_ENTRY { TTYPE* Next = nullptr; };
 
-template <class TOBJECT>
-class CGDK::Ipoolable : public SCGLIST_ENTRY<TOBJECT>, virtual public Ireferenceable
+template <class T>
+class CGDK::Ipoolable : public SCGLIST_ENTRY<T>, virtual public Ireferenceable
 {
 };
 

@@ -30,7 +30,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)child_traffic_info_brief_send.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)child_traffic_info_mini.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)combobox_connective.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)dalog_connectable_status.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dialog_connectable_status.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)dialog_connective_status.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)dllmain.cpp">
       <CompileAsManaged>false</CompileAsManaged>

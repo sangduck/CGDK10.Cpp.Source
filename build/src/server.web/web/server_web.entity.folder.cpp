@@ -143,14 +143,14 @@ bool is_file_type_test_png(const std::filesystem::path& _filename)
 
 bool is_file_type_test_mov(const std::filesystem::path& _filename)
 {
-	// defintions) 
+	// definitions) 
 	auto STR_EXTENSION_MOV = ".mov";
 
 	// 1) get file extension 
 	auto str_extension = _filename.extension().string();
 
 	// check)
-	RETURN_IF(__stricmp(str_extension.c_str(), STR_EXTENSION_MOV) != 0, false);
+	RETURN_IF(CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_MOV) != 0, false);
 
 	// return)
 	return true;
@@ -158,7 +158,7 @@ bool is_file_type_test_mov(const std::filesystem::path& _filename)
 
 bool is_file_type_test_mpeg(const std::filesystem::path& _filename)
 {
-	// defintions) 
+	// definitions) 
 	auto STR_EXTENSION_MPG = ".mpg";
 	auto STR_EXTENSION_MPEG = ".mpeg";
 	auto STR_EXTENSION_MP4 = ".mp4";
@@ -167,9 +167,9 @@ bool is_file_type_test_mpeg(const std::filesystem::path& _filename)
 	auto str_extension = _filename.extension().string();
 
 	// check)
-	if (__stricmp(str_extension.c_str(), STR_EXTENSION_MPG) != 0
-	 && __stricmp(str_extension.c_str(), STR_EXTENSION_MPEG) != 0
-	 && __stricmp(str_extension.c_str(), STR_EXTENSION_MP4) != 0)
+	if (CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_MPG) != 0
+	 && CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_MPEG) != 0
+	 && CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_MP4) != 0)
 	{
 		return false;
 	}
@@ -180,14 +180,14 @@ bool is_file_type_test_mpeg(const std::filesystem::path& _filename)
 
 bool is_file_type_test_avi(const std::filesystem::path& _filename)
 {
-	// defintions) 
+	// definitions) 
 	auto STR_EXTENSION_AVI = ".avi";
 
 	// 1) get file extension 
 	auto str_extension = _filename.extension().string();
 
 	// check)
-	RETURN_IF(__stricmp(str_extension.c_str(), STR_EXTENSION_AVI) != 0, false);
+	RETURN_IF(CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_AVI) != 0, false);
 
 	// return)
 	return true;
@@ -266,14 +266,14 @@ bool is_file_type_test_mp3(const std::filesystem::path& _filename)
 
 bool is_file_type_test_ogg(const std::filesystem::path& _filename)
 {
-	// defintions) 
+	// definitions) 
 	auto STR_EXTENSION_OGG = ".ogg";
 
 	// 1) get file extension 
 	auto str_extension = _filename.extension().string();
 
 	// check)
-	RETURN_IF(__stricmp(str_extension.c_str(), STR_EXTENSION_OGG) != 0, false);
+	RETURN_IF(CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_OGG) != 0, false);
 
 	// return)
 	return true;
@@ -331,7 +331,7 @@ server::web::eENTITY_TYPE get_file_type(const std::filesystem::path& _filename)
 	}
 	else
 	{
-		// defintions) 
+		// definitions) 
 		auto STR_EXTENSION_HTM = ".htm";
 		auto STR_EXTENSION_HTML = ".html";
 		auto STR_EXTENSION_JS = ".js";
@@ -345,23 +345,23 @@ server::web::eENTITY_TYPE get_file_type(const std::filesystem::path& _filename)
 		auto str_extension = _filename.extension().string();
 
 		// 3) Image
-		if (__stricmp(str_extension.c_str(), STR_EXTENSION_HTM) == 0
-		 || __stricmp(str_extension.c_str(), STR_EXTENSION_HTML) == 0)
+		if (CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_HTM) == 0
+		 || CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_HTML) == 0)
 		{
 			type = server::web::eENTITY_TYPE::TEXT_HTML;
 		}
-		else if (__stricmp(str_extension.c_str(), STR_EXTENSION_JS) == 0
-		  	  || __stricmp(str_extension.c_str(), STR_EXTENSION_JAVA) == 0
-		  	  || __stricmp(str_extension.c_str(), STR_EXTENSION_JAVASCRIPT) == 0)
+		else if (CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_JS) == 0
+		  	  || CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_JAVA) == 0
+		  	  || CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_JAVASCRIPT) == 0)
 		{
 			type = server::web::eENTITY_TYPE::APPLICATION_SCRIPT;
 		}
-		else if (__stricmp(str_extension.c_str(), STR_EXTENSION_CSS) == 0
-			  || __stricmp(str_extension.c_str(), STR_EXTENSION_CS) == 0)
+		else if (CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_CSS) == 0
+			  || CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_CS) == 0)
 		{
 			type = server::web::eENTITY_TYPE::TEXT_CSS;
 		}
-		else if (__stricmp(str_extension.c_str(), STR_EXTENSION_TXT) == 0)
+		else if (CGDK::__stricmp(str_extension.c_str(), STR_EXTENSION_TXT) == 0)
 		{
 			type = server::web::eENTITY_TYPE::TEXT_PLAIN;
 		}
@@ -394,8 +394,8 @@ result_code server::web::entity::folder::initialize(const std::string_view _sour
 	// declare) 
 	context	context_setting;
 
-	context_setting["source"sv] = _source;
-	context_setting["recursive"sv] = _flag_recursive;
+	context_setting["source"] = _source;
+	context_setting["recursive"] = _flag_recursive;
 
 	// return) 
 	return this->initialize(context_setting);
@@ -411,8 +411,14 @@ chrono::time::utc::time_point get_file_write_time(const std::filesystem::path& _
 }
 void server::web::entity::folder::on_initializing(context& _context)
 {
-	// 1) get source directory
-	auto str_source = static_cast<std::string>(_context["source"sv]);
+	// declare)
+	std::string str_source;
+
+		// 1) get source directory
+	if (const auto& context_source = _context["source"]; context_source.is_valid())
+	{
+		str_source = (std::string&&)context_source;
+	}
 
 	// 2) get path name
 	std::filesystem::path path_full{ str_source };
@@ -420,11 +426,8 @@ void server::web::entity::folder::on_initializing(context& _context)
 	// declare) 
 	bool is_recursive = true;
 
-	// 3) is_recursive
-	auto context_is_recursive = _context["recursive"sv];
-
 	// 4) flag - get 'is_recursive' value
-	if (context_is_recursive.is_valid())
+	if (const auto& context_is_recursive = _context["recursive"sv]; context_is_recursive.is_valid())
 	{
 		is_recursive = (bool)context_is_recursive;
 	}
@@ -499,10 +502,10 @@ void server::web::entity::folder::on_initializing(context& _context)
 	}
 
 	// 6) find start page
-	m_pentity_entry = find_child_entity(m_str_entry);
+	this->m_pentity_entry = find_child_entity(m_str_entry);
 		
 	// 7) find default start page
-	if(m_pentity_entry.empty())
+	if(this->m_pentity_entry.empty())
 	{
 		for(auto& iter : g_default_page)
 		{
@@ -512,14 +515,14 @@ void server::web::entity::folder::on_initializing(context& _context)
 			// check) 
 			if (pentity.exist())
 			{
-				m_pentity_entry = pentity;
+				this->m_pentity_entry = pentity;
 			}
 		}
 	}
 
 	// 8) set path...
-	set_name(path_full.filename().string());
-	m_path_source = path_full.string();
+	this->name(path_full.filename().string());
+	this->m_path_source = path_full.string();
 }
 
 void server::web::entity::folder::on_initialize(context& /*_context*/)
@@ -529,10 +532,10 @@ void server::web::entity::folder::on_initialize(context& /*_context*/)
 void server::web::entity::folder::on_destroying()
 {
 	// declare) 
-	std::map<std::string, object_ptr<Ientity>> mapChild;
+	std::map<std::string, object_ptr<Ientity>, std::less<>> mapChild;
 
 	// 1) 일단 Map에서 제거한다.
-	scoped_lock(m_map_child)
+	SCOPED_LOCK(this->m_lockable_map_child)
 	{
 		for(auto& iter: m_map_child)
 		{
@@ -590,7 +593,7 @@ int server::web::entity::folder::process_request(sMESSAGE_HTTP_REQUEST& _msg, st
 
 	try
 	{
-		// 1) ganerate path info if _path is empty...
+		// 1) generate path info if _path is empty...
 		if (_path.empty())
 		{
 			// declare) 
@@ -640,7 +643,7 @@ int server::web::entity::folder::process_request(sMESSAGE_HTTP_REQUEST& _msg, st
 			// - find entity
 			pentity = find_child_entity(_path[1]);
 
-			// - etract
+			// - extract
 			_path.erase(_path.begin() + 1);
 		}
 		else
@@ -651,7 +654,7 @@ int server::web::entity::folder::process_request(sMESSAGE_HTTP_REQUEST& _msg, st
 		// checK) fail to find
 		THROW_IF(pentity.empty(), throwable::failure(eRESULT::NOT_EXIST, 404, "can't find"sv));
 
-		// 6) reqest to entity
+		// 6) request to entity
 		result = pentity->process_request(_msg, _path, _webserver_parameters);
 	}
 	catch(throwable::failure& e)

@@ -68,7 +68,8 @@ public:
 			};
 
 	// 1) Group(Memberable가 속해있는 Group이다. Group에 속해있지 않으면 nullptr이 된다.)
-			lockable<std::vector<OBSERVER_REGISTER_INFO>> m_vector_observable;
+	mutable	lock_object			m_lockable_vector_observable;
+			std::vector<OBSERVER_REGISTER_INFO> m_vector_observable;
 
 private:
 			void*				m_pobserver_data;
@@ -91,22 +92,22 @@ void Iobserver<_observer_base_t, _TOBSERVER_CHANNEL, _TOBSERVABLEBASE>::_add_obs
 	// check)
 	CGASSERT_ERROR(_pobservable != nullptr)
 
-	scoped_lock(m_vector_observable)
+	SCOPED_LOCK(this->m_lockable_vector_observable)
 	{
-		m_vector_observable.emplace_back(OBSERVER_REGISTER_INFO(_pobservable, _ocid));
+		this->m_vector_observable.emplace_back(OBSERVER_REGISTER_INFO(_pobservable, _ocid));
 	}
 }
 
 template <class _observer_base_t, class _TOBSERVER_CHANNEL, class _TOBSERVABLEBASE>
 void Iobserver<_observer_base_t, _TOBSERVER_CHANNEL, _TOBSERVABLEBASE>::_erase_observable(observer_channel_t _ocid) noexcept
 {
-	scoped_lock(m_vector_observable)
+	SCOPED_LOCK(this->m_lockable_vector_observable)
 	{
-		for (auto iter = m_vector_observable.begin(), iter_end = m_vector_observable.end(); iter != iter_end; ++iter)
+		for (auto iter = this->m_vector_observable.begin(), iter_end = this->m_vector_observable.end(); iter != iter_end; ++iter)
 		{
 			if (iter->ocid == _ocid)
 			{
-				m_vector_observable.erase(iter);
+				this->m_vector_observable.erase(iter);
 				break;
 			}
 		}
@@ -116,9 +117,9 @@ void Iobserver<_observer_base_t, _TOBSERVER_CHANNEL, _TOBSERVABLEBASE>::_erase_o
 template <class _observer_base_t, class _TOBSERVER_CHANNEL, class _TOBSERVABLEBASE>
 bool Iobserver<_observer_base_t, _TOBSERVER_CHANNEL, _TOBSERVABLEBASE>::_is_observable(observable_base_t* _pobservable, observer_channel_t _ocid) const noexcept
 {
-	scoped_lock(m_vector_observable)
+	SCOPED_LOCK(this->m_lockable_vector_observable)
 	{
-		for (auto iter = m_vector_observable.begin(), iter_end = m_vector_observable.end(); iter != iter_end; ++iter)
+		for (auto iter = this->m_vector_observable.begin(), iter_end = this->m_vector_observable.end(); iter != iter_end; ++iter)
 		{
 			if (iter->ocid == _ocid)
 			{
@@ -137,9 +138,9 @@ object_ptr<_TOBSERVABLEBASE> Iobserver<_observer_base_t, _TOBSERVER_CHANNEL, _TO
 	// declare)
 	object_ptr<_TOBSERVABLEBASE> pobservable;
 
-	scoped_lock(m_vector_observable)
+	SCOPED_LOCK(this->m_lockable_vector_observable)
 	{
-		for (auto iter = m_vector_observable.begin(), iter_end = m_vector_observable.end(); iter != iter_end; ++iter)
+		for (auto iter = this->m_vector_observable.begin(), iter_end = this->m_vector_observable.end(); iter != iter_end; ++iter)
 		{
 			if (iter->ocid == _ocid)
 			{
@@ -156,9 +157,9 @@ object_ptr<_TOBSERVABLEBASE> Iobserver<_observer_base_t, _TOBSERVER_CHANNEL, _TO
 template <class _observer_base_t, class _TOBSERVER_CHANNEL, class _TOBSERVABLEBASE>
 void Iobserver<_observer_base_t, _TOBSERVER_CHANNEL, _TOBSERVABLEBASE>::_popback_observable() noexcept
 {
-	scoped_lock(m_vector_observable)
+	SCOPED_LOCK(this->m_lockable_vector_observable)
 	{
-		m_vector_observable.pop_back();
+		this->m_vector_observable.pop_back();
 	}
 }
 
@@ -168,13 +169,13 @@ void Iobserver<_observer_base_t, _TOBSERVER_CHANNEL, _TOBSERVABLEBASE>::_unsubsc
 	// declare)
 	object_ptr<_TOBSERVABLEBASE> pobservable;
 
-	scoped_lock_named(m_vector_observable, PPP1)
+	SCOPED_LOCK_NAMED(this->m_lockable_vector_observable, PPP1)
 	{
-		for (auto iter = m_vector_observable.begin(), iter_end = m_vector_observable.end(); iter != iter_end; ++iter)
+		for (auto iter = this->m_vector_observable.begin(), iter_end = this->m_vector_observable.end(); iter != iter_end; ++iter)
 		{
 			if (iter->ocid == _ocid)
 			{
-				scoped_lock_leave(PPP1)
+				SCOPED_LOCK_LEAVE(PPP1)
 
 				iter->pobservable->unsubscribe(dynamic_cast<_observer_base_t*>(this), _ocid);
 				break;
@@ -206,9 +207,9 @@ void Iobserver<_observer_base_t, _TOBSERVER_CHANNEL, _TOBSERVABLEBASE>::unsubscr
 	std::vector<OBSERVER_REGISTER_INFO> vector_observable;
 
 	// 1) 복사
-	scoped_lock(m_vector_observable)
+	SCOPED_LOCK(this->m_lockable_vector_observable)
 	{
-		vector_observable = m_vector_observable;
+		vector_observable = this->m_vector_observable;
 	}
 
 	// 2) 모두 제거

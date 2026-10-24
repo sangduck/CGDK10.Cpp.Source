@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -27,7 +27,7 @@ using namespace CGDK;
 
 //-----------------------------------------------------------------------------
 //
-// step 2) json íŒŒì¼ê³¼ contextì˜ ì—°ê³„
+// step 2) json ÆÄÀÏ°ú contextÀÇ ¿¬°è
 //
 // 
 // 
@@ -44,18 +44,18 @@ void tutorial_context_step_2_json_file()
 	// Declare) 
 	context	temp;
 
-	// 1) JSONíŒŒì¼ ì½ê¸°
-	temp.read_from_json_file("test_setting.json"sv);
+	// 1) JSONÆÄÀÏ ÀĞ±â
+	temp.from_json(api::file::read_file("test_setting.json"));
 
-	// 2) ì½ì€ JSON íŒŒì¼ í™œìš©í•˜ê¸°.
-	temp["Text"sv] = "Save this"sv;
+	// 2) ÀĞÀº JSON ÆÄÀÏ È°¿ëÇÏ±â.
+	temp["Text"] = "Save this";
 
-	// 4) Fileë¡œ ì €ì¥í•œë‹¤.
-	temp.write_to_json_file("test_setting_updated.json"sv);
+	// 3) JSONÀ» ½ºÆ®¸µÀ¸·Î ÀúÀåÇÑ´Ù.
+	shared_buffer buf = temp.to_json();
 
-	// 5) JSONì„ ìŠ¤íŠ¸ë§ìœ¼ë¡œ ì €ì¥í•œë‹¤.
-	shared_buffer buf = temp.write_to_json_string<wchar_t>();
+	// 4) File·Î ÀúÀåÇÑ´Ù.
+	api::file::write_file(temp.to_json(), "test_setting_updated.json");
 
-	// trace) í™”ë©´ì— ì¶œë ¥í•œë‹¤.
+	// trace) È­¸é¿¡ Ãâ·ÂÇÑ´Ù.
 	std::cout << buf.data() << std::endl;
 }

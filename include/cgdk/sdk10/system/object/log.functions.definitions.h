@@ -40,9 +40,9 @@
 	#define	_ENABLE_LOG_WARNING
 	#define	_ENABLE_LOG_USER
 
-	#if !defined(NDEBUG)
+	//#if !defined(NDEBUG)
 		#define	_ENABLE_LOG_DEBUG
-	#endif
+	//#endif
 	#define	_ENABLE_LOG_INFO
 	//#define _ENABLE_LOG_INFO_LOW
 	#define	_ENABLE_LOG_PROGRESS
@@ -53,7 +53,7 @@
 
 // ----------------------------------------------------------------------------
 //
-// 2. Log Funtions
+// 2. Log Functions
 //
 // ----------------------------------------------------------------------------
 // 1) Log

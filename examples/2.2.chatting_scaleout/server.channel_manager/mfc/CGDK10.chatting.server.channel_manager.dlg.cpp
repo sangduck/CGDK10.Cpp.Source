@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "framework.h"
 #include "CGDK10.chatting.server.channel_manager.mfc.h"
 #include "CGDK10.chatting.server.channel_manager.dlg.h"
@@ -13,7 +13,7 @@ class CAboutDlg : public CDialogEx
 public:
 	CAboutDlg();
 
-// ëŒ€í™” ìƒì ë°ì´í„°ì…ë‹ˆë‹¤.
+// ´ëÈ­ »óÀÚ µ¥ÀÌÅÍÀÔ´Ï´Ù.
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ABOUTBOX };
 #endif
@@ -38,7 +38,7 @@ BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
-// channel_manager_server_dlg ëŒ€í™” ìƒì
+// channel_manager_server_dlg ´ëÈ­ »óÀÚ
 
 
 
@@ -60,7 +60,7 @@ BEGIN_MESSAGE_MAP(channel_manager_server_dlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
-// channel_manager_server_dlg ë©”ì‹œì§€ ì²˜ë¦¬ê¸°
+// channel_manager_server_dlg ¸Ş½ÃÁö Ã³¸®±â
 
 BOOL channel_manager_server_dlg::OnInitDialog()
 {
@@ -108,7 +108,7 @@ void channel_manager_server_dlg::OnPaint()
 	{
 		CPaintDC dc(this);
 
-		sendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
+		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);

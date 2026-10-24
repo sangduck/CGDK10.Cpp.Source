@@ -230,7 +230,7 @@ void CStatic_graph::Scroll(int p_iScroll)
 	//-----------------------------------------------------------------
 	m_positionView+=p_iScroll;
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 
@@ -249,7 +249,7 @@ void CStatic_graph::Scroll(int p_iScroll)
 
 
 	//-----------------------------------------------------------------
-	// 3. 복사해서 땡긴다.
+	// 3. 복사해서 당긴다.
 	//-----------------------------------------------------------------
 	// 1) 복사해 옮긴다.
 	dc.BitBlt(0, 0, rect.right-1, rect.bottom, &dc, 1, 0, SRCCOPY);

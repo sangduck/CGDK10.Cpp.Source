@@ -1,7 +1,7 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 
-void socket_tcp::on_connect(net::io::Iconnective* /*_pacceptor*/)
+void socket_tcp::on_connect()
 {
 }
 void socket_tcp::on_disconnect(uint64_t /*_disconnect_reason*/)

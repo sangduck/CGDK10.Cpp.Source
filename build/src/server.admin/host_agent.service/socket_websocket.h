@@ -29,17 +29,29 @@
 // ----------------------------------------------------------------------------
 class socket_websocket :
 	public						net::socket::http_server,
+	public						net::io::add_on::Nsocket_sustain,
 	public						Nmessage_transmitter,
 	public						Igroupable<socket_websocket>,
 	public						Iobserver<socket_websocket>,
 	public						Npoolable<socket_websocket>
 {
+public:
+			socket_websocket();
+
 private:
+	virtual bool				on_websocket_upgrade(const sMESSAGE_HTTP_REQUEST& _request) override;
 	virtual void				on_connect() override;
 	virtual void				on_disconnect(uint64_t _disconnect_reason) override;
 	virtual result_code			on_message(sMESSAGE_HTTP_REQUEST& _msg) override;
 	virtual result_code			on_message(sMESSAGE_HTTP_WEBSOCKET& _msg) override;
 	virtual result_code			on_message(sMESSAGE_NETWORK& _msg) override;
+	virtual bool				process_keepalive_ping() override { return this->send_websocket_ping(); }
+
+			std::atomic<bool>	m_is_rejected{ false };
+
+			// - 메시지 제한 (on_connect에서 설정한다.)
+			std::mutex			m_lockable_rate;
+			server_system::rate_limiter m_rate_limiter;
 
 public:
 			shared_buffer		make_webmessage_set_main_page(std::string_view _command, std::string_view _page);

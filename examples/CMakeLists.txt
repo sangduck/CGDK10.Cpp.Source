@@ -19,19 +19,19 @@
 #-----------------------------------------------------------------------------
 # setting
 #-----------------------------------------------------------------------------
-# 1) project name
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY( VERSION 3.20 )
+
+# 2) project name
 PROJECT ( "CGDK10.example" )
 
-# 2) project version
+# 3) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 SET ( DEFAULT_BUILD_TYPE Debug )
-
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
 
 
 #-----------------------------------------------------------------------------
@@ -40,8 +40,9 @@ CMAKE_POLICY( VERSION 3.20 )
 # 1) tcp_echo
 ADD_SUBDIRECTORY (1.1.tcp_echo)
 ADD_SUBDIRECTORY (1.2.tcp_relay_echo)
-ADD_SUBDIRECTORY (1.3.tcp_multicast_echo)
+#ADD_SUBDIRECTORY (1.3.tcp_multicast_echo)
 ADD_SUBDIRECTORY (1.4.tcp_echo_ex)
+ADD_SUBDIRECTORY (1.6.emergency_signal)
 
 # 2) 1.chatting_simple
 ADD_SUBDIRECTORY (2.1.chatting_simple)
@@ -73,4 +74,10 @@ ADD_SUBDIRECTORY (6.5.game_trade_server_system)
 
 # 7) update_service
 ADD_SUBDIRECTORY (7.1.update_service)
+
+# 8) redis
+ADD_SUBDIRECTORY (8.1.bench_redis)
+
+# 9) Build alias for convenience
+ADD_CUSTOM_TARGET(examples DEPENDS ${BUILD_NAME}_linux.${BUILD_TYPE})
 

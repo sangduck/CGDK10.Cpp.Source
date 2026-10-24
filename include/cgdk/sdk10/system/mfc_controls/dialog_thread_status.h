@@ -68,22 +68,23 @@ private:
 // implementation) 
 protected:
 			CComboBox			m_combo_update_interval;
-	static int					m_update_inverval;
+	static int					m_update_interval;
 
 			CTabCtrl			m_tabMenu;
 
 			CChild_thread_list	m_child_thread_list;
 			CChild_executor_list m_child_executor_list;
 			CChild_schedulable_list m_child_schedulable_list;
-			lockable<object_ptr<api::manager_thread>>	m_pmanager_thead;
-			object_ptr<executor::manager>				m_pmanager_executor;
-			system_executor*							m_pdefault_executor;
+	mutable	lock_object			m_lockable_pmanager_thread;
+			object_ptr<api::manager_thread>	m_pmanager_thread;
+			object_ptr<executor::manager> m_pmanager_executor;
+			system_executor*	m_pdefault_executor;
 
 			void				SetManager(api::manager_thread* _pthread_manager, executor::manager* _pexecutor_manager, system_executor* _pDefaultExecutor);
-			void				resetThreadList();
+			void				resetThreadList() noexcept;
 			void				SetUpdateInterval(int _Interval);
 			void				UpdateThreadStatus();
-						void				SetViewStatus(bool _enable_sustain);
+			void				SetViewStatus(bool _enable_sustain);
 };
 
 

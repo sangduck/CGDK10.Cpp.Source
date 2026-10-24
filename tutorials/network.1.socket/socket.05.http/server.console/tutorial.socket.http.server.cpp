@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.http.h"
+#include "cgdk/sdk10/net.socket.http.h"
 #include "../../define_message.h"
 
 #include <iostream>
@@ -8,10 +8,10 @@
 
 using namespace CGDK;
 
-// 1) socket_web í´ë˜ìŠ¤ë¥¼ ì •ì˜í•œë‹¤.
+// 1) socket_web Å¬·¡½º¸¦ Á¤ÀÇÇÑ´Ù.
 class socket_web : public net::socket::http_server
 {
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜.
+	// (v) ¸Ş½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö.
 	virtual result_code on_message(sMESSAGE_HTTP_REQUEST& _msg) override;
 };
 
@@ -20,48 +20,48 @@ int main()
 	// trace) 
 	std::cout << "start server [tut.socket.05.http.server]..."sv << '\n';
 
-	// 2) 'socket_web'ì„ ì‚¬ìš©í•˜ëŠ” acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 2) 'socket_web'À» »ç¿ëÇÏ´Â acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto pacceptor = make_own<net::acceptor<socket_web>>();
 
-	// 3) 20000ë²ˆ í¬íŠ¸ì—ì„œ listenì„ ì‹œì‘í•œë‹¤. (ê¸°ë³¸ì„¤ì •ì€ IPv4ê³¼ IPv6 ë™ì‹œ ì§€ì›ì´ë‹¤.)
+	// 3) 20000¹ø Æ÷Æ®¿¡¼­ listenÀ» ½ÃÀÛÇÑ´Ù. (±âº»¼³Á¤Àº IPv4°ú IPv6 µ¿½Ã Áö¿øÀÌ´Ù.)
 	pacceptor->start({ {{net::ip::tcp::v6(), 10000}}, nullptr });
 
-	// 4) ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+	// 4) ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 	while(_getch() != 27);
 
 	// trace) 
 	std::cout << "stop server [tut.socket.05.http.server]..."sv << '\n';
 
-	// end) ì„œë²„ ì¢…ë£Œ
+	// end) ¼­¹ö Á¾·á
 	return 0;
 }
 
 result_code socket_web::on_message(sMESSAGE_HTTP_REQUEST& _msg)
 {
-	// 1) ì „ì†¡ë°›ì€ ìš”ì²­ ë©”ì‹œì§€ì˜ í—¤ë” ì •ë³´ë¥¼ ì¶œë ¥í•œë‹¤.
-	std::cout << " - protocol: "sv << to_string<char>(_msg.protocol) << " version: "sv << _msg.version_major() << "."sv << _msg.version_minor() << '\n';
-	std::cout << " - method: "sv << to_string<char>(_msg.method) << '\n';
+	// 1) Àü¼Û¹ŞÀº ¿äÃ» ¸Ş½ÃÁöÀÇ Çì´õ Á¤º¸¸¦ Ãâ·ÂÇÑ´Ù.
+	std::cout << " - protocol: "sv << to_string(_msg.protocol) << " version: "sv << _msg.version_major() << "."sv << _msg.version_minor() << '\n';
+	std::cout << " - method: "sv << to_string(_msg.method) << '\n';
 	std::cout << " - path: "sv << reinterpret_cast<const char*>(_msg.path.data()) << '\n';
 	for (auto& iter : _msg.parameters)
 	{
 		std::cout << ' ' << iter.key << ": "sv << iter.value << '\n';
 	}
 
-	// 2) ì‘ë‹µ ë©”ì‹œì§€ë¥¼ ì‘ì„±í•´ ì „ì†¡í•œë‹¤.
+	// 2) ÀÀ´ä ¸Ş½ÃÁö¸¦ ÀÛ¼ºÇØ Àü¼ÛÇÑ´Ù.
 	sMESSAGE_HTTP_RESPONSE msg_http_response;
 	msg_http_response.version		 = _msg.version;
 	msg_http_response.status_code	 = eHTTP_STATUS_CODE::OK_;
-	msg_http_response.status_message = to_string<char>(msg_http_response.status_code);
+	msg_http_response.status_message = to_string(msg_http_response.status_code);
 	msg_http_response.headers.push_back({ "Access-Control-Allow_Origin"sv, "www.cgcii.co.kr"sv });
 
-	// ì„¤ëª…) _msg.pathì— ë”°ë¼ ë‹¤ë¥¸ ì‘ë‹µì„ í•˜ë„ë¡ ì‘ì„±í•œë‹¤.
-	//       _msg.pathëŠ” ë¸Œë¼ìš°ì¦ˆ(í´ë¼ì´ì–¸íŠ¸)ì—ì„œ urlì— ì…ë ¥í•œ  ë¬¸ìì—´ ì¤‘ ì ‘ì† ì£¼ì†Œ ì´í›„ '/' ë¶€í„° ê°’ì´ë‹¤.
+	// ¼³¸í) _msg.path¿¡ µû¶ó ´Ù¸¥ ÀÀ´äÀ» ÇÏµµ·Ï ÀÛ¼ºÇÑ´Ù.
+	//       _msg.path´Â ºê¶ó¿ìÁî(Å¬¶óÀÌ¾ğÆ®)¿¡¼­ url¿¡ ÀÔ·ÂÇÑ  ¹®ÀÚ¿­ Áß Á¢¼Ó ÁÖ¼Ò ÀÌÈÄ '/' ºÎÅÍ °ªÀÌ´Ù.
 	//
 	//          "http://127.0.0.1/abcd"  => _msg.path = "/abcd"
 	//          "http://127.0.0.1/xyze/sss/bcdd"  => _msg.path = "/xyze/sss/bcdd"
 	//
 
-	// case) "http://127.0.0.1/a" ì¼ ê²½ìš°
+	// case) "http://127.0.0.1/a" ÀÏ °æ¿ì
 #if defined(_WIN32)
 	if(_msg.path == u8"/a") // 
 #else
@@ -70,7 +70,7 @@ result_code socket_web::on_message(sMESSAGE_HTTP_REQUEST& _msg)
 	{
 		msg_http_response.contents.push_back(make_shared_buffer(text("<html><body><h1>welcone</h1></body></html>\r\n"sv)));
 	}
-	// case) "http://127.0.0.1/b" ì¼ ê²½ìš°
+	// case) "http://127.0.0.1/b" ÀÏ °æ¿ì
 #if defined(_WIN32)
 	else if(_msg.path == u8"/b")
 #else
@@ -79,7 +79,7 @@ result_code socket_web::on_message(sMESSAGE_HTTP_REQUEST& _msg)
 	{
 		msg_http_response.contents.push_back(make_shared_buffer(text("<html><body><h1>nice to meet you CGCII</h1></body></html>\r\n"sv)));
 	}
-	// case) ê¸°íƒ€
+	// case) ±âÅ¸
 	else
 	{
 		msg_http_response.contents.push_back(make_shared_buffer(text("<html><body><h1>hellow CGCII</h1></body></html>\r\n"sv)));

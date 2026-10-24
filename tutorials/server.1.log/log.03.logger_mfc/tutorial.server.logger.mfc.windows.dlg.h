@@ -1,31 +1,31 @@
-ï»¿
-// tutorial.server.log.mfc.windows.dlg.h: í—¤ë” íŒŒì¼
+
+// tutorial.server.log.mfc.windows.dlg.h: Çì´õ ÆÄÀÏ
 //
 
 #pragma once
 
 
-// CtutorialserverloggermfcwindowsDlg ëŒ€í™” ìƒì
+// CtutorialserverloggermfcwindowsDlg ´ëÈ­ »óÀÚ
 class CtutorialserverloggermfcwindowsDlg : public CDialogEx
 {
-// ìƒì„±ì…ë‹ˆë‹¤.
+// »ı¼ºÀÔ´Ï´Ù.
 public:
-	CtutorialserverloggermfcwindowsDlg(CWnd* pParent = nullptr);	// í‘œì¤€ ìƒì„±ìì…ë‹ˆë‹¤.
+	CtutorialserverloggermfcwindowsDlg(CWnd* pParent = nullptr);	// Ç¥ÁØ »ı¼ºÀÚÀÔ´Ï´Ù.
 
-// ëŒ€í™” ìƒì ë°ì´í„°ì…ë‹ˆë‹¤.
+// ´ëÈ­ »óÀÚ µ¥ÀÌÅÍÀÔ´Ï´Ù.
 #ifdef AFX_DESIGN_TIME
-	enum { IDD = IDD_TUTORIALSERVERLOGMFCWINDOWSVS16_DIALOG };
+	enum { IDD = IDD_TUTORIALSERVERLOGMFCWINDOWS_DIALOG };
 #endif
 
 	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV ì§€ì›ì…ë‹ˆë‹¤.
+	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV Áö¿øÀÔ´Ï´Ù.
 
 
-// êµ¬í˜„ì…ë‹ˆë‹¤.
+// ±¸ÇöÀÔ´Ï´Ù.
 protected:
 	HICON m_hIcon;
 
-	// ìƒì„±ëœ ë©”ì‹œì§€ ë§µ í•¨ìˆ˜
+	// »ı¼ºµÈ ¸Ş½ÃÁö ¸Ê ÇÔ¼ö
 	virtual BOOL OnInitDialog();
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();

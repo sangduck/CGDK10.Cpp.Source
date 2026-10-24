@@ -27,8 +27,8 @@ namespace CGDK
 // logger_syslog
 //
 //-----------------------------------------------------------------------------
-class logger_syslog : 
-	public						Nlogger
+class logger_syslog :
+	public						Nlogger_async		// - written on the execution of this logger (the callers never wait for syslog)
 {
 public:
 			struct INITIALIZE_PARAMETER
@@ -37,7 +37,6 @@ public:
 
 public:
 			logger_syslog();
-			logger_syslog(const std::string_view _name);
 	virtual ~logger_syslog();
 
 public:
@@ -46,11 +45,10 @@ public:
 			result_code			initialize(const context& _context) { context context_copy(_context); return this->object::Ninitializable::initialize(context_copy); }
 	virtual	result_code			initialize(context& _context) override { return this->object::Ninitializable::initialize(_context); }
 
-	virtual	void				process_log(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record) override;
-
 protected:
+	virtual	void				process_log_batch(std::vector<object_ptr<LOG_RECORD>>& _vector_plog_record) override;
 	virtual	result_code			_process_initializing(context& _context) override;
-	virtual	result_code			_process_destroying() noexcept;
+	virtual	result_code			_process_destroying() noexcept override;
 
 protected:
 			int					m_priority = 0;
@@ -58,4 +56,4 @@ protected:
 
 }
 
-#endif
+#endif

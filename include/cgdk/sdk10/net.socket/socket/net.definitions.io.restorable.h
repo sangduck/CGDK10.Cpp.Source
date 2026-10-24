@@ -22,70 +22,70 @@ namespace CGDK
 {
 //-----------------------------------------------------------------------------
 //
-// 1. [SEQUENCE_ID]
+// 1. [sequence_id_t]
 //
 //
 //-----------------------------------------------------------------------------
-using SEQUENCE_ID = uint64_t;
+using sequence_id_t = uint64_t;
 
 
 //-----------------------------------------------------------------------------
 //
-// 2. [RESTORE_SERVER_ID]
+// 2. [restore_server_id_t]
 //
 //
 //-----------------------------------------------------------------------------
-struct RESTORE_SERVER_ID
+struct restore_server_id_t
 {
 public:
 	uint64_t	id_key;
 	uint64_t	id_certify;
 
 public:
-	RESTORE_SERVER_ID() noexcept : id_key(0), id_certify(0) {}
+	restore_server_id_t() noexcept : id_key(0), id_certify(0) {}
 
 	bool				empty() const noexcept	{ return id_key == 0 || id_certify == 0; }
 	bool				exist() const noexcept	{ return id_key != 0 && id_certify != 0; }
 	void				reset() noexcept		{ id_key=0; id_certify=0;}
 
-	RESTORE_SERVER_ID&	operator = (const RESTORE_SERVER_ID& _rhs) noexcept { id_key = _rhs.id_key; id_certify = _rhs.id_certify; return *this; }
+	restore_server_id_t&	operator = (const restore_server_id_t& _rhs) noexcept { id_key = _rhs.id_key; id_certify = _rhs.id_certify; return *this; }
 
-	bool				operator ==(const RESTORE_SERVER_ID& _rhs) const noexcept { return id_key == _rhs.id_key && id_certify == _rhs.id_certify; }
-	bool				operator !=(const RESTORE_SERVER_ID& _rhs) const noexcept { return id_key != _rhs.id_key || id_certify != _rhs.id_certify; }
-	bool				operator > (const RESTORE_SERVER_ID& _rhs) const noexcept { return id_key >  _rhs.id_key; }
-	bool				operator >=(const RESTORE_SERVER_ID& _rhs) const noexcept { return id_key >= _rhs.id_key; }
-	bool				operator < (const RESTORE_SERVER_ID& _rhs) const noexcept { return id_key <  _rhs.id_key; }
-	bool				operator <=(const RESTORE_SERVER_ID& _rhs) const noexcept { return id_key <= _rhs.id_key; }
+	bool				operator ==(const restore_server_id_t& _rhs) const noexcept { return id_key == _rhs.id_key && id_certify == _rhs.id_certify; }
+	bool				operator !=(const restore_server_id_t& _rhs) const noexcept { return id_key != _rhs.id_key || id_certify != _rhs.id_certify; }
+	bool				operator > (const restore_server_id_t& _rhs) const noexcept { return id_key >  _rhs.id_key; }
+	bool				operator >=(const restore_server_id_t& _rhs) const noexcept { return id_key >= _rhs.id_key; }
+	bool				operator < (const restore_server_id_t& _rhs) const noexcept { return id_key <  _rhs.id_key; }
+	bool				operator <=(const restore_server_id_t& _rhs) const noexcept { return id_key <= _rhs.id_key; }
 };
 
 
 //-----------------------------------------------------------------------------
 //
-// 3. [RESTORE_CLIENT_ID]
+// 3. [restore_client_io_t]
 //
 //
 //-----------------------------------------------------------------------------
-struct RESTORE_CLIENT_ID
+struct restore_client_io_t
 {
 public:
 	uint64_t	id_key;
 	uint64_t	id_certify;
 
 public:
-	RESTORE_CLIENT_ID() noexcept : id_key(0), id_certify(0) {}
+	restore_client_io_t() noexcept : id_key(0), id_certify(0) {}
 
 	bool				empty() const noexcept	{ return id_key == 0 || id_certify == 0; }
 	bool				exist() const noexcept	{ return id_key != 0 && id_certify != 0; }
 	void				reset() noexcept		{ id_key=0; id_certify=0;}
 
-	RESTORE_CLIENT_ID&	operator = (const RESTORE_CLIENT_ID& _rhs) noexcept { id_key = _rhs.id_key; id_certify = _rhs.id_certify; return *this; }
+	restore_client_io_t&	operator = (const restore_client_io_t& _rhs) noexcept { id_key = _rhs.id_key; id_certify = _rhs.id_certify; return *this; }
 
-	bool				operator ==(const RESTORE_CLIENT_ID& _rhs) const noexcept { return id_key == _rhs.id_key && id_certify == _rhs.id_certify; }
-	bool				operator !=(const RESTORE_CLIENT_ID& _rhs) const noexcept { return id_key != _rhs.id_key || id_certify != _rhs.id_certify; }
-	bool				operator > (const RESTORE_CLIENT_ID& _rhs) const noexcept { return id_key >  _rhs.id_key; }
-	bool				operator >=(const RESTORE_CLIENT_ID& _rhs) const noexcept { return id_key >= _rhs.id_key; }
-	bool				operator < (const RESTORE_CLIENT_ID& _rhs) const noexcept { return id_key <  _rhs.id_key; }
-	bool				operator <=(const RESTORE_CLIENT_ID& _rhs) const noexcept { return id_key <= _rhs.id_key; }
+	bool				operator ==(const restore_client_io_t& _rhs) const noexcept { return id_key == _rhs.id_key && id_certify == _rhs.id_certify; }
+	bool				operator !=(const restore_client_io_t& _rhs) const noexcept { return id_key != _rhs.id_key || id_certify != _rhs.id_certify; }
+	bool				operator > (const restore_client_io_t& _rhs) const noexcept { return id_key >  _rhs.id_key; }
+	bool				operator >=(const restore_client_io_t& _rhs) const noexcept { return id_key >= _rhs.id_key; }
+	bool				operator < (const restore_client_io_t& _rhs) const noexcept { return id_key <  _rhs.id_key; }
+	bool				operator <=(const restore_client_io_t& _rhs) const noexcept { return id_key <= _rhs.id_key; }
 };
 
 

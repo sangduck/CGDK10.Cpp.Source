@@ -57,7 +57,7 @@ namespace CGDK
 //
 //    5) Event System에서의 시간은 모두 System Time을 사용하고 있다. System Time은
 //       Local Time과 동일하지 않기 때문에 실제 지역 시간과는 다를 수 있으므로 
-//       설정을 할때는 반드시 System Time으로 설정할 필요가 있다.
+//       설정을 할 때는 반드시 System Time으로 설정할 필요가 있다.
 //
 //
 // 2. 주요함수.
@@ -69,7 +69,7 @@ namespace CGDK
 //
 //    2) begin()/end()
 //       - entity manager에 등록된 모든 Event객체를 얻고자 할 때 사용하는 함수이다.
-//       - 이때 주의해야하는 것은 안전한 실행을 위해 반드시 Lock을 건 이후에 
+//       - 이때 주의해야 하는 것은 안전한 실행을 위해 반드시 Lock을 건 이후에 
 //         begin()함수를 호출하여 Event Object에 접근하라는 것이다.
 //
 //    3) Delete Done Event Option
@@ -103,17 +103,18 @@ public:
 			object_ptr<Ientity>	unregister_entity(uint64_t _id_entity) noexcept;
 			void				unregister_event_all() noexcept;
 	[[nodiscard]] object_ptr<Ientity> find_event(uint64_t _id_event) const noexcept;
-	[[nodiscard]] bool			is_exist(Ientity* _pentity) const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<std::set<object_ptr<Ientity>>>&>(this->m_set_time_entity)); return this->_is_exist(_pentity); }
-	[[nodiscard]] bool			is_exist(uint64_t _id_entity) const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<std::set<object_ptr<Ientity>>>&>(this->m_set_time_entity)); return this->_is_exist(_id_entity); }
+	[[nodiscard]] bool			is_exist(Ientity* _pentity) const noexcept { std::lock_guard lock(this->m_lockable_set_time_entity); return this->_is_exist(_pentity); }
 
 			bool				register_class(std::string_view _class_name, std::function<own_ptr<time_event::Ientity>()>& _f_register);
 			bool				unregister_class(std::string_view _class_name);
+	[[nodiscard]] size_t		class_count() const noexcept { std::lock_guard lock(this->m_lockable_map_time_class); return this->m_map_time_class.size(); }
+
 
 			void				enable_delete_done_entity(bool _status = true) noexcept { this->m_is_delete_done_entity = _status; }
 			void				disable_delete_done_entity() noexcept { this->m_is_delete_done_entity = false;}
 	[[nodiscard]] bool			is_delete_done_entity() const noexcept { return this->m_is_delete_done_entity;}
 
-	[[nodiscard]] size_t		size() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<std::set<object_ptr<Ientity>>>&>(this->m_set_time_entity)); return this->m_set_time_entity.size(); }
+	[[nodiscard]] size_t		size() const noexcept { std::lock_guard lock(this->m_lockable_set_time_entity); return this->m_set_time_entity.size(); }
 	[[nodiscard]] bool			empty() const noexcept { return this->size() == 0; }
 	[[nodiscard]] bool			exist() const noexcept { return this->size() != 0; }
 
@@ -121,21 +122,22 @@ public:
 	[[nodiscard]] auto			begin() const noexcept { return this->m_set_time_entity.begin();}
 	[[nodiscard]] auto			end() noexcept { return this->m_set_time_entity.end();}
 	[[nodiscard]] auto			end() const noexcept { return this->m_set_time_entity.end();}
-	[[nodiscard]] auto&			get_lockable() noexcept { return this->m_set_time_entity;}
-	[[nodiscard]] const auto&	get_lockable() const noexcept { return this->m_set_time_entity;}
+	[[nodiscard]] auto&			get_lockable() noexcept { return this->m_lockable_set_time_entity;}
+	[[nodiscard]] const auto&	get_lockable() const noexcept { return this->m_lockable_set_time_entity;}
 	[[nodiscard]] 				operator lock_object&() noexcept { return this->get_lockable();}
 	[[nodiscard]] 				operator const lock_object& () const noexcept { return this->get_lockable(); }
 
-	[[nodiscard]] auto			executor() const noexcept { scoped_lock(m_cs_pexecutor) { return this->m_pexecutor; } }
+	[[nodiscard]] auto			executor() const noexcept { std::lock_guard lock(m_lockable_pexecutor); return this->m_pexecutor; }
 			void				executor(const object_ptr<Iexecutor>& _pexecutor) noexcept { this->executor(object_ptr<Iexecutor>(_pexecutor)); }
-			void				executor(object_ptr<Iexecutor>&& _pexecutor) noexcept { scoped_lock(m_cs_pexecutor) { this->m_pexecutor = std::move(_pexecutor); } }
+			void				executor(object_ptr<Iexecutor>&& _pexecutor) noexcept { std::lock_guard lock(m_lockable_pexecutor); this->m_pexecutor = std::move(_pexecutor); }
 
-	static	auto				instance() { if(m_pinstance.empty()){ initialize_instance();} return object_ptr<entity_manager>(m_pinstance);}
+	static	auto				instance() { auto p = m_pinstance.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_pinstance.get_acquire(); } return object_ptr<entity_manager>(p);}
 	static	void				initialize_instance();
 	static	void				initialize_instance(context& _context);
 	static	void				set_instance(own_ptr<entity_manager>&& _pinstance) noexcept;
 	static	void				reset_instance() noexcept;
 	static	void				detach_instance() noexcept { m_pinstance.detach(); }
+	static	void				print_statistics() noexcept;
 
 protected:
 	virtual	void				on_initializing(context& _context) override;
@@ -160,22 +162,28 @@ public:
 	virtual	bool				process_detach(Ientity* _pentity) noexcept override;
 
 			void				_push_time_entity(Ientity* _pentity);
+			bool				_reschedule_time_entity(Ientity* _pentity);
 			void				_pop_time_entity() noexcept;
 			bool				_process_detach(Ientity* _pentity) noexcept;
 			bool				_is_exist(Ientity* _pentity) const noexcept;
 			bool				_is_exist(uint64_t _id_entity) const noexcept;
 
+	static	void				print_statistics_time_event_classes(shared_buffer& _buffer_output);
+	static	void				print_statistics_time_event_entities(shared_buffer& _buffer_output);
 public:
-			bool				m_is_delete_done_entity;
+			bool				m_is_delete_done_entity{true};
 
 private:
 			std::atomic<int>	m_flag_run;
-			lockable<>			m_cs_pexecutor;
+	mutable	lock_object			m_lockable_pexecutor;
 			object_ptr<Iexecutor> m_pexecutor;
-			lockable<std::map<std::string, std::function<own_ptr<time_event::Ientity>()>>> m_map_time_class;
-			lockable<std::set<object_ptr<Ientity>>> m_set_time_entity;
+	mutable	lock_object			m_lockable_map_time_class;
+			std::map<std::string, std::function<own_ptr<time_event::Ientity>()>> m_map_time_class;
+	mutable	lock_object			m_lockable_set_time_entity;
+			std::set<object_ptr<Ientity>> m_set_time_entity;
+			uint64_t			m_id_entity_serial = 0;	// (locked by m_lockable_set_time_entity)
 			std::vector<Ientity*>	m_priorityqueue_time_entity;
-			std::mutex				m_lock_priorityqueue;
+			std::mutex				m_lockable_priorityqueue;
 			std::condition_variable	m_cv_priorityqueue_exist;
 			std::condition_variable	m_cv_priorityqueue_in_time;
 
@@ -187,7 +195,7 @@ private:
 
 protected:
 	static own_ptr<entity_manager> m_pinstance;
-	static lockable<>			m_lockable_create;
+	static lock_object			m_lockable_create;
 };
 
 

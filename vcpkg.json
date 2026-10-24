@@ -1,8 +1,9 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
-  "description": "for compling source of CGCII lib projects",
-  "builtin-baseline": "db2071b44938c0fb7943a94c8ab912e4e182a60b",
-
+  "name": "gruma-server",
+  "version-string": "1.0.0",
+  "description": "for compiling source of CGCII lib projects",
+  "builtin-baseline": "4f746bc66438fce2b900c3ba6094a483b871b045",
   "dependencies": [
     {
       "name": "gperftools",
@@ -16,20 +17,13 @@
       "name": "openssl",
       "default-features": false
     },
+    "zlib",
+    "rapidjson",
     "protobuf",
     "boost-asio",
-    "boost-thread"
-  ],
-
-  "features": {
-      "openssl": {
-      "description": "open SSL for crypto-algorithm and https",
-      "dependencies": [ "openssl" ]
-    },
-    "gperftools": {
-      "description": "Google performance tools for tcmalloc betchmarking",
-      "dependencies": [ "gperftools" ]
-    }
-  }
+    "boost-thread",
+    "redis-plus-plus",
+    "librdkafka",
+    "cppkafka"
+  ]
 }
-

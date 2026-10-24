@@ -64,17 +64,12 @@ protected:
 			Nudp_resend();
 	virtual	~Nudp_resend() noexcept;
 
-// public)
 public:
-	// 1) send할 때 부르는 함수.
 	virtual	bool				request_send(const buffer_view _buffer, object_ptr<Ireferenceable>&& _powner, std::size_t _count_message, const net::sockaddr& _paddress) override;
 
-// implementation)
 private:
-	// 1) reset할때 호출하는 함수.(기본은 빈것...)
 	virtual	void				reset_send_request() noexcept override;
 
-	// Definition) send Queues
 			struct SENDED_PACKET
 			{
 			public:
@@ -88,36 +83,27 @@ private:
 				SENDED_PACKET() noexcept :iSendOut(0), count_message(0){}
 			};
 
-	// Definition) executor Resend
 			class executable_resend;
 
-	// 2) Re-send용 Progress
 			object_ptr<executable_resend>	m_pexecutable_resend;
 
-	// 3) ProcessResend
 			void				progress_resend();
 
-	// 3) Sliding Window
 			uint32_t			m_size_slinding_window;			// Sliding Window의 크기
 
-	// 4) send Buffers
 			uint32_t			m_serial_send;					// send Serial
 			uint32_t			m_last_serial_send_acked;		// 완료 ack받은 마지막 packet
-			uint32_t			m_last_serial_sended;			// 마지막으로 보낸 Serial.
+			uint32_t			m_last_serial_sent;			// 마지막으로 보낸 Serial.
 
-	// 5) send Queues
-			int					m_nSended;
-			std::vector<SENDED_PACKET> m_queue_sended;			// 이미 보낸 Packet을 Array로 저장함.
+			int					m_nSent;
+			std::vector<SENDED_PACKET> m_queue_sent;			// 이미 보낸 Packet을 Array로 저장함.
 			circular_list<SENDED_PACKET> m_list_send_queue;		// 아직 보내지 않은 Packet을 보관한 send Queue
 
-	// 6) Criticalsection
-			lockable<>			m_lockable_send;				// send Queue용 Critical section
+	mutable	lock_object			m_lockable_send;				// send Queue용 Critical section
 
-	// 7) Resend Interval (전송이 제대로 되지 않았을 때 다시 재전송을 하는 간격.)
 			chrono::tick::duration	 m_tick_resend_interval;
 			chrono::tick::time_point m_tick_resend_next;
 
-	// statistics) 
 			int					m_retransmitted;				// 재전송한 횟수.
 
 protected:

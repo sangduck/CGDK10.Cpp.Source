@@ -35,7 +35,6 @@ public:
 protected:
 	virtual	void				on_enable(bool /*_is_state*/) {}
 
-protected:
 	virtual	bool				process_set_enable(bool _is_state) { auto old = this->m_is_state.exchange(_is_state); if(old != _is_state) this->on_enable(_is_state); return old;}
 	[[nodiscard]] virtual bool	process_get_enable() const noexcept{ return this->m_is_state;}
 

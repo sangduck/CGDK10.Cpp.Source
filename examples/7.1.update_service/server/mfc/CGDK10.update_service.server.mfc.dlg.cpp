@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "framework.h"
 #include "CGDK10.update_service.server.mfc.h"
 #include "CGDK10.update_service.server.mfc.dlg.h"
@@ -51,12 +51,12 @@ BOOL Cupdate_service_server_mfc_dlg::OnInitDialog()
 
 
 	//-----------------------------------------------------------------
-	// 2. log ì„¤ì •
+	// 2. log ¼³Á¤
 	//-----------------------------------------------------------------
 	// 1) create logger view
 	m_child_logger_view.CreateChild(nullptr, this);
 
-	// 2) dialogì˜ í¬ê¸°ë¥¼ ì–»ëŠ”ë‹¤.
+	// 2) dialogÀÇ Å©±â¸¦ ¾ò´Â´Ù.
 	RECT rect_dlg;
 	GetClientRect(&rect_dlg);
 	RECT rect_dlg_logger;
@@ -67,25 +67,25 @@ BOOL Cupdate_service_server_mfc_dlg::OnInitDialog()
 	m_child_logger_view.Move(0, -10, ORIGIN_LEFT | ORIGIN_UPON, GetDlgItem(IDC_STATIC_FOOTER));
 	m_child_logger_view.Initialize();
 
-	// 4) mfc log controlì„ ì—°ê²°í•œë‹¤.
+	// 4) mfc log controlÀ» ¿¬°áÇÑ´Ù.
 	service::get_logger()->register_log_targetable(&m_child_logger_view);
 
 
 	//-----------------------------------------------------------------
-	// 4. ì´ˆê¸°í™”.
+	// 4. ÃÊ±âÈ­.
 	//-----------------------------------------------------------------
-	// 1) serviceë¥¼ ìƒì„±í•œë‹¤.
+	// 1) service¸¦ »ı¼ºÇÑ´Ù.
 	g_pservice = make_own<service>();
 
-	// 2) unregisterí•œë‹¤.
+	// 2) unregisterÇÑ´Ù.
 	g_pservice->register_messageable(this);
 
-	// 3) Serviceë¥¼ initializeí•œë‹¤.
+	// 3) Service¸¦ initializeÇÑ´Ù.
 	request_service_initialize();
 
 
 	//-----------------------------------------------------------------
-	// 4. control ì„¤ì •.
+	// 4. control ¼³Á¤.
 	//-----------------------------------------------------------------
 	// 1) socket
 	m_listctrl_socket_peer.InsertColumn(0, TEXT("ip"),			LVCFMT_LEFT,  150, 0);
@@ -112,19 +112,19 @@ BOOL Cupdate_service_server_mfc_dlg::OnInitDialog()
 	// declare) 
 	context temp_context;
 
-	// 2) load json file for setting
-	temp_context.read_from_json_file(CONFIGURE_FILE);
+	// 3) load json file for setting
+	temp_context.from_json(api::file::read_file(CONFIGURE_FILE));
 
-	// 3) channeel server socket
+	// 4) channeel server socket
 	m_child_acceptor_socket_peer.CreateChild(g_pservice->m_pacceptor_tcp, this);
 	m_child_acceptor_socket_peer.SetDefaultPort(temp_context["acceptor_user"sv]["local_endpoint"sv]["port"sv]);
 	m_child_acceptor_socket_peer.Move(5, 0, ORIGIN_REAR | ORIGIN_CENTER_Y, GetDlgItem(IDC_STATIC_TAG_ACCEPTOR));
 
-	// 4) pool/thread Status Dialog
+	// 5) pool/thread Status Dialog
 	m_dlg_factory_status.CreateModaless(factory::manager::instance(), this);
 	m_dlg_thread_status.CreateModaless(api::manager_thread::instance(), executor::manager::instance(), system_executor::instance(), this);
 
-	// 5) controlì„ ëª¨ë‘ Disableí•œë‹¤.
+	// 6) controlÀ» ¸ğµÎ DisableÇÑ´Ù.
 	enable_server_controls(FALSE);
 
 
@@ -325,7 +325,7 @@ result_code Cupdate_service_server_mfc_dlg::process_message(sMESSAGE& _msg)
 		case	CGNOTIFY_SOCKET_USER_REMOVE:
 		case	CGNOTIFY_SOCKET_USER_UPDATE:
 				{
-					scoped_lock(m_cs_vector_event_socket_peer)
+					SCOPED_LOCK(m_cs_vector_event_socket_peer)
 					{
 						m_vector_event_socket_peer_queuing.emplace_back(EVENT_SOCKET_USER_NOTIFY{ msg_notify.command, (socket_peer*)msg_notify.wParam });
 					}
@@ -336,7 +336,7 @@ result_code Cupdate_service_server_mfc_dlg::process_message(sMESSAGE& _msg)
 		case	CGNOTIFY_UPDATABLE_RESOURCE_REMOVE:
 		case	CGNOTIFY_UPDATABLE_RESOURCE_UPDATE:
 				{
-					scoped_lock(m_cs_vector_event_updatable_resource)
+					SCOPED_LOCK(m_cs_vector_event_updatable_resource)
 					{
 						m_vector_event_updatable_resource_queuing.emplace_back(EVENT_UPDATABLE_RESOURCE_NOTIFY{ msg_notify.command, (socket_peer*)msg_notify.wParam });
 					}
@@ -372,11 +372,11 @@ void Cupdate_service_server_mfc_dlg::on_service_running()
 
 	enable_server_controls(TRUE);
 
-	auto& server_setting_info = g_pservice->setting();
-	SetDlgItemTextA(m_hWnd, IDC_STATIC_SERVER_NAME, server_setting_info.nickname.c_str());
-	auto str_server_id = NFMT::format("{}", g_pservice->setting().iid);
+	const auto& server_setting_info = g_pservice->get_service_instance()->info.setting;
+	SetDlgItemTextA(m_hWnd, IDC_STATIC_SERVER_NAME, server_setting_info.name.c_str());
+	auto str_server_id = std::format("{}", server_setting_info.iid);
 	SetDlgItemTextA(m_hWnd, IDC_STATIC_SERVER_ID, str_server_id.c_str());
-	auto str_server_version = NFMT::format("{}", server_setting_info.revision.revision);
+	auto str_server_version = std::format("{}", server_setting_info.revision.revision);
 	SetDlgItemTextA(m_hWnd, IDC_STATIC_SERVER_VERSION, str_server_version.c_str());
 
 	SetTimer(0, 1000, nullptr);
@@ -413,7 +413,14 @@ void Cupdate_service_server_mfc_dlg::on_service_update()
 
 void Cupdate_service_server_mfc_dlg::request_service_initialize()
 {
-	g_pservice->initialize();
+	// declare)
+	context context_initialize;
+
+	// 1) load json file for setting
+	context_initialize.from_json(api::file::read_file(CONFIGURE_FILE));
+
+	// 2) initialize service
+	g_pservice->initialize(context_initialize);
 }
 
 void Cupdate_service_server_mfc_dlg::request_service_start()
@@ -427,10 +434,17 @@ void Cupdate_service_server_mfc_dlg::request_service_start()
 	GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_ENABLED);
 	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
 
-	// 2) Openì˜ ì‹¤í–‰ì„ ìš”ì²­í•œë‹¤.
+	// 2) OpenÀÇ ½ÇÇàÀ» ¿äÃ»ÇÑ´Ù.
 	system_executor::post(make_executable([]()
 	{
-		g_pservice->start();
+		// declare)
+		context context_start;
+
+		// - load json file for setting
+		context_start.from_json(api::file::read_file(CONFIGURE_FILE));
+
+		// - initialize service
+		g_pservice->start(context_start);
 	}));
 }
 
@@ -449,7 +463,7 @@ void Cupdate_service_server_mfc_dlg::request_service_stop()
 	GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
 	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
 
-	// 2) Closeì˜ ì‹¤í–‰ì„ ìš”ì²­í•œë‹¤.
+	// 2) CloseÀÇ ½ÇÇàÀ» ¿äÃ»ÇÑ´Ù.
 	system_executor::post(make_executable([]()
 	{
 		g_pservice->stop();
@@ -458,7 +472,7 @@ void Cupdate_service_server_mfc_dlg::request_service_stop()
 
 void Cupdate_service_server_mfc_dlg::request_service_destroy()
 {
-	// 1) í˜„ì¬ ThreadIDë¥¼ êµ¬í•œë‹¤.(WM_QUIT messageëŠ” í˜„ì¬ Threadê°€ ë°›ì•„ì•¼ ì²˜ë¦¬ëœë‹¤.)
+	// 1) ÇöÀç ThreadID¸¦ ±¸ÇÑ´Ù.(WM_QUIT message´Â ÇöÀç Thread°¡ ¹Ş¾Æ¾ß Ã³¸®µÈ´Ù.)
 	auto thread_id = GetCurrentThreadId();
 
 	// 2) Menu Control
@@ -467,61 +481,61 @@ void Cupdate_service_server_mfc_dlg::request_service_destroy()
 	GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
 	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
 
-	// 3) socket userë¥¼ ì œê±°í•œë‹¤.
-	scoped_lock(m_cs_vector_event_socket_peer)
+	// 3) socket user¸¦ Á¦°ÅÇÑ´Ù.
+	SCOPED_LOCK(m_cs_vector_event_socket_peer)
 	{
 		m_vector_event_socket_peer_queuing.clear();
 		m_vector_event_socket_peer_processing.clear();
 	}
-	scoped_lock(m_listctrl_socket_peer)
+	SCOPED_LOCK(m_lockable_listctrl_socket_peer)
 	{
 		for (int i = 0; i < m_listctrl_socket_peer.GetItemCount(); ++i)
 		{
-			// - Itemì„ ì–»ëŠ”ë‹¤.
+			// - ItemÀ» ¾ò´Â´Ù.
 			auto* psocket_peer = (socket_peer*)m_listctrl_socket_peer.GetItemData(i);
 
-			// - releaseí•œë‹¤.
+			// - releaseÇÑ´Ù.
 			psocket_peer->release();
 		}
 
-		// - ëª¨ë“  Itemì„ ì§€ìš´ë‹¤.
+		// - ¸ğµç ItemÀ» Áö¿î´Ù.
 		m_listctrl_socket_peer.DeleteAllItems();
 	}
 
-	// 4) updatable resourceë¥¼ ì œê±°í•œë‹¤.
-	scoped_lock(m_cs_vector_event_updatable_resource)
+	// 4) updatable resource¸¦ Á¦°ÅÇÑ´Ù.
+	SCOPED_LOCK(m_cs_vector_event_updatable_resource)
 	{
 		m_vector_event_updatable_resource_queuing.clear();
 		m_vector_event_updatable_resource_processing.clear();
 	}
-	scoped_lock(m_listctrl_updatable_resource)
+	SCOPED_LOCK(m_lockable_listctrl_updatable_resource)
 	{
 		for (int i = 0; i < m_listctrl_updatable_resource.GetItemCount(); ++i)
 		{
-			// - Itemì„ ì–»ëŠ”ë‹¤.
+			// - ItemÀ» ¾ò´Â´Ù.
 			auto* pupdatable_resource = (socket_peer*)m_listctrl_updatable_resource.GetItemData(i);
 
-			// - releaseí•œë‹¤.
+			// - releaseÇÑ´Ù.
 			pupdatable_resource->release();
 		}
 
-		// - ëª¨ë“  Itemì„ ì§€ìš´ë‹¤.
+		// - ¸ğµç ItemÀ» Áö¿î´Ù.
 		m_listctrl_updatable_resource.DeleteAllItems();
 	}
 
-	// 5) destroyì˜ ì‹¤í–‰ì„ ìš”ì²­í•œë‹¤.
+	// 5) destroyÀÇ ½ÇÇàÀ» ¿äÃ»ÇÑ´Ù.
 	system_executor::post(make_executable([=]()
 	{
-		// - Serverë¥¼ ë‹«ëŠ”ë‹¤.
+		// - Server¸¦ ´İ´Â´Ù.
 		g_pservice->destroy();
 
-		// - loggerë¥¼ ë“±ë¡í•´ì œí•œë‹¤.
+		// - logger¸¦ µî·ÏÇØÁ¦ÇÑ´Ù.
 		service::get_logger()->unregister_log_targetable(&m_child_logger_view);
 
-		// - unregisterí•œë‹¤.
+		// - unregisterÇÑ´Ù.
 		g_pservice->unregister_messageable(this);
 
-		// - QUIT Messageë¥¼ í˜„ì¬ì˜ Threadì— ë‚ ë¦°ë‹¤.(ì´ê²ƒìœ¼ë¡œ ì–´í”Œë¦¬ì¼€ì´ì…˜ì€ ì¢…ë£Œëœë‹¤.)
+		// - QUIT Message¸¦ ÇöÀçÀÇ Thread¿¡ ³¯¸°´Ù.(ÀÌ°ÍÀ¸·Î ¾ÖÇÃ¸®ÄÉÀÌ¼ÇÀº Á¾·áµÈ´Ù.)
 		PostThreadMessage(thread_id, WM_QUIT, (WPARAM)IDOK, 0);
 	}));
 }
@@ -543,11 +557,7 @@ void Cupdate_service_server_mfc_dlg::enable_server_controls(BOOL _enable)
 	// 3) update name
 	if(_enable)
 	{
-	#ifdef _UNICODE
-		SetDlgItemTextA(m_hWnd, IDC_STATIC_SERVER_NAME, g_pservice->setting().nickname.c_str());
-	#else
-		SetDlgItemText(IDC_STATIC_SERVER_NAME, g_pservice->setting().name.c_str());
-	#endif
+		SetDlgItemTextA(m_hWnd, IDC_STATIC_SERVER_NAME, g_pservice->get_service_instance()->info.setting.name.c_str());
 	}
 }
 
@@ -569,12 +579,12 @@ int Cupdate_service_server_mfc_dlg::list_add_socket_peer(socket_peer* _psocket_p
 	// declare) 
 	LV_ITEM	list_item;
 
-	scoped_lock(m_listctrl_socket_peer)
+	SCOPED_LOCK(m_lockable_listctrl_socket_peer)
 	{
 		// declare) 
 		WCHAR text[256];
 
-		// 1) ì¶”ê°€í•œë‹¤.
+		// 1) Ãß°¡ÇÑ´Ù.
 		list_item.iItem = m_listctrl_socket_peer.InsertItem(m_listctrl_socket_peer.GetItemCount(), TEXT(""));
 
 		// 2) club
@@ -585,14 +595,15 @@ int Cupdate_service_server_mfc_dlg::list_add_socket_peer(socket_peer* _psocket_p
 		{
 			// 0. "ip"
 			list_item.iSubItem = 0;
-			wsprintf(text, TEXT("%s:%d"), const_cast<TCHAR*>(_psocket_peer->remote_endpoint().to_string<TCHAR>().c_str()), _psocket_peer->remote_endpoint().port());
+			wsprintf(text, TEXT("%hs:%d"), _psocket_peer->remote_endpoint().to_string().c_str(), _psocket_peer->remote_endpoint().port());
 			list_item.pszText = text;
 			m_listctrl_socket_peer.SetItem(&list_item);
 
 			// 1. "connected"
 			list_item.iSubItem = 1;
-			auto wstr_connect_time = to_string<TCHAR>(_psocket_peer->statistics_get_connect_time(), L"{:04}-{:02}-{:02} {:02}:{:02}:{:02}");
-			list_item.pszText = (LPWSTR)wstr_connect_time.c_str();
+			list_item.iSubItem = 4;
+			wsprintf(text, TEXT("%hs"), to_string(_psocket_peer->statistics_get_connect_time(), "{:04}-{:02}-{:02} {:02}:{:02}:{:02}").c_str());
+			list_item.pszText = text;
 			m_listctrl_socket_peer.SetItem(&list_item);
 		}
 
@@ -632,16 +643,16 @@ int Cupdate_service_server_mfc_dlg::list_add_socket_peer(socket_peer* _psocket_p
 		list_item.pszText = text;
 		m_listctrl_socket_peer.SetItem(&list_item);
 
-		// 4) Item Dataë¡œ í¬ì¸í„°ë¥¼ ì¶”ê°€í•œë‹¤.
+		// 4) Item Data·Î Æ÷ÀÎÅÍ¸¦ Ãß°¡ÇÑ´Ù.
 		m_listctrl_socket_peer.SetItemData(list_item.iItem, (DWORD_PTR)_psocket_peer);
 
-		// 5) Indexë¥¼ IDë¡œ ë§µí•‘í•˜ì—¬ ì €ì¥í•œë‹¤.
+		// 5) Index¸¦ ID·Î ¸ÊÇÎÇÏ¿© ÀúÀåÇÑ´Ù.
 		_psocket_peer->m_idx_list = m_listctrl_socket_peer.MapIndexToID(list_item.iItem);
 
-		// 6) add_refí•œë‹¤.
+		// 6) add_refÇÑ´Ù.
 		_psocket_peer->add_ref();
 
-		// 7) Updateí•œë‹¤.
+		// 7) UpdateÇÑ´Ù.
 		list_update_socket_peer(list_item.iItem);
 	}
 
@@ -654,27 +665,27 @@ void Cupdate_service_server_mfc_dlg::list_remove_socket_peer(socket_peer* _psock
 	// declare) 
 	int count_user;
 
-	scoped_lock(m_listctrl_socket_peer)
+	SCOPED_LOCK(m_lockable_listctrl_socket_peer)
 	{
-		// 1) Indexë¥¼ ì–»ëŠ”ë‹¤.
+		// 1) Index¸¦ ¾ò´Â´Ù.
 		int	index = m_listctrl_socket_peer.MapIDToIndex(_psocket_peer->m_idx_list);
 
 		// check)
 		RETURN_IF(index < 0)
 
-			// 2) Itemì„ ì–»ëŠ”ë‹¤.
+			// 2) ItemÀ» ¾ò´Â´Ù.
 			auto* psocket_peer = (socket_peer*)m_listctrl_socket_peer.GetItemData(index);
 
 		// check)
 		CGASSERT_ERROR(_psocket_peer == psocket_peer);
 
-		// 3) ì§€ìš´ë‹¤.
+		// 3) Áö¿î´Ù.
 		m_listctrl_socket_peer.DeleteItem(index);
 
 		// 4) reset m_idex_list
 		psocket_peer->m_idx_list = static_cast<uint32_t>(-1);
 
-		// 5) releaseí•œë‹¤.
+		// 5) releaseÇÑ´Ù.
 		psocket_peer->release();
 
 		// 6) ..
@@ -684,22 +695,22 @@ void Cupdate_service_server_mfc_dlg::list_remove_socket_peer(socket_peer* _psock
 
 void Cupdate_service_server_mfc_dlg::list_update_socket_peer(socket_peer* _psocket_peer)
 {
-	scoped_lock(m_listctrl_socket_peer)
+	SCOPED_LOCK(m_lockable_listctrl_socket_peer)
 	{
-		// 1) Indexë¥¼ ì–»ëŠ”ë‹¤.
+		// 1) Index¸¦ ¾ò´Â´Ù.
 		int	index = m_listctrl_socket_peer.MapIDToIndex(_psocket_peer->m_idx_list);
 
 		// check)
 		RETURN_IF(index < 0);
 
-		// 2) Group Roomì„ Updateí•œë‹¤.
+		// 2) Group RoomÀ» UpdateÇÑ´Ù.
 		list_update_socket_peer(index);
 	}
 }
 
 void Cupdate_service_server_mfc_dlg::list_update_socket_peer(int _index)
 {
-	scoped_lock(m_listctrl_socket_peer)
+	SCOPED_LOCK(m_lockable_listctrl_socket_peer)
 	{
 		// check) 
 		RETURN_IF(_index < 0 || _index >= m_listctrl_socket_peer.GetItemCount(), );
@@ -707,7 +718,7 @@ void Cupdate_service_server_mfc_dlg::list_update_socket_peer(int _index)
 		// declare) 
 		TCHAR text[256]{ 0 };
 
-		// 1) socket_server_lobbyì„ ì–»ëŠ”ë‹¤.
+		// 1) socket_server_lobbyÀ» ¾ò´Â´Ù.
 		auto psocket_peer = (socket_peer*)m_listctrl_socket_peer.GetItemData(_index);
 
 		// 2) update items
@@ -760,7 +771,7 @@ void Cupdate_service_server_mfc_dlg::list_update_socket_peer(int _index)
 
 void Cupdate_service_server_mfc_dlg::list_update_event_socket_peer()
 {
-	scoped_lock(m_cs_vector_event_socket_peer)
+	SCOPED_LOCK(m_cs_vector_event_socket_peer)
 	{
 		m_vector_event_socket_peer_queuing.swap(m_vector_event_socket_peer_processing);
 	}
@@ -771,22 +782,22 @@ void Cupdate_service_server_mfc_dlg::list_update_event_socket_peer()
 	{
 		m_listctrl_socket_peer.SetRedraw(false);
 
-		scoped_lock(m_listctrl_socket_peer)
+		SCOPED_LOCK(m_lockable_listctrl_socket_peer)
 		{
 			for (auto& iter : m_vector_event_socket_peer_processing)
 			{
 				switch (iter.message)
 				{
 				case	CGNOTIFY_SOCKET_USER_ADD:
-						list_add_socket_peer(iter.psource);
+						list_add_socket_peer(iter.psource.get());
 						break;
 
 				case	CGNOTIFY_SOCKET_USER_REMOVE:
-						list_remove_socket_peer(iter.psource);
+						list_remove_socket_peer(iter.psource.get());
 						break;
 
 				case	CGNOTIFY_SOCKET_USER_UPDATE:
-						list_update_socket_peer(iter.psource);
+						list_update_socket_peer(iter.psource.get());
 						break;
 
 				default:
@@ -795,7 +806,7 @@ void Cupdate_service_server_mfc_dlg::list_update_event_socket_peer()
 				}
 			}
 
-			// 1) í™”ë©´ì— ë³´ì´ëŠ” ê²ƒë§Œ Updateí•œë‹¤.
+			// 1) È­¸é¿¡ º¸ÀÌ´Â °Í¸¸ UpdateÇÑ´Ù.
 			int	start = m_listctrl_socket_peer.GetTopIndex();
 			int	end = m_listctrl_socket_peer.GetTopIndex() + m_listctrl_socket_peer.GetCountPerPage() + 1;
 
@@ -818,12 +829,12 @@ int Cupdate_service_server_mfc_dlg::list_add_updatable_resource(socket_peer* _ps
 	// declare) 
 	LV_ITEM	list_item;
 
-	scoped_lock(m_listctrl_updatable_resource)
+	SCOPED_LOCK(m_lockable_listctrl_updatable_resource)
 	{
 		// declare) 
 		WCHAR text[256];
 
-		// 1) ì¶”ê°€í•œë‹¤.
+		// 1) Ãß°¡ÇÑ´Ù.
 		list_item.iItem = m_listctrl_updatable_resource.InsertItem(m_listctrl_updatable_resource.GetItemCount(), TEXT(""));
 
 		// 2) club
@@ -834,14 +845,14 @@ int Cupdate_service_server_mfc_dlg::list_add_updatable_resource(socket_peer* _ps
 		{
 			// 3. "ip"
 			list_item.iSubItem = 3;
-			wsprintf(text, TEXT("%s:%d"), const_cast<TCHAR*>(_psocket_peer->remote_endpoint().to_string<TCHAR>().c_str()), _psocket_peer->remote_endpoint().port());
+			wsprintf(text, TEXT("%hs:%d"), _psocket_peer->remote_endpoint().to_string().c_str(), _psocket_peer->remote_endpoint().port());
 			list_item.pszText = text;
 			m_listctrl_updatable_resource.SetItem(&list_item);
 
 			// 4. "connected"
 			list_item.iSubItem = 4;
-			auto wstr_connect_time = to_string<TCHAR>(_psocket_peer->statistics_get_connect_time(), L"{:04}-{:02}-{:02} {:02}:{:02}:{:02}");
-			list_item.pszText = (LPWSTR)wstr_connect_time.c_str();
+			wsprintf(text, TEXT("%hs"), to_string(_psocket_peer->statistics_get_connect_time(), "{:04}-{:02}-{:02} {:02}:{:02}:{:02}").c_str());
+			list_item.pszText = text;
 			m_listctrl_updatable_resource.SetItem(&list_item);
 		}
 
@@ -863,16 +874,16 @@ int Cupdate_service_server_mfc_dlg::list_add_updatable_resource(socket_peer* _ps
 		list_item.pszText = text;
 		m_listctrl_updatable_resource.SetItem(&list_item);
 
-		// 4) Item Dataë¡œ í¬ì¸í„°ë¥¼ ì¶”ê°€í•œë‹¤.
+		// 4) Item Data·Î Æ÷ÀÎÅÍ¸¦ Ãß°¡ÇÑ´Ù.
 		m_listctrl_updatable_resource.SetItemData(list_item.iItem, (DWORD_PTR)_psocket_peer);
 
-		// 5) Indexë¥¼ IDë¡œ ë§µí•‘í•˜ì—¬ ì €ì¥í•œë‹¤.
+		// 5) Index¸¦ ID·Î ¸ÊÇÎÇÏ¿© ÀúÀåÇÑ´Ù.
 		_psocket_peer->m_idx_list = m_listctrl_updatable_resource.MapIndexToID(list_item.iItem);
 
-		// 6) add_refí•œë‹¤.
+		// 6) add_refÇÑ´Ù.
 		_psocket_peer->add_ref();
 
-		// 7) Updateí•œë‹¤.
+		// 7) UpdateÇÑ´Ù.
 		list_update_updatable_resource(list_item.iItem);
 	}
 
@@ -885,27 +896,27 @@ void Cupdate_service_server_mfc_dlg::list_remove_updatable_resource(socket_peer*
 	// declare) 
 	int iCountUser;
 
-	scoped_lock(m_listctrl_updatable_resource)
+	SCOPED_LOCK(m_lockable_listctrl_updatable_resource)
 	{
-		// 1) Indexë¥¼ ì–»ëŠ”ë‹¤.
+		// 1) Index¸¦ ¾ò´Â´Ù.
 		int	index = m_listctrl_updatable_resource.MapIDToIndex(_psocket_peer->m_idx_list);
 
 		// check)
 		RETURN_IF(index < 0)
 
-			// 2) Itemì„ ì–»ëŠ”ë‹¤.
+			// 2) ItemÀ» ¾ò´Â´Ù.
 			auto* psocket_lobby_server = (socket_peer*)m_listctrl_updatable_resource.GetItemData(index);
 
 		// check)
 		CGASSERT_ERROR(_psocket_peer == psocket_lobby_server);
 
-		// 3) ì§€ìš´ë‹¤.
+		// 3) Áö¿î´Ù.
 		m_listctrl_updatable_resource.DeleteItem(index);
 
 		// 4) reset m_idex_list
 		psocket_lobby_server->m_idx_list = static_cast<uint32_t>(-1);
 
-		// 5) releaseí•œë‹¤.
+		// 5) releaseÇÑ´Ù.
 		psocket_lobby_server->release();
 
 		// 6) ..
@@ -915,15 +926,15 @@ void Cupdate_service_server_mfc_dlg::list_remove_updatable_resource(socket_peer*
 
 void Cupdate_service_server_mfc_dlg::list_update_updatable_resource(socket_peer* _psocket_peer)
 {
-	scoped_lock(m_listctrl_updatable_resource)
+	SCOPED_LOCK(m_lockable_listctrl_updatable_resource)
 	{
-		// 1) Indexë¥¼ ì–»ëŠ”ë‹¤.
+		// 1) Index¸¦ ¾ò´Â´Ù.
 		int	index = m_listctrl_updatable_resource.MapIDToIndex(_psocket_peer->m_idx_list);
 
 		// check)
 		RETURN_IF(index < 0)
 
-		// 2) Group Roomì„ Updateí•œë‹¤.
+		// 2) Group RoomÀ» UpdateÇÑ´Ù.
 		list_update_updatable_resource(index);
 	}
 }
@@ -932,7 +943,7 @@ void Cupdate_service_server_mfc_dlg::list_update_updatable_resource(int /*_index
 {
 	//LV_ITEM	list_item;
 
-	//scoped_lock(m_listctrl_updatable_resource)
+	//SCOPED_LOCK(m_lockable_listctrl_updatable_resource)
 	//{
 	//	// check) 
 	//	RETURN_IF(_index < 0 || _index >= m_listctrl_updatable_resource.GetItemCount(), );
@@ -940,7 +951,7 @@ void Cupdate_service_server_mfc_dlg::list_update_updatable_resource(int /*_index
 	//	// declare) 
 	//	TCHAR text[256]{ 0 };
 
-	//	// 1) socket_server_lobbyì„ ì–»ëŠ”ë‹¤.
+	//	// 1) socket_server_lobbyÀ» ¾ò´Â´Ù.
 	//	auto psocket_server = (socket_peer*)m_listctrl_updatable_resource.GetItemData(_index);
 
 	//	// 2) 
@@ -971,7 +982,7 @@ void Cupdate_service_server_mfc_dlg::list_update_updatable_resource(int /*_index
 
 void Cupdate_service_server_mfc_dlg::list_update_event_updatable_resource()
 {
-	scoped_lock(m_cs_vector_event_updatable_resource)
+	SCOPED_LOCK(m_cs_vector_event_updatable_resource)
 	{
 		m_vector_event_updatable_resource_queuing.swap(m_vector_event_updatable_resource_processing);
 	}
@@ -982,22 +993,22 @@ void Cupdate_service_server_mfc_dlg::list_update_event_updatable_resource()
 	{
 		m_listctrl_updatable_resource.SetRedraw(false);
 
-		scoped_lock(m_listctrl_updatable_resource)
+		SCOPED_LOCK(m_lockable_listctrl_updatable_resource)
 		{
 			for (auto& iter : m_vector_event_updatable_resource_processing)
 			{
 				switch (iter.message)
 				{
 				case	CGNOTIFY_UPDATABLE_RESOURCE_ADD:
-						list_add_updatable_resource(iter.psource);
+						list_add_updatable_resource(iter.psource.get());
 						break;
 
 				case	CGNOTIFY_UPDATABLE_RESOURCE_REMOVE:
-						list_remove_updatable_resource(iter.psource);
+						list_remove_updatable_resource(iter.psource.get());
 						break;
 
 				case	CGNOTIFY_UPDATABLE_RESOURCE_UPDATE:
-						list_update_updatable_resource(iter.psource);
+						list_update_updatable_resource(iter.psource.get());
 						break;
 
 				default:
@@ -1006,7 +1017,7 @@ void Cupdate_service_server_mfc_dlg::list_update_event_updatable_resource()
 				}
 			}
 
-			// 1) í™”ë©´ì— ë³´ì´ëŠ” ê²ƒë§Œ Updateí•œë‹¤.
+			// 1) È­¸é¿¡ º¸ÀÌ´Â °Í¸¸ UpdateÇÑ´Ù.
 			int	start = m_listctrl_updatable_resource.GetTopIndex();
 			int	end = m_listctrl_updatable_resource.GetTopIndex() + m_listctrl_updatable_resource.GetCountPerPage() + 1;
 

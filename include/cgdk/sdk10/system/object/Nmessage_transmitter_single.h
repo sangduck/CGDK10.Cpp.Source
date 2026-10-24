@@ -27,12 +27,15 @@
 class CGDK::Nmessage_transmitter_single : virtual public Imessage_transmitter
 {
 public:
-			object_ptr<Imessageable> get_messageable() const noexcept { return m_pmessageable;}
-private:
-			lockable<object_ptr<Imessageable>>	m_pmessageable;
+			object_ptr<Imessageable> get_messageable() const noexcept { return this->m_pmessageable;}
+
 public:
 	virtual	result_code			process_transmit_message(sMESSAGE& _msg) override;
 	virtual	bool				process_attach(object_ptr<Imessageable>&& _pmessageable) override;
 	virtual	bool				process_detach(Imessageable* _pmessageable) noexcept override;
 	virtual int					process_reset_message_transmitter() noexcept override;
+
+private:
+			lock_object			m_lockable_pmessageable;
+			object_ptr<Imessageable> m_pmessageable;
 };

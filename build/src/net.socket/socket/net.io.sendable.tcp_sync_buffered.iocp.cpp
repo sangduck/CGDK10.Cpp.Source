@@ -16,45 +16,49 @@ bool net::io::sendable::Ntcp_sync_buffered::process_sendable( const buffer_view 
 	// ----------------------------------------------------------------------------
 
 	// check) _buffer.size()이 0이 아닌가?
-	CGASSERT(_buffer.size() != 0, false);
+	CGASSERT_FATAL(_buffer.size() != 0);
 
 	// check) _buffer.size()이 0이 아닌가?
-	RETURN_IF(_buffer.size() == 0, false);
+	if(_buffer.size() == 0)
+		return false;
 
 	// check) _buffer.data()가 nullptr이 아닌가?
-	CGASSERT(_buffer.data() != nullptr, false);
+	CGASSERT_ERROR(_buffer.data() != nullptr);
 
 	// check) _buffer.data()가 nullptr이 아닌가? (size가 0이 아닌데 data가 nullptr이라면 심각한 오류 이므로 exception을 던진다.)
-	THROW_IF(_buffer.data() == nullptr, throwable::failure(eRESULT::INVALID_MESSAGE_BUFFER_IS_NULL, 0, "buffer.data is null ('net::io::sendable::Ntcp_sync_buffered::process_sendable')"sv));
-
+	if(_buffer.data() == nullptr)
+		return false;
+	
 	// declare)
 	CGSOCKET handle_socket;
 
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		// check) if socket is not connected, return false (after lock)
-		RETURN_IF(this->socket_state() < eSOCKET_STATE::ESTABLISHED, false);
+		if(this->socket_state() < eSOCKET_STATE::ESTABLISHED)
+			return false;
 
 		// 1) get socket native handle (실패확률을 최소화 하기 위해 lock을 건 후에 native handle을 얻는다.)ㄴ
 		handle_socket = this->native_handle();
 
-		// check) aleady released socket handle?
-		RETURN_IF(handle_socket == INVALID_SOCKET, false);
+		// check) already released socket handle?
+		if(handle_socket == INVALID_SOCKET)
+			return false;
 
-		// check) quque overflowed? (최대 queuing 한계를 초과했을 경우 false를 리턴한다.)
+		// check) queue overflowed? (최대 queuing 한계를 초과했을 경우 false를 리턴한다.)
 		if ((this->m_queue_pending.array_buffer.size() >= this->m_max_depth_of_send_buffer) || (this->m_bytes_max_queued >= this->m_bytes_max_queued))
 		{
 			// statistics)
 			this->statistics_on_error_send();
 
 			// check)
-			THROW_IF(this->exception_on_send_overflow(), throwable::failure(eRESULT::OVERFLOW_ERROR, 0, "occure send overflow"sv));
+			this->process_on_send_overflow();
 
 			// return)
 			return false;
 		}
 
-		// 2) queued (전송중일 경우 (m_flag_sending == true)라면 그냥 queuing만 하고 종료한다.
+		// 2) queued (전송 중일 경우 (m_flag_sending == true)라면 그냥 queuing만 하고 종료한다.
 		if (this->m_flag_sending == true)
 		{
 			// - queuing to pending_queue
@@ -85,7 +89,7 @@ bool net::io::sendable::Ntcp_sync_buffered::process_sendable( const buffer_view 
 			if (error_code != WSAEWOULDBLOCK)
 			{
 				// - roll back
-				scoped_lock(this->m_lockable_sending)
+				SCOPED_LOCK(this->m_lockable_sending)
 				{
 					// - clear buffers
 					this->m_queue_pending.clear();
@@ -190,10 +194,10 @@ void net::io::sendable::Ntcp_sync_buffered::process_complete_sendable(uintptr_t 
 	this->statistics_on_send_bytes(_transferred_bytes);
 	this->statistics_on_send_message((_transferred_bytes != 0) ? (this->m_queue_sending.count_message + _count_message) : 0);
 
-	// check) 이미 destroy 된경우 더이상 처리하지 않고 그냥 끝낸다. (destroy되어 clear 처리된 경우 bytes_data가 0일 것이다.)
+	// check) 이미 destroy 된 경우 더 이상 처리하지 않고 그냥 끝낸다. (destroy되어 clear 처리된 경우 bytes_data가 0일 것이다.)
 	RETURN_IF(this->m_queue_sending.bytes_data == 0);
 
-	scoped_lock_named(this->m_lockable_sending, cs)
+	SCOPED_LOCK_NAMED(this->m_lockable_sending, cs)
 	{
 		// 1) clear seding queue
 		this->m_queue_sending.clear();
@@ -215,7 +219,7 @@ void net::io::sendable::Ntcp_sync_buffered::process_complete_sendable(uintptr_t 
 			this->m_flag_sending = false;
 
 			// - lock leave
-			scoped_lock_leave(cs)
+			SCOPED_LOCK_LEAVE(cs)
 
 			// - shutdown if send_disconnected
 			if (this->socket_state() == eSOCKET_STATE::SEND_DISCONNECTED)
@@ -281,7 +285,7 @@ void net::io::sendable::Ntcp_sync_buffered::process_close_sender()
 	// check)
 	bool do_shutdown;
 
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		do_shutdown = this->m_queue_sending.array_buffer.empty();
 	}
@@ -299,14 +303,16 @@ void net::io::sendable::Ntcp_sync_buffered::process_close_sender()
 void net::io::sendable::Ntcp_sync_buffered::process_reset_sendable() noexcept
 {
 	// 1) prepare & reset sending status
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		// - prepare and reset send buffer
 		this->m_queue_pending.clear();
-		this->m_queue_sending.clear();
 
-		// - reset flag 'sending'
-		this->m_flag_sending = false;
+		// - reset sending buffer
+		if (this->m_flag_sending == false)
+		{
+			this->m_queue_sending.clear();
+		}
 	}
 
 	// 2) reset socket option

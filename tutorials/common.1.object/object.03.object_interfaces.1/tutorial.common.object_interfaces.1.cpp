@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -20,15 +20,15 @@
 //
 // tutorial common - object pointer
 //
-// CGDKì—ì„œ ê°ì²´ì˜ ìƒì„±ê³¼ íŒŒê´´ í˜¹ì€ ê°ì¢… ê¸°ëŠ¥ì˜ ìˆ˜í–‰ì˜ ê³µí†µëœ ì²˜ë¦¬ë¥¼ ìœ„í•´ ì—¬ëŸ¬
-// Inteface classë¥¼ ì‚¬ìš©í•˜ê³  ìˆìŠµë‹ˆë‹¤.
-// ì´ê²ƒë“¤ì— ëŒ€í•œ ì„¤ëª…ì…ë‹ˆë‹¤.
+// CGDK¿¡¼­ °´Ã¼ÀÇ »ı¼º°ú ÆÄ±« È¤Àº °¢Á¾ ±â´ÉÀÇ ¼öÇàÀÇ °øÅëµÈ Ã³¸®¸¦ À§ÇØ ¿©·¯
+// Inteface class¸¦ »ç¿ëÇÏ°í ÀÖ½À´Ï´Ù.
+// ÀÌ°Íµé¿¡ ´ëÇÑ ¼³¸íÀÔ´Ï´Ù.
 //
-//  1) ì°¸ì¡°ê³„ìˆ˜
+//  1) ÂüÁ¶°è¼ö
 //
 //     * CGDK::Ireferenceable
 //
-//  2) ê°ì²´ ì†ì„± ê´€ë ¨ inteface
+//  2) °´Ã¼ ¼Ó¼º °ü·Ã inteface
 //
 //       - CGDK::Iobject_identifiable
 //       - CGDK::Inameable
@@ -45,13 +45,13 @@ void tutorial_object_interface_1_step_ex1_Nobject_startable();
 
 int main()
 {
-	// 1) Nnameable ì¸í„°í˜ì´ìŠ¤
+	// 1) Nnameable ÀÎÅÍÆäÀÌ½º
 	tutorial_object_interface_1_step_1_Inameable();
 
-	// 2) object hierarchy ì¸í„°í˜ì´ìŠ¤
+	// 2) object hierarchy ÀÎÅÍÆäÀÌ½º
 	tutorial_object_interface_1_step_2_object_hierarchy();
 
-	// ex.1) object::Ninitializable_startable ì¸í„°í˜ì´ìŠ¤
+	// ex.1) object::Ninitializable_startable ÀÎÅÍÆäÀÌ½º
 	tutorial_object_interface_1_step_ex1_Nobject_startable();
 
 	// return)

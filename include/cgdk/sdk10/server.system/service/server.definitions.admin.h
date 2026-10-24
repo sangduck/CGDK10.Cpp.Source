@@ -143,86 +143,15 @@ namespace CGDK
 #endif
 
 
-namespace server_admin
+namespace server_system
 {
-	//-----------------------------------------------------------------------------
-	/**
-
-	@class		iid_t (instance id)
-	@brief		
-	@todo
-	@ref		sSETTING_INFO, sSERVICE_INSTANCE_INFO
-	@details	\n
-
-	*/
-	//-----------------------------------------------------------------------------
-	// 1) instance id (매번 객체화될 때마다 할당되는 id이다. (0:비객체화, >0:객체화))
-	typedef uint64_t iid_t;
-
-
-	//-----------------------------------------------------------------------------
-	/**
-
-	@class		sRANK
-	@brief		설정 정보의 기본 내용
-	@todo
-	@ref		sHOST_SETTING_INFO, sSERVICE_INSTANCE_INFO, SERVICE_SETTING
-	@details	\n
-
-	*/
-	//-----------------------------------------------------------------------------
-	// 1) instance의 타입
-	namespace eINSTANCE_TYPE
-	{
-		constexpr static int NONE = 0;
-		constexpr static int HOST = 1;
-		constexpr static int SERVICE = 2;
-		constexpr static int ADMIN_SERVER = 3;
-		constexpr static int ADMON_CIENT = 4;
-	};
-
-	// 2) revision
-	struct sREVISION
-	{
-		ENABLE_STRUCT_SERIALIZABLE
-
-		std::string			url;						// - URL
-		int64_t				revision{ 0 };				// - version
-		chrono::time::utc::time_point time;				// - time
-	};
-
-	// 3) rank(역할)
-	struct sRANK
-	{
-		// 1) group/field
-		int32_t				group{ 0 };
-		int32_t				field{ 0 };
-
-		// 2) role/Index
-		int32_t				role{ 0 };
-		int32_t				index{ 0 };
-
-		// function)
-		bool				empty() const noexcept { return this->group == 0 && this->field == 0 && this->role == 0 && this->index == 0; }
-		bool				exist() const noexcept { return !this->empty(); }
-		void				clear() noexcept;
-
-		std::string			to_string() const { return NFMT::format("{}.{}.{}.{}"sv, group, field, role, index); }
-	};
-	inline bool operator == (const sRANK& _lhs, const sRANK& _rhs) noexcept { return _lhs.group == _rhs.group && _lhs.field == _rhs.field && _lhs.role == _rhs.role && _lhs.index == _rhs.index; }
-	inline bool operator != (const sRANK& _lhs, const sRANK& _rhs) noexcept { return !(_lhs == _rhs); }
-	inline bool operator >  (const sRANK& _lhs, const sRANK& _rhs) noexcept { return (_lhs.group > _rhs.group) ? true : (_lhs.group < _rhs.group) ? false : (_lhs.field > _rhs.field) ? true : (_lhs.field < _rhs.field) ? false : (_lhs.role > _rhs.role) ? true : (_lhs.role < _rhs.role) ? false : (_lhs.index > _rhs.index); }
-	inline bool operator <= (const sRANK& _lhs, const sRANK& _rhs) noexcept { return !(_lhs > _rhs); }
-	inline bool operator <  (const sRANK& _lhs, const sRANK& _rhs) noexcept { return  (_rhs > _lhs); }
-	inline bool operator >= (const sRANK& _lhs, const sRANK& _rhs) noexcept { return !(_lhs > _rhs); }
-
 	//-----------------------------------------------------------------------------
 	/**
 
 	@class		sCERTIFY_INFO
 	@brief		네트워크로 송수신 시 사용되는 구조체
 	@todo
-	@ref		sHOST_SETTING_INFO, sSERVICE_INSTANCE_INFO, SERVICE_SETTING
+	@ref		sSERVICE_INSTANCE_INFO, SERVICE_SETTING
 	@details	\n
 
 	*/
@@ -230,58 +159,24 @@ namespace server_admin
 	// 2) 인증 종류
 	struct sCERTIFY_INFO
 	{
-		ENABLE_STRUCT_SERIALIZABLE
-
-		int					 instance_type{ eINSTANCE_TYPE::NONE };
+		int					dummy{ 0 };
 	};
 
+	// - certify key
+	//   CERTIFY_REQUEST = [sCERTIFY_INFO][std::string_view certify_key (optional)]
+	//   key가 설정된 쪽(admin server/host agent)은 같은 key를 보낸 접속만 받는다.
+	[[nodiscard]] bool	is_certify_key_matched(std::string_view _expected, std::string_view _received) noexcept;
+	[[nodiscard]] std::string get_certify_key_from_environment();
 
-	//-----------------------------------------------------------------------------
-	/**
+	// - key file (앞뒤 공백/줄바꿈은 뺀다. linux: group/other가 읽을 수 있으면 경고한다. 읽지 못하면 std::nullopt)
+	[[nodiscard]] std::optional<std::string> read_key_file(std::string_view _filename);
 
-	@class		sSERVICE_SETTING_INFO
-	@brief		설정 정보의 기본 내용
-	@todo
-	@ref		sHOST_SETTING_INFO, sSERVICE_INSTANCE_INFO, SERVICE_SETTING
-	@details	\n
-
-	*/
-	//-----------------------------------------------------------------------------
-	// 1. 사용자가 설정할 수 있는 instance 정보들
-	struct sSERVICE_SETTING
-	{
-		ENABLE_STRUCT_SERIALIZABLE
-
-		// 1) instance id
-		iid_t				iid{ 0 };					// - sSERVICE_INSTANCE_INFO의 iid값과 같은 값
-
-		// 2) name/comment
-		std::string			nickname;
-		std::string			comment;
-
-		// 3) setting
-		sRANK				rank;						// - server rank (서버 소속(group, field), 서버의 역할 및 순번(role, index), 서버속성(attribute)
-		std::array<uint64_t, 8>	parameter{};			// - options
-		shared_buffer		buf_configure;				// - configure (JSON setting info)
-		shared_buffer		buf_setting;				// - configure (setting info)
-
-		// 4) version
-		sREVISION			revision;					// - reversion
-		sVERSION_EX			version;					// - version
-
-		// 5) execute info
-		std::string			file_execute;				// - execute filename
-		std::string			str_path;					// - File Path
-		std::string			str_path_working;			// - Working Directory
-		shared_buffer		buf_command_line;			// - Commandline(UNICODE, 1 NULL Terminate line, 2 NULL is Terminate Block)
-		shared_buffer		buf_environment;			// - Environmennt block(UNICODE, 1 NULL Terminate line, 2 NULL is Terminate Block)
-
-		// funcions)
-		bool load(std::string_view _path = "."sv);
-		bool load(std::wstring_view _path);
-		bool save();
-		void clear() noexcept;
-	};
+	// - setting의 key
+	//   1) "<name>_file" : key file (읽지 못하면 아무도 맞출 수 없는 key로 설정하고 error log를 남긴다.)
+	//   2) "<name>"      : key
+	//   3) _environment  : 환경변수 (빈 문자열이면 쓰지 않는다.)
+	[[nodiscard]] std::string get_key_from_setting(context& _context, std::string_view _name, std::string_view _environment = {});
+	[[nodiscard]] inline std::string get_certify_key_from_setting(context& _context) { return get_key_from_setting(_context, "certify_key", "CGDK_ADMIN_CERTIFY_KEY"); }
 
 
 	//-----------------------------------------------------------------------------
@@ -483,7 +378,7 @@ namespace server_admin
 		ENABLE_STRUCT_SERIALIZABLE
 
 		static_string<64>		name;					// - name
-		CGSOCKET				socket_handle;			// - socket handle
+		CGSOCKET				socket_handle{ INVALID_SOCKET }; // - socket handle
 
 		net::sockaddr			addr_local;				// - address: local(bind)
 		net::sockaddr			addr_remote;			// - address: remote
@@ -496,8 +391,8 @@ namespace server_admin
 	{
 		ENABLE_STRUCT_SERIALIZABLE
 
-		CGSOCKET				id;						// - id (socket handle)
-		eSOCKET_STATE			state_socket;			// - Socket State
+		CGSOCKET				id { INVALID_SOCKET }; // - id (socket handle)
+		eSOCKET_STATE			state_socket{ eSOCKET_STATE::CLOSED }; // - Socket State
 
 		chrono::time::utc::time_point time_connect;		// - connect time
 		chrono::time::utc::time_point time_close;		// - close time
@@ -561,295 +456,515 @@ namespace server_admin
 	//-----------------------------------------------------------------------------
 	/**
 
-	@class		sHOST_SETTING_INFO
+	@class		sHOST
 	@brief		HOST의 설정 내용
 	@todo
-	@ref		sSERVICE_INSTANCE_INFO, SERVICE_SETTING
+	@ref		sSERVICE
 	@details	\n
 
 	*/
 	//-----------------------------------------------------------------------------
-	// 1) Host setting - 호스트 설정, 사용자가 설정하는 값(Host에 대해서는 설정값이 거의 없다.)
-	struct sHOST_SETTING_INFO
+	//-----------------------------------------------------------------
+	// host instance info
+	//-----------------------------------------------------------------
+	struct sHOST
 	{
 		ENABLE_STRUCT_SERIALIZABLE
 
-		// 1) host sID
-		iid_t				iid{ 0 };
+		// 1) setting
+		struct sSETTING
+		{
+			ENABLE_STRUCT_SERIALIZABLE
 
-		// 2) name/comment
-		std::string			name;
-		std::string			comment;
-	};
+			// - host sID
+			iid_t				iid{ 0 };
 
-	// 2) Host Info - 호스트의 기본 값(호스트 명, 하드웨어 정보, O/S정보 등)
-	struct sHOST_INSTANCE_INFO
-	{
-		ENABLE_STRUCT_SERIALIZABLE
+			// - name/comment
+			std::string			name;
+			std::string			comment;
+		} setting;
 
-		// 1) system/OS Info
-		SYSTEM::sINFO		system_info;
-		sOS_INFO			os_info;
+		// 2) info
+		struct sINFO
+		{
+			ENABLE_STRUCT_SERIALIZABLE
 
-		// 2) host address
-		sMAC_ADDRESS		mac;
-		net::sockaddr		addr_host;
-		std::string			uid_host;
-		std::string			uid_os;
+			// - system/OS Info
+			SYSTEM::sINFO		system_info;
+			sOS_INFO			os_info;
 
-		// 3) host name
-		std::string			host_name;
+			// - host address
+			sMAC_ADDRESS		mac;
+			net::sockaddr		addr_host;
+			std::string			uid_host;
+			std::string			uid_os;
 
-		// 4) start Time
-		chrono::time::utc::time_point time_start;
-	};
+			// - host name
+			std::string			host_name;
 
-	// 3) Host Status - Host의 상태(CPU사용량,메모리 사용량,네트워크 사용랴), 지속적으로 Host에서 전송되어오는 정보.
-	struct sHOST_INSTANCE_STATUS
-	{
-		// 1) host instance id
-		iid_t				iid{ 0 };
-
-		// 2) usage info
-		SYSTEM::sINFO		system_info;
-		std::vector<SYSTEM::sSTATUS> vector_status;
+			// - start Time
+			chrono::time::utc::time_point time_start;
+		} info;
 
 		// 3) status
-		eOBJECT_STATE	state{ eOBJECT_STATE::NONE };
-	};
+		struct sSTATUS
+		{
+			ENABLE_STRUCT_SERIALIZABLE
 
-	// 4) status header
-	struct sSERVICE_INSTANCE_INFO_BASIC
-	{
-		ENABLE_STRUCT_SERIALIZABLE
+			// 1) host instance id
+			iid_t				iid{ 0 };
 
-		// 1) instance id
-		std::string			name;						// - application name
-		iid_t				host_iid{ 0 };				// - host id
-		uint64_t			pid{ 0 };					// - process_id
-
-		// 2) version
-		sREVISION			revision;					// - repository 정보
-		sVERSION_EX			version;					// - veersion
-
-		// 3) settings
-		chrono::time::utc::time_point time_register;	// - 서버 정보를 등록한 시간.
-		chrono::time::utc::time_point time_update;		// - 서버 정보를 업데이트한 시간.
-
-		// funcions)
-		void				clear() noexcept;
-	};
-
-	// 5) 현재 적용된 instance 정보들
-	struct sSERVICE_INSTANCE_INFO : public sSERVICE_INSTANCE_INFO_BASIC
-	{
-		// 1) execute file/directory
-		std::string			file_execute;				// - execute filename
-		std::string			str_path;					// - File Path
-		std::string			str_path_working;			// - Working Directory
-		shared_buffer		buf_command_line;			// - Commandline(UNICODE, 1 NULL Terminate line, 2 NULL is Terminate Block)
-		shared_buffer		buf_environment;			// - Environmennt block(UNICODE, 1 NULL Terminate line, 2 NULL is Terminate Block)
-
-		// funcions)
-		void				clear() noexcept;
+			// 2) usage info
+			SYSTEM::sINFO		system_info;
+			std::vector<SYSTEM::sSTATUS> vector_status;
+			//std::vector<PROCESS::sSTATUS>	vector_process_status;
+		} status;
 	};
 
 
 	//-----------------------------------------------------------------------------
 	/**
 
-	@class		sSERVICE_INSTANCE_STATUS
+	@class		sSERVICE
 
 	*/
 	//-----------------------------------------------------------------------------
-	// 3. 변경되는 instance 현재 상태값
-	struct sSERVICE_INSTANCE_STATUS
-	{
-		ENABLE_STRUCT_SERIALIZABLE
-
-		// 1) instance id
-		iid_t				iid{ 0 };					// - sSERVICE_INSTANCE_INFO의 iid값과 같은 값
-
-		// 2) service state
-		eOBJECT_STATE		state{ eOBJECT_STATE::NONE };
-		uint32_t			dummy{ 0 };
-
-		// 3) process id
-		uint64_t			pid{ 0 };
-
-		// 4) process/memory/network ...
-		std::vector<PROCESS::sSTATUS> vector_process_status;
-
-		// 5) entity status
-		std::vector<server_admin::factory_snap>				vector_factory;
-		std::vector<server_admin::executor_snap>			vector_executor;
-		std::vector<server_admin::schedulable_snap>			vector_schedulable;
-		std::vector<server_admin::connective_info_snap>		vector_connective;
-		std::vector<server_admin::socket_info_snap>			vector_binder;
-		std::vector<server_admin::time_event_snap>			vector_time_event;
-		statistics::unit_connective_snap					connective_info;
-		statistics::unit_traffic_snap						traffic_info;
-
-		// 6) log status
-		circular_list<object_ptr<LOG_RECORD>>				vector_log_record;
-
-		// 7) time updated
-		chrono::time::utc::time_point time_update;		// - 데이터가 작성된 시간
-
-		void clear() noexcept
-		{
-			this->vector_factory.clear();
-			this->vector_executor.clear();
-			this->vector_schedulable.clear();
-			this->vector_connective.clear();
-			this->vector_binder.clear();
-			this->vector_time_event.clear();
-			this->connective_info = statistics::unit_connective_snap();
-			this->traffic_info = statistics::unit_traffic_snap();
-			this->vector_log_record.clear();
-		}
-	};
 
 
 	//-----------------------------------------------------------------
 	// all in one
 	//-----------------------------------------------------------------
 	// - server setting/status
-	struct sSERVICE_INSTANCE_STATUS_UPDATE
+	struct sSERVICE_STATUS_UPDATE
 	{
 		ENABLE_STRUCT_SERIALIZABLE
 
-		PROCESS::sSTATUS										process_status;
-		std::vector<server_admin::factory_update_snap>			vector_factory_update;
-		std::vector<server_admin::executor_update_snap>			vector_executor_update;
-		std::vector<server_admin::schedulable_update_snap>		vector_schedulable_update;
-		std::vector<server_admin::connective_info_update_snap>	vector_connective_update;
-		std::vector<server_admin::socket_info_update_snap>		vector_binder_update;
-		statistics::unit_connective_snap						connective_info;
-		statistics::unit_traffic_snap							traffic_info;
+		PROCESS::sSTATUS							process_status;
+		std::vector<factory_update_snap>			vector_factory_update;
+		std::vector<executor_update_snap>			vector_executor_update;
+		std::vector<schedulable_update_snap>		vector_schedulable_update;
+		std::vector<connective_info_update_snap>	vector_connective_update;
+		std::vector<socket_info_update_snap>		vector_binder_update;
+		statistics::unit_connective_snap			connective_info;
+		statistics::unit_traffic_snap				traffic_info;
 	};
 
+	//-----------------------------------------------------------------
+	// service type (서비스를 실행하는 방법)
+	//
+	//  - EXECUTE         : 실행 파일을 실행한다. (sSETTING의 filename/path/working_path/arguments/environment)
+	//  - SERVICE         : 서비스를 시작/중지한다. (sSETTING::name이 서비스 이름. windows: windows service, linux: systemd service)
+	//  - DOCKER          : docker container를 시작/중지한다. (sSETTING::name이 container 이름. 'docker start/stop <name>')
+	//-----------------------------------------------------------------
+	enum class eSERVICE_TYPE : uint32_t
+	{
+		EXECUTE			 = 0,
+		SERVICE			 = 1,
+		DOCKER			 = 2,
+		MAX_
+	};
 
-//-----------------------------------------------------------------
-// get snap functions
-//-----------------------------------------------------------------
-// 1) factory
-factory_snap							get_snap				(const Ifactory* _pfactory) noexcept;
-factory_update_snap						get_update_snap			(const Ifactory* _pfactory) noexcept;
-std::vector<factory_snap>				get_snap				(factory::manager* _pmanager);
-std::vector<factory_update_snap>		get_update_snap			(factory::manager* _pmanager);
-std::vector<factory_snap>				get_snap				(factory::manager* _pmanager, eOBJECT_TYPE _object_type);
-std::vector<factory_update_snap>		get_update_snap			(factory::manager* _pmanager, eOBJECT_TYPE _object_type);
+	// - 문자열 <-> eSERVICE_TYPE ("execute", "service"("windows_service"도 허용), "docker". 모르는 값은 EXECUTE)
+	[[nodiscard]] inline eSERVICE_TYPE to_service_type(std::string_view _text) noexcept
+	{
+		if (_text == "service" || _text == "windows_service")
+			return eSERVICE_TYPE::SERVICE;
+		if (_text == "docker")
+			return eSERVICE_TYPE::DOCKER;
+		return eSERVICE_TYPE::EXECUTE;
+	}
 
-// 2) executor
-executor_snap							get_snap				(Iexecutor* _pexector) noexcept;
-executor_update_snap					get_update_snap			(Iexecutor* _pexector) noexcept;
-std::vector<executor_snap>				get_snap				(executor::manager* _pexecutor_manager);
-std::vector<executor_update_snap>		get_update_snap			(executor::manager* _pexecutor_manager);
+	[[nodiscard]] inline std::string_view to_service_type_string(eSERVICE_TYPE _service_type) noexcept
+	{
+		switch (_service_type)
+		{
+		case	eSERVICE_TYPE::SERVICE:	return "service";
+		case	eSERVICE_TYPE::DOCKER:			return "docker";
+		default:								return "execute";
+		}
+	}
 
-// 3) schedulable
-schedulable_snap						get_snap				(const Ischedulable* _pschedulable) noexcept;
-schedulable_update_snap					get_update_snap			(const Ischedulable* _pschedulable) noexcept;
-std::vector<schedulable_snap>			get_snap				(schedulable::manager* _pschedulable_manager);
-std::vector<schedulable_update_snap>	get_update_snap			(schedulable::manager* _pschedulable_manager);
+#if defined(_WIN32)
+	// - UTF-8 <-> UTF-16 (windows W API에 넘길 때 쓴다.)
+	[[nodiscard]] inline std::wstring utf8_to_utf16(std::string_view _text)
+	{
+		if (_text.empty())
+			return std::wstring();
 
-// 4) connective
-statistics::unit_connective_snap		get_snap				(const statistics::unit_connective& _unit_connective) noexcept;
-statistics::unit_connective_snap		get_update_snap			(const statistics::unit_connective& _connective) noexcept;
-connective_info_snap					get_snap				(const net::io::Iconnective* _pconnective) noexcept;
-connective_info_update_snap				get_update_snap			(const net::io::Iconnective* _pconnective) noexcept;
-std::vector<connective_info_snap>		get_snap				(net::io::connective::manager* _pconnective_manager);
-std::vector<connective_info_update_snap> get_update_snap		(net::io::connective::manager* _pconnective_manager);
+		auto length = ::MultiByteToWideChar(CP_UTF8, 0, _text.data(), static_cast<int>(_text.size()), nullptr, 0);
+		std::wstring result(static_cast<std::size_t>(length), L'\0');
+		::MultiByteToWideChar(CP_UTF8, 0, _text.data(), static_cast<int>(_text.size()), result.data(), length);
+		return result;
+	}
 
-// 5) traffic
-statistics::unit_traffic_snap			get_snap				(const statistics::unit_traffic& _traffic_info) noexcept;
-statistics::unit_traffic_snap			get_update_snap			(const statistics::unit_traffic& _traffic_info) noexcept;
+	[[nodiscard]] inline std::string utf16_to_utf8(std::wstring_view _text)
+	{
+		if (_text.empty())
+			return std::string();
 
-// 6) socket info (binder)
-socket_info_snap						get_snap				(const net::io::Ibinder* _pbinder) noexcept;
-socket_info_snap						get_snap				(const net::io::Ibinder* _pbinder, net::io::statistics::Nsocket* _pstatistics_socket) noexcept;
-socket_info_update_snap					get_update_snap			(const net::io::Ibinder* _pbinder) noexcept;
-std::vector<socket_info_snap>			get_snap				(net::io::binder::manager* _pbinder_manager);
-std::vector<socket_info_update_snap> get_update_snap			(net::io::binder::manager* _pbinder_manager);
+		auto size = ::WideCharToMultiByte(CP_UTF8, 0, _text.data(), static_cast<int>(_text.size()), nullptr, 0, nullptr, nullptr);
+		std::string result(static_cast<std::size_t>(size), '\0');
+		::WideCharToMultiByte(CP_UTF8, 0, _text.data(), static_cast<int>(_text.size()), result.data(), size, nullptr, nullptr);
+		return result;
+	}
+#endif
 
-// 7) time_event
-time_event_snap							get_snap				(const time_event::Ientity* _ptime_event) noexcept;
-time_event_update_snap					get_update_snap			(const time_event::Ientity* _ptime_event) noexcept;
-std::vector<time_event_snap>			get_snap				(time_event::entity_manager* _pentity_manager);
-std::vector<time_event_update_snap>		get_update_snap(time_event::entity_manager * _pentity_manager);
+	//-----------------------------------------------------------------
+	// service instance info
+	//-----------------------------------------------------------------
+	struct sSERVER_CERTIFICATION_INFO
+	{
+		ENABLE_STRUCT_SERIALIZABLE
 
-// 8) logger
-std::vector<object_ptr<LOG_RECORD>>		get_records_of_default_logger();
-circular_list<object_ptr<LOG_RECORD>>	get_records_of_default_logger_circular_list();
+		std::string			name;						// - application name
+		std::string			comment;					// - comment
+		sRANK				rank;						// - server rank (서버 소속(group, field), 서버의 역할 및 순번(role, index), 서버속성(attribute)
+		sREVISION			revision;					// - repository 정보
+		sVERSION_EX			version;					// - version
+	};
+
+	struct sSERVICE
+	{
+		ENABLE_STRUCT_SERIALIZABLE
+
+		// 1) setting
+		struct sSETTING
+		{
+			ENABLE_STRUCT_SERIALIZABLE
+
+			// 1) instance id
+			iid_t				iid{ IID_AUTO };			// - instance id값과 같은 값
+
+			// 2) instance id
+			std::string			name;						// - application name
+			std::string			comment;					// - comment
+
+			// 3) rank & configures
+			sRANK				rank;						// - server rank (서버 소속(group, field), 서버의 역할 및 순번(role, index), 서버속성(attribute)
+
+			// 4) version
+			sREVISION			revision;					// - repository 정보
+			sVERSION_EX			version;					// - version
+
+			// 5) service type & execute file/directory
+			eSERVICE_TYPE		service_type{ eSERVICE_TYPE::EXECUTE };	// - 실행 방법 (EXECUTE: 실행 파일, SERVICE: name이 서비스 이름, DOCKER: name이 container 이름)
+			uint32_t			reserved{ 0 };					// - (8 byte 정렬. pack(1)이므로 다음 멤버를 8 byte에 맞춘다.)
+			std::string			filename;					// - execute filename
+			std::string			path;						// - File Path
+			std::string			working_path;				// - Working Directory
+			std::vector<std::string> arguments;				// - 실행 인자 (UTF-8. 실행 파일 이름은 포함하지 않는다.)
+															//   . 채우는 곳
+															//     -> host_agent: 설정의 "arguments" (server_admin.instance_manager.cpp)
+															//     (실제로 적용된 실행 인자는 info.arguments에 보관한다. (Xservice::run))
+															//   . 쓰는 곳 (비어 있지 않으면 실행 인자로 전달한다.)
+															//     -> windows: CreateProcessW/CreateProcessAsUserW의 command line (get_arguments_string)
+															//     -> linux  : execv/execve의 argv
+			std::vector<std::string> environment;			// - 환경 변수 ('name=value' 목록. UTF-8)
+															//   . 채우는 곳
+															//     -> host_agent: 설정의 "environment" (server_admin.instance_manager.cpp)
+															//   . 쓰는 곳 (host_agent: server_admin.instance_service_local.cpp)
+															//     -> windows: 기본 환경(콘솔 모드: 부모 프로세스의 환경, 서비스 모드: CreateEnvironmentBlock으로 만든 사용자 기본 환경)에
+															//                 추가/덮어쓴 UTF-16 블록(get_environment_block)을 CreateProcessW/CreateProcessAsUserW의 lpEnvironment로 전달
+															//                 (이름은 대소문자를 구분하지 않는다.)
+															//     -> linux  : 부모 프로세스의 환경에 추가/덮어쓴 후 execve로 실행한다.
+															//     -> 비어 있으면 기본 환경을 그대로 쓴다.
+
+			// 6) contexts
+			context				context_initialize;			// - context for start
+			context				context_start;				// - context for start
+
+			// 7) options
+			uint32_t			stop_grace_period{ 0 };		// - 멈출 때 기다리는 시간(초). 0이면 설정하지 않는다. (DOCKER: 'docker stop -t <초>'. 없으면 docker 기본값)
+
+			// functions)
+			void				clear() noexcept;
+
+			// - arguments
+			[[nodiscard]] std::string get_arguments_string(std::string_view _execute = {}) const;	// - 공백/따옴표가 있는 인자는 따옴표로 감싼다. (_execute가 있으면 맨 앞에 붙인다.)
+			[[nodiscard]] static std::string quote_argument(std::string_view _argument);
+
+			// - environment
+		#if defined(_WIN32)
+			[[nodiscard]] std::wstring get_environment_block(const wchar_t* _pbase_block = nullptr) const;	// - _pbase_block(기본 환경. UTF-16 블록)에 environment를 추가/덮어쓴 UTF-16 블록 ('name=value'마다 NULL, 끝에 NULL 하나 더. environment가 비어 있으면 빈 문자열)
+		#endif
+		} setting;
+
+		// 2) info
+		struct sINFO
+		{
+			ENABLE_STRUCT_SERIALIZABLE
+
+			// 1) process id
+			iid_t				host_iid{ IID_AUTO };		// - host instance id
+			uint64_t			pid{ 0 };					// - process id
+
+			// 2) initialize
+			context				context_run;				// - context after started
+			std::vector<std::string> arguments;				// - 실제로 적용된 실행 인자 (Xservice::run이 보관한다. setting.arguments는 요청한 값이다.)
+
+			// 3) time
+			chrono::time::utc::time_point time_register;	// - register time
+			chrono::time::utc::time_point time_update;		// - update time
+		} info;
+
+		// 3) status
+		struct sSTATUS
+		{
+			ENABLE_STRUCT_SERIALIZABLE
+
+			// - instance id
+			iid_t				iid{ 0 };					// - sSERVICE_INSTANCE_INFO의 iid값과 같은 값
+
+			// - service state
+			eOBJECT_STATE		state{ eOBJECT_STATE::NONE };
+			uint32_t			dummy{ 0 };
+
+			// - process/memory/network ...
+			PROCESS::sSTATUS	process_status;
+
+			// - entity status
+			std::vector<factory_snap>				vector_factory;
+			std::vector<executor_snap>				vector_executor;
+			std::vector<schedulable_snap>			vector_schedulable;
+			std::vector<connective_info_snap>		vector_connective;
+			std::vector<socket_info_snap>			vector_binder;
+			std::vector<time_event_snap>			vector_time_event;
+			statistics::unit_connective_snap		connective_info;
+			statistics::unit_traffic_snap			traffic_info;
+
+			// - log infos
+			circular_list<object_ptr<LOG_RECORD>>	vector_log_record;
+
+			// - time updated
+			chrono::time::utc::time_point time_state_changed;	// - 서버 정보를 등록한 시간.
+			chrono::time::utc::time_point time_update;			// - 데이터가 작성된 시간
+
+			void clear() noexcept
+			{
+				this->iid = 0;
+				this->state = eOBJECT_STATE::NONE;
+				this->dummy = 0;
+				//process_status.clear();
+				this->vector_factory.clear();
+				this->vector_executor.clear();
+				this->vector_schedulable.clear();
+				this->vector_connective.clear();
+				this->vector_binder.clear();
+				this->vector_time_event.clear();
+				this->connective_info = statistics::unit_connective_snap();
+				this->traffic_info = statistics::unit_traffic_snap();
+				this->vector_log_record.clear();
+				this->time_state_changed = (chrono::time::utc::time_point::min)();
+				this->time_update = (chrono::time::utc::time_point::min)();
+			}
+		} status;
+	};
+
+	struct sINSTANCE_KEY
+	{
+		ENABLE_STRUCT_SERIALIZABLE
+
+		uint64_t	key{ 0 };
+		chrono::time::utc::time_point time{ (chrono::time::utc::time_point::min)() };
+
+		void initialize() noexcept;
+	};
+
+	bool operator==(const sINSTANCE_KEY& _left, const sINSTANCE_KEY& _right) noexcept;
+	bool operator!=(const sINSTANCE_KEY& _left, const sINSTANCE_KEY& _right) noexcept;
+	bool operator<(const sINSTANCE_KEY& _left, const sINSTANCE_KEY& _right) noexcept;
+	bool operator>(const sINSTANCE_KEY& _left, const sINSTANCE_KEY& _right) noexcept;
+	bool operator<=(const sINSTANCE_KEY& _left, const sINSTANCE_KEY& _right) noexcept;
+	bool operator>=(const sINSTANCE_KEY& _left, const sINSTANCE_KEY& _right) noexcept;
+
+	////-----------------------------------------------------------------------------
+	///**
+
+	//@class		sSERVICE_SETTING_INFO
+	//@brief		설정 정보의 기본 내용
+	//@todo
+	//@ref		sHOST_SETTING_INFO, sSERVICE_INSTANCE_INFO, SERVICE_SETTING
+	//@details	\n
+
+	//*/
+	////-----------------------------------------------------------------------------
+	//// 1. 사용자가 설정할 수 있는 instance 정보들
+	//struct sSERVICE_SETTING
+	//{
+	//	ENABLE_STRUCT_SERIALIZABLE
+
+	//		// 1) instance id
+	//		iid_t				iid{ 0 };					// - sSERVICE_INSTANCE_INFO의 iid값과 같은 값
+
+	//	// 2) name/comment
+	//	std::string			nickname;
+	//	std::string			comment;
+
+	//	// 3) setting
+	//	sRANK				rank;						// - server rank (서버 소속(group, field), 서버의 역할 및 순번(role, index), 서버속성(attribute)
+	//	std::array<uint64_t, 8>	parameter{};			// - options
+	//	shared_buffer		buf_configure;				// - configure (JSON)
+	//	shared_buffer		buf_setting;				// - setting info
+
+	//	// 4) version
+	//	sREVISION			revision;					// - reversion
+	//	sVERSION_EX			version;					// - version
+
+	//	// 5) execute info
+	//	std::string			filename;				// - execute filename
+	//	std::string			path;					// - File Path
+	//	std::string			working_path;			// - Working Directory
+	//	shared_buffer		buf_command_line;			// - Commandline(UNICODE, 1 NULL Terminate line, 2 NULL is Terminate Block)
+	//	shared_buffer		buf_environment;			// - Environment block(UNICODE, 1 NULL Terminate line, 2 NULL is Terminate Block)
+
+	//	// functions)
+	//	bool set_configure_json_string(std::string_view _json_string);
+	//	bool set_configure_json_string_from_file(std::string_view _filename);
+	//	bool save();
+	//	void clear() noexcept;
+	//};
 
 
-//-----------------------------------------------------------------
-// message functions
-//-----------------------------------------------------------------
-// 1) certify
-shared_buffer message_SERVER_ADMIN_CERTIFY_REQUEST				(const sCERTIFY_INFO& _certify_info);
-shared_buffer message_SERVER_ADMIN_CERTIFY_RESPONSE				(eRESULT _result);
 
-// 2) admin request
-shared_buffer message_SERVER_ADMIN_REQUEST_UPDATE_SETTING		(iid_t _instance_iid, iid_t _host_iid, const server_admin::sSERVICE_SETTING& _server_setting);
-shared_buffer message_SERVER_ADMIN_REQUEST_INIT_SERVICE			(iid_t _instance_iid);
-shared_buffer message_SERVER_ADMIN_REQUEST_DESTROY_SERVICE		(iid_t _instance_iid);
-shared_buffer message_SERVER_ADMIN_REQUEST_KILL_SERVICE			(iid_t _instance_iid);
-shared_buffer message_SERVER_ADMIN_REQUEST_START_SERVICE		(iid_t _instance_iid, const std::string_view _setting);
-shared_buffer message_SERVER_ADMIN_REQUEST_STOP_SERVICE			(iid_t _instance_iid);
-shared_buffer message_SERVER_ADMIN_REQUEST_PAUSE_SERVICE		(iid_t _instance_iid);
-shared_buffer message_SERVER_ADMIN_REQUEST_CONTINUE_SERVICE		(iid_t _instance_iid);
-shared_buffer message_SERVER_ADMIN_INSTANCE_VERSION_UPDATE		(iid_t _instance_iid);
+	//-----------------------------------------------------------------
+	// get snap functions
+	//-----------------------------------------------------------------
+	// 1) factory
+	factory_snap							get_snap				(const Ifactory* _pfactory) noexcept;
+	factory_update_snap						get_update_snap			(const Ifactory* _pfactory) noexcept;
+	std::vector<factory_snap>				get_snap				(factory::manager* _pmanager);
+	std::vector<factory_update_snap>		get_update_snap			(factory::manager* _pmanager);
+	std::vector<factory_snap>				get_snap				(factory::manager* _pmanager, eOBJECT_TYPE _object_type);
+	std::vector<factory_update_snap>		get_update_snap			(factory::manager* _pmanager, eOBJECT_TYPE _object_type);
 
-// 3) admin instance process
-shared_buffer message_SERVER_ADMIN_INSTANCE_CERTIFY_REQUEST		(uint64_t _pid, server_admin::sRANK _rank);
-shared_buffer message_SERVER_ADMIN_INSTANCE_CERTIFY_RESPONSE	(const server_admin::sSERVICE_SETTING& _instance_setting);
-shared_buffer message_SERVER_ADMIN_INSTANCE_CERTIFY_RESPONSE	(eRESULT _result);
+	// 2) executor
+	executor_snap							get_snap				(Iexecutor* _pexector) noexcept;
+	executor_update_snap					get_update_snap			(Iexecutor* _pexector) noexcept;
+	std::vector<executor_snap>				get_snap				(executor::manager* _pexecutor_manager);
+	std::vector<executor_update_snap>		get_update_snap			(executor::manager* _pexecutor_manager);
 
-shared_buffer message_SERVER_ADMIN_INSTANCE_ENTER				(const std::vector<sINSTANCE_SERVICE>& _vector_instance);
-shared_buffer message_SERVER_ADMIN_INSTANCE_LEAVE				(iid_t _service_iid);
+	// 3) schedulable
+	schedulable_snap						get_snap				(const Ischedulable* _pschedulable) noexcept;
+	schedulable_update_snap					get_update_snap			(const Ischedulable* _pschedulable) noexcept;
+	std::vector<schedulable_snap>			get_snap				(schedulable::manager* _pschedulable_manager);
+	std::vector<schedulable_update_snap>	get_update_snap			(schedulable::manager* _pschedulable_manager);
 
-// 4) admin instance info
-shared_buffer message_SERVER_ADMIN_INSTANCE_REGISTER			(Ibuffer_serializable* _pinstance);
-shared_buffer message_SERVER_ADMIN_INSTANCE_UNREGISTER			(iid_t _instance_iid);
-shared_buffer message_SERVER_ADMIN_INSTANCE_UPDATE				(iid_t _instance_iid, Ibuffer_serializable& _instance);
-shared_buffer message_SERVER_ADMIN_INSTANCE_UPDATE_SETTING		(iid_t _instance_iid, Ibuffer_serializable& _instance);
-shared_buffer message_SERVER_ADMIN_INSTANCE_UPDATE_INFO			(iid_t _instance_iid, Ibuffer_serializable& _instance);
-shared_buffer message_SERVER_ADMIN_INSTANCE_UPDATE_INFO			(iid_t _service_iid);
-shared_buffer message_SERVER_ADMIN_INSTANCE_UPDATE_STATUS		(iid_t _service_iid, Ibuffer_serializable& _instance);
-shared_buffer message_SERVER_ADMIN_INSTANCE_UPDATE_STATE		(iid_t _service_iid, eOBJECT_STATE _status_new, eOBJECT_STATE _status_old);
-shared_buffer message_SERVER_ADMIN_INSTANCE_UPDATE_PID			(iid_t _instance_iid, uint64_t _pid);
-shared_buffer message_SERVER_ADMIN_ERROR						(iid_t _service_iid, uint32_t _request, int _error_code, const std::string_view _error_message);
+	// 4) connective
+	statistics::unit_connective_snap		get_snap				(const statistics::unit_connective& _unit_connective) noexcept;
+	statistics::unit_connective_snap		get_update_snap			(const statistics::unit_connective& _connective) noexcept;
+	connective_info_snap					get_snap				(const net::io::Iconnective* _pconnective) noexcept;
+	connective_info_update_snap				get_update_snap			(const net::io::Iconnective* _pconnective) noexcept;
+	std::vector<connective_info_snap>		get_snap				(net::io::connective::manager* _pconnective_manager);
+	std::vector<connective_info_update_snap> get_update_snap		(net::io::connective::manager* _pconnective_manager);
 
-shared_buffer message_FACTORY_FACTORY_REGISTER					(iid_t _instance_iid, Ifactory* _pfactory);
-shared_buffer message_FACTORY_FACTORY_UNREGISTER				(iid_t _instance_iid, Ifactory* _pfactory);
-shared_buffer message_FACTORY_FACTORY_UPDATE					(iid_t _instance_iid, Ifactory* _pfactory);
+	// 5) traffic
+	statistics::unit_traffic_snap			get_snap				(const statistics::unit_traffic& _traffic_info) noexcept;
+	statistics::unit_traffic_snap			get_update_snap			(const statistics::unit_traffic& _traffic_info) noexcept;
 
-shared_buffer message_EXECUTOR_REGISTER							(iid_t _instance_iid, Iexecutor* _pexecutor);
-shared_buffer message_EXECUTOR_UNREGISTER						(iid_t _instance_iid, Iexecutor* _pexecutor);
-shared_buffer message_EXECUTOR_UPDATE							(iid_t _instance_iid, Iexecutor* _pexecutor);
+	// 6) socket info (binder)
+	socket_info_snap						get_snap				(const net::io::Ibinder* _pbinder) noexcept;
+	socket_info_snap						get_snap				(const net::io::Ibinder* _pbinder, net::io::statistics::Nsocket* _pstatistics_socket) noexcept;
+	socket_info_update_snap					get_update_snap			(const net::io::Ibinder* _pbinder) noexcept;
+	std::vector<socket_info_snap>			get_snap				(net::io::binder::manager* _pbinder_manager);
+	std::vector<socket_info_update_snap> get_update_snap			(net::io::binder::manager* _pbinder_manager);
 
-shared_buffer message_NETWORK_SOCKET_CONNECTIVE_REGISTER		(iid_t _instance_iid, const net::io::Iconnective* _pconnective);
-shared_buffer message_NETWORK_SOCKET_CONNECTIVE_UNREGISTER		(iid_t _instance_iid, const net::io::Iconnective* _pconnective);
-shared_buffer message_NETWORK_SOCKET_CONNECTIVE_UPDATE			(iid_t _instance_iid, const net::io::Iconnective* _pconnective);
+	// 7) time_event
+	time_event_snap							get_snap				(const time_event::Ientity* _ptime_event) noexcept;
+	time_event_update_snap					get_update_snap			(const time_event::Ientity* _ptime_event) noexcept;
+	std::vector<time_event_snap>			get_snap				(time_event::entity_manager* _pentity_manager);
+	std::vector<time_event_update_snap>		get_update_snap(time_event::entity_manager * _pentity_manager);
 
-shared_buffer message_NETWORK_SOCKET_BINDER_REGISTER			(iid_t _instance_iid, net::io::Ibinder* _pbinder, net::io::statistics::Nsocket* _pstatistics_socket);
-shared_buffer message_NETWORK_SOCKET_BINDER_UNREGISTER			(iid_t _instance_iid, net::io::Ibinder* _pbinder);
-shared_buffer message_NETWORK_SOCKET_BINDER_UPDATE				(iid_t _instance_iid, net::io::Ibinder* _pbinder);
+	// 8) logger
+	std::vector<object_ptr<LOG_RECORD>>		get_records_of_default_logger();
+	circular_list<object_ptr<LOG_RECORD>>	get_records_of_default_logger_circular_list();
 
-shared_buffer message_SERVER_TIME_EVENT_EVENT_REGISTER			(iid_t _instance_iid, time_event::Ientity* _ptime_event);
-shared_buffer message_SERVER_TIME_EVENT_EVENT_UNREGISTER		(iid_t _instance_iid, time_event::Ientity* _ptime_event);
-shared_buffer message_SERVER_TIME_EVENT_EVENT_EXECUTE			(iid_t _instance_iid, time_event::Ientity* _ptime_event);
 
-shared_buffer message_SERVER_ADMIN_DUMP_INFO_LIST				(iid_t _instance_iid);
-shared_buffer message_SERVER_ADMIN_DUMP_INFO					(iid_t _instance_iid);
+	//-----------------------------------------------------------------
+	// message functions
+	//-----------------------------------------------------------------
+	// 1) certify
+	shared_buffer make_message_SERVER_ADMIN_CERTIFY_REQUEST				(const sCERTIFY_INFO& _certify_info);
+	shared_buffer make_message_SERVER_ADMIN_CERTIFY_REQUEST				(const sCERTIFY_INFO& _certify_info, std::string_view _certify_key);
+	shared_buffer make_message_SERVER_ADMIN_CERTIFY_RESPONSE			(eRESULT _result);
 
-shared_buffer message_SYSTEM_LOG								(iid_t _instance_iid, const LOG_RECORD* _plog_record);
-shared_buffer message_SYSTEM_LOG								(iid_t _instance_iid, const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record);
+	// 2) admin request
+	shared_buffer make_message_SERVER_ADMIN_REQUEST_UPDATE_SETTING		(iid_t _instance_iid, iid_t _host_iid, const sSERVICE::sSETTING& _server_setting);
+	shared_buffer make_message_SERVER_ADMIN_REQUEST_INIT_SERVICE		(iid_t _instance_iid);
+	shared_buffer make_message_SERVER_ADMIN_REQUEST_DESTROY_SERVICE		(iid_t _instance_iid);
+	shared_buffer make_message_SERVER_ADMIN_REQUEST_KILL_SERVICE		(iid_t _instance_iid);
+	shared_buffer make_message_SERVER_ADMIN_REQUEST_START_SERVICE		(iid_t _instance_iid, const context& _setting);
+	shared_buffer make_message_SERVER_ADMIN_REQUEST_STOP_SERVICE		(iid_t _instance_iid);
+	shared_buffer make_message_SERVER_ADMIN_REQUEST_PAUSE_SERVICE		(iid_t _instance_iid);
+	shared_buffer make_message_SERVER_ADMIN_REQUEST_CONTINUE_SERVICE	(iid_t _instance_iid);
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_VERSION_UPDATE		(iid_t _instance_iid);
+
+	// 3) admin instance process
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_CERTIFY_REQUEST	(const host::manager* _phost_instance_manager, const service::manager* _pservice_instance_manager);
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_CERTIFY_RESPONSE	(const sSERVICE& _service_remote, const std::map<iid_t, object_ptr<host::Ninstance>>& _map_host_info_confirmed, const std::map<iid_t, object_ptr<service::Ninstance>>& _map_service_info_confirmed);
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_CERTIFY_RESPONSE	(eRESULT _result);
+
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_ENTER				(const std::vector<sSERVICE>& _vector_instance);
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_LEAVE				(iid_t _service_iid);
+
+	// 4) admin instance info
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_REGISTER			(Ibuffer_serializable* _pinstance);
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_UNREGISTER			(iid_t _iid);
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_UPDATE				(iid_t _iid, Ibuffer_serializable& _instance);
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_UPDATE_SETTING		(iid_t _iid, const sSERVICE::sSETTING& _setting);
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_UPDATE_INFO		(iid_t _iid, const sSERVICE& _service_info);
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_UPDATE_STATUS		(iid_t _iid, const sSERVICE::sSTATUS& _service_status);
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_UPDATE_STATUS		(iid_t _iid);
+	// - host_agent web ui 상태 (HOST_UPDATE_STATUS의 system status 뒤에 붙는다. [uint32 field 수][uint64 x field 수])
+	//   * 없으면(이전 host_agent) 읽지 않고, 모르는 field(이후 버전)는 건너뛴다. (admin/host_agent를 따로 배포할 수 있다.)
+	struct sHOST_WEB_STATUS
+	{
+		uint64_t		web_connections = 0;
+		uint64_t		web_timeout_request = 0;
+		uint64_t		web_timeout_idle = 0;
+		uint64_t		websocket_connections = 0;
+		uint64_t		websocket_timeout_request = 0;
+		uint64_t		websocket_timeout_idle = 0;
+	};
+	shared_buffer make_message_SERVER_ADMIN_HOST_UPDATE_STATUS			(iid_t _host_iid, const SYSTEM::sSTATUS& _system_status, const sHOST_WEB_STATUS* _pweb_status = nullptr);
+	[[nodiscard]] SYSTEM::sSTATUS extract_system_status					(buffer_view& _buffer);
+	[[nodiscard]] std::optional<sHOST_WEB_STATUS> extract_host_web_status	(buffer_view& _buffer);
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_UPDATE_STATE		(iid_t _iid, eOBJECT_STATE _status_new, eOBJECT_STATE _status_old, const sSERVICE* _service_info);
+	shared_buffer make_message_SERVER_ADMIN_INSTANCE_UPDATE_PID			(iid_t _iid, uint64_t _pid);
+	shared_buffer make_message_SERVER_ADMIN_ERROR						(iid_t _iid, uint32_t _request, int _error_code, const std::string_view _error_message);
+	shared_buffer make_message_SERVER_ADMIN_REQUEST_RESULT				(iid_t _iid, uint32_t _request, uint64_t _request_id, eRESULT _result, std::string_view _message);
+
+	// - request id (optional. appended at the end of REQUEST_xxx by admin server, returned in REQUEST_RESULT)
+	//   (services ignore the trailing bytes, so the old services work with it)
+	[[nodiscard]] shared_buffer append_request_id(const shared_buffer& _message, uint64_t _request_id);
+	[[nodiscard]] uint64_t extract_request_id(buffer_view& _remained) noexcept;
+
+	shared_buffer make_message_FACTORY_FACTORY_REGISTER					(iid_t _iid, Ifactory* _pfactory);
+	shared_buffer make_message_FACTORY_FACTORY_UNREGISTER				(iid_t _iid, Ifactory* _pfactory);
+	shared_buffer make_message_FACTORY_FACTORY_UPDATE					(iid_t _iid, Ifactory* _pfactory);
+
+	shared_buffer make_message_EXECUTOR_REGISTER						(iid_t _iid, Iexecutor* _pexecutor);
+	shared_buffer make_message_EXECUTOR_UNREGISTER						(iid_t _iid, Iexecutor* _pexecutor);
+	shared_buffer make_message_EXECUTOR_UPDATE							(iid_t _iid, Iexecutor* _pexecutor);
+
+	shared_buffer make_message_NETWORK_SOCKET_CONNECTIVE_REGISTER		(iid_t _iid, const net::io::Iconnective* _pconnective);
+	shared_buffer make_message_NETWORK_SOCKET_CONNECTIVE_UNREGISTER		(iid_t _iid, const net::io::Iconnective* _pconnective);
+	shared_buffer make_message_NETWORK_SOCKET_CONNECTIVE_UPDATE			(iid_t _iid, const net::io::Iconnective* _pconnective);
+
+	shared_buffer make_message_NETWORK_SOCKET_BINDER_REGISTER			(iid_t _iid, net::io::Ibinder* _pbinder, net::io::statistics::Nsocket* _pstatistics_socket);
+	shared_buffer make_message_NETWORK_SOCKET_BINDER_UNREGISTER			(iid_t _iid, net::io::Ibinder* _pbinder);
+	shared_buffer make_message_NETWORK_SOCKET_BINDER_UPDATE				(iid_t _iid, net::io::Ibinder* _pbinder);
+
+	shared_buffer make_message_SERVER_TIME_EVENT_EVENT_REGISTER			(iid_t _iid, time_event::Ientity* _ptime_event);
+	shared_buffer make_message_SERVER_TIME_EVENT_EVENT_UNREGISTER		(iid_t _iid, time_event::Ientity* _ptime_event);
+	shared_buffer make_message_SERVER_TIME_EVENT_EVENT_EXECUTE			(iid_t _iid, time_event::Ientity* _ptime_event);
+
+	shared_buffer make_message_SERVER_ADMIN_DUMP_INFO_LIST				(iid_t _iid);
+	shared_buffer make_message_SERVER_ADMIN_DUMP_INFO					(iid_t _iid);
+
+	shared_buffer make_message_SYSTEM_LOG								(iid_t _iid, const LOG_RECORD* _plog_record);
+	shared_buffer make_message_SYSTEM_LOG								(iid_t _iid, const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record);
 }
-shared_buffer message_SERVER_CERTIFY_REQUEST					(const server_admin::sSERVICE_SETTING& _server_setting_info);
-shared_buffer message_SERVER_CERTIFY_RESPONSE					(eRESULT _result, const server_admin::sSERVICE_SETTING& _server_setting_info);
-shared_buffer message_SERVER_CERTIFY_RESPONSE					(eRESULT _result);
+
 }
 
 #pragma pack()

@@ -34,7 +34,7 @@ class circular_list
 //     4) X:iterator		순회할 때 사용되는 반복자.
 //     5) X:const_iterator	순회할 때 사용되는 반복자(const버전)
 //     6) X:difference_type	두 iterator에 담김 값의 거리를 나타내는 타입.
-//     7) X:size_type		X의 크기를 나타낼때 사용되는 형.
+//     7) X:size_type		X의 크기를 나타낼 때 사용되는 형.
 //
 //  * Reversible Requirement
 //     1) X::reverse_iterator 역순환 때 사용되는 반복자.
@@ -65,7 +65,7 @@ public:
 	// Allocator)
 	typedef TALLOCATOR		allocator_type;
 
-	// Self) 자기자신(표준 아님.)
+	// Self) 자기 자신(표준 아님.)
 	typedef	circular_list<value_type, TALLOCATOR>	_mytype;
 
 	// Rebinder) 
@@ -81,13 +81,13 @@ public:
 //
 //  * Common Container Requirement
 //     1) X();				Default Constructor
-//     2) X(a);				Copy Constrctor.(소요시간은 선형적)
+//     2) X(a);				Copy Constructor.(소요시간은 선형적)
 //		  X u(a);
 //     3) (&a)->~X();		Destructor.(소요시간은 선형적)
 //     4) a.begin(); 		Container 순회에 사용할 시작과 끝 iterator 
 //		  a.end();
 //     5) a==b; a!=b;		Container 모든 원소 같으면 true.(소요시간 선형적)
-//     6) a.size();			Container에 담김 원소의 갯수를 리턴한다.
+//     6) a.size();			Container에 담김 원소의 개수를 리턴한다.
 //     7) a.max_size();		Container가 담을 수 있는 최대 원소 개수를 리턴한다.
 //     8) a.empty();		Container가 비어 있는 경우라면 true를 리턴한다.
 //     9) a<b; a>b; 		비교 연산(소요시간 선형적)
@@ -109,7 +109,7 @@ public:
 public:
 	// Common Standard 1) Status Function
 	size_type				size() const							{	return m_size;}
-	size_type				max_size() const						{	return std::numeric_limits<size_t>::max();}
+	size_type				max_size() const						{	return (std::numeric_limits<size_t>::max)();}
 	bool					empty() const							{	return m_size==0;}
 
 	// Common Standard 2) 
@@ -119,12 +119,12 @@ public:
 	iterator				end()									{	return iterator(m_tail);}
 	const_iterator			end() const								{	return const_iterator(m_tail);}
 	const_iterator			cend() const							{	return const_iterator(m_tail);}
-	reverse_iterator		rbegin()								{	return reverse_iterator(iterator(m_tail->_pre));}
-	const_reverse_iterator	rbegin() const							{	return const_reverse_iterator(const_iterator(m_tail->_pre));}
-	const_reverse_iterator	crbegin() const							{	return const_reverse_iterator(const_iterator(m_tail->_pre));}
-	reverse_iterator		rend()									{	return reverse_iterator(iterator(m_head->_pre));}
-	const_reverse_iterator	rend() const							{	return const_reverse_iterator(const_iterator(m_head->_pre));}
-	const_reverse_iterator	crend() const							{	return const_reverse_iterator(const_iterator(m_head->_pre));}
+	reverse_iterator		rbegin()								{	return reverse_iterator(end());}
+	const_reverse_iterator	rbegin() const							{	return const_reverse_iterator(end());}
+	const_reverse_iterator	crbegin() const							{	return const_reverse_iterator(cend());}
+	reverse_iterator		rend()									{	return reverse_iterator(begin());}
+	const_reverse_iterator	rend() const							{	return const_reverse_iterator(begin());}
+	const_reverse_iterator	crend() const							{	return const_reverse_iterator(cbegin());}
 
 	// Common Standard 3) 
 	void					swap(_mytype& _right);
@@ -137,6 +137,7 @@ public:
 	bool					operator<=(const _mytype& _right) const;
 	bool					operator>=(const _mytype& _right) const;
 	_mytype&				operator=(const _mytype& _right);
+	_mytype&				operator=(_mytype&& _right) noexcept;
 
 
 // ****************************************************************************
@@ -245,7 +246,7 @@ public:
 	void					assign(ITERATOR _first, ITERATOR _last);
 	void					assign(size_type _count, const_reference _val);
 
-	// 9) merge(두개의 circular_list를 합치는 함수.)
+	// 9) merge(두 개의 circular_list를 합치는 함수.)
 	template<typename _Pr3>
 	void					merge(_mytype& _right, _Pr3 _pred);
 	void					merge(_mytype& _right);
@@ -283,7 +284,7 @@ protected:
 	_node*					m_tail;					// Linked List의 Tail의 바로 뒤~
 
 	// 2) Size & Capacity
-	size_type				m_size;					// 현재 사용중인 Node수.
+	size_type				m_size;					// 현재 사용 중인 Node수.
 	size_type				m_capacity;				// 전체 Node수.
 
 	// 3) Allocator
@@ -468,6 +469,10 @@ circular_list<TDATA, TALLOCATOR>::circular_list(_mytype&& _right) noexcept : cir
 template <class TDATA, class TALLOCATOR>
 typename circular_list<TDATA, TALLOCATOR>::_mytype& circular_list<TDATA, TALLOCATOR>::operator=(const _mytype& _right)
 {
+	// check) self (not cleared)
+	if (&_right == this)
+		return	*this;
+
 	// 1) 일단 모조리 다 지운다.
 	clear();
 
@@ -483,6 +488,26 @@ typename circular_list<TDATA, TALLOCATOR>::_mytype& circular_list<TDATA, TALLOCA
 	}
 
 	// return)자기 자신 Return
+	return	*this;
+}
+
+template <class TDATA, class TALLOCATOR>
+typename circular_list<TDATA, TALLOCATOR>::_mytype& circular_list<TDATA, TALLOCATOR>::operator=(_mytype&& _right) noexcept
+{
+	// check) self
+	if (&_right != this)
+	{
+		// 1) the elements here are destroyed (the nodes are kept)
+		clear();
+
+		// 2) takes the nodes of '_right' ('_right' gets the empty ones of here. like the move constructor)
+		std::swap(m_head, _right.m_head);
+		std::swap(m_tail, _right.m_tail);
+		std::swap(m_size, _right.m_size);
+		std::swap(m_capacity, _right.m_capacity);
+	}
+
+	// return)
 	return	*this;
 }
 
@@ -584,7 +609,7 @@ circular_list<TDATA, TALLOCATOR>::circular_list(TITERATOR _first, TITERATOR _las
 template <class TDATA, class TALLOCATOR>
 circular_list<TDATA, TALLOCATOR>::~circular_list() noexcept
 {
-	// 1) 먼저 clear를 해서 item마다 destory를 호출한다.
+	// 1) 먼저 clear를 해서 item마다 destroy를 호출한다.
 	clear();
 
 	// 2) 모든 Node들을 지운다.
@@ -683,239 +708,97 @@ typename circular_list<TDATA, TALLOCATOR>::_node* circular_list<TDATA, TALLOCATO
 template <class TDATA, class TALLOCATOR>
 bool circular_list<TDATA, TALLOCATOR>::operator==(const _mytype& _right) const
 {
-	// 1) 처음부터 찾기 위해 준비한다.
-	iterator iter_src=begin();
-	typename _mytype::iterator iter_dst = _right.begin();
+	if (m_size != _right.m_size)
+		return false;
 
-	for(;;)
+	const_iterator iter_src = begin();
+	const_iterator iter_dst = _right.begin();
+
+	for (; iter_src != end(); ++iter_src, ++iter_dst)
 	{
-		// check) Src가 끝인가???
-		if(iter_src == end())
-		{
-			return (iter_dst == _right.end());
-		}
-
-		// check) Dst가 끝인가?
-		if(iter_dst == end())
-		{
+		if (*iter_src != *iter_dst)
 			return false;
-		}
-
-		// 2) 만약 Src와 Dst가 같지 않으면 바로 false리턴!
-		if(*iter_src!=*iter_dst)
-		{
-			return false;
-		}
-
-		// 3) 다음값~
-		++iter_src;
-		++iter_dst;
 	}
+
+	return true;
 }
 
 template <class TDATA, class TALLOCATOR>
 bool circular_list<TDATA, TALLOCATOR>::operator!=(const _mytype& _right) const	
 {
-	// 1) 처음부터 찾기 위해 준비한다.
-	iterator iter_src=begin();
-	typename _mytype::iterator iter_dst = _right.begin();
-
-	for(;;)
-	{
-		// check) Src가 끝인가???
-		if(iter_src == end())
-		{
-			return (iter_dst != _right.end());
-		}
-
-		// check) Dst가 끝인가?
-		if(iter_dst == end())
-		{
-			return true;
-		}
-
-		// 2) 만약 Src와 Dst가 같지 않으면 바로 true리턴!
-		if(*iter_src != *iter_dst)
-		{
-			return true;
-		}
-
-		// 3) 다음값~
-		++iter_src;
-		++iter_dst;
-	}
+	return !(*this == _right);
 }
 
 template <class TDATA, class TALLOCATOR>
 bool circular_list<TDATA, TALLOCATOR>::operator<(const _mytype& _right) const	
 {
-	// 1) 처음부터 찾기 위해 준비한다.
-	iterator iter_src=begin();
-	typename _mytype::iterator iter_dst = _right.begin();
+	const_iterator iter_src = begin();
+	const_iterator iter_dst = _right.begin();
 
-	for(;;)
+	for (; iter_src != end() && iter_dst != _right.end(); ++iter_src, ++iter_dst)
 	{
-		// check) Dst가 끝인가?
-		if(iter_dst == end())
-		{
-			return false;
-		}
-
-		// check) Src가 끝인가???
-		if(iter_src == end())
-		{
+		if (*iter_src < *iter_dst)
 			return true;
-		}
-
-
-		// 2) 만약 Src와 Dst가 같지 않으면 바로 true리턴!
-		if(*iter_src != *iter_dst)
-		{
-			return (*iter_src<*iter_dst);
-		}
-
-		// 3) 다음값~
-		++iter_src;
-		++iter_dst;
+		if (*iter_dst < *iter_src)
+			return false;
 	}
+
+	return iter_src == end() && iter_dst != _right.end();
 }
 
 template <class TDATA, class TALLOCATOR>
 bool circular_list<TDATA, TALLOCATOR>::operator>(const _mytype& _right) const	
 {
-	// 1) 처음부터 찾기 위해 준비한다.
-	iterator iter_src = begin();
-	typename _mytype::iterator iter_dst = _right.begin();
-
-	for(;;)
-	{
-		// check) Src가 끝인가???
-		if(iter_src == end())
-		{
-			return false;
-		}
-
-		// check) Dst가 끝인가?
-		if(iter_dst == end())
-		{
-			return true;
-		}
-
-		// 2) 만약 Src와 Dst가 같지 않으면 바로 true리턴!
-		if(*iter_src != *iter_dst)
-		{
-			return (*iter_src>*iter_dst);
-		}
-
-		// 3) 다음값~
-		++iter_src;
-		++iter_dst;
-	}
+	return _right < *this;
 }
 
 template <class TDATA, class TALLOCATOR>
 bool circular_list<TDATA, TALLOCATOR>::operator<=(const _mytype& _right) const	
 {
-	// 1) 처음부터 찾기 위해 준비한다.
-	iterator iter_src=begin();
-	typename _mytype::iterator iter_dst = _right.begin();
-
-	for(;;)
-	{
-		// check) Src가 끝인가???
-		if(iter_src == end())
-		{
-			return true;
-		}
-
-		// check) Dst가 끝인가?
-		if(iter_dst == end())
-		{
-			return false;
-		}
-
-		// 2) 만약 Src와 Dst가 같지 않으면 바로 true리턴!
-		if(*iter_src!=*iter_dst)
-		{
-			return (*iter_src<*iter_dst);
-		}
-
-		// 3) 다음값~
-		++iter_src;
-		++iter_dst;
-	}
+	return !(_right < *this);
 }
 
 template <class TDATA, class TALLOCATOR>
 bool circular_list<TDATA, TALLOCATOR>::operator>=(const _mytype& _right) const	
 {
-	// 1) 처음부터 찾기 위해 준비한다.
-	iterator iter_src=begin();
-	typename _mytype::iterator iter_dst = _right.begin();
-
-	for(;;)
-	{
-		// check) Dst가 끝인가?
-		if(iter_dst == end())
-		{
-			return true;
-		}
-
-		// check) Src가 끝인가???
-		if(iter_src == end())
-		{
-			return false;
-		}
-
-		// 2) 만약 Src와 Dst가 같지 않으면 바로 true리턴!
-		if(*iter_src != *iter_dst)
-		{
-			return (*iter_src>*iter_dst);
-		}
-
-		// 3) 다음값~
-		++iter_src;
-		++iter_dst;
-	}
+	return !(*this < _right);
 }
-
-
 
 template <class TDATA, class TALLOCATOR>
 void circular_list<TDATA, TALLOCATOR>::reserve(size_type _count)
 {
 	//-----------------------------------------------------------------
-	// 1. 추가로 확보할 Node갯수를 계산한다.
+	// 1. 추가로 확보할 Node개수를 계산한다.
 	//-----------------------------------------------------------------
-	// check) 추가할 item의 갯수가 0개 이하라면 그냥 끝낸다.
+	// check) 추가할 item의 개수가 0개 이하라면 그냥 끝낸다.
 	CGD_RETURN_IF(_count <= m_capacity);
 
 	//-----------------------------------------------------------------
 	// 2. 추가할 Node수만큼 생성한다.
 	//-----------------------------------------------------------------
-	// 1) 새로 추가될 item의 갯수를 계산한다.
+	// 1) 새로 추가될 item의 개수를 계산한다.
 	size_type added = _count - m_capacity;
 
 	// 1) 생성한 객체를 붙일 Node를 얻는다.
 	_node* end = m_head->_pre;
 	try
 	{
-		// 2) 추가할 item의 갯수만큼 node를 만들어 붙힌다.
+		// 2) 추가할 item의 개수만큼 node를 만들어 붙인다.
 		for(; added>0; --added)
 		{
 			// - Node를 새로 생성한다.
 			_node* pnode_new = m_alloc_node.allocate(1);
 
-			// - 생성한 Node를 end에 붙힌다.
+			// - 생성한 Node를 end에 붙인다.
 			LINK_NODE(end, pnode_new);
 
-			// - 붙힌 Node를 새로운 end로 설정한다.
+			// - 붙인 Node를 새로운 end로 설정한다.
 			end = pnode_new;
 		}
 	}
 	catch(...)
 	{
-		// 1) Roll back할 첫번째 Node를 얻는다.
+		// 1) Roll back할 첫 번째 Node를 얻는다.
 		_node*	nodeDealloc = m_head->_pre->_next;
 
 		// 2) Loop를 돌며 생성된 모든 Node를 제거한다.
@@ -939,9 +822,9 @@ void circular_list<TDATA, TALLOCATOR>::reserve(size_type _count)
 	}
 
 	//-----------------------------------------------------------------
-	// 3. Head앞 쪽에다가 붙힌다.
+	// 3. Head앞 쪽에다가 붙인다.
 	//-----------------------------------------------------------------
-	// 1) 만든 node를 head의 앞쪽에 붙힌다.
+	// 1) 만든 node를 head의 앞쪽에 붙인다.
 	LINK_NODE(end, m_head);
 
 	//-----------------------------------------------------------------
@@ -971,10 +854,10 @@ void circular_list<TDATA, TALLOCATOR>::resize(size_type _new_size, const value_t
 	//  만약 현재 크기가 NewSize보다 크면 뒷쪽 Item들을 제거한다.
 	else
 	{
-		// 1) 돌면처 differ만큼 뒷쪽에서부터 제거한다.
+		// 1) 돌면서 differ만큼 뒷쪽에서부터 제거한다.
 		while (differ!=0)
 		{
-			// - Tail을 한칸 땡긴다.
+			// - Tail을 한 칸 당긴다.
 			m_tail = m_tail->_pre;
 
 			// - Destroy를 호출한다.
@@ -1044,7 +927,7 @@ void circular_list<TDATA, TALLOCATOR>::push_front(const_reference _val)
 	//
 	// 주의) 1)항에서 pre를 먼저 얻은 다음 construct를 처리하고 3)항에서
 	//       m_head에 얻어놓은 _pre를 넣은 이유는 Exception-safe처리를
-	//       위해서이다. construct과정에서 exception이 발생할수 있고
+	//       위해서이다. construct과정에서 exception이 발생할 수 있고
 	//       만약 m_head를 미리 땡겨놔버리면 exception이 발생했을 때 다시
 	//       roll-back을 해줘야 한다. 그래서 construct가 끝난 이후에 
 	//       m_head 값을 바꾸는 처리를 한 것이다.
@@ -1058,7 +941,7 @@ void circular_list<TDATA, TALLOCATOR>::push_front(const_reference _val)
 		// 2) Constructor를 호출한다.(Copy constructor의 호출)
 		m_alloc_val.construct(&pnow->_data, _val);
 
-		// 3) 그냥 하나 땡긴다.
+		// 3) 그냥 하나 당긴다.
 		m_head = pnow;
 
 		// 4) 크기(size)를 1 늘인다.
@@ -1069,7 +952,7 @@ void circular_list<TDATA, TALLOCATOR>::push_front(const_reference _val)
 	//
 	// - 남은 node의 수가(m_size와 allocated같으면 남은 Node가 없는 것이다.)
 	//   없으면 새로 만들어 추가한다.
-	//   (이것이 수행되지 않도록 최대한 reserve를 미래 해둘것을 권한다.)
+	//   (이것이 수행되지 않도록 최대한 reserve를 미래 해둘 것을 권한다.)
 	//-----------------------------------------------------------------
 	else
 	{
@@ -1104,7 +987,7 @@ void circular_list<TDATA, TALLOCATOR>::push_front(value_type&& _val)
 		// 2) Constructor를 호출한다.(Copy constructor의 호출)
 		m_alloc_val.construct(&pnow->_data, std::move(_val));
 
-		// 3) 그냥 하나 땡긴다.
+		// 3) 그냥 하나 당긴다.
 		m_head = pnow;
 
 		// 4) 크기(size)를 1 늘인다.
@@ -1139,7 +1022,7 @@ typename circular_list<TDATA, TALLOCATOR>::reference circular_list<TDATA, TALLOC
 	//
 	// - 남은 node(m_size와 allocated같으면 남은 Node가 없는 것이다.)가
 	//   없으면 새로 만들어 추가한다.
-	//   (이것이 수행되지 않도록 최대한 reserve를 미래 해둘것을 권한다.)
+	//   (이것이 수행되지 않도록 최대한 reserve를 미래 해둘 것을 권한다.)
 	//-----------------------------------------------------------------
 	if(m_size == m_capacity)
 	{
@@ -1169,7 +1052,7 @@ typename circular_list<TDATA, TALLOCATOR>::reference circular_list<TDATA, TALLOC
 	//
 	// 주의) 1)항에서 pre를 먼저 얻은 다음 construct를 처리하고 3)항에서
 	//       m_head에 얻어놓은 _pre를 넣은 이유는 Exception-safe한 처리를
-	//       위해서이다. construct과정에서 exception이 발생할수 있고
+	//       위해서이다. construct과정에서 exception이 발생할 수 있고
 	//       만약 m_head를 미리 땡겨놔버리면 exception이 발생했을 때 다시
 	//       roll-back을 해줘야 한다. 그래서 construct가 끝난 이후에 
 	//       m_head 값을 바꾸는 처리를 한 것이다.
@@ -1184,7 +1067,7 @@ typename circular_list<TDATA, TALLOCATOR>::reference circular_list<TDATA, TALLOC
 	// 3) Constructor를 호출한다.
 	m_alloc_val.construct(&pnow->_data);
 
-	// 4) 그냥 하나 땡긴다.
+	// 4) 그냥 하나 당긴다.
 	m_head = pnow;
 
 	// 5) 크기(size)를 1 늘인다.
@@ -1210,7 +1093,7 @@ void circular_list<TDATA, TALLOCATOR>::push_back(const_reference _val)
 	// 2-1) 여분 Node가 있을 경우
 	if(m_size != m_capacity)
 	{
-		// - 그냥 하나 땡긴다.
+		// - 그냥 하나 당긴다.
 		m_tail = m_tail->_next;
 
 		// - 크기(size)를 1 늘인다.
@@ -1239,7 +1122,7 @@ template <class TDATA, class TALLOCATOR>
 void circular_list<TDATA, TALLOCATOR>::push_back(value_type&& _val)
 {
 	//-----------------------------------------------------------------
-	// 위의 push_back과 동일 costruct()호출시 std::move를 사용한다는 
+	// 위의 push_back과 동일 costruct()호출 시 std::move를 사용한다는 
 	// 것만 다름.
 	//-----------------------------------------------------------------
 	// 1) Constructor를 호출한다.(Copy constructor의 호출)
@@ -1248,7 +1131,7 @@ void circular_list<TDATA, TALLOCATOR>::push_back(value_type&& _val)
 	// 2-1) 여분 Node가 있을 경우
 	if (m_size!=m_capacity)
 	{
-		// - 그냥 하나 땡긴다.
+		// - 그냥 하나 당긴다.
 		m_tail = m_tail->_next;
 
 		// - 크기(size)를 1 늘인다.
@@ -1289,7 +1172,7 @@ typename circular_list<TDATA, TALLOCATOR>::reference circular_list<TDATA, TALLOC
 	// 2-1) 여분 Node가 있을 경우
 	if(m_size!=m_capacity)
 	{
-		// 1) 그냥 하나 땡긴다.
+		// 1) 그냥 하나 당긴다.
 		m_tail = m_tail->_next;
 
 		// 2) 크기(size)를 1 늘인다.
@@ -1323,8 +1206,8 @@ void circular_list<TDATA, TALLOCATOR>::pop_front()
 {
 	// check) 비어 있는데 pop을 하면 안된다.
 	#ifdef _CGD_NOCHECK_EMPTY_POP
-	// * Empty를 Check를 하지 않을 경우에 Debug 모드일때 Assert를 띄워준다.
-	//   (Release Mode일 때는 아무일도 동작하지 않는다.)
+	// * Empty를 Check를 하지 않을 경우에 Debug 모드일 때 Assert를 띄워준다.
+	//   (Release Mode일 때는 아무 일도 동작하지 않는다.)
 	CGDASSERT_ERROR(!empty());
 	#else
 	// Empty를 Check를 할 경우 Empty를 Check하고 비어 있을 경우 아무동작하지 않고 그냥 끝낸다.
@@ -1337,7 +1220,7 @@ void circular_list<TDATA, TALLOCATOR>::pop_front()
 	// 1) Destroy를 호출한다.
 	m_alloc_val.destroy(&m_head->_data);
 
-	// 2) Head를 한칸 땡긴다.
+	// 2) Head를 한 칸 당긴다.
 	m_head = m_head->_next;
 
 	// 3) 크기(size)를 1 줄인다.
@@ -1350,15 +1233,15 @@ void circular_list<TDATA, TALLOCATOR>::pop_back()
 {
 	// check) Empty검사.
 	#ifdef _CGD_NOCHECK_EMPTY_POP
-	// * Empty를 Check를 하지 않을 경우에 Debug 모드일때 Assert를 띄워준다.
-	//   (Release Mode일 때는 아무일도 동작하지 않는다.)
+	// * Empty를 Check를 하지 않을 경우에 Debug 모드일 때 Assert를 띄워준다.
+	//   (Release Mode일 때는 아무 일도 동작하지 않는다.)
 	CGDASSERT_ERROR(!empty());
 	#else
 	// Empty를 Check를 할 경우 Empty를 Check하고 비어 있을 경우 아무동작하지 않고 그냥 끝낸다.
 	CGD_RETURN_IF(empty());
 	#endif
 
-	// 1) Tail을 한칸 땡긴다.
+	// 1) Tail을 한 칸 당긴다.
 	m_tail = m_tail->_pre;
 
 	// 2) Destroy를 호출한다.
@@ -1418,7 +1301,7 @@ typename circular_list<TDATA, TALLOCATOR>::iterator circular_list<TDATA, TALLOCA
 	LINK_NODE(pnode->_pre, pnode_new);
 	LINK_NODE(pnode_new, pnode);
 
-	// 4) 할당받은 갯수(allocated)와 크기(size)를 1 늘린다.
+	// 4) 할당받은 개수(allocated)와 크기(size)를 1 늘린다.
 	++m_size;
 
 	// return)
@@ -1475,8 +1358,8 @@ void circular_list<TDATA, TALLOCATOR>::insert(const_iterator _where, int _count,
 		//    (iter_insert의 이전 Node에 이어서 붙혀야 한다.)
 		iter_end = iter_insert--;
 
-		// 4) 추가할당 되는 Node 갯수를 저장한다.
-		//    (남은 count는 추가해야할 Node수이다.)
+		// 4) 추가할당 되는 Node 개수를 저장한다.
+		//    (남은 count는 추가해야 할 Node수이다.)
 		capacity_inc = count;
 
 		// 5) 생성해서 나머지 Node들을 추가한다.
@@ -1526,7 +1409,7 @@ void circular_list<TDATA, TALLOCATOR>::insert(const_iterator _where, int _count,
 	//-----------------------------------------------------------------
 	// 2. Link추가하기.
 	//-----------------------------------------------------------------
-	// 1) 삽입할 첫번째 Node를 얻기.
+	// 1) 삽입할 첫 번째 Node를 얻기.
 	_node* pnode_start = m_tail->_next;
 
 	// 2) _where이 Head일 경우 Head를 바꾸기.
@@ -1544,9 +1427,9 @@ void circular_list<TDATA, TALLOCATOR>::insert(const_iterator _where, int _count,
 
 
 	//-----------------------------------------------------------------
-	// 3. Node갯수를 계산한다.
+	// 3. Node개수를 계산한다.
 	//-----------------------------------------------------------------
-	// 1) 할당받은 갯수(allocated)와 크기(size)를 _count만큼 늘린다.
+	// 1) 할당받은 개수(allocated)와 크기(size)를 _count만큼 늘린다.
 	m_size += _count;
 
 	// 2) capacity를 증가한다.
@@ -1635,7 +1518,7 @@ void circular_list<TDATA, TALLOCATOR>::insert(const_iterator _where, TITERATOR _
 	//-----------------------------------------------------------------
 	// 2. Link추가하기.
 	//-----------------------------------------------------------------
-	// 1) 삽입할 첫번째 Node를 얻기.
+	// 1) 삽입할 첫 번째 Node를 얻기.
 	_node* pnode_start = m_tail->_next;
 
 	// 2) _where이 Head일 경우 Head를 바꾸기.
@@ -1653,9 +1536,9 @@ void circular_list<TDATA, TALLOCATOR>::insert(const_iterator _where, TITERATOR _
 
 
 	//-----------------------------------------------------------------
-	// 3. Node갯수를 계산한다.
+	// 3. Node개수를 계산한다.
 	//-----------------------------------------------------------------
-	// 1) 할당받은 갯수(allocated)와 크기(size)를 _count만큼 늘린다.
+	// 1) 할당받은 개수(allocated)와 크기(size)를 _count만큼 늘린다.
 	m_size += (count+capacity_inc);
 
 	// 2) capacity를 증가한다.
@@ -1680,150 +1563,71 @@ void circular_list<TDATA, TALLOCATOR>::insert(const_iterator _where, TITERATOR _
 template <class TDATA, class TALLOCATOR>
 typename circular_list<TDATA, TALLOCATOR>::iterator circular_list<TDATA, TALLOCATOR>::erase(const_iterator _where)
 {
-	//-----------------------------------------------------------------
-	// ChecK)
-	//-----------------------------------------------------------------
-	// 1) _where이 tail이면 안된다.
 	CGDASSERT_ERROR(_where != end());
-
-	// 2) 이건 뭐.. 당연하다~
 	CGDASSERT(_where._Ptr != 0, iterator());
 
-
-	//-----------------------------------------------------------------
-	// 1. Head일 경우 pop_front를 함.
-	//-----------------------------------------------------------------
-	// - Head일 경우 push_front를 함.
-	if(_where == begin())
-	{
-		// - push_front를 함.
-		pop_front();
-
-		// - begin()을 return함.
-		return	begin();
-	}
-
-
-	//-----------------------------------------------------------------
-	// 2. List에서 제거
-	//-----------------------------------------------------------------
-	// 1) 떼낼 Node
 	_node* pnode_temp = _where._Ptr;
-
-	// 2) 기존 Node에서 떼낸다.
-	_node* pnode_pre = pnode_temp->_pre;
 	_node* pnode_next = pnode_temp->_next;
 
-	// 3) Link한다.
-	LINK_NODE(pnode_pre, pnode_next);
+	m_alloc_val.destroy(&pnode_temp->_data);
 
+	if (pnode_temp == m_head)
+	{
+		m_head = pnode_next;
+	}
+	else
+	{
+		LINK_NODE(pnode_temp->_pre, pnode_next);
+		LINK_NODE(pnode_temp, m_tail->_next);
+		LINK_NODE(m_tail, pnode_temp);
+	}
 
-	//-----------------------------------------------------------------
-	// 3. 떼낸 Node를 할당해제한다.
-	//-----------------------------------------------------------------
-	// 1) Destruct를 호출한다.
-	m_alloc_node.destroy(pnode_temp);
-
-	// 2) 지운다.
-	LINK_NODE(pnode_temp, m_tail->_next); 
-	LINK_NODE(m_tail, pnode_temp);
-
-
-	//-----------------------------------------------------------------
-	// 4. Node갯수 처리
-	//-----------------------------------------------------------------
-	// 1) 크기를 1 줄인다.
 	--m_size;
 
-
-	// return)Next Node의 Iterator를 되돌려준다.
-	return	iterator(pnode_next);
+	return iterator(pnode_next);
 }
-
-
 template <class TDATA, class TALLOCATOR>
 typename circular_list<TDATA, TALLOCATOR>::iterator circular_list<TDATA, TALLOCATOR>::erase(const_iterator _first, const_iterator _last)
 {
-	//-----------------------------------------------------------------
-	// 1. Destroy하며 갯수 세아리기...
-	//-----------------------------------------------------------------
-	// 1) First Node의 PreNode를 미리 구해놓는다.
-	_node* temp_node_first = _first._Ptr->_pre;
+	CGD_RETURN_IF(_first == _last, iterator(_last._Ptr));
 
-	// 2) 단지... 줄어드는 숫자만 확인하기 위해 돌린다.
+	_node* first_node = _first._Ptr;
+	_node* last_node = _last._Ptr;
+	_node* before_first = first_node->_pre;
+	_node* removed_last = last_node->_pre;
+
 	size_type count = 0;
-	const_iterator temp = _first;
-	while(temp != _last)
+	for (const_iterator iter = _first; iter != _last; ++iter)
 	{
-		// check) temp가 end까지 가면 안된다.
-		CGDASSERT_ERROR(temp!=end());
-
-		// declare) 지울 Node를 저장할 변수.
-		iterator tempDel;
-
-		// - Delete할 Node를 받고 다음 Node로...
-		tempDel = temp++;
-
-		// - Destruct를 호출한다.
-		m_alloc_val.destroy(&(*tempDel));
-
-		// - 숫자를 더한다.
+		CGDASSERT_ERROR(iter != end());
+		m_alloc_val.destroy(&iter._Ptr->_data);
 		++count;
 	}
 
-	// check) 만약에 갯수가 0개라면 그냥 return
-	CGD_RETURN_IF(count == 0, iterator(temp._Ptr));
+	LINK_NODE(before_first, last_node);
 
+	if (first_node == m_head)
+	{
+		m_head = last_node;
+	}
 
-	//-----------------------------------------------------------------
-	// 2. 실제 제거하기.
-	//-----------------------------------------------------------------
-	// 1) erase한 만큼 크기를 줄인다.
+	LINK_NODE(removed_last, m_tail->_next);
+	LINK_NODE(m_tail, first_node);
+
 	m_size -= count;
 
-	// 2) 처음일 경우 Head를 땡긴다.
-	if(_first==begin())
-	{
-		// - Head를 땡기기...
-		m_head = _last._Ptr;
-		
-		// return) 되돌리기..
-		return iterator(temp._Ptr);;
-	}
-
-	// 3) 끝일 경우 Tail을 땡긴다.
-	if(_last==end())
-	{
-		// - Tail을 땡기기...
-		m_tail = temp._Ptr;
-		
-		// return) 되돌리기..
-		return iterator(temp._Ptr);
-	}
-
-	// 4) Tail뒤에 붙이기.
-	LINK_NODE(temp._Ptr->_pre, m_tail->_next); 
-	LINK_NODE(m_tail, _first._Ptr);
-
-	// 5) 떼낸 List를 붙힌다.
-	LINK_NODE(temp_node_first, temp._Ptr);
-
-
-	// return)
-	return iterator(temp._Ptr);
+	return iterator(last_node);
 }
-
-
 
 //-----------------------------------------------------------------
 // CGDK::circular_list)
 //
-//  attach: _where의 _node를 node 통채로 붙인다.
-//  detach : _where의 _node를 node 통채로 떼낸다.
+//  attach: _where의 _node를 node 통째로 붙인다.
+//  detach : _where의 _node를 node 통째로 떼낸다.
 //
 // 설명)
 //  insert나 erase는 값을 지우는 함수이다. 그러나 attach나 detach는
-//  node 통채로 떼어내는 함수이다.
+//  node 통째로 떼어내는 함수이다.
 //  splice는 그 대상이 같은 circular_list라고 한다면 이 함수는 그냥 해당 node
 //  만을 대상으로 한다. 즉 node자체를 떼놓았다가 node자체를 붙인다.
 //-----------------------------------------------------------------
@@ -1850,7 +1654,7 @@ void circular_list<TDATA, TALLOCATOR>::attach(const_iterator _where, const_itera
 		m_head = pnode_new;
 	}
 
-	// 4) 할당받은 갯수(allocated)와 크기(size)를 1 늘린다.
+	// 4) 할당받은 개수(allocated)와 크기(size)를 1 늘린다.
 	++m_size;
 	++m_capacity;
 }
@@ -1864,7 +1668,7 @@ void circular_list<TDATA, TALLOCATOR>::detach(const_iterator _where)
 	// check) 이건 뭐.. 당연하다~
 	CGASSERT_ERROR(_where._Ptr != 0);
 
-	// 1) head일 경우 한칸 민다.
+	// 1) head일 경우 한 칸 민다.
 	if(_where == begin())
 	{
 		m_head = m_head->_next;
@@ -1917,18 +1721,18 @@ void circular_list<TDATA, TALLOCATOR>::remove(const_reference _val)
 			// - 지울 Node 수 계산.
 			++count;
 
-			// check) 처음일 경우 Head를 땡긴다.
+			// check) 처음일 경우 Head를 당긴다.
 			if(iter_remove == begin())
 			{
-				// - Head를 땡기기...
+				// - Head를 당기기...
 				m_head = m_head->_next;
 				continue;
 			}
 
-			// check) 끝일 경우 Tail을 땡긴다.
+			// check) 끝일 경우 Tail을 당긴다.
 			if(iter==end())
 			{
-				// - Tail을 땡기기...
+				// - Tail을 당기기...
 				m_tail = m_tail->_pre;
 				continue;
 			}
@@ -1950,11 +1754,11 @@ void circular_list<TDATA, TALLOCATOR>::remove(const_reference _val)
 
 
 	//-----------------------------------------------------------------
-	// 2. 제거된 갯수만큼 줄인다.
+	// 2. 제거된 개수만큼 줄인다.
 	//-----------------------------------------------------------------
 	// 지운만큼 크기를 줄인다.
 	m_size -= count;
-	m_capacity-= count;
+
 }
 
 
@@ -1988,18 +1792,18 @@ void circular_list<TDATA, TALLOCATOR>::remove_if(_Pr1 _pred)
 			// - 지울 Node 수 계산.
 			++count;
 
-			// check) 처음일 경우 Head를 땡긴다.
+			// check) 처음일 경우 Head를 당긴다.
 			if(iter_remove == begin())
 			{
-				// - Head를 땡기기...
+				// - Head를 당기기...
 				m_head = m_head->_next;
 				continue;
 			}
 
-			// check) 끝일 경우 Tail을 땡긴다.
+			// check) 끝일 경우 Tail을 당긴다.
 			if(iter==end())
 			{
-				// - Tail을 땡기기...
+				// - Tail을 당기기...
 				m_tail = m_tail->_pre;
 				continue;
 			}
@@ -2021,7 +1825,7 @@ void circular_list<TDATA, TALLOCATOR>::remove_if(_Pr1 _pred)
 
 	// 지운만큼 크기를 줄인다.
 	m_size -= count;
-	m_capacity -= count;
+
 }
 
 
@@ -2067,30 +1871,19 @@ void circular_list<TDATA, TALLOCATOR>::swap(_mytype& _right)
 template <class TDATA, class TALLOCATOR>
 void circular_list<TDATA, TALLOCATOR>::unique()
 {
-	//-----------------------------------------------------------------
-	// 설명) Unique함수.
-	//   Unique함수는 연속적인 중복값들을 제거하는 함수이다.
-	//   따라서 원리는 처음부터 끝까지 iteration을 돌면서 다음과 같으
-	//   면 지운다. 끝~
-	//-----------------------------------------------------------------
-	// check) 크기가 2보다 작으면 그냥 되돌린다.
-	CGD_RETURN_IF(m_size<2);
+	CGD_RETURN_IF(m_size < 2);
 
-	// 1) 같은 것 제거하기...
 	iterator _first = begin();
 	iterator _after = _first;
 
-	// 2) Iteration을 돈다.
-	for (++_after; _after != end(); )
+	for (++_after; _after != end();)
 	{
-		// check) _first와 _after가 같으면 _after를 지운다.
-		if (_pred(*_first, *_after))
+		if (*_first == *_after)
 		{
 			_after = erase(_after);
 			continue;
 		}
 
-		// - 다음~(_after를 _first에 넣는다.)
 		_first = _after++;
 	}
 }
@@ -2099,183 +1892,114 @@ template <class TDATA, class TALLOCATOR>
 template<typename _Pr2>
 void circular_list<TDATA, TALLOCATOR>::unique(_Pr2 _pred)
 {
-	// check) 크기가 2보다 작으면 그냥 되돌린다.
 	CGD_RETURN_IF(m_size < 2);
 
-	// 1) 같은 것은 제거한다.
 	iterator _first = begin();
 	iterator _after = _first;
 
-	// 2) Iteration을 돈다.
 	for (++_after; _after != end();)
 	{
-		// check) _first와 _after가 같으면 _after를 지운다.
-		if (*_first == *_after)
+		if (_pred(*_first, *_after))
 		{
 			_after = erase(_after);
 			continue;
 		}
 
-		// - 다음~(_after를 _first에 넣는다.)
 		_first = _after++;
 	}
 }
 
 
-
 //-----------------------------------------------------------------
 // CGDK::circular_list)
 //
-//  splice: 정해진 node들을 통채로 옮긴다.
+//  splice: 정해진 node들을 통째로 옮긴다.
 //
 // 설명)
 //   circular_list와 같은 node기반의 container가 가진 장점 중에 하나로 
-//  특정 node를 move할때 해당하는 node의 연결만 딱 떼어 내서 원하는 곳으로
+//  특정 node를 move할 때 해당하는 node의 연결만 딱 떼어 내서 원하는 곳으로
 //  이동이 가능하다. splice는 바로 이런 동작을 하는 함수이다.
 //  std::list에서는 sort등지에 많이 사용된다.
 //-----------------------------------------------------------------
 template <class TDATA, class TALLOCATOR>
 void circular_list<TDATA, TALLOCATOR>::splice(const_iterator _where, _mytype& _right)
 {
-	// check) 
 	CGD_RETURN_IF(this == &_right || _right.empty());
 
-	// 1) Right에서 떼내기.
 	_node* right_first = _right.m_head;
 	_node* right_last = _right.m_tail->_pre;
+	size_type count = _right.m_size;
 
-	// 2) List를 0로...
-	_node* right_pre = right_first->_pre;
-	LINK_NODE(right_pre, _right.m_tail);
+	LINK_NODE(right_first->_pre, _right.m_tail);
 	_right.m_head = _right.m_tail;
-
-	// 3) Size와 Capasity를 계산한다.
-	_right.m_capacity -= _right.m_size;
-	m_size += _right.m_size; // 붙을 꺼니까~
-	m_capacity += _right.m_size;
-
-	// 4) Right의 Size를 0으로..
+	_right.m_capacity -= count;
 	_right.m_size = 0;
 
-	// 5) 연결시킬 앞과 뒤 Node
 	_node* pnode_next = _where._Ptr;
 	_node* pnode_pre = pnode_next->_pre;
 
-	// 6) right First와 pnode_pre의 연결
 	LINK_NODE(pnode_pre, right_first);
-
-	// 7) right Last와 pnode_next의 연결
 	LINK_NODE(right_last, pnode_next);
 
-	// 8) _where가 Head일 경우...
-	if(_where._Ptr == m_head)
-	{
+	if (_where._Ptr == m_head)
 		m_head = right_first;
-	}
+
+	m_size += count;
+	m_capacity += count;
 }
 
 
 template <class TDATA, class TALLOCATOR>
 void circular_list<TDATA, TALLOCATOR>::splice(const_iterator _where, _mytype& _right, const_iterator _first)
 {
-	// check) 만약 _right가 복사할 것이 하나도 없으면 Return
 	CGD_RETURN_IF(_first == _right.end());
 
-	// check) _right가 this이면서 처음이나 끝이면 Return~
-	CGD_RETURN_IF(this == &_right && (_where == _first || _where == end()));
+	const_iterator _last = _first;
+	++_last;
 
+	CGD_RETURN_IF(this == &_right && (_where == _first || _where == _last));
 
-	// 1) 추후에 처리를 위해 떼어낼 부분을 저장해놓는다.
-	_node* right_first = _first._Ptr;
-	_node* right_last = _right.m_tail->_pre;
-
-	// 2) 떼낼 객체의 갯수를 세아린다.
-	int count = 0;
-	for(; _first!=_right.end(); ++_first)
-	{
-		++count;
-	}
-
-	// 3) Right의 List에서 해당 부분을 떼어내고 그 앞뒤를연결~
-	LINK_NODE(_first._pre, _right.m_tail);
-
-	// 4) Size와 Capasity를 계산한다.
-	_right.m_capacity -= count;
-	_right.m_size -= count;
-	m_size += count;	// 붙을 꺼니까~
-	m_capacity += count;
-
-
-	// 5) 연결시킬 앞과 뒤 Node
-	_node* pnode_next = _where._Ptr;
-	_node* pnode_pre = pnode_next->_pre;
-
-	// 6) right First와 pnode_pre의 연결
-	LINK_NODE(pnode_pre, right_first);
-
-	// 7) right Last와 pnode_next의 연결
-	LINK_NODE(right_last, pnode_next);
-
-	// 8) _where가 Head일 경우...
-	if (_where._Ptr == m_head)
-	{
-		m_head = right_first;
-	}
+	splice(_where, _right, _first, _last);
 }
 
 
 template <class TDATA, class TALLOCATOR>
 void circular_list<TDATA, TALLOCATOR>::splice(const_iterator _where, _mytype& _right, const_iterator _first, const_iterator _last)
 {
-	// check) 
 	CGD_RETURN_IF(_first == _last || (this == &_right && _where == _last));
 
-
-	// 1) 추후에 처리를 위해 떼어낼 부분을 저장해놓는다.
 	_node* right_first = _first._Ptr;
 	_node* right_last = _last._Ptr->_pre;
 
-	// 2) 떼낼 객체의 갯수를 세아린다.
 	size_type count = 0;
-
-	// 3-1) 같은 Container라면 갯수변화는 없다! 따라서 셀 필요없다.
-	if (this == &_right)
+	if (this != &_right)
 	{
-	}
-	// 3-2) 통채로라도 셀 필요없다.
-	else if (_first == _right.begin() && _last == _right.end())
-	{
-		count = _right.m_size;	
-	}
-	else
-	{
-		for(; _first!=_last; ++_first)
-		{
+		for (auto iter = _first; iter != _last; ++iter)
 			++count;
-		}
 	}
 
-	// 4) Right의 List에서 해당 부분을 떼어내고 그 앞뒤를연결~
-	LINK_NODE(_first._Ptr->_pre, _last._Ptr);
+	LINK_NODE(right_first->_pre, _last._Ptr);
 
-	// 5) Size와 Capasity를 계산한다.
-	_right.m_capacity -= count;
-	_right.m_size -= count;
-	m_size += count; // 붙을 꺼니까~
-	m_capacity += count;
+	if (_right.m_head == right_first)
+		_right.m_head = _last._Ptr;
 
-	// 6) 연결시킬 앞과 뒤 Node
 	_node* pnode_next = _where._Ptr;
 	_node* pnode_pre = pnode_next->_pre;
 
-	// 7) right First와 pnode_pre의 연결
 	LINK_NODE(pnode_pre, right_first);
-
-	// 8) right Last와 pnode_next의 연결
 	LINK_NODE(right_last, pnode_next);
+
+	if (m_head == pnode_next)
+		m_head = right_first;
+
+	if (this != &_right)
+	{
+		_right.m_capacity -= count;
+		_right.m_size -= count;
+		m_size += count;
+		m_capacity += count;
+	}
 }
-
-
 
 
 //-----------------------------------------------------------------
@@ -2293,171 +2017,55 @@ template <class TDATA, class TALLOCATOR>
 template<typename _Pr3>
 void circular_list<TDATA, TALLOCATOR>::merge(_mytype& _right, _Pr3 _pred)
 {
-	// check) 같은 list라면 Merge를 할 필요 없다.
-	CGD_RETURN_IF(&_right == this);
+	CGD_RETURN_IF(&_right == this || _right.empty());
 
-	// 1) 완전포함인지 확인한다.
-	if(front() >= _right.back())
-	{
-		// - Right를 m_head 앞에 통채로 붙이기.
-		LINK_NODE(m_head->_pre, _right.m_head)
-		LINK_NODE(_right.m_tail->pre, m_head)
-	}
-	// 2) 완전포함인지 확인한다.
-	else if(back() <= _right.front())
-	{
-		// - _right를 m_tail 뒤에 통채로 붙이기
-		LINK_NODE(m_tail->_pre, _right.m_head)
-		LINK_NODE(_right.m_tail->_pre, m_tail)
-	}
-	// 3) 차례로 붙이기...(temp_list가 Main이고 binList가 여기에 붙는 것임.)				
-	else
-	{
-		// NodeA와 NodeB를 설정한다.
-		_node*	node_a = m_head;
-		node_a->_pre  = m_head->_pre;
-		_node*	node_b = _right.m_head;
+	iterator iter = begin();
+	iterator iter_right = _right.begin();
 
-		for(;;)
+	while (iter != end() && iter_right != _right.end())
+	{
+		if (_pred(*iter_right, *iter))
 		{
-			// B를 Next로(B를 A앞에 끼워 넣는다.)
-			if(_pred(node_a->_data, node_b->_data))
-			{
-				// - node_b를 잠시 얻어 놓는다.
-				_node* temp_b_next = node_b->_next;
-
-				// - node_b를 NodeA앞에 붙인다.
-				LINK_NODE(node_a->_pre, node_b);
-				LINK_NODE(node_b, node_a);
-
-				// - node_b를 다음으로 옮긴다.
-				node_b = temp_b_next;
-
-				// - node_b가 끝인지 확인한다.
-				CGD_BREAK_IF(temp_b_next==_right.m_tail);
-			}
-			// A를 Next로(그냥 넘긴다.)
-			else
-			{
-				// node_a를 다음으로 옮긴다.
-				_node* temp_a_next = node_a->_next;
-
-				// node_a가 끝인지 확인한다.
-				if(temp_a_next==m_tail)
-				{
-					// node_a뒤에 node_b를 붙인다.
-					LINK_NODE(node_a, node_b);
-					LINK_NODE(node_b, m_tail);
-
-					break;
-				}
-
-				node_a = temp_a_next;
-			}
+			auto iter_next = iter_right;
+			++iter_next;
+			splice(iter, _right, iter_right);
+			iter_right = iter_next;
+		}
+		else
+		{
+			++iter;
 		}
 	}
 
-
-	// 4) _right.m_size를 임시로 저장해 놓는다.
-	size_type temp_size = _right.m_size;
-
-	// 5) List의 Size와 count를 정리한다.
-	m_size += temp_size;
-	m_size += temp_size;
-
-	// 6) Right List의 Size와 count를 정리한다.
-	_right.m_size = 0;
-	_right.m_size -= temp_size;
-
-	// 7) Right List를 정리한다.
-	LINK_NODE(_right.m_head, _right.m_head);
-	_right.m_tail = _right.m_head;
-
+	if (iter_right != _right.end())
+		splice(end(), _right, iter_right, _right.end());
 }
 
 template <class TDATA, class TALLOCATOR>
 void circular_list<TDATA, TALLOCATOR>::merge(_mytype& _right)
 {
-	// check) 같은 list라면 Merge를 할 필요 없다.
-	CGD_RETURN_IF(&_right == this);
+	CGD_RETURN_IF(&_right == this || _right.empty());
 
+	iterator iter = begin();
+	iterator iter_right = _right.begin();
 
-	// 1) 완전포함인지 확인한다.
-	if(front() >= _right.back())
+	while (iter != end() && iter_right != _right.end())
 	{
-		// - Right를 m_head 앞에 통채로 붙이기.
-		LINK_NODE(m_head->_pre, _right.m_head)
-		LINK_NODE(_right.m_tail->pre, m_head)
-	}
-	// 2) 완전포함인지 확인한다.
-	else if(back() <= _right.front())
-	{
-		// - _right를 m_tail 뒤에 통채로 붙이기
-		LINK_NODE(m_tail->_pre, _right.m_head)
-		LINK_NODE(_right.m_tail->_pre, m_tail)
-	}
-	// 3) 차례로 붙이기...(temp_list가 Main이고 binList가 여기에 붙는 것임.)				
-	else
-	{
-		// NodeA와 NodeB를 설정한다.
-		_node*	node_a = m_head;
-		node_a->_pre = m_head->_pre;
-		_node*	node_b = _right.m_head;
-
-		for(;;)
+		if (*iter_right < *iter)
 		{
-			// B를 끼워놓고 B를 Next로...
-			if(node_a->_data > node_b->_data)
-			{
-				// - node_b를 잠시 얻어 놓는다.
-				_node* temp_b_next = node_b->_next;
-
-				// - node_b를 NodeA앞에 붙인다.
-				LINK_NODE(node_a->_pre, node_b);
-				LINK_NODE(node_b, node_a);
-
-				// - node_b를 다음으로 옮긴다.
-				node_b = temp_b_next;
-
-				// - node_b가 끝인지 확인한다.
-				CGD_BREAK_IF(temp_b_next == _right.m_tail);
-			}
-			// A를 Next로(그냥 넘긴다.)
-			else
-			{
-				// node_a를 다음으로 옮긴다.
-				_node* temp_a_next = node_a->_next;
-
-				// node_a가 끝인지 확인한다.
-				if(temp_a_next == m_tail)
-				{
-					// node_a뒤에 node_b를 붙인다.
-					LINK_NODE(node_a, node_b);
-					LINK_NODE(node_b, m_tail);
-
-					break;
-				}
-
-				node_a = temp_a_next;
-			}
+			auto iter_next = iter_right;
+			++iter_next;
+			splice(iter, _right, iter_right);
+			iter_right = iter_next;
+		}
+		else
+		{
+			++iter;
 		}
 	}
 
-
-	// 4) _right.m_size를 임시로 저장해 놓는다.
-	size_type temp_size = _right.m_size;
-
-	// 5) List의 Size와 count를 정리한다.
-	m_size += temp_size;
-	m_size += temp_size;
-
-	// 6) Right List의 Size와 count를 정리한다.
-	_right.m_size = 0;
-	_right.m_size -= temp_size;
-
-	// 7) Right List를 정리한다.
-	LINK_NODE(_right.m_head, _right.m_head);
-	_right.m_tail = _right.m_head;
+	if (iter_right != _right.end())
+		splice(end(), _right, iter_right, _right.end());
 }
 
 #ifdef _CGD_LIST_FAST_SORT
@@ -2470,16 +2078,16 @@ void circular_list<TDATA, TALLOCATOR>::_slice_for_sort(_node& temp_list, _node*&
 	//  이 함수는 4개를 정렬해서 끊어주는 함수이다.
 	//  한꺼번에 4개의 node를 개개별에 따라 sort를 하여 끊어주기 때문에
 	//  2개씩 끊는 함수에 비해 대략 10%~20%정도 속도향상을 가져다 준다.
-	//  하지만 code가 지나치게 방대해 질수 있으므로 code의 량이 중요할
+	//  하지만 code가 지나치게 방대해 질 수 있으므로 code의 량이 중요할
 	//  경우 2개씩 끊는 함수를 사용하기를 권한다.
 	//  (std::list의 경우 1개씩 끊어서 처리하도록 해서 속도상의 손해가
 	//  있다.)
 	//-----------------------------------------------------------------
 
 	//-----------------------------------------------------------------
-	// 1. 첫번재 데이터
+	// 1. 첫 번째 데이터
 	//-----------------------------------------------------------------
-	// 1) 첫번째 Node를 얻는다.
+	// 1) 첫 번째 Node를 얻는다.
 	temp_list._next = node_now;
 
 	// 2) 다음 Node
@@ -2498,7 +2106,7 @@ void circular_list<TDATA, TALLOCATOR>::_slice_for_sort(_node& temp_list, _node*&
 
 
 	//-----------------------------------------------------------------
-	// 2. 두번째 데이터
+	// 2. 두 번째 데이터
 	//-----------------------------------------------------------------
 	// 1) 2개째 Node를 얻는다.
 	_node* pnode_second = node_now;
@@ -2537,7 +2145,7 @@ void circular_list<TDATA, TALLOCATOR>::_slice_for_sort(_node& temp_list, _node*&
 
 
 	//-----------------------------------------------------------------
-	// 3. 세번째 데이터
+	// 3. 세 번째 데이터
 	//-----------------------------------------------------------------
 	// 1) 3개째 Node를 얻는다.
 	_node* pnode_third = node_now;
@@ -2578,7 +2186,7 @@ void circular_list<TDATA, TALLOCATOR>::_slice_for_sort(_node& temp_list, _node*&
 
 
 	//-----------------------------------------------------------------
-	// 3. 네번째 데이터
+	// 3. 네 번째 데이터
 	//-----------------------------------------------------------------
 	// 1) nodwNow가 4번째것이다.
 	_node* nodeForth = node_now;
@@ -2626,12 +2234,12 @@ void circular_list<TDATA, TALLOCATOR>::_slice_for_sort(_node& temp_list, _node*&
 	// 설명)
 	//  merge sort를 위해 list를 일정 단위로 끊는 역할을 하는 이 함수이다.
 	//  이 함수는 2개를 정렬해서 끊어주는 함수이다.
-	//  위의 함수는 4개씩 끊어주는 함수여서 빠르기는 하지만 코드가 커질수
+	//  위의 함수는 4개씩 끊어주는 함수여서 빠르기는 하지만 코드가 커질 수
 	//  있기 때문에 간단한 code를 원할 경우 이 함수를 사용하기를 권한다.
 	//  속도는 10~20%정도 느리지만 code의 량은 1/3도 되지 않는다.
 	//-----------------------------------------------------------------
 
-	// 1) 두개의 Node를 읽어들인다.
+	// 1) 두 개의 Node를 읽어들인다.
 	_node* nodeFirst = node_now;
 	_node* pnode_second = node_now->_next;
 
@@ -2672,7 +2280,7 @@ void circular_list<TDATA, TALLOCATOR>::_merge_for_sort(_node& temp_list, _node& 
 {
 	//-----------------------------------------------------------------
 	// 설명)
-	//   merge sort를 위해 두개의 나누어진 list를 합쳐주는 함수이다.
+	//   merge sort를 위해 두 개의 나누어진 list를 합쳐주는 함수이다.
 	//  하나의 list를 기준으로 다른 하나의 list값들을 기준이 되는 list
 	//  사이에 끼워넣는 형태로 code가 구성된다.
 	//   기존의 lstd::list에 비해서 0비교를 하게 함으로써 잦은 비교에
@@ -2789,7 +2397,7 @@ void circular_list<TDATA, TALLOCATOR>::_merge_for_sort(_node& temp_list, _node& 
 {
 	//-----------------------------------------------------------------
 	// 설명)
-	//   merge sort를 위해 두개의 나누어진 list를 합쳐주는 함수이다.
+	//   merge sort를 위해 두 개의 나누어진 list를 합쳐주는 함수이다.
 	//  하나의 list를 기준으로 다른 하나의 list값들을 기준이 되는 list
 	//  사이에 끼워넣는 형태로 code가 구성된다.
 	//   기존의 lstd::list에 비해서 0비교를 하게 함으로써 잦은 비교에
@@ -3412,41 +3020,20 @@ void circular_list<TDATA, TALLOCATOR>::sort(_Pr3 _pred)
 template <class TDATA, class TALLOCATOR>
 void circular_list<TDATA, TALLOCATOR>::shrink()
 {
-	//-----------------------------------------------------------------
-	// 1. 돌면서 남은 node들을 모두 제거한다.
-	//-----------------------------------------------------------------
-	// 1) 단지... 줄어드는 숫자만 확인하기 위해 돌린다.
 	size_type count = 0;
-
-	// 2) 지울 head와 tail을 설정.
 	_node* temp_first = m_tail->_next;
 	_node* temp_last = m_head;
-	while(temp_first != temp_last)
+
+	while (temp_first != temp_last)
 	{
-		// - Destruct를 호출한다.
-		m_alloc_val.destroy(&temp_first->_data);
-
-		// - Destruct를 호출하고 pnode_temp를 지운다.
-		//   (Destroy는 호출하지 않는다.)
+		_node* temp_next = temp_first->_next;
 		m_alloc_node.deallocate(temp_first, 1);
-
-		// - 숫자를 더한다.
 		++count;
-
-		// - 다음...
-		temp_first= temp_first->_next;
+		temp_first = temp_next;
 	}
 
-
-	//-----------------------------------------------------------------
-	// 2. Node를 정리한다.
-	//-----------------------------------------------------------------
-	// 1) m_head와 m_tail을 뒤로 붙이기.
 	LINK_NODE(m_tail, m_head);
-
-	// 2) 할당받은 수와 크기를 1 줄인다.
-	m_size -= count;
+	m_capacity -= count;
 }
-
 
 }

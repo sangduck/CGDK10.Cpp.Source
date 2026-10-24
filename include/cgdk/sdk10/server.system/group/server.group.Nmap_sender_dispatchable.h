@@ -63,7 +63,7 @@ void group::Nmap_sender_dispatchable<_TMEMBER, _TKEY, _TPARAM, _TMEMBER_DATA, _T
 	}
 	catch(...)
 	{
-		// - Unreigster 
+		// - Unregister 
 		_pmember->unregister_messageable(this);
 
 		// reraise) 

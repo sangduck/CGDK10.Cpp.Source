@@ -86,7 +86,7 @@ bool group::array_seat_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::s
 	// declare)
 	object_ptr<member_t> pmember;
 
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
 		// check)
 		RETURN_IF(_index < 0 || _index >= static_cast<int>(this->member_capacity()), false)
@@ -114,7 +114,7 @@ bool group::array_seat_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::s
 	// declare)
 	object_ptr<member_t> pmember;
 
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
 		// check)
 		RETURN_IF(_index < 0 || _index >= static_cast<int>(this->member_capacity()), false)
@@ -141,7 +141,7 @@ group::array_seat_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_t
 	// declare)
 	object_ptr<member_t> pmember;
 
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
 		// check)
 		RETURN_IF(_index < 0 || _index >= static_cast<int>(this->member_capacity()), false)
@@ -172,40 +172,15 @@ bool group::array_seat_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::s
 	// check) _buffer가 empty면 리턴
 	RETURN_IF(_buffer.empty(), false)
 
-	// declare)
-	std::vector<object_ptr<_TMEMBER>> vector_send;
-
-	// 1) make member list
-	scoped_lock(this->m_lockable_group)
-	{
-		// - get member count
-		auto count = this->member_count();
-
-		// - reserve
-		vector_send.reserve(count);
-
-		for (auto iter = this->begin(); count > 0; ++iter)
-		{
-			// check) 
-			CGASSERT_ERROR(iter != this->end());
-
-			// check) continue if member is empty
-			CONTINUE_IF((*iter).empty());
-
-			// - dcrease member count
-			--count;
-
-			// check) except member == _member_except
-			CONTINUE_IF((*iter).member() == _member_except);
-
-			// - copy member
-			vector_send.push_back((*iter).member());
-		}
-	}
+	// 1) member snapshot (copy-on-write)
+	auto snapshot_send = this->get_member_snapshot();
 
 	// 2) send to all
-	for (auto& iter : vector_send)
+	for (auto* iter : snapshot_send)
 	{
+		// check) except member == _memer_except
+		CONTINUE_IF(iter == _member_except);
+
 		iter->process_send(shared_buffer(_buffer), 1, _option);
 	}
 
@@ -224,40 +199,15 @@ group::array_seat_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_e
 	// 2) append _data to buffer_temp
 	buffer_temp.template append<T>(_data);
 
-	// declare)
-	std::vector<object_ptr<_TMEMBER>> vector_send;
-
-	// 3) make member list
-	scoped_lock(this->m_lockable_group)
-	{
-		// - get member count
-		auto count = this->member_count();
-
-		// - reserve
-		vector_send.reserve(count);
-
-		for (auto iter = this->begin(); count > 0; ++iter)
-		{
-			// check) 
-			CGASSERT_ERROR(iter != this->end());
-
-			// check) continue if member is empty
-			CONTINUE_IF((*iter).empty());
-
-			// - dcrease member count
-			--count;
-
-			// check) except member == _member_except
-			CONTINUE_IF((*iter).member() == _member_except);
-
-			// - copy member
-			vector_send.push_back((*iter).member());
-		}
-	}
+	// 3) member snapshot (copy-on-write)
+	auto snapshot_send = this->get_member_snapshot();
 
 	// 4) send to all
-	for (auto& iter : vector_send)
+	for (auto* iter : snapshot_send)
 	{
+		// check) except member == _memer_except
+		CONTINUE_IF(iter == _member_except);
+
 		iter->process_send(shared_buffer(buffer_temp), 1, _option);
 	}
 
@@ -275,7 +225,7 @@ bool group::array_seat_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::s
 	std::vector<object_ptr<_TMEMBER>> vector_send;
 
 	// 1) make member list
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
 		// - get member count
 		auto count = this->member_count();
@@ -291,14 +241,14 @@ bool group::array_seat_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::s
 			// check) continue if member is empty
 			CONTINUE_IF((*iter).empty());
 
-			// - dcrease member count
+			// - decrease member count
 			--count;
 
 			// check) continue if result of '_pred' is false
-			CONTINUE_IF(_pred((*iter).member()) == false);
+			CONTINUE_IF(_pred(*(*iter)) == false);
 
 			// - copy member
-			vector_send.push_back((*iter).member());
+			vector_send.push_back(*(*iter));
 		}
 	}
 
@@ -327,7 +277,7 @@ group::array_seat_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_c
 	std::vector<object_ptr<_TMEMBER>> vector_send;
 
 	// 1) make member list
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
 		// - get member count
 		auto count = this->member_count();
@@ -343,14 +293,14 @@ group::array_seat_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::send_c
 			// check) continue if member is empty
 			CONTINUE_IF((*iter).empty());
 
-			// - dcrease member count
+			// - decrease member count
 			--count;
 
 			// check) continue if result of '_pred' is false
-			CONTINUE_IF(_pred((*iter).member()) == false);
+			CONTINUE_IF(_pred(*(*iter)) == false);
 
 			// - copy member
-			vector_send.push_back((*iter).member());
+			vector_send.push_back(*(*iter));
 		}
 	}
 
@@ -370,36 +320,11 @@ bool group::array_seat_sender<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::p
 	// check)
 	RETURN_IF(_buffer.empty(), false)
 
-	// declare)
-	std::vector<object_ptr<_TMEMBER>> vector_send;
-
-	// 1) make member list
-	scoped_lock(this->m_lockable_group)
-	{
-		// - get member count
-		auto count = this->member_count();
-
-		// - reserve
-		vector_send.reserve(count);
-
-		for (auto iter = this->begin(); count > 0; ++iter)
-		{
-			// check) 
-			CGASSERT_ERROR(iter != this->end());
-
-			// check) continue if member is empty
-			CONTINUE_IF((*iter).empty());
-
-			// - dcrease member count
-			--count;
-
-			// - copy member
-			vector_send.push_back((*iter).member());
-		}
-	}
+	// 1) member snapshot (copy-on-write. no group lock while the published one is valid)
+	auto snapshot_send = this->get_member_snapshot();
 
 	// 2) send to all
-	for (auto& iter : vector_send)
+	for (auto* iter : snapshot_send)
 	{
 		iter->process_send(shared_buffer(_buffer), _count_message, _option);
 	}

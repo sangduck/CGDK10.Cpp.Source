@@ -1,0 +1,23 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="socket.01.tcp_simple\server.console\tutorial.socket.tcp_simple.server.console.vs18.vcxproj" Id="469929e0-47e1-4c49-aa27-1578d1681e67" />
+  <Project Path="socket.02.tcp_send_receive\server.console\tutorial.socket.tcp_send_receive.server.console.vs18.vcxproj" Id="6f1993c4-5d2e-48b9-9f7b-e9f0881bd9b5" />
+  <Project Path="socket.03.tcp_configure\server.console\tutorial.socket.tcp_configure.server.console.vs18.vcxproj" Id="a0cf6184-470e-4d03-9f19-7d9371f9c8bb" />
+  <Project Path="socket.04.udp_simple\server.console\tutorial.socket.udp_simple.server.console.vs18.vcxproj" Id="5729252d-0947-4073-a01e-9b85f3dcdf6a" />
+  <Project Path="socket.05.http\server.console\tutorial.socket.http.server.console.vs18.vcxproj" Id="ae6b92dc-d308-4e29-8f64-a5b952189ddc" />
+  <Project Path="socket.06.websocket\server.console\tutorial.socket.websocket.server.console.vs18.vcxproj" Id="0914f19c-6042-400c-a3e9-1c23f9361ad1" />
+  <Project Path="socket.ex01.tcp_graceful_close\server.console\tutorial.socket.ex.tcp_graceful_close.server.console.vs18.vcxproj" Id="bdc9b788-d3b4-4a93-9d25-e101b50668cb" />
+  <Project Path="socket.ex02.net.ip\tutorial.socket.ex.net.ip.console.vs18.vcxproj" Id="6b4e1de2-a7d0-486f-ba8c-66c3b2e58095" />
+  <Project Path="socket.ex06.tcp_protobuf\server.console\tutorial.socket.tcp_protobuf.server.console.vs18.vcxproj" Id="2ec794b5-3801-40d6-81cf-6620fe15a402" />
+  <Project Path="socket.ex08.socket_logger\tutorial.socket.socket_logger.vs18.vcxproj" Id="313e9b19-89df-4a5d-be94-3e46bb5fb3e6" />
+  <Project Path="socket.ex09.lambda_socket\server\tutorial.socket.lambda_socket.server.vs18.vcxproj" Id="160f20e3-ec38-429d-a8cf-ba7cda48b485" />
+  <Project Path="socket.ex10.crypted_send_receive\server.console\tutorial.socket.ex.crypted_send_receive.server.console.vs18.vcxproj" Id="bdca655c-e376-4d53-9daa-b4c4a5050d7f" />
+  <Project Path="socket.ex11.ssl_send_receive\server.console\tutorial.socket.ex.ssl_send_receive.server.console.vs18.vcxproj" Id="db6259dd-c45c-4ccb-85c6-0e44cfcb6dd1" />
+  <Project Path="socket.ex12.kafka\tutorial.socket.kafka.vs18.vcxproj" Id="7f3a69aa-d51f-484b-a566-e6219b840be5" />
+  <Project Path="socket.ex13.mail\tutorial.socket.mail.vs18.vcxproj" Id="707fa81f-5376-4c0c-8633-f7ad96fdee84" />
+  <Project Path="socket.ex14.uds\tutorial.socket.ex.uds.console.vs18.vcxproj" Id="05a853f1-58e7-428e-9b82-c0bd7e5b8367" />
+  <Project Path="socket.ex15.socket_option\tutorial.socket.ex.socket_option.console.vs18.vcxproj" Id="6c2f0e41-3b9a-4d7e-9a51-2f8c1d0b7e15" />
+  <Project Path="socket.ex16.emergency_acceptor\tutorial.socket.ex.emergency_acceptor.console.vs18.vcxproj" Id="2591990d-663e-48c5-a51c-dc2b158fa6f6" />
+</Solution>

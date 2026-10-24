@@ -21,7 +21,7 @@ intptr_t net::io::send_request::Nudp_resend::executable_resend::process_execute(
 	// declare) 
 	object_ptr<net::io::send_request::Nudp_resend> pexecutor;
 				
-	scoped_lock(this->m_lockable_object)
+	SCOPED_LOCK(this->m_lockable_object)
 	{
 		// - 값을 복사한다.
 		pexecutor = this->m_pObject;
@@ -38,7 +38,7 @@ intptr_t net::io::send_request::Nudp_resend::executable_resend::process_execute(
 
 void net::io::send_request::Nudp_resend::executable_resend::reset_object()
 {
-	scoped_lock(this->m_lockable_object)
+	SCOPED_LOCK(this->m_lockable_object)
 	{
 		this->m_pObject = nullptr;
 	}
@@ -83,7 +83,7 @@ void net::io::send_request::Nudp_resend::reset_send_request() noexcept
 void net::io::send_request::Nudp_resend::create_buffers()
 {
 	// 1) shared_buffer를 생성한다.
-	this->m_queue_sended.resize(SEND_QUEUE_SIZE);
+	this->m_queue_sent.resize(SEND_QUEUE_SIZE);
 }
 
 void net::io::send_request::Nudp_resend::destroy_buffers() noexcept
@@ -94,7 +94,7 @@ void net::io::send_request::Nudp_resend::destroy_buffers() noexcept
 
 void net::io::send_request::Nudp_resend::clear_buffers() noexcept
 {
-	scoped_lock(this->m_lockable_send)
+	SCOPED_LOCK(this->m_lockable_send)
 	{
 		// 1) Tick reset
 		this->m_tick_resend_next = chrono::tick::now();
@@ -102,16 +102,16 @@ void net::io::send_request::Nudp_resend::clear_buffers() noexcept
 		// 2) send
 		this->m_serial_send = 0;
 		this->m_last_serial_send_acked = 0;
-		this->m_last_serial_sended = 0;
-		this->m_nSended = 0;
+		this->m_last_serial_sent = 0;
+		this->m_nSent = 0;
 
 		// 3) 재전송 횟수를 0으로...
 		this->m_retransmitted = 0;
 
-		// 4) Sended Queue
+		// 4) Sent Queue
 		for(int i=0; i<SEND_QUEUE_SIZE; ++i)
 		{
-			this->m_queue_sended.at(i).powner.reset();
+			this->m_queue_sent.at(i).powner.reset();
 		}
 
 		// 6) SendQueue를 clear
@@ -132,7 +132,7 @@ bool net::io::send_request::Nudp_resend::request_send( const buffer_view _buffer
 	//-----------------------------------------------------------------
 	// 1. Resend를 위한 Stack처리.
 	//
-	//    - Resend하는 부분은 Commanand부분에 Resend Flag가 붙어 올 
+	//    - Resend하는 부분은 Command부분에 Resend Flag가 붙어 올 
 	//      경우 Queue에 저장시킨 후 ACK신호가 돌아오지 않으면 일정시간 
 	//      간격으로 재전송을 수행한다.
 	//    - executable의 ProcssCompleteSend의 경우 ACK를 받아 Resend 
@@ -146,21 +146,24 @@ bool net::io::send_request::Nudp_resend::request_send( const buffer_view _buffer
 	//            process_send()한 완료로 인해 처리가 꼬일 수도 있기 
 	//            때문이다.
 	//-----------------------------------------------------------------
-	// 1) buffer를 일단 복사한다.
-	buffer temp_buffer { _buffer, dynamic_cast<Imemory*>(_powner.get())->get_bound() };
-
-	// 2) Reliable Flag가 Check되어 있으면 처리한다.
-	bool bResended = (temp_buffer.front<uint32_t>(4) & eMESSAGE::SYSTEM::FLAG_RELIABLE) != 0;
+	// 1) Reliable Flag가 Check되어 있으면 처리한다. (원본 버퍼는 읽기만 한다.)
+	bool bResent = _buffer.size() >= sizeof(uint32_t) * 2 && (_buffer.front<uint32_t>(4) & eMESSAGE::SYSTEM::FLAG_RELIABLE) != 0;
 
 	// Case) Resend일 경우... 
-	if(bResended)
+	if(bResent)
 	{
-		scoped_lock(this->m_lockable_send)
-		{
-			// - Reliable Flag를 제거한다.
-			temp_buffer.front<uint32_t>(4) &= (~eMESSAGE::SYSTEM::FLAG_RELIABLE);
+		// 2) 재전송 queue에 보관할 복사본을 만든다. (호출자의 원본 버퍼는 수정하지 않는다.)
+		auto temp_buffer = alloc_shared_buffer(_buffer.size() + sizeof(uint32_t) * 2);
 
-			// - Packet Serial과 tail Command를 붙힌다.
+		// - 원본 내용을 복사한다.
+		temp_buffer.append(_buffer.size(), _buffer.data());
+
+		// - Reliable Flag를 제거한다.
+		temp_buffer.front<uint32_t>(4) &= (~eMESSAGE::SYSTEM::FLAG_RELIABLE);
+
+		SCOPED_LOCK(this->m_lockable_send)
+		{
+			// - Packet Serial과 tail Command를 붙인다.
 			temp_buffer.append<uint32_t>(m_serial_send);
 			temp_buffer.append<uint32_t>(eMESSAGE::NETWORK::REQUEST_ACK);
 
@@ -172,7 +175,7 @@ bool net::io::send_request::Nudp_resend::request_send( const buffer_view _buffer
 
 				// 2) Packet shared_buffer를 설정한다.
 				temp_send_message.buffer = temp_buffer;
-				temp_send_message.powner = std::move(_powner);
+				temp_send_message.powner = temp_buffer.get_source();
 
 				 //3) Tick count를 설정한다.
 				temp_send_message.iSendOut = 16;
@@ -193,11 +196,11 @@ bool net::io::send_request::Nudp_resend::request_send( const buffer_view _buffer
 			uint32_t Offset = this->m_serial_send & SEND_QUEUE_INDEX_MASK;
 
 			// 1) 일단 Packet을 Queueing한다.
-			SENDED_PACKET& temp_send_message = this->m_queue_sended.at(Offset);
+			SENDED_PACKET& temp_send_message = this->m_queue_sent.at(Offset);
 
 			// 2) Packet shared_buffer를 설정한다.
 			temp_send_message.buffer = temp_buffer;
-			temp_send_message.powner = _powner;
+			temp_send_message.powner = temp_buffer.get_source();
 
 			 //3) Tick count를 설정한다.
 			temp_send_message.iSendOut = 16;
@@ -208,15 +211,18 @@ bool net::io::send_request::Nudp_resend::request_send( const buffer_view _buffer
 			++this->m_serial_send;
 
 			// 5) 보낸 마지막 Serial을 증가시킨다.
-			++this->m_last_serial_sended;
+			++this->m_last_serial_sent;
 
-			// 6) Sended된 횟수를 증가시킨다.
-			++this->m_nSended;
+			// 6) Sent된 횟수를 증가시킨다.
+			++this->m_nSent;
 		}
+
+		// 3) 복사본을 전송한다.
+		return this->process_sendable(temp_buffer, temp_buffer.move_out_source(), _count_message, _address);
 	}
 
 	// 3) call 'process_sendable'
-	return this->process_sendable(temp_buffer, std::move(_powner), _count_message, _address);
+	return this->process_sendable(_buffer, std::move(_powner), _count_message, _address);
 }
 
 #if defined(_MSC_VER)
@@ -225,7 +231,7 @@ bool net::io::send_request::Nudp_resend::request_send( const buffer_view _buffer
 
 void net::io::send_request::Nudp_resend::progress_resend()
 {
-	scoped_lock(this->m_lockable_send)
+	SCOPED_LOCK(this->m_lockable_send)
 	{
 		//-----------------------------------------------------------------
 		//  1. Retransmit Check
@@ -239,19 +245,19 @@ void net::io::send_request::Nudp_resend::progress_resend()
 		// check) 
 		RETURN_IF(tick_now < this->m_tick_resend_next);
 
-		for(uint32_t i = this->m_last_serial_send_acked; i < this->m_last_serial_sended; ++i)
+		for(uint32_t i = this->m_last_serial_send_acked; i < this->m_last_serial_sent; ++i)
 		{
-			// declare) Sended Packet
-			SENDED_PACKET& temp_sended = this->m_queue_sended.at(i & SEND_QUEUE_INDEX_MASK);
+			// declare) Sent Packet
+			SENDED_PACKET& temp_sent = this->m_queue_sent.at(i & SEND_QUEUE_INDEX_MASK);
 
 			// check) 이미 ack된 것이라면 다음...
-			CONTINUE_IF(temp_sended.powner.empty());
+			CONTINUE_IF(temp_sent.powner.empty());
 
 			// check) 이미 ack된 것이라면 다음...
-			CONTINUE_IF((tick_now-temp_sended.tick_last_send) < this->m_tick_resend_interval);
+			CONTINUE_IF((tick_now-temp_sent.tick_last_send) < this->m_tick_resend_interval);
 
 			// 1) Counter를 줄인다.
-			if(temp_sended.iSendOut == 0)
+			if(temp_sent.iSendOut == 0)
 			{
 				// - free해버린다.
 				this->ack(i, false);
@@ -261,10 +267,10 @@ void net::io::send_request::Nudp_resend::progress_resend()
 			}
 
 			// 2) SendOut을 줄인다.
-			--temp_sended.iSendOut;
+			--temp_sent.iSendOut;
 
 			// 3) 전송한다.
-			auto result = this->process_sendable(temp_sended.buffer, object_ptr<Ireferenceable>(temp_sended.powner), 1, temp_sended.addr_destination);
+			auto result = this->process_sendable(temp_sent.buffer, object_ptr<Ireferenceable>(temp_sent.powner), 1, temp_sent.addr_destination);
 
 			// check) 전송 제대로 했나???
 			if(result == false)
@@ -276,11 +282,11 @@ void net::io::send_request::Nudp_resend::progress_resend()
 				continue;
 			}
 
-			// - Retransmitted갯수를 증가시킨다.
+			// - Retransmitted개수를 증가시킨다.
 			++this->m_retransmitted;
 
 			// - 마지막 재전송한 시간을 Update한다.
-			temp_sended.tick_last_send = tick_now;
+			temp_sent.tick_last_send = tick_now;
 		}
 
 		// 3) Next Tick 계산.
@@ -291,39 +297,39 @@ void net::io::send_request::Nudp_resend::progress_resend()
 bool net::io::send_request::Nudp_resend::ack( uint32_t p_dwPacketSerial, bool /*_result*/)
 {
 	// declare) 
-	SENDED_PACKET* psended_packet = nullptr;
+	SENDED_PACKET* psent_packet = nullptr;
 
-	scoped_lock(this->m_lockable_send)
+	SCOPED_LOCK(this->m_lockable_send)
 	{
 		// check) 마지막 SendAck보다 작으면 그냥 끝낸다.
 		RETURN_IF(p_dwPacketSerial < this->m_last_serial_send_acked, true);
 
 		// check) 마지막 SendAck보다 작으면 그냥 끝낸다.
-		RETURN_IF(p_dwPacketSerial > this->m_last_serial_sended, true);
+		RETURN_IF(p_dwPacketSerial > this->m_last_serial_sent, true);
 
 
 		//-----------------------------------------------------------------
 		//  1. ack한만큼 전송한다.
 		//-----------------------------------------------------------------
-		// declare) Sended Packet
-		SENDED_PACKET& temp_sended = this->m_queue_sended.at(p_dwPacketSerial & SEND_QUEUE_INDEX_MASK);
+		// declare) Sent Packet
+		SENDED_PACKET& temp_sent = this->m_queue_sent.at(p_dwPacketSerial & SEND_QUEUE_INDEX_MASK);
 
 		// check)
-		RETURN_IF(temp_sended.powner.empty(), false);
+		RETURN_IF(temp_sent.powner.empty(), false);
 
 		// 1) 해제한다.
-		temp_sended.powner.reset();
+		temp_sent.powner.reset();
 
-		// 2) ack를 땡긴다.
-		while(this->m_last_serial_sended>m_last_serial_send_acked)
+		// 2) ack를 당긴다.
+		while(this->m_last_serial_sent>m_last_serial_send_acked)
 		{
-			BREAK_IF(this->m_queue_sended.at(this->m_last_serial_send_acked & SEND_QUEUE_INDEX_MASK).powner.exist());
+			BREAK_IF(this->m_queue_sent.at(this->m_last_serial_send_acked & SEND_QUEUE_INDEX_MASK).powner.exist());
 
 			++this->m_last_serial_send_acked;
 		}
 
-		// 4) Sended된 갯수를 줄인다.
-		--this->m_nSended;
+		// 4) Sent된 개수를 줄인다.
+		--this->m_nSent;
 
 
 		//-----------------------------------------------------------------
@@ -332,20 +338,20 @@ bool net::io::send_request::Nudp_resend::ack( uint32_t p_dwPacketSerial, bool /*
 		if(this->m_list_send_queue.empty() == false)
 		{
 			// - Queuing된 것 하나를 얻는다.
-			SENDED_PACKET& tempSendedS = this->m_list_send_queue.front();
+			SENDED_PACKET& tempSentS = this->m_list_send_queue.front();
 
-			// declare) Sended Packet
-			SENDED_PACKET& tempSendedD = this->m_queue_sended.at(m_last_serial_sended & SEND_QUEUE_INDEX_MASK);
+			// declare) Sent Packet
+			SENDED_PACKET& tempSentD = this->m_queue_sent.at(m_last_serial_sent & SEND_QUEUE_INDEX_MASK);
 
 			// - 
-			tempSendedD = tempSendedS;
-			tempSendedD.tick_last_send = chrono::tick::now();
+			tempSentD = tempSentS;
+			tempSentD.tick_last_send = chrono::tick::now();
 
 			// - ...
-			++this->m_last_serial_sended;
+			++this->m_last_serial_sent;
 
 			// 
-			psended_packet = &tempSendedD;
+			psent_packet = &tempSentD;
 
 			this->m_list_send_queue.pop_front();
 		}
@@ -355,13 +361,13 @@ bool net::io::send_request::Nudp_resend::ack( uint32_t p_dwPacketSerial, bool /*
 	//-----------------------------------------------------------------
 	//  3. 전송하기.
 	//-----------------------------------------------------------------
-	if(psended_packet != nullptr)
+	if(psent_packet != nullptr)
 	{
-		// Decalre) 
+		// Declare) 
 		bool result;
 
 		// 1) 전송하기...
-		result = this->process_sendable(psended_packet->buffer, object_ptr<Ireferenceable>(psended_packet->powner), 1, psended_packet->addr_destination);
+		result = this->process_sendable(psent_packet->buffer, object_ptr<Ireferenceable>(psent_packet->powner), 1, psent_packet->addr_destination);
 
 		// check) 전송에 실패했다.
 		RETURN_IF(result == false, false);

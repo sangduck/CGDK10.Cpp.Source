@@ -25,7 +25,7 @@ void socket_chatting::on_connect()
 	}
 
 	// 1) ...
-	send(message_REQUEST_USER_CHECKIN(ACCOUNT_ID(rand()), "TestID"));
+	send(message_REQUEST_ACCOUNT_CHECKIN(ACCOUNT_ID(rand()), "TestID"));
 }
 
 void socket_chatting::on_fail_connect(uint64_t /*_disconnect_reason*/)
@@ -44,24 +44,25 @@ void socket_chatting::on_disconnect(uint64_t /*_disconnect_reason*/)
 	}
 }
 
-BEGIN_CGMESSAGE_MAP(socket_chatting)
-	CGMESSAGE_TYPE_SUB(eMESSAGE::SYSTEM::NETWORK, ((sMESSAGE_BUFFER&)_msg).buf_message.front<uint32_t>(4))
-		ON_CGMESSAGE(eMESSAGE::RESPONSE_USER_CHECKIN,		on_message_RESPONSE_USER_CHECKIN,	sMESSAGE_NETWORK);
-		ON_CGMESSAGE(eMESSAGE::NOTIFY_ENTER_CHANNEL,		on_message_NOTIFY_ENTER_CHANNEL,	sMESSAGE_NETWORK);
-		ON_CGMESSAGE(eMESSAGE::SEND_CHATTING_MESSAGE,		on_message_SEND_CHATTING_MESSAGE,	sMESSAGE_NETWORK);
-	END_SUB_CGMESSAGE_MAP
-END_CGMESSAGE_MAP
-
 result_code socket_chatting::on_message(sMESSAGE_NETWORK& _msg)
 {
-	// 1) Message를 처리한다.
-	EXECUTE_CGMESSAGE_MAP(_msg);
+	// 1) execute messge
+	BEGIN_NESTED_CGMESSAGE_MAP
+		CGMESSAGE_TYPE_SUB(eMESSAGE::SYSTEM::NETWORK, ((sMESSAGE_BUFFER&)_msg).buf_message.front<uint32_t>(4))
+			ON_CGMESSAGE(eMESSAGE::RESPONSE_ACCOUNT_CHECKIN,	on_message_RESPONSE_ACCOUNT_CHECKIN,	sMESSAGE_NETWORK);
+			ON_CGMESSAGE(eMESSAGE::NOTIFY_ENTER_CHANNEL,		on_message_NOTIFY_ENTER_CHANNEL,		sMESSAGE_NETWORK);
+			ON_CGMESSAGE(eMESSAGE::SEND_CHATTING_MESSAGE,		on_message_SEND_CHATTING_MESSAGE,		sMESSAGE_NETWORK);
+		END_SUB_CGMESSAGE_MAP
+	END_NESTED_CGMESSAGE_MAP
+	
+	// return)
+	return eRESULT::BYPASS;
 
 	// return)
 	return eRESULT::BYPASS;
 }
 
-result_code socket_chatting::on_message_RESPONSE_USER_CHECKIN(sMESSAGE_NETWORK& /*_msg*/)
+result_code socket_chatting::on_message_RESPONSE_ACCOUNT_CHECKIN(sMESSAGE_NETWORK& /*_msg*/)
 {
 	// Return) 
 	return eRESULT::DONE;

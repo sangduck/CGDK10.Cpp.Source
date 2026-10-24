@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.update.h"
+#include "cgdk/sdk10/net.update.h"
 using namespace CGDK;
 
 #include "../define_message.h"
@@ -60,7 +60,7 @@ result_code socket_update::on_message_UPDATE_REQUEST(sMESSAGE_NETWORK& _msg)
 	// 1) get buffer for message de-serialize
 	auto buf_recv = _msg.buf_message + offset(8);
 
-	// 2) resource idë¥¼ ë°›ì•„ì„œ..
+	// 2) resource id¸¦ ¹Þ¾Æ¼­..
 	auto resource_id = buf_recv.extract<update::UPDATE_RESOURCE_ID>();
 
 	try
@@ -88,8 +88,8 @@ result_code socket_update::on_message_UPDATE_REQUEST(sMESSAGE_NETWORK& _msg)
 			// - set on~ functions 
 			psender->set_function_update_end([=](update::sender_lambda* _psender, eRESULT /*_result*/) {
 				std::cout << "@ update complete" << std::endl;
-				std::cout << "  - total transfered files: " << NFMT::format("{}", _psender->get_total_transfered_files()) << std::endl;
-				std::cout << "  - total transfered bytes: " << NFMT::format("{}", _psender->get_total_transfered_bytes()) << std::endl;
+				std::cout << "  - total transfered files: " << _psender->get_total_transfered_files() << std::endl;
+				std::cout << "  - total transfered bytes: " << _psender->get_total_transfered_bytes() << std::endl;
 				});
 			psender->set_function_updatable_begin([=](update::sender_lambda* /*_psender*/, const resource::Iupdatable* /*_resource*/, const resource::sUPDATABLE_FILE_META_INFO& _updatable_info) {
 				std::cout << "  [send] updating file: " << _updatable_info.filename << std::endl;
@@ -100,7 +100,7 @@ result_code socket_update::on_message_UPDATE_REQUEST(sMESSAGE_NETWORK& _msg)
 				});
 		}
 
-		// 6) ì„±ê³µ ë©”ì‹œì§€ë¥¼ ë³´ë‚¸ë‹¤.
+		// 6) ¼º°ø ¸Þ½ÃÁö¸¦ º¸³½´Ù.
 		this->send(message_UPDATE_RESPONSE(eRESULT::SUCCESS));
 
 		// 7) start update

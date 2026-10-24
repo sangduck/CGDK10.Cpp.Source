@@ -4,7 +4,7 @@ using namespace CGDK;
 
 bool net::io::Isocket::closesocket(uint64_t _disconnect_reason) noexcept
 {
-	// check) DISCONNECT_REASON_MASK에 해당하는 부분의 Flag를 유저가 설정해서는 안됀다.
+	// check) DISCONNECT_REASON_MASK에 해당하는 부분의 Flag를 유저가 설정해서는 안 된다.
 	CGASSERT_ERROR((_disconnect_reason & DISCONNECT_REASON_MASK) == 0);
 
 	// 1) Active disconnect 속성 추가!
@@ -26,6 +26,15 @@ net::sockaddr net::io::Isocket::process_get_peer_address(std::error_code& _error
 	
 	// 2) get peer address
 	auto result = api::socket::get_peer_address(native_handle(), reinterpret_cast<::sockaddr*>(&address_socket), &address_socket.length);
+
+	// - a UDS (Unix domain socket : enable_uds of the acceptor / a loopback connect) : the same host. only the family is kept (is_unix(), is_loopback() is true)
+	//   (the path of a UDS can be longer than net::sockaddr)
+	if (result && address_socket.length > 0 && address_socket.family() == AF_UNIX)
+	{
+		address_socket.u_v6 = {};
+		address_socket.u_v6.sin_family = AF_UNIX;
+		address_socket.length = static_cast<int>(sizeof(address_socket.u_v6.sin_family));
+	}
 
 	// check) 
 	if (result != false)
@@ -53,6 +62,15 @@ net::sockaddr net::io::Isocket::process_get_socket_address(std::error_code& _err
 	// 2) get socket address
 	auto result = api::socket::get_socket_address(native_handle(), reinterpret_cast<::sockaddr*>(&address_socket), &address_socket.length);
 
+	// - a UDS (Unix domain socket : enable_uds of the acceptor / a loopback connect) : the same host. only the family is kept (is_unix(), is_loopback() is true)
+	//   (the path of a UDS can be longer than net::sockaddr)
+	if (result && address_socket.length > 0 && address_socket.family() == AF_UNIX)
+	{
+		address_socket.u_v6 = {};
+		address_socket.u_v6.sin_family = AF_UNIX;
+		address_socket.length = static_cast<int>(sizeof(address_socket.u_v6.sin_family));
+	}
+
 	// check) 
 	if (result != false)
 	{
@@ -79,8 +97,17 @@ net::sockaddr net::io::Isocket::socket_address_in_public(std::error_code& _error
 	// 2) Address를 얻는다.
 	auto result = api::socket::get_socket_address(native_handle(), reinterpret_cast<::sockaddr*>(&address_socket), &address_socket.length);
 
+	// - a UDS (Unix domain socket : enable_uds of the acceptor / a loopback connect) : the same host. only the family is kept (is_unix(), is_loopback() is true)
+	//   (the path of a UDS can be longer than net::sockaddr)
+	if (result && address_socket.length > 0 && address_socket.family() == AF_UNIX)
+	{
+		address_socket.u_v6 = {};
+		address_socket.u_v6.sin_family = AF_UNIX;
+		address_socket.length = static_cast<int>(sizeof(address_socket.u_v6.sin_family));
+	}
+
 	// 3) address가 존재하며 BIND_ANY일 경우 local을 설정한다.
-	if (result == true && address_socket.length != 0 && !address_socket.is_bind_any())
+	if (result == true && address_socket.length != 0 && !address_socket.is_bind_any() && !address_socket.is_unix())
 	{
 		auto port = address_socket.u_v4.sin_port;
 		api::socket::instance().get_local_address_public_first(address_socket);
@@ -148,14 +175,11 @@ intptr_t net::io::Isocket::process_execute_epoll([[maybe_unused]] intptr_t _even
 
 CGHANDLE net::io::Isocket::detach_epoll_handle() noexcept
 {
-	// 1) get 
-	auto epoll_handle = m_epoll_handle;
+	// 1) atomically take the handle (exactly-once : a concurrent close/destroy gets INVALID and returns)
+	auto epoll_handle = m_epoll_handle.exchange(INVALID_SOCKET, std::memory_order_acq_rel);
 
 	// check)
 	RETURN_IF(epoll_handle == INVALID_SOCKET, epoll_handle);
-
-	// 1) reset epoll handle
-	m_epoll_handle = INVALID_SOCKET;
 
 	// 3) reset executor
 	object_ptr<executor::Iio_context> pio_context = std::move(m_pio_context);
@@ -185,24 +209,62 @@ void net::io::Isocket::post_epoll_event_EPOLLOUT() noexcept
 	// check) 
 	RETURN_IF(pio_context.empty());
 
-	scoped_lock(m_epoll_event_cs)
+	SCOPED_LOCK(m_epoll_event_cs)
 	{
-		//  설명) EPOLLOUT event를 설정한 후 이미 EPOLLIN으로 event가 진행중이면
+		//  설명) EPOLLOUT event를 설정한 후 이미 EPOLLIN으로 event가 진행 중이면
 		//        플래그만 변경시켜놓고 끝낸다.
 		//        근데 EPOLLIN event가 진행중이 아니면 직접 set_event()를 건다.
 
-		// check) EPOLLOUT이 이미 설정된 상태면 안됀다.
+		// check) EPOLLOUT이 이미 설정된 상태면 안 된다.
 		CGASSERT_ERROR((this->m_epoll_event_flag & EPOLLOUT) == 0);
 
 		// 2) set EPOLLOUT flag
 		add_epoll_event_flag(EPOLLOUT);
 
-		// cheeck) epoll_event가 진행중일 경우 m_epoll_event_flag만 update하고 종료한다.
+		// check) epoll_event가 진행 중일 경우 m_epoll_event_flag만 update하고 종료한다.
 		RETURN_IF(m_epoll_event_processing_now == true);
 
 		// 3) epoll event를 업데이트한다.
 		pio_context->set_event(get_epoll_handle(), m_epoll_event_flag);
 	}
+}
+
+bool net::io::Isocket::process_start_io(executor::Iio_context* _pio_context, bool _is_attached) noexcept
+{
+	//-----------------------------------------------------------------
+	// the start of the I/O of a connected socket (after on_connect() : the acceptor, the connector, connect_requestable)
+	//
+	//  - io_uring completion (the io_context is one and the receivable/sendable of the socket support it) : the first RECV op
+	//    is posted (process_start_io_completion). no readiness registration (a completion connect is a CONNECT op : nothing to detach)
+	//  - readiness : the registration of the epoll event flags (set_event when the handle is registered already : the connect poll,
+	//    attach otherwise). a readiness socket on a completion io_context (a sendable without the op support) : the same
+	//-----------------------------------------------------------------
+	// check)
+	RETURN_IF(_pio_context == nullptr, false);
+
+	// 1) io_uring completion (decided before on_connect : process_decide_io_completion)
+	const bool is_completion_backend = (_pio_context->backend() == executor::io_backend::io_uring_completion);
+
+	if (this->m_is_io_completion)
+	{
+		// - the first RECV
+		return this->process_start_io_completion();
+	}
+
+	// 2) readiness (the connect of a completion io_context is an op : the handle is not registered)
+	if (_is_attached && is_completion_backend == false)
+		return _pio_context->set_event(this->get_epoll_handle(), this->m_epoll_event_flag, this->m_pexecutable_socket);
+
+	return _pio_context->attach(this->get_epoll_handle(), this->m_pexecutable_socket, this->m_epoll_event_flag);
+}
+
+void net::io::Isocket::process_decide_io_completion() noexcept
+{
+	// - the mode of this connection : a completion io_context and a receivable/sendable with the op support (readiness otherwise)
+	//   (before on_connect() : a close in on_connect or right after takes the completion branch of process_close_socket)
+	auto* pio_context = this->m_pio_context.get();
+
+	this->m_is_io_completion = (pio_context != nullptr && pio_context->backend() == executor::io_backend::io_uring_completion && this->process_is_io_completion_supported());
 }
 
 #endif
@@ -221,7 +283,7 @@ namespace io
 
 	void enable_default_socket_debug_logging(bool _enable) noexcept
 	{
-		scoped_lock(g_cs_map_message_type_info)
+		SCOPED_LOCK(g_cs_map_message_type_info)
 		{
 			// check)
 			RETURN_IF(g_enable_plogger_socket_debug == _enable);
@@ -248,7 +310,7 @@ namespace io
 
 	void set_default_socket_debug_logger(Ilogger* _logger) noexcept
 	{
-		scoped_lock(g_cs_map_message_type_info)
+		SCOPED_LOCK(g_cs_map_message_type_info)
 		{
 			// check)
 			RETURN_IF(g_plogger_socket_debug == _logger);
@@ -272,7 +334,7 @@ namespace io
 		// declare)
 		object_ptr<Ilogger> plogger_socket_debug;
 
-		scoped_lock(g_cs_map_message_type_info)
+		SCOPED_LOCK(g_cs_map_message_type_info)
 		{
 			// check)
 			RETURN_IF(g_plogger_socket_debug.empty(), plogger_socket_debug);
@@ -306,7 +368,7 @@ namespace io
 		// declare)
 		object_ptr<Ilogger> plogger_socket_debug;
 
-		scoped_lock(g_cs_map_message_type_info)
+		SCOPED_LOCK(g_cs_map_message_type_info)
 		{
 			plogger_socket_debug = g_plogger_socket_debug;
 		}
@@ -315,7 +377,7 @@ namespace io
 		RETURN_IF(plogger_socket_debug.empty());
 
 		// trace)
-		LOG(plogger_socket_debug, log_type_t::debug) << " socket["sv << _hsocket << "] connected from '"sv << to_string<char>(_sockaddr) << "'"sv;
+		LOG(plogger_socket_debug, log_type_t::debug) << " socket["sv << _hsocket << "] connected from '"sv << to_string(_sockaddr) << "'"sv;
 	}
 
 	void _debug_log_socket_disconnected(CGSOCKET _hsocket, uint64_t _reason)
@@ -323,7 +385,7 @@ namespace io
 		// declare)
 		object_ptr<Ilogger> plogger_socket_debug;
 
-		scoped_lock(g_cs_map_message_type_info)
+		SCOPED_LOCK(g_cs_map_message_type_info)
 		{
 			plogger_socket_debug = g_plogger_socket_debug;
 		}
@@ -364,7 +426,7 @@ namespace io
 		// 2) user reason
 		auto reason_user = _reason & DISCONNECT_REASON_MASK_USER;
 
-		if (reason_user != 0 && reason_user < DISCONNECT_REASON_OPEN_SOCKET_LIMITS)
+		if (reason_user != 0)
 		{
 			switch (reason_user)
 			{
@@ -383,13 +445,18 @@ namespace io
 			case	DISCONNECT_REASON_KEEP_ALIVE_TIME_OUT:			str_reason_user = "KEEP_ALIVE_TIME_OUT"sv; break;		// socket의 prepare단계에서 실패했다.
 			case	DISCONNECT_REASON_DISABLED:						str_reason_user = "DISABLED"sv; break;					// acceptor나 connector가 disabled된 상태이다.
 			case	DISCONNECT_REASON_CONNECTION_FULL:				str_reason_user = "CONNECTION_FULL"sv; break;			// 최대접속수를 초과해 접속종료되어다.
-			case	DISCONNECT_REASON_EXCEPTION_OCCURED:			str_reason_user = "EXCEPTION_OCCURED"sv; break;			// 처리중 예외가 발생해 접속이 종료되었다.
-			default:												str_reason_user = "OTHERS"sv; break;					// 처리중 예외가 발생해 접속이 종료되었다.
+			case	DISCONNECT_REASON_EXCEPTION_OCCURRED:			str_reason_user = "EXCEPTION_OCCURRED"sv; break;			// 처리 중 예외가 발생해 접속이 종료되었다.
+			case	DISCONNECT_REASON_FAIL_TO_INITIALIZE_CRYPT:		str_reason_user = "FAIL_TO_INITIALIZE_CRYPT"sv; break;	// socket의 crypt 초기화에 실해했다.
+			case	DISCONNECT_REASON_INVALID_CRC:					str_reason_user = "INVALID_CRC"sv; break;				// crc가 다른 값이다.
+			case	DISCONNECT_REASON_OPEN_SOCKET_LIMITS:			str_reason_user = "OPEN_SOCKET_LIMITS"sv; break;		// socket의 최대 생성 수를 초과해 접속이 종료되었다.
+			case	DISCONNECT_REASON_SUSTAIN_TIMEOUT:				str_reason_user = "SUSTAIN_TIMEOUT"sv; break;			// socket sustain의 시간 제한으로 접속을 종료했다.
+			case	DISCONNECT_REASON_FAIL_TO_ENCRYPT:				str_reason_user = "FAIL_TO_ENCRYPT"sv; break;			// encrypt에 실패했다.
+			default:												str_reason_user = "OTHERS"sv; break;					// 처리 중 예외가 발생해 접속이 종료되었다.
 			}
 		}
 
 		// trace)
-		LOG(plogger_socket_debug, log_type_t::debug) << " socket["sv << _hsocket << "] disconnected reason:"sv << NFMT::format("0x{:x}", _reason) << "("sv << str_reason_system << " "sv << str_reason_user << ")"sv;
+		LOG(plogger_socket_debug, log_type_t::debug) << " socket["sv << _hsocket << "] disconnected reason:"sv << CGDK::stream_hex(_reason, 0, false, true) << "("sv << str_reason_system << " "sv << str_reason_user << ")"sv;
 	}
 
 	void _debug_log_socket_received(CGSOCKET _hsocket, uint64_t _length, uint64_t _stacked)
@@ -397,7 +464,7 @@ namespace io
 		// declare)
 		object_ptr<Ilogger> plogger_socket_debug;
 
-		scoped_lock(g_cs_map_message_type_info)
+		SCOPED_LOCK(g_cs_map_message_type_info)
 		{
 			plogger_socket_debug = g_plogger_socket_debug;
 		}
@@ -414,7 +481,7 @@ namespace io
 		// declare)
 		object_ptr<Ilogger> plogger_socket_debug;
 
-		scoped_lock(g_cs_map_message_type_info)
+		SCOPED_LOCK(g_cs_map_message_type_info)
 		{
 			plogger_socket_debug = g_plogger_socket_debug;
 		}
@@ -450,7 +517,7 @@ namespace io
 		// declare)
 		object_ptr<Ilogger> plogger_socket_debug;
 
-		scoped_lock(g_cs_map_message_type_info)
+		SCOPED_LOCK(g_cs_map_message_type_info)
 		{
 			plogger_socket_debug = g_plogger_socket_debug;
 		}
@@ -475,4 +542,90 @@ namespace io
 	}
 }
 }
+}
+void net::io::Isocket::process_on_send_overflow()
+{
+	// 1) exception_on_send_overflow(true)면 exception을 던진다.
+	THROW_IF(this->m_is_exception_on_send_overflow, throwable::failure(eRESULT::OVERFLOW_ERROR, 0, "send overflow occurred"sv));
+
+	// check) 이미 접속 종료를 요청했으면 할 것이 없다.
+	if (this->m_is_send_overflow_closing.exchange(true))
+		return;
+
+	// log)
+	LOG_WARNING << "(warn) CGDK.net.socket: send queue overflowed. socket closed (receiver is too slow)"sv;
+
+	// 2) 접속을 끊는다.
+	//    - 송신 lock 안에서 호출되므로 접속 종료는 executor에서 처리한다. (lock 순서 문제 방지)
+	//    - socket 객체는 재사용될 수 있으므로 같은 socket handle일 때만 끊는다.
+	auto pexecutable = make_executable([psocket = object_ptr<net::io::Isocket>(this), handle_socket = this->native_handle()]()
+	{
+		if (psocket->native_handle() == handle_socket)
+			psocket->process_close_socket(DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE);
+	});
+
+	// 3) post
+	system_executor::post(std::move(pexecutable));
+}
+
+bool net::io::Isocket::apply_socket_option() noexcept
+{
+	//-----------------------------------------------------------------
+	// the tcp socket option (sSOCKET_OPTION_TCP) is applied to the socket handle
+	//
+	//  - called when the connect/accept completes (connectable::Ntcp::process_complete_connect). set socket_option() before.
+	//  - nothing but TCP_NODELAY is set by default : an option is set only when it is on
+	//  - a UDS (AF_UNIX) socket : skipped (no TCP option)
+	//  - returns false when an option failed (the socket is usable. logged)
+	//-----------------------------------------------------------------
+	// 1) socket handle
+	const auto handle_socket = this->native_handle();
+
+	// check)
+	RETURN_IF(handle_socket == INVALID_SOCKET, false);
+
+	// check) a UDS : no TCP option
+	RETURN_IF(this->m_address_family == AF_UNIX, true);
+
+	// declare)
+	const auto& option = this->m_socket_option;
+	bool result = true;
+
+	// 2) TCP_NODELAY
+	if (api::socket::set_tcp_nodelay(handle_socket, option.tcp_nodelay) == false)
+	{
+		result = false;
+		LOG_DEBUG << "(err ) CGDK.net.socket: fail to set 'TCP_NODELAY' (socket:"sv << static_cast<int64_t>(handle_socket) << ", error_code:"sv << api::get_last_error() << ") " __CGFUNCTION__ ""sv;
+	}
+
+	// 3) delayed ACK off (linux : TCP_QUICKACK. the receivable sets it again after every recv. windows : SIO_TCP_SET_ACK_FREQUENCY = 1)
+	if (option.tcp_quickack && api::socket::set_tcp_quickack(handle_socket, true) == false)
+	{
+		result = false;
+		LOG_DEBUG << "(err ) CGDK.net.socket: fail to set 'TCP_QUICKACK' (socket:"sv << static_cast<int64_t>(handle_socket) << ", error_code:"sv << api::get_last_error() << ") " __CGFUNCTION__ ""sv;
+	}
+
+#if !defined(_WINSOCK2API_)
+	// 4) SO_BUSY_POLL (microseconds. CAP_NET_ADMIN is needed to raise it over the current value : EPERM is warned once)
+	if (option.busy_poll != 0 && api::socket::set_busy_poll(handle_socket, option.busy_poll) == false)
+	{
+		result = false;
+
+		static std::atomic<bool> s_warned_busy_poll{ false };
+		if (s_warned_busy_poll.exchange(true) == false)
+			LOG_WARNING << "(warn) CGDK.net.socket: fail to set 'SO_BUSY_POLL' (error_code:"sv << api::get_last_error() << ". CAP_NET_ADMIN is required to raise it over the current value : sysctl net.core.busy_read)"sv;
+		else
+			LOG_DEBUG << "(err ) CGDK.net.socket: fail to set 'SO_BUSY_POLL' (socket:"sv << static_cast<int64_t>(handle_socket) << ", error_code:"sv << api::get_last_error() << ") " __CGFUNCTION__ ""sv;
+	}
+
+	// 5) TCP_NOTSENT_LOWAT (bytes)
+	if (option.tcp_notsent_lowat != 0 && api::socket::set_tcp_notsent_lowat(handle_socket, option.tcp_notsent_lowat) == false)
+	{
+		result = false;
+		LOG_DEBUG << "(err ) CGDK.net.socket: fail to set 'TCP_NOTSENT_LOWAT' (socket:"sv << static_cast<int64_t>(handle_socket) << ", error_code:"sv << api::get_last_error() << ") " __CGFUNCTION__ ""sv;
+	}
+#endif
+
+	// return)
+	return result;
 }

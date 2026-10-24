@@ -38,7 +38,7 @@ public:
 struct _REQUEST_AUTHORIZE2 : public query::REQUEST
 {
 public:
-	// 1) Essencial
+	// 1) Essential
 	static_string<64>			client_id;
 	static_string<256>			redirect_uri;
 	eOAUTH_SCOPE				scope {eOAUTH_SCOPE::NOT_DEFINED_ };
@@ -571,7 +571,7 @@ public:
 		static_string<64>				tran_type;				// 거래구분
 		static_string<64>				print_content;			// 통장인자내용
 		int64_t							tran_amt{ 0 };			// 거래금액
-		int64_t							after_balance_amt{ 0 };	// 거래후 잔액
+		int64_t							after_balance_amt{ 0 };	// 거래 후 잔액
 		static_string<64>				branch_name;			// 거래점명
 	};
 
@@ -589,7 +589,7 @@ public:
 struct REQUEST_TRANSFER_WITHDRAW : public query::REQUEST
 {
 public:
-	static_string<64>				authorization;		// 계좌등록시 오픈플랫폼으로부터 전송받은 access_token
+	static_string<64>				authorization;		// 계좌등록 시 오픈플랫폼으로부터 전송받은 access_token
 
 	static_string<64>				dps_print_content;	// 입금계좌인자내역
 	static_string<64>				fintech_use_num;	// 출금계좌핀테크이용번호
@@ -633,7 +633,7 @@ struct RESPONSE_TRANSFER_WITHDRAW : public query::RESPONSE
 struct REQUEST_TRANSFER_DEPOSIT : public query::REQUEST
 {
 public:
-	static_string<64>				authorization;		// 계좌등록시 오픈플랫폼으로부터 전송받은 access_token
+	static_string<64>				authorization;		// 계좌등록 시 오픈플랫폼으로부터 전송받은 access_token
 
 	static_string<64>				wd_pass_phrase;		// 이용기관 입금이체용 암호무누구
 	static_string<64>				wd_print_content;	// 출금계좌인자내역
@@ -699,7 +699,7 @@ struct RESPONSE_TRANSFER_DEPOSIT : public query::RESPONSE
 struct REQUEST_TRANSFER_DEPOSIT2 : public query::REQUEST
 {
 public:
-	static_string<64>				authorization;			// 계좌등록시 오픈플랫폼으로부터 전송받은 access_token
+	static_string<64>				authorization;			// 계좌등록 시 오픈플랫폼으로부터 전송받은 access_token
 
 	static_string<64>				wd_pass_phrase;			// 이용기관 입금이체용 암호무누구
 	static_string<64>				wd_print_content;		// 출금계좌인자내역
@@ -709,7 +709,7 @@ public:
 	{
 		int							tran_no{ 0 };			// 거래순번
 		eOAUTH_BANK_CODE			bank_code_std{ 0 };		// 입금은행.표준코드
-		static_string<64>			accoount_num;			// 입금계좌번호
+		static_string<64>			account_num;			// 입금계좌번호
 		static_string<64>			account_holder_name;	// 입금계좌예금주명
 		static_string<64>			print_content;			// 입금계좌인자내역
 		int64_t						tran_amt{ 0 };			// 거래금액
@@ -766,7 +766,7 @@ struct RESPONSE_TRANSFER_DEPOSIT2 : public query::RESPONSE
 struct REQUEST_TRANSFER_RESULT : public query::REQUEST
 {
 public:
-	static_string<64>				authorization;			// 계좌등록시 오픈플랫폼으로부터 전송받은 access_token
+	static_string<64>				authorization;			// 계좌등록 시 오픈플랫폼으로부터 전송받은 access_token
 
 	eOAUTH_CHECK_TYPE				check_type;				// 1:출금이체, 2:입금이체
 	int								req_cnt{ 0 };			// 요청건수(req_cnt)
@@ -835,25 +835,25 @@ struct RESPONSE_TRANSFER_RESULT : public query::RESPONSE
 struct REQUEST_TRANSFER_RECHECK : public query::REQUEST
 {
 public:
-	static_string<64>				authorization;										// 계좌등록시 오픈플랫폼으로부터 전송받은 access_token
+	static_string<64>				authorization;										// 계좌등록 시 오픈플랫폼으로부터 전송받은 access_token
 
 	eOAUTH_CHECK_TYPE				check_type;											// 1:출금이체, 2:입금이체
 	int								req_cnt{ 0 };										// 요청건수(req_cnt)
 
-	struct TRNASACTION
+	struct TRANSACTION
 	{
 	public:
 		int								tran_no{ 0 };									// 거래순번
 		chrono::date_time				org_tran_dtime;									// 원거래요청일시
 		eOAUTH_ORG_REQ_GUBUN			org_req_gubun{ eOAUTH_ORG_REQ_GUBUN::NOT_DEFINED_ };	// 원거래요청계좌지정방식구분 (1:핀테크이용번호, 2:계좌번호)
 		eOAUTH_BANK_CODE				bank_code_std{ 0 };								// 원거래 은행 대표코드
-		static_string<64>				accoount_num;									// 원거래 입출금계좌번호
+		static_string<64>				account_num;									// 원거래 입출금계좌번호
 		static_string<64>				print_content;									// 원거래 입출금계좌인자내역
 		static_string<64>				fintech_use_num;								// 원거래 입출금핀테크이용번호
 		int64_t							org_tran_amt{ 0 };								// 원거래 거래금액
 	};
 
-	std::vector<TRNASACTION>		req_list;											// 요청건수(req_cnt), 요청목록(req_list)
+	std::vector<TRANSACTION>		req_list;											// 요청건수(req_cnt), 요청목록(req_list)
 	chrono::date_time				tran_dtime;											// 요청일시
 };
 
@@ -907,11 +907,11 @@ struct RESPONSE_TRANSFER_RECHECK : public query::RESPONSE
 struct REQUEST_INQUIRY_REAL_NAME : public query::REQUEST
 {
 public:
-	static_string<64>				authorization;				//        계좌등록시 오픈플랫폼으로부터 전송받은 access_token
+	static_string<64>				authorization;				//        계좌등록 시 오픈플랫폼으로부터 전송받은 access_token
 
 	eOAUTH_BANK_CODE				bank_code_std {0};			// AN( 3) 원거래 은행 대표코드
-	static_string<64>				accoount_num;				// AN(16) 계좌번호
-	static_string<64>				accoount_holder_info;		// AN( 7) 예금주 인증정보 YYYYMMDD(6) + 식별번호(1)
+	static_string<64>				account_num;				// AN(16) 계좌번호
+	static_string<64>				account_holder_info;		// AN( 7) 예금주 인증정보 YYYYMMDD(6) + 식별번호(1)
 	chrono::date_time				tran_dtime;					//  N(14) 요청일시
 															
 };
@@ -947,7 +947,7 @@ struct RESPONSE_INQUIRY_REAL_NAME : public query::RESPONSE
 struct REQUEST_BANK_STATUS : public query::REQUEST
 {
 public:
-	static_string<64>				authorization;										//        계좌등록시 오픈플랫폼으로부터 전송받은 access_token
+	static_string<64>				authorization;										//        계좌등록 시 오픈플랫폼으로부터 전송받은 access_token
 };
 
 struct RESPONSE_BANK_STATUS : public query::RESPONSE
@@ -959,7 +959,7 @@ struct RESPONSE_BANK_STATUS : public query::RESPONSE
 	{
 		eOAUTH_BANK_CODE				bank_code_std{ 0 };								// AN(  3)  참가기관.표준코드
 		static_string<64>				bank_name;										// AH( 20)  참가기관명
-		eOAUTH_BANK_STATUS				bank_status{ eOAUTH_BANK_STATUS::NOT_DEFINED_ };		// AN[  1]  참가기관상태 Y:거래가능, D:장애, L:개시이전, E:종류처리중.
+		eOAUTH_BANK_STATUS				bank_status{ eOAUTH_BANK_STATUS::NOT_DEFINED_ };		// AN[  1]  참가기관상태 Y:거래가능, D:장애, L:개시이전, E:종료처리 중.
 	};
 
 	std::vector<BANK_STATUS>		res_list;											//          참가기관목록(res_list)

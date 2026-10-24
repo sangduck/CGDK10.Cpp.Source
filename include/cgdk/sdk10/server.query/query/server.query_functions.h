@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                           Server Query Classes                            *
+//*                               server.query                                *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -63,7 +63,7 @@ void query::query_function<TQUERY>::process_execute_query()
 		}
 		catch (throwable::failure_ex& _e)
 		{
-			// - call lambeda function
+			// - call lambda function
 			m_lambda(_e, this);
 
 			// reraise)
@@ -74,7 +74,7 @@ void query::query_function<TQUERY>::process_execute_query()
 			// declare)
 			throwable::failure_ex result(eRESULT::EXCEPTION);
 
-			// - call lambeda function
+			// - call lambda function
 			m_lambda(result, this);
 
 			// reraise)

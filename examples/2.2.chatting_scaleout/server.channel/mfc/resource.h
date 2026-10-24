@@ -1,6 +1,6 @@
-ï»¿//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ì—ì„œ ìƒì„±í•œ í¬í•¨ íŒŒì¼ìž…ë‹ˆë‹¤.
-// channelservermfc.rcì—ì„œ ì‚¬ìš©
+//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++¿¡¼­ »ý¼ºÇÑ Æ÷ÇÔ ÆÄÀÏÀÔ´Ï´Ù.
+// channelservermfc.rc¿¡¼­ »ç¿ë
 //
 #define IDR_MAINFRAME					128
 #define IDM_ABOUTBOX					0x0010
@@ -8,7 +8,7 @@
 #define IDS_ABOUTBOX					101
 #define IDD_CHANNEL_SERVERMFC_DIALOG				102
 
-// ë‹¤ìŒì€ ìƒˆ ê°œì²´ì— ì‚¬ìš©í•  ê¸°ë³¸ê°’ìž…ë‹ˆë‹¤.
+// ´ÙÀ½Àº »õ °³Ã¼¿¡ »ç¿ëÇÒ ±âº»°ªÀÔ´Ï´Ù.
 //
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS

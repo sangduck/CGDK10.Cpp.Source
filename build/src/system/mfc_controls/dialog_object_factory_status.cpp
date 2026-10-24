@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <charconv>
 #include "Dialog_amount.h"
 #include "Dialog_amount_shrink.h"
 
@@ -57,14 +58,16 @@ END_MESSAGE_MAP()
 
 
 // CDialog_object_factory_status message handlers
-int	CDialog_object_factory_status::m_update_inverval = 2;
+int	CDialog_object_factory_status::m_update_interval = 2;
 
 BOOL CDialog_object_factory_status::CreateModaless(factory::manager* _pmanager, CWnd* _pparent)
 {
 	// 1) Manager를 설정한다.
-	scoped_lock(m_pmanager)
 	{
-		m_pmanager	 = _pmanager;
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager);
+
+		m_pmanager = _pmanager;
 	}
 
 	// 2) 생성한다.
@@ -133,7 +136,7 @@ BOOL CDialog_object_factory_status::OnInitDialog()
 	m_listctrl_object_factory.SetImageList(&m_imagelist_object_factory, LVSIL_SMALL);
 
 	// 3) 
-	m_combo_update_interval.SetCurSel(m_update_inverval);
+	m_combo_update_interval.SetCurSel(m_update_interval);
 
 	// 4) CheckButton 설정
 	((CButton*)GetDlgItem(IDC_CHECK_VISIBLE_MEMORYBLOCK))->SetCheck(m_bVisiableTypeStatus.at(static_cast<int>(eFACTORY_TYPE::POOL_MEMORYBLOCK)));
@@ -215,10 +218,10 @@ void CDialog_object_factory_status::OnBnClickedCancel()
 
 void CDialog_object_factory_status::ClearFactoryList()
 {
-	scoped_lock(m_pmanager)
-	{
-		m_pmanager.reset();
-	}
+	// lock) 
+	std::lock_guard lock(this->m_lockable_pmanager);
+
+	m_pmanager.reset();
 }
 
 void CDialog_object_factory_status::UpdateFactoryList()
@@ -226,7 +229,7 @@ void CDialog_object_factory_status::UpdateFactoryList()
 	// check) 윈도우가 생성되어 있지 않으면 끝낸다.
 	RETURN_IF(m_hWnd == nullptr)
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 
@@ -237,11 +240,12 @@ void CDialog_object_factory_status::UpdateFactoryList()
 	object_ptr<factory::manager> pmanager;
 
 	// 1) Factory Manager를 읽어 저장해 놓는다.
-	scoped_lock(m_pmanager)
 	{
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager);
+
 		pmanager = m_pmanager;
 	}
-
 
 	//-----------------------------------------------------------------
 	// 2. Manager가 Empty면 모두 지운다.
@@ -266,7 +270,7 @@ void CDialog_object_factory_status::UpdateFactoryList()
 	// declare) Index를 0으로...
 	int index = 0;
 
-	scoped_unique_lock(pmanager->get_lockable())
+	SCOPED_UNIQUE_LOCK(pmanager->get_lockable())
 	{
 		// 2) Factory list Iterator의 begin과 end를 얻는다.
 		auto iter = pmanager->begin();
@@ -293,9 +297,9 @@ void CDialog_object_factory_status::UpdateFactoryList()
 			if(index >= m_listctrl_object_factory.GetItemCount())
 			{
 				// - 이름을 얻는다.
-				auto str_name = pfactory->get_name<TCHAR>();
+				auto str_name = pfactory->name<TCHAR>();
 
-				// - 값을 추가하고 데이타를 설정한다.
+				// - 값을 추가하고 데이터를 설정한다.
 				m_listctrl_object_factory.InsertItem(index, str_name.c_str(), static_cast<int>(pfactory->type()));
 
 				TCHAR text[MAX_STRING_LENGTH] = {};
@@ -313,8 +317,8 @@ void CDialog_object_factory_status::UpdateFactoryList()
 
 				// 2	"size"
 				list_item.iSubItem = 2;
-				to_string_scaled_byte(text, MAX_STRING_LENGTH, pfactory->object_size());
-				list_item.pszText = text;
+				CString str_size(to_string_scaled_byte(static_cast<uint64_t>(pfactory->object_size())).c_str());
+				list_item.pszText = const_cast<LPTSTR>(static_cast<LPCTSTR>(str_size));
 				m_listctrl_object_factory.SetItem(&list_item);
 
 				// - set item
@@ -323,7 +327,7 @@ void CDialog_object_factory_status::UpdateFactoryList()
 			else if(m_listctrl_object_factory.GetItemData(index)!=(DWORD_PTR)pfactory)
 			{
 				// - 이름을 얻는다.
-				auto str_text = pfactory->get_name<TCHAR>();
+				auto str_text = pfactory->name<TCHAR>();
 
 				// - 변경되었으면 name도 바꾸어야 한다.
 				LV_ITEM list_item;
@@ -350,8 +354,8 @@ void CDialog_object_factory_status::UpdateFactoryList()
 
 				// 2	"size"
 				list_item.iSubItem = 2;
-				to_string_scaled_byte(text, MAX_STRING_LENGTH, pfactory->object_size());
-				list_item.pszText = text;
+				CString str_size(to_string_scaled_byte(static_cast<uint64_t>(pfactory->object_size())).c_str());
+				list_item.pszText = const_cast<LPTSTR>(static_cast<LPCTSTR>(str_size));
 				m_listctrl_object_factory.SetItem(&list_item);
 
 				// - set item
@@ -375,14 +379,11 @@ void CDialog_object_factory_status::UpdateFactoryList()
 		// 2) Progress Bar Range를 설정한다.
 		m_progressMemoryUsage.SetRange32(0, static_cast<int>(pmanager->sustain_threshold(2) / (1024.0f*1024.0f)));
 		m_progressMemoryUsage.SetPos(static_cast<int>(sInfoMemoryCounters.PrivateUsage / (1024.0f*1024.0f)));
-
-		// declare) 
-		TCHAR	string[256] = { NULL, };
-		SetDlgItemText(IDC_STATIC_MEMORY_WORKINGSET,	to_string_scaled_byte(string, 256, sInfoMemoryCounters.WorkingSetSize).data());
-		SetDlgItemText(IDC_STATIC_MEMORY_PRIVATE,		to_string_scaled_byte(string, 256, sInfoMemoryCounters.PrivateUsage).data());
-		SetDlgItemText(IDC_STATIC_SUSTAIN_LEVEL1,		to_string_scaled_byte(string, 256, pmanager->sustain_threshold(0)).data());
-		SetDlgItemText(IDC_STATIC_SUSTAIN_LEVEL2,		to_string_scaled_byte(string, 256, pmanager->sustain_threshold(1)).data());
-		SetDlgItemText(IDC_STATIC_SUSTAIN_LEVEL3,		to_string_scaled_byte(string, 256, pmanager->sustain_threshold(2)).data());
+		SetDlgItemText(IDC_STATIC_MEMORY_WORKINGSET,	CString(to_string_scaled_byte(static_cast<uint64_t>(sInfoMemoryCounters.WorkingSetSize)).c_str()));
+		SetDlgItemText(IDC_STATIC_MEMORY_PRIVATE,		CString(to_string_scaled_byte(static_cast<uint64_t>(sInfoMemoryCounters.PrivateUsage)).c_str()));
+		SetDlgItemText(IDC_STATIC_SUSTAIN_LEVEL1,		CString(to_string_scaled_byte(static_cast<uint64_t>(pmanager->sustain_threshold(0))).c_str()));
+		SetDlgItemText(IDC_STATIC_SUSTAIN_LEVEL2,		CString(to_string_scaled_byte(static_cast<uint64_t>(pmanager->sustain_threshold(1))).c_str()));
+		SetDlgItemText(IDC_STATIC_SUSTAIN_LEVEL3,		CString(to_string_scaled_byte(static_cast<uint64_t>(pmanager->sustain_threshold(2))).c_str()));
 	}
 
 	// 6) 아직도 남은 것들은 모조리 지운다.
@@ -407,8 +408,10 @@ void CDialog_object_factory_status::update_factory_status(int _index)
 	bool is_factory_sustain = true;
 
 	// 1) get factory sustain status
-	scoped_lock(m_pmanager)
 	{
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager);
+
 		if (m_pmanager.exist())
 		{
 			is_factory_sustain = m_pmanager->is_enable_sustain();
@@ -426,7 +429,18 @@ void CDialog_object_factory_status::update_factory_status(int _index)
 
 	// 2) List를 설정한다.
 	TCHAR text[MAX_STRING_LENGTH]={};
+	char text_mb[MAX_STRING_LENGTH]={};
 	LV_ITEM list_item;
+	auto set_number_text = [&](auto _value)
+	{
+		if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(_value)>> && std::is_unsigned_v<std::remove_cvref_t<decltype(_value)>>)
+		*std::to_chars(text_mb, text_mb + (std::size(text_mb)) - 1, static_cast<uint64_t>(_value)).ptr = 0;
+	else if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(_value)>>)
+		*std::to_chars(text_mb, text_mb + (std::size(text_mb)) - 1, static_cast<int64_t>(_value)).ptr = 0;
+	else
+		*std::to_chars(text_mb, text_mb + (std::size(text_mb)) - 1, _value).ptr = 0;
+		list_item.pszText = const_cast<TCHAR*>(encode_string(text, std::string_view(text_mb), MAX_STRING_LENGTH).data());
+	};
 	list_item.mask = LVIF_TEXT;
 	list_item.state = 0;
 	list_item.cchTextMax = MAX_STRING_LENGTH;
@@ -436,7 +450,8 @@ void CDialog_object_factory_status::update_factory_status(int _index)
 	list_item.iSubItem = 3;
 	if (pfactory->type() <= eFACTORY_TYPE::POOL_USER)
 	{
-		list_item.pszText = const_cast<LPWSTR>(to_string<TCHAR>(factory_statistics.gc_type).data());
+		wsprintf(text, TEXT("%hs"), to_string(factory_statistics.gc_type).data());
+		list_item.pszText = text;
 	}
 	else
 	{
@@ -446,14 +461,12 @@ void CDialog_object_factory_status::update_factory_status(int _index)
 
 	// 4, TEXT("existing")
 	list_item.iSubItem = 4;
-	__to_string(text, factory_statistics.now.existing);
-	list_item.pszText = text;
+	set_number_text(factory_statistics.now.existing);
 	m_listctrl_object_factory.SetItem(&list_item);
 
 	// 5, TEXT("in using")
 	list_item.iSubItem = 5;
-	__to_string(text, factory_statistics.now.in_using);
-	list_item.pszText = text;
+	set_number_text(factory_statistics.now.in_using);
 	m_listctrl_object_factory.SetItem(&list_item);
 
 	// 6, TEXT("stack.pool")
@@ -473,28 +486,24 @@ void CDialog_object_factory_status::update_factory_status(int _index)
 
 	// 8, TEXT("requested")
 	list_item.iSubItem = 8;
-	__to_string(text, factory_statistics.now.alloc_create + factory_statistics.now.alloc_stack + factory_statistics.now.alloc_stack_tls);
-	list_item.pszText = text;
+	set_number_text(factory_statistics.now.alloc_create + factory_statistics.now.alloc_stack + factory_statistics.now.alloc_stack_tls);
 	m_listctrl_object_factory.SetItem(&list_item);
 
 	// 9, TEXT("alloc.new")
 	list_item.iSubItem = 9;
-	__to_string(text, factory_statistics.now.alloc_create);
-	list_item.pszText = text;
+	set_number_text(factory_statistics.now.alloc_create);
 	m_listctrl_object_factory.SetItem(&list_item);
 
 	//14,TEXT("free.del")
 	list_item.iSubItem = 14;
-	__to_string(text, factory_statistics.now.free_delete);
-	list_item.pszText = text;
+	set_number_text(factory_statistics.now.free_delete);
 	m_listctrl_object_factory.SetItem(&list_item);
 
 	// 6, TEXT("stack.tls")
 	if (pfactory->type() <= eFACTORY_TYPE::POOL_USER)
 	{
 		list_item.iSubItem = 7;
-		__to_string(text, factory_statistics.now.tls_stack_depth);
-		list_item.pszText = text;
+		set_number_text(factory_statistics.now.tls_stack_depth);
 		m_listctrl_object_factory.SetItem(&list_item);
 	}
 
@@ -502,22 +511,19 @@ void CDialog_object_factory_status::update_factory_status(int _index)
 	{
 		//10,TEXT("alloc.pool")
 		list_item.iSubItem = 10;
-		__to_string(text, factory_statistics.now.alloc_stack);
-		list_item.pszText = text;
+		set_number_text(factory_statistics.now.alloc_stack);
 		m_listctrl_object_factory.SetItem(&list_item);
 
 		//12,TEXT("thr.pool")
 		list_item.iSubItem = 12;
 		if (factory_statistics.now.existing_limits != INT64_MAX)
 		{
-			__to_string(text, factory_statistics.now.existing_limits);
-			list_item.pszText = text;
+			set_number_text(factory_statistics.now.existing_limits);
 		}
 		else
 		{
 			list_item.pszText = const_cast<LPWSTR>(TEXT(""));
 		}
-		list_item.pszText = text;
 		m_listctrl_object_factory.SetItem(&list_item);
 
 		//16,TEXT("ratio.pool")
@@ -525,7 +531,7 @@ void CDialog_object_factory_status::update_factory_status(int _index)
 		int64_t	f_allocated_total = factory_statistics.now.alloc_create + factory_statistics.now.alloc_stack + factory_statistics.now.alloc_stack_tls;
 		if (f_allocated_total)
 		{
-			__sprintf(text, TEXT("%6.3f%%"), (float)factory_statistics.now.alloc_stack / (float)f_allocated_total * 100.0f);
+			std::swprintf(text, std::size(text), std::wstring_view(TEXT("%6.3f%%")).data(), (float)factory_statistics.now.alloc_stack / (float)f_allocated_total * 100.0f);
 			list_item.pszText = text;
 		}
 		else
@@ -538,19 +544,19 @@ void CDialog_object_factory_status::update_factory_status(int _index)
 		{
 			//11,TEXT("alloc.tls")
 			list_item.iSubItem = 11;
-			__to_string(text, factory_statistics.now.alloc_stack_tls);
+			set_number_text(factory_statistics.now.alloc_stack_tls);
 			list_item.pszText = text;
 			m_listctrl_object_factory.SetItem(&list_item);
 
 			//13,TEXT("thr.tls")
 			list_item.iSubItem = 13;
-			__to_string(text, factory_statistics.now.tls_stack_depth_threshold);
+			set_number_text(factory_statistics.now.tls_stack_depth_threshold);
 			list_item.pszText = text;
 			m_listctrl_object_factory.SetItem(&list_item);
 
 			//15,TEXT("free.tls")
 			list_item.iSubItem = 15;
-			__to_string(text, factory_statistics.now.free_stack_tls);
+			set_number_text(factory_statistics.now.free_stack_tls);
 			list_item.pszText = text;
 			m_listctrl_object_factory.SetItem(&list_item);
 
@@ -558,7 +564,7 @@ void CDialog_object_factory_status::update_factory_status(int _index)
 			list_item.iSubItem = 17;
 			if (f_allocated_total)
 			{
-				__sprintf(text, TEXT("%6.3f%%"), (float)factory_statistics.now.alloc_stack_tls / (float)f_allocated_total * 100.0f);
+				std::swprintf(text, std::size(text), std::wstring_view(TEXT("%6.3f%%")).data(), (float)factory_statistics.now.alloc_stack_tls / (float)f_allocated_total * 100.0f);
 				list_item.pszText = text;
 			}
 			else
@@ -628,7 +634,7 @@ void CDialog_object_factory_status::update_factory_status(int _index)
 	int64_t	fAllocatedCreate = factory_statistics.now.alloc_create;
 	if (fAllocatedCreate != 0)
 	{
-		__sprintf(text, TEXT("%6.3f%%"), (float)factory_statistics.now.free_delete / fAllocatedCreate * 100.0f);
+		std::swprintf(text, std::size(text), std::wstring_view(TEXT("%6.3f%%")).data(), (float)factory_statistics.now.free_delete / fAllocatedCreate * 100.0f);
 		list_item.pszText = text;
 	}
 	else
@@ -640,7 +646,7 @@ void CDialog_object_factory_status::update_factory_status(int _index)
 
 void CDialog_object_factory_status::OnCbnSelchangeComboUpdateInterval()
 {
-	// 1) 선택된 Inteval을 얻어낸다.
+	// 1) 선택된 Interval을 얻어낸다.
 	int	selected = m_combo_update_interval.GetCurSel();
 
 	// 2) 해당하는 Update Interval로 설정한다.
@@ -677,8 +683,10 @@ void CDialog_object_factory_status::OnBnClickedButtonPrepare()
 	object_ptr<factory::manager> pmanager;
 
 	// 1) Factory Manager를 읽어 저장해 놓는다.
-	scoped_lock(m_pmanager)
 	{
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager);
+
 		pmanager = m_pmanager;
 	}
 
@@ -703,8 +711,8 @@ void CDialog_object_factory_status::OnBnClickedButtonPrepare()
 		// declare) 
 		object_ptr<Ifactory> pfactory;
 
-		// - Factory을 Factory Manager에서 찾는다.(이렇게 한번더 manager에서 찾는 이유는 Thread-Safe 문제 때문임.)
-		scoped_shared_lock(pmanager->get_lockable())
+		// - Factory을 Factory Manager에서 찾는다.(이렇게 한 번 더 manager에서 찾는 이유는 Thread-Safe 문제 때문임.)
+		SCOPED_SHARED_LOCK(pmanager->get_lockable())
 		{
 			pfactory = pmanager->find(pfactory_find);
 		}
@@ -741,8 +749,10 @@ void CDialog_object_factory_status::OnBnClickedButtonShrink()
 	object_ptr<factory::manager> pmanager;
 
 	// 1) Factory Manager를 읽어 저장해 놓는다.
-	scoped_lock(m_pmanager)
 	{
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager);
+
 		pmanager = m_pmanager;
 	}
 
@@ -767,8 +777,8 @@ void CDialog_object_factory_status::OnBnClickedButtonShrink()
 		// declare) 
 		object_ptr<Ifactory> pfactory;
 
-		// - Factory을 Factory Manager에서 찾는다.(이렇게 한번더 manager에서 찾는 이유는 Thread-Safe 문제 때문임.)
-		scoped_shared_lock(pmanager->get_lockable())
+		// - Factory을 Factory Manager에서 찾는다.(이렇게 한 번 더 manager에서 찾는 이유는 Thread-Safe 문제 때문임.)
+		SCOPED_SHARED_LOCK(pmanager->get_lockable())
 		{
 			pfactory = pmanager->find(pfactory_find);
 		}
@@ -793,8 +803,10 @@ void CDialog_object_factory_status::OnBnClickedButtonEnableSustain()
 	object_ptr<factory::manager> pmanager;
 
 	// 1) Factory Manager를 읽어 저장해 놓는다.
-	scoped_lock(m_pmanager)
 	{
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager);
+
 		pmanager = m_pmanager;
 	}
 
@@ -811,8 +823,10 @@ void CDialog_object_factory_status::OnBnClickedButtonDisableSustain()
 	object_ptr<factory::manager> pmanager;
 
 	// 1) Factory Manager를 읽어 저장해 놓는다.
-	scoped_lock(m_pmanager)
 	{
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager);
+
 		pmanager = m_pmanager;
 	}
 
@@ -829,8 +843,10 @@ void CDialog_object_factory_status::OnBnClickedCheckEnableSustainManager()
 	object_ptr<factory::manager> pmanager;
 
 	// 1) Connective Manager를 설정한다.
-	scoped_lock(m_pmanager)
 	{
+		// lock) 
+		std::lock_guard lock(this->m_lockable_pmanager);
+
 		pmanager = m_pmanager;
 	}
 
@@ -896,10 +912,10 @@ void CDialog_object_factory_status::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// 1) 상태를 Update한다.
@@ -912,10 +928,10 @@ void CDialog_object_factory_status::OnTimer(UINT_PTR nIDEvent)
 void CDialog_object_factory_status::SetUpdateInterval(int _interval)
 {
 	// 1) 
-	m_update_inverval = _interval;
+	m_update_interval = _interval;
 	
 	// 2) 
-	switch(m_update_inverval)
+	switch(m_update_interval)
 	{
 	// No Update
 	case	0:
@@ -973,7 +989,7 @@ void CDialog_object_factory_status::OnActivate(UINT nState, CWnd* pwnd_other, BO
 	CDialogEx::OnActivate(nState, pwnd_other, bMinimized);
 
 	// 2) 타이머를 설정한다.
-	SetUpdateInterval(m_update_inverval);
+	SetUpdateInterval(m_update_interval);
 
 	// 3) 값을 설정.
 	PostMessage(eMESSAGE::WINDOWS::NOTIFY, CGUPDATE);

@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 #include "cgdk/sdk10/server.group.h"
 #include "../../define_message.h"
 
@@ -118,7 +118,7 @@ protected:
 		// return) 
 		return eRESULT::BYPASS;
 	}
-	// @) ë©¤ë²„ì˜ ê³ ìœ  í‚¤ë¥¼  ë¦¬í„´í•´ì£¼ëŠ” í•¨ìˆ˜ë‹¤. group::Nmap_senderí´ë˜ìŠ¤ groupì˜ ê²½ìš° ì´ê±¸ ë°˜ë“œì‹œ ì •ì˜í•´ì¤˜ì•¼í•œë‹¤.
+	// @) ¸â¹öÀÇ °íÀ¯ Å°¸¦  ¸®ÅÏÇØÁÖ´Â ÇÔ¼ö´Ù. group::Nmap_senderÅ¬·¡½º groupÀÇ °æ¿ì ÀÌ°É ¹İµå½Ã Á¤ÀÇÇØÁà¾ßÇÑ´Ù.
 	virtual	int64_t process_get_member_key(socket_tcp* _pmember) override
 	{
 		return _pmember->m_member_serial;
@@ -132,16 +132,16 @@ int g_member_serial = 0;
 
 void socket_tcp::on_connect()
 {
-	// 1) ì ‘ì†í•˜ë©´ ë¨¼ì € Member Serialì„ ì¨ë„£ëŠ”ë‹¤.
+	// 1) Á¢¼ÓÇÏ¸é ¸ÕÀú Member SerialÀ» ½á³Ö´Â´Ù.
 	m_member_serial	 = g_member_serial++;
 
-	// 2) groupì— Enterì‹œí‚¨ë‹¤.
+	// 2) group¿¡ Enter½ÃÅ²´Ù.
 	g_pgroup_a->enter(this);
 }
 
 void socket_tcp::on_disconnect(uint64_t /*_disconnect_reason*/)
 {
-	// 1) ì ‘ì†ì´ ì¢…ë£Œë˜ë©´ groupì—ì„œ ë‚˜ê°„ë‹¤.
+	// 1) Á¢¼ÓÀÌ Á¾·áµÇ¸é group¿¡¼­ ³ª°£´Ù.
 	leave_group();
 }
 
@@ -162,26 +162,26 @@ int main(int /*argc*/, char* /*argv*/[])
 	// trace) 
 	std::cout << "CGCII tutorial.group.server ex01..."sv << std::endl;
 
-	// 1) group_a, group_b, group_cë¥¼ ìƒì„±í•œë‹¤.
+	// 1) group_a, group_b, group_c¸¦ »ı¼ºÇÑ´Ù.
 	g_pgroup_a = make_own<group_a>();
 	g_pgroup_b = make_own<group_b>();
 	g_pgroup_c = make_own<group_c>();
 
-	// 2) groupì— ì…ì¥ ê°€ëŠ¥í•˜ê²Œ ì„¤ì •í•œë‹¤.
+	// 2) group¿¡ ÀÔÀå °¡´ÉÇÏ°Ô ¼³Á¤ÇÑ´Ù.
 	g_pgroup_a->enable_member_enter();
 	g_pgroup_b->enable_member_enter();
 	g_pgroup_c->enable_member_enter();
 
-	// 3) Acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤ / create Acceptor object
+	// 3) Acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù / create Acceptor object
 	auto pacceptor = make_own<net::acceptor<socket_tcp>>();
 
-	// 4) 20000ë²ˆ í¬íŠ¸ì— Listenì„ ì‹œì‘í•œë‹¤ / start listening on 20000 port
+	// 4) 20000¹ø Æ÷Æ®¿¡ ListenÀ» ½ÃÀÛÇÑ´Ù / start listening on 20000 port
 	pacceptor->start({{ net::ip::tcp::v6(), 20000 }});
 
-	// 5) ESCë¥¼ ëˆŒëŸ¬ ì¢…ë£Œí•˜ê¸°ë¥¼ ê¸°ë‹¤ë¦°ë‹¤. / wait for exit pressing ESC key
+	// 5) ESC¸¦ ´­·¯ Á¾·áÇÏ±â¸¦ ±â´Ù¸°´Ù. / wait for exit pressing ESC key
 	while(_getch() != 27);
 
-	// 6) Acceptorë¥¼ ë‹«ëŠ”ë‹¤ / close Acceptor
+	// 6) Acceptor¸¦ ´İ´Â´Ù / close Acceptor
 	pacceptor->stop();
 
 	return 0;

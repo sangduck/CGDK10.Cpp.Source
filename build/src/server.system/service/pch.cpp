@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include <iostream>
 
 
@@ -13,10 +13,10 @@
 
 namespace CGDK
 {
-	lockable<>								__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL4 + 1)	api::manager_perfornamce_query::m_lockable_create;
-	own_ptr<api::manager_perfornamce_query>	__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL4 + 2)	api::manager_perfornamce_query::m_pinstance;
+	lock_object								__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL4 + 1)	api::manager_performance_query::m_lockable_create;
+	own_ptr<api::manager_performance_query>	__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL4 + 2)	api::manager_performance_query::m_pinstance;
 
-	lockable<>								__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL4 + 3)	g_lockable_pservice_global;
+	lock_object								__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL4 + 3)	g_lockable_pservice_global;
 	object_ptr<server_system::Nservice>		__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL4 + 5)	g_pservice_global;
 }
 

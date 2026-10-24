@@ -82,7 +82,7 @@ protected:
 			LONGLONG			m_count_disconnect;
 
 			const statistics::unit_connective*	m_pstatistics;
-			lockable<>			m_lockable_statistics;
+	mutable	lock_object			m_lockable_statistics;
 
 			void				SetSocketStatus(net::io::Iconnective* _pconnective);
 };

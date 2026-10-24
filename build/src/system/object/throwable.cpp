@@ -14,10 +14,10 @@ object_ptr<LOG_RECORD> Nthrowable::get_log_record() const noexcept
 	plog_record->level = log_level_t::higher();
 	plog_record->result = reason();
 	plog_record->origin = log_origin_t{ static_cast<uint64_t>(m_param)};
-	plog_record->time_occure = chrono::time::utc::now();
+	plog_record->time_occurred = chrono::time::utc::now();
 
 	// 3) log message
-	plog_record->set_message(m_description);
+	plog_record->set_message<char>(this->m_description);
 
 	// return)
 	return	plog_record;
@@ -33,19 +33,15 @@ object_ptr<LOG_RECORD> _throwable_ex(const Nthrowable& _throwable, const Ndescri
 	plog_record->level = log_level_t::higher();
 	plog_record->result = _throwable.reason();
 	plog_record->origin = log_origin_t{static_cast<uint64_t>(_throwable.m_param)};
-	plog_record->time_occure = chrono::time::utc::now();
+	plog_record->time_occurred = chrono::time::utc::now();
 
 	// 3) log message
 	if (_throwable.m_description.empty() == false)
-	{
-		plog_record->set_message(_throwable.m_description);
-	}
+		plog_record->set_message<char>(_throwable.m_description);
 
 	// 4) description ex를 추가한다.
 	for (auto& iter : _pdescription.m_description_ex)
-	{
-		plog_record->add_message(iter);
-	}
+		plog_record->add_message<char>(iter);
 
 	// return)
 	return plog_record;

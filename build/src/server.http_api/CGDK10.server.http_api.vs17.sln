@@ -1,0 +1,79 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "windows", "windows", "{E930DCFB-CED3-4A8E-BB3E-B0F48257B2BD}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.http_api.bank", "bank\CGDK10.server.http_api.bank.vs17.vcxproj", "{22CEBBDE-7A00-4C72-9C57-803B50085849}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.http_api.kakao", "kakao\CGDK10.server.http_api.kakao.vs17.vcxproj", "{FE497E37-60AF-45F5-8192-9281CB48CBDF}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.http_api.line", "line\CGDK10.server.http_api.line.vs17.vcxproj", "{24F279B8-D3C2-41B7-9E45-451E79C40768}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.http_api.naver", "naver\CGDK10.server.http_api.naver.vs17.vcxproj", "{7946334A-E25D-42BF-A29B-2C1378D5E91E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.http_api.apple", "apple\CGDK10.server.http_api.apple.vs17.vcxproj", "{973D24CE-1811-4FD2-9D0E-9D260286BFB2}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.http_api.google", "google\CGDK10.server.http_api.google.vs17.vcxproj", "{C42BE74D-0906-44B6-838C-692C0A470674}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "cgdk_info.shared", "..\common\cgdk_info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.server.http_api.bank", "bank\CGDK10.server.http_api.bank.vcxitems", "{B7FE28B5-9886-4C1D-A316-6C456D817258}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.server.http_api.kakao", "kakao\CGDK10.server.http_api.kakao.vcxitems", "{9992C880-7AB1-405E-BC12-2666252E95D7}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.server.http_api.line", "line\CGDK10.server.http_api.line.vcxitems", "{3F3B5FA9-CDA7-49EA-840F-260834D180F2}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.server.http_api.naver", "naver\CGDK10.server.http_api.naver.vcxitems", "{BAFE9667-EFD1-4259-B26A-2C05421A4D02}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.server.http_api.apple", "apple\CGDK10.server.http_api.apple.vcxitems", "{BCC2A5E9-5174-4334-AFF0-2582E8858200}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.server.http_api.google", "google\CGDK10.server.http_api.google.vcxitems", "{91A9B58C-DE0E-455B-A276-2A2E2E06C616}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{22CEBBDE-7A00-4C72-9C57-803B50085849}.Debug|x64.ActiveCfg = Debug|x64
+		{22CEBBDE-7A00-4C72-9C57-803B50085849}.Debug|x64.Build.0 = Debug|x64
+		{22CEBBDE-7A00-4C72-9C57-803B50085849}.Release|x64.ActiveCfg = Release|x64
+		{22CEBBDE-7A00-4C72-9C57-803B50085849}.Release|x64.Build.0 = Release|x64
+		{FE497E37-60AF-45F5-8192-9281CB48CBDF}.Debug|x64.ActiveCfg = Debug|x64
+		{FE497E37-60AF-45F5-8192-9281CB48CBDF}.Debug|x64.Build.0 = Debug|x64
+		{FE497E37-60AF-45F5-8192-9281CB48CBDF}.Release|x64.ActiveCfg = Release|x64
+		{FE497E37-60AF-45F5-8192-9281CB48CBDF}.Release|x64.Build.0 = Release|x64
+		{24F279B8-D3C2-41B7-9E45-451E79C40768}.Debug|x64.ActiveCfg = Debug|x64
+		{24F279B8-D3C2-41B7-9E45-451E79C40768}.Debug|x64.Build.0 = Debug|x64
+		{24F279B8-D3C2-41B7-9E45-451E79C40768}.Release|x64.ActiveCfg = Release|x64
+		{24F279B8-D3C2-41B7-9E45-451E79C40768}.Release|x64.Build.0 = Release|x64
+		{7946334A-E25D-42BF-A29B-2C1378D5E91E}.Debug|x64.ActiveCfg = Debug|x64
+		{7946334A-E25D-42BF-A29B-2C1378D5E91E}.Debug|x64.Build.0 = Debug|x64
+		{7946334A-E25D-42BF-A29B-2C1378D5E91E}.Release|x64.ActiveCfg = Release|x64
+		{7946334A-E25D-42BF-A29B-2C1378D5E91E}.Release|x64.Build.0 = Release|x64
+		{973D24CE-1811-4FD2-9D0E-9D260286BFB2}.Debug|x64.ActiveCfg = Debug|x64
+		{973D24CE-1811-4FD2-9D0E-9D260286BFB2}.Debug|x64.Build.0 = Debug|x64
+		{973D24CE-1811-4FD2-9D0E-9D260286BFB2}.Release|x64.ActiveCfg = Release|x64
+		{973D24CE-1811-4FD2-9D0E-9D260286BFB2}.Release|x64.Build.0 = Release|x64
+		{C42BE74D-0906-44B6-838C-692C0A470674}.Debug|x64.ActiveCfg = Debug|x64
+		{C42BE74D-0906-44B6-838C-692C0A470674}.Debug|x64.Build.0 = Debug|x64
+		{C42BE74D-0906-44B6-838C-692C0A470674}.Release|x64.ActiveCfg = Release|x64
+		{C42BE74D-0906-44B6-838C-692C0A470674}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{22CEBBDE-7A00-4C72-9C57-803B50085849} = {E930DCFB-CED3-4A8E-BB3E-B0F48257B2BD}
+		{FE497E37-60AF-45F5-8192-9281CB48CBDF} = {E930DCFB-CED3-4A8E-BB3E-B0F48257B2BD}
+		{24F279B8-D3C2-41B7-9E45-451E79C40768} = {E930DCFB-CED3-4A8E-BB3E-B0F48257B2BD}
+		{7946334A-E25D-42BF-A29B-2C1378D5E91E} = {E930DCFB-CED3-4A8E-BB3E-B0F48257B2BD}
+		{973D24CE-1811-4FD2-9D0E-9D260286BFB2} = {E930DCFB-CED3-4A8E-BB3E-B0F48257B2BD}
+		{C42BE74D-0906-44B6-838C-692C0A470674} = {E930DCFB-CED3-4A8E-BB3E-B0F48257B2BD}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BAE9AC1B-8AB1-4297-A309-0C4D06A6A674}
+	EndGlobalSection
+EndGlobal

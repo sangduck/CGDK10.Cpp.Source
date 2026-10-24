@@ -1,4 +1,4 @@
-Ôªø// dllmain.cpp : DLLÏùò Ï¥àÍ∏∞Ìôî Î£®Ìã¥ÏùÑ Ï†ïÏùòÌï©ÎãàÎã§.
+// dllmain.cpp : DLL¿« √ ±‚»≠ ∑Á∆æ¿ª ¡§¿««’¥œ¥Ÿ.
 //
 
 #include "pch.h"
@@ -10,28 +10,21 @@
 	#define new DEBUG_NEW
 #endif
 
-static AFX_EXTENSION_MODULE CGDKnetworkupdatecontrolsMFCvs16DLL = { false, nullptr };
-
-namespace CGDK
-{
-	extern bool g_is_initialize;
-}
+static AFX_EXTENSION_MODULE CGDKnetworkupdatecontrolsMFCDLL = { false, nullptr };
 
 extern "C" int APIENTRY
 DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
 {
 	UNREFERENCED_PARAMETER(lpReserved);
 
-	CGDK::g_is_initialize = false;
-
 	if (dwReason == DLL_PROCESS_ATTACH)
 	{
-		if (!AfxInitExtensionModule(CGDKnetworkupdatecontrolsMFCvs16DLL, hInstance))
+		if (!AfxInitExtensionModule(CGDKnetworkupdatecontrolsMFCDLL, hInstance))
 			return 0;
 
 		AfxInitRichEdit2();
 
-		new CDynLinkLibrary(CGDKnetworkupdatecontrolsMFCvs16DLL);
+		new CDynLinkLibrary(CGDKnetworkupdatecontrolsMFCDLL);
 
 		if (!AfxSocketInit())
 		{
@@ -40,7 +33,7 @@ DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
 	}
 	else if (dwReason == DLL_PROCESS_DETACH)
 	{
-		AfxTermExtensionModule(CGDKnetworkupdatecontrolsMFCvs16DLL);
+		AfxTermExtensionModule(CGDKnetworkupdatecontrolsMFCDLL);
 	}
 	return 1;
 }

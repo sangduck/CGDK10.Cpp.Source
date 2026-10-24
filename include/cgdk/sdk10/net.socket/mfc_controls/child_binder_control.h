@@ -70,7 +70,7 @@ protected:
 			CButton				m_buttonStatus;
 
 			object_ptr<net::io::Ibinder>	m_pBinder;
-			lockable<>			m_csBinder;
+	mutable	lock_object			m_csBinder;
 
 			bool				Bind();
 };

@@ -1,4 +1,4 @@
-Ôªø#include "pch.h"
+#include "pch.h"
 #include <iostream>
 #if defined(_WIN32)
 #include <conio.h>
@@ -44,7 +44,7 @@ int main()
 		// - send gathered messages every 10ms
 		g_pgroup->execute_interval(10ms);
 
-		// - schedulerÏóê groupÏùÑ Î∂ôÏù∏Îã§.
+		// - schedulerø° group¿ª ∫Ÿ¿Œ¥Ÿ.
 		system_executor::register_schedulable(g_pgroup);
 	}
 
@@ -72,148 +72,148 @@ int main()
 
 			switch (ch)
 			{
-				// disconnect
+			// disconnect
 			case	'6':
-				scoped_lock(pacceptor->get_lockable())
-				{
-					if (pacceptor->count() != 0)
+					SCOPED_LOCK(pacceptor->get_lockable())
 					{
-						(*pacceptor->begin())->closesocket();
+						if (pacceptor->count() != 0)
+						{
+							(*pacceptor->begin())->closesocket();
+						}
 					}
-				}
-				break;
+					break;
 			case	'7':
-				pacceptor->close_connectable_all();
-				break;
+					pacceptor->close_connectable_all();
+					break;
 
-				// closesocket
+			// closesocket
 			case	'8':
-				scoped_lock(pacceptor->get_lockable())
-				{
-					if (pacceptor->count() != 0)
+					SCOPED_LOCK(pacceptor->get_lockable())
 					{
-						(*pacceptor->begin())->disconnect();
+						if (pacceptor->count() != 0)
+						{
+							(*pacceptor->begin())->disconnect();
+						}
 					}
-				}
-				break;
+					break;
 
 			case	'9':
-				pacceptor->disconnect_connectable_all();
-				break;
+					pacceptor->disconnect_connectable_all();
+					break;
 
-				// send
+			// send
 			case	'U':
 			case	'u':
-			{
-				// - alloc buffer
-				auto buf_temp = alloc_shared_buffer(8);
+					{
+						// - alloc buffer
+						auto buf_temp = alloc_shared_buffer(8);
 
-				// - write message
-				buf_temp.append<uint32_t>(8);
-				buf_temp.append(crc());
-				// check)
-				CGASSERT_ERROR(buf_temp.size() == 8);
+						// - write message
+						buf_temp.append<uint32_t>(8);
+						buf_temp.append(crc());
+						// check)
+						CGASSERT_ERROR(buf_temp.size() == 8);
 
-				// - send
-				pacceptor->send(buf_temp);
-			}
-			break;
+						// - send
+						pacceptor->send(buf_temp);
+					}
+					break;
 
 			case	'I':
 			case	'i':
-			{
-				// 2) alloc buffer
-				auto buf_temp = alloc_shared_buffer(1024);
+					{
+						// 2) alloc buffer
+						auto buf_temp = alloc_shared_buffer(1024);
 
-				// 3) write message
-				buf_temp.append<uint32_t>(1024);
-				buf_temp.append<uint32_t>(0);
-				while (buf_temp.size() < 1024 - SIZE_OF_CRC)
-				{
-					buf_temp.append<uint32_t>(0);
-				}
-				buf_temp.append(crc());
+						// 3) write message
+						buf_temp.append<uint32_t>(1024);
+						buf_temp.append<uint32_t>(0);
+						while (buf_temp.size() < 1024 - SIZE_OF_CRC)
+						{
+							buf_temp.append<uint32_t>(0);
+						}
+						buf_temp.append(crc());
 
-				// - send
-				pacceptor->send(buf_temp);
-			}
-			break;
+						// - send
+						pacceptor->send(buf_temp);
+					}
+					break;
 
 			case	'O':
 			case	'o':
-			{
-				// - alloc buffer
-				auto buf_temp = alloc_shared_buffer(65536);
+					{
+						// - alloc buffer
+						auto buf_temp = alloc_shared_buffer(65536);
 
-				// - write message
-				buf_temp.append<uint32_t>(65536);
-				buf_temp.append<uint32_t>(0);
-				while (buf_temp.size() < 65536 - SIZE_OF_CRC)
-				{
-					buf_temp.append<uint32_t>(0);
-				}
-				buf_temp.append(crc());
+						// - write message
+						buf_temp.append<uint32_t>(65536);
+						buf_temp.append<uint32_t>(0);
+						while (buf_temp.size() < 65536 - SIZE_OF_CRC)
+						{
+							buf_temp.append<uint32_t>(0);
+						}
+						buf_temp.append(crc());
 
-				// check)
-				CGASSERT_ERROR(buf_temp.size() == 65536);
+						// check)
+						CGASSERT_ERROR(buf_temp.size() == 65536);
 
-				// - send
-				pacceptor->send(buf_temp);
-			}
-			break;
+						// - send
+						pacceptor->send(buf_temp);
+					}
+					break;
 
 			// echo on/off
 			case	'a':
-				g_disable_echo = !g_disable_echo;
-				break;
+					g_disable_echo = !g_disable_echo;
+					break;
 
 			case	'=':
-			{
-				factory::manager::print_statistics(true);
-				std::cout << "\n";
-				print_statistics_info(pacceptor->statistics_get_connective_info_total(), true);
-			}
-			break;
+					{
+						factory::manager::print_statistics(true);
+						std::cout << "\n";
+						print_statistics_info(pacceptor->statistics_get_connective_info_total(), true);
+					}
+					break;
 
 			case	'+':
-			{
-				factory::manager::print_statistics();
-				std::cout << "\n";
-				print_statistics_info(pacceptor->statistics_get_connective_info_total(), true);
-			}
-			break;
+					{
+						factory::manager::print_statistics();
+						std::cout << "\n";
+						print_statistics_info(pacceptor->statistics_get_connective_info_total(), true);
+					}
+					break;
 
 			case	'-':
-			{
-				executor::manager::print_statistics(true);
-				std::cout << "\n";
-				print_statistics_info(pacceptor->statistics_get_connective_info_total(), true);
-			}
-			break;
+					{
+						executor::manager::print_statistics(true);
+						std::cout << "\n";
+						print_statistics_info(pacceptor->statistics_get_connective_info_total(), true);
+					}
+					break;
 
 			case	'_':
-			{
-				executor::manager::print_statistics();
-				std::cout << "\n";
-				print_statistics_info(pacceptor->statistics_get_connective_info_total(), true);
-			}
-			break;
+					{
+						executor::manager::print_statistics();
+						std::cout << "\n";
+						print_statistics_info(pacceptor->statistics_get_connective_info_total(), true);
+					}
+					break;
 
 			case	ASCII_CODE_BACKSPACE:
-			{
-				std::cout << "\033c";
-				print_title();
-				print_statistics_info(pacceptor->statistics_get_connective_info_total(), true);
-			}
-			break;
+					{
+						std::cout << "\033c";
+						print_title();
+						print_statistics_info(pacceptor->statistics_get_connective_info_total(), true);
+					}
+					break;
 
 #if defined(_WIN32)
 			case	0xe0:
-			{
-				// - extended key (for windows)
-				/*auto key = */_getch();
-			}
-			break;
+					{
+						// - extended key (for windows)
+						/*auto key = */_getch();
+					}
+					break;
 #endif
 			}
 
@@ -288,17 +288,17 @@ void print_title()
 
 void print_statistics_info(const statistics::unit_connective& _statistics_connective, bool _update_now)
 {
-	// 1) ÌòÑÏû¨ TickÍ≥º Tick GapÏùÑ Íµ¨ÌïúÎã§.
+	// 1) «ˆ¿Á Tick∞˙ Tick Gap¿ª ±∏«—¥Ÿ.
 	static auto tick_last = chrono::tick::time_point(chrono::tick::duration::zero());
 	auto tick_now = chrono::tick::now();
 
 	// 2) get tick differ
 	auto tick_differ = std::chrono::duration_cast<chrono::tick::milliseconds>(tick_now - tick_last);
 
-	// check) tickdifferÍ∞Ä 1sÏù¥ÌïòÎ©¥ Í∑∏ÎÉ• ÎÅùÎÇ∏Îã§.
+	// check) tickdiffer∞° 1s¿Ã«œ∏È ±◊≥… ≥°≥Ω¥Ÿ.
 	RETURN_IF(_update_now == false && tick_differ < 1s);
 
-	// 3) ÏµúÏ¢Ö ÏãúÍ∞ÑÏùÑ UpdateÌïúÎã§.
+	// 3) √÷¡æ Ω√∞£¿ª Update«—¥Ÿ.
 	tick_last = tick_now;
 
 	// 4) alloc buffer
@@ -311,18 +311,18 @@ void print_statistics_info(const statistics::unit_connective& _statistics_connec
 		static uint64_t	last_count_success = 0;
 		static uint64_t	last_count_disconnected = 0;
 
-		// - Ïù¥Ï†ÑÍ≥º ÌòÑÏû¨Ïùò Ï∞®Ïù¥Î•º Íµ¨ÌïúÎã§. (OverflowÍ∞Ä ÎÇ¨ÏùÑ Í≤ΩÏö∞Î•º ÎåÄÎπÑÌïòÏó¨ Í≥ÑÏÇ∞Ìï¥Ïïº ÌïúÎã§.)
+		// - ¿Ã¿¸∞˙ «ˆ¿Á¿« ¬˜¿Ã∏¶ ±∏«—¥Ÿ. (Overflow∞° ≥µ¿ª ∞ÊøÏ∏¶ ¥Î∫Ò«œø© ∞ËªÍ«ÿæﬂ «—¥Ÿ.)
 		auto now_count_keep = _statistics_connective.count_keep.load();
 		auto now_count_try = _statistics_connective.count_try.load();
 		auto now_count_success = _statistics_connective.count_success_connect.load();
 		auto now_count_disconnected = _statistics_connective.count_disconnect.load();
 
-		// - Ï¥àÎãπ Ï†ÑÏÜ°Î•†ÏùÑ Íµ¨ÌïúÎã§.
+		// - √ ¥Á ¿¸º€∑¸¿ª ±∏«—¥Ÿ.
 		auto total_try_per_sec = ((float)(now_count_try - last_count_try)) * 1000.0f / tick_differ.count();
 		auto total_success_per_sec = ((float)(now_count_success - last_count_success)) * 1000.0f / tick_differ.count();
 		auto total_disconnected_per_sec = ((float)(now_count_disconnected - last_count_disconnected)) * 1000.0f / tick_differ.count();
 
-		// - Ïù¥Ï†Ñ Í∞íÏùÑ ÌòÑÏû¨ Í∞íÏúºÎ°ú UpdateÌïúÎã§.(Îã§Ïùå FrameÏóêÏÑúÏùò Í≥ÑÏÇ∞ÏùÑ ÏúÑÌï¥)
+		// - ¿Ã¿¸ ∞™¿ª «ˆ¿Á ∞™¿∏∑Œ Update«—¥Ÿ.(¥Ÿ¿Ω Frameø°º≠¿« ∞ËªÍ¿ª ¿ß«ÿ)
 		last_count_try = now_count_try;
 		last_count_success = now_count_success;
 		last_count_disconnected = now_count_disconnected;
@@ -343,27 +343,27 @@ void print_statistics_info(const statistics::unit_connective& _statistics_connec
 		auto& statistics = net::io::statistics::Nsocket::statistics_get_traffic_info_total();
 
 		// declare) 
-		static uint64_t	last_count_sended = 0;
+		static uint64_t	last_count_sent = 0;
 		static uint64_t	last_count_received = 0;
-		static uint64_t	last_count_sendedByte = 0;
+		static uint64_t	last_count_sentByte = 0;
 		static uint64_t	last_count_received_byte = 0;
 
-		// - Ïù¥Ï†ÑÍ≥º ÌòÑÏû¨Ïùò Ï∞®Ïù¥Î•º Íµ¨ÌïúÎã§. (OverflowÍ∞Ä ÎÇ¨ÏùÑ Í≤ΩÏö∞Î•º ÎåÄÎπÑÌïòÏó¨ Í≥ÑÏÇ∞Ìï¥Ïïº ÌïúÎã§.)
-		auto now_count_sended = statistics.count_sended_message.load();
-		auto now_count_sendedByte = statistics.count_sended_bytes.load();
+		// - ¿Ã¿¸∞˙ «ˆ¿Á¿« ¬˜¿Ã∏¶ ±∏«—¥Ÿ. (Overflow∞° ≥µ¿ª ∞ÊøÏ∏¶ ¥Î∫Ò«œø© ∞ËªÍ«ÿæﬂ «—¥Ÿ.)
+		auto now_count_sent = statistics.count_sent_message.load();
+		auto now_count_sentByte = statistics.count_sent_bytes.load();
 		auto now_count_send_failed = statistics.count_error_on_send.load();
 		auto now_count_received = statistics.count_received_message.load();
 		auto now_count_received_byte = statistics.count_received_bytes.load();
 
-		// - Ï¥àÎãπ Ï†ÑÏÜ°Î•†ÏùÑ Íµ¨ÌïúÎã§.
-		auto total_sended_message_per_sec = ((float)(now_count_sended - last_count_sended)) * 1000.0f / tick_differ.count();
-		auto total_sended_byte_per_sec = ((float)(now_count_sendedByte - last_count_sendedByte)) * 1000.0f / tick_differ.count();
+		// - √ ¥Á ¿¸º€∑¸¿ª ±∏«—¥Ÿ.
+		auto total_sent_message_per_sec = ((float)(now_count_sent - last_count_sent)) * 1000.0f / tick_differ.count();
+		auto total_sent_byte_per_sec = ((float)(now_count_sentByte - last_count_sentByte)) * 1000.0f / tick_differ.count();
 		auto total_receive_message_per_sec = ((float)(now_count_received - last_count_received)) * 1000.0f / tick_differ.count();
 		auto total_receive_byte_per_sec = ((float)(now_count_received_byte - last_count_received_byte)) * 1000.0f / tick_differ.count();
 
-		// - Ïù¥Ï†Ñ Í∞íÏùÑ ÌòÑÏû¨ Í∞íÏúºÎ°ú UpdateÌïúÎã§.(Îã§Ïùå FrameÏóêÏÑúÏùò Í≥ÑÏÇ∞ÏùÑ ÏúÑÌï¥)
-		last_count_sended = now_count_sended;
-		last_count_sendedByte = now_count_sendedByte;
+		// - ¿Ã¿¸ ∞™¿ª «ˆ¿Á ∞™¿∏∑Œ Update«—¥Ÿ.(¥Ÿ¿Ω Frameø°º≠¿« ∞ËªÍ¿ª ¿ß«ÿ)
+		last_count_sent = now_count_sent;
+		last_count_sentByte = now_count_sentByte;
 		last_count_received = now_count_received;
 		last_count_received_byte = now_count_received_byte;
 
@@ -372,18 +372,18 @@ void print_statistics_info(const statistics::unit_connective& _statistics_connec
 
 		// - sended
 		buf_output.append_text(" [send]    "sv);
-		buf_output.append_text("\x1b[90m   messages \x1b[0m"sv); buf_output.append_text("{:12d}"sv, now_count_sended);
-		__sprintf(temp_string, "%.2f"sv, total_sended_message_per_sec);
+		buf_output.append_text("\x1b[90m   messages \x1b[0m"sv); buf_output.append_text(std::format("{:12d}"sv, now_count_sent));
+		std::snprintf(temp_string, sizeof(temp_string), "%.2f", total_sent_message_per_sec);
 		buf_output.append_text("\x1b[90m   messages/s \x1b[0m"sv); buf_output.append_text(temp_string);
-		buf_output.append_text("\x1b[90m   bytes/s \x1b[0m"sv); buf_output.append_text(to_string_scaled_byte(temp_string, 256, total_sended_byte_per_sec));
+		buf_output.append_text("\x1b[90m   bytes/s \x1b[0m"sv); buf_output.append_text(to_string_scaled_byte(total_sent_byte_per_sec));
 		buf_output.append_text("\x1b[90m   failed \x1b[0m"sv); buf_output.append_text(now_count_send_failed); buf_output.append_text("\x1b[K\n"sv);
 
 		// - received
 		buf_output.append_text(" [receive] "sv);
-		buf_output.append_text("\x1b[90m   messages \x1b[0m"sv); buf_output.append_text("{:12d}"sv, now_count_received);
-		__sprintf(temp_string, "%.2f", total_receive_message_per_sec);
+		buf_output.append_text("\x1b[90m   messages \x1b[0m"sv); buf_output.append_text(std::format("{:12d}"sv, now_count_received));
+		std::snprintf(temp_string, sizeof(temp_string), "%.2f", total_receive_message_per_sec);
 		buf_output.append_text("\x1b[90m   messages/s \x1b[0m"sv); buf_output.append_text(temp_string);
-		buf_output.append_text("\x1b[90m   bytes/s \x1b[0m"sv); buf_output.append_text(to_string_scaled_byte(temp_string, 256, total_receive_byte_per_sec)); buf_output.append_text("\x1b[K\n"sv);
+		buf_output.append_text("\x1b[90m   bytes/s \x1b[0m"sv); buf_output.append_text(to_string_scaled_byte(total_receive_byte_per_sec)); buf_output.append_text("\x1b[K\n"sv);
 		buf_output.append_text("\n"sv);
 	}
 

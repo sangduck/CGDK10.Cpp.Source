@@ -1,4 +1,4 @@
-ï»¿#if defined(_WIN32)
+#if defined(_WIN32)
 	#include <conio.h>
 #endif
 
@@ -11,22 +11,22 @@
 // @ namespace
 using namespace CGDK;
 
-// @) socket í´ë˜ìŠ¤ ì •ì˜
+// @) socket Å¬·¡½º Á¤ÀÇ
 class socket_tcp : public net::socket::tcp<>
 {
-	// (v) ì ‘ì† ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_connect() override 
 	{
 		std::cout << " @ connected"sv << '\n'; 
 	}
 
-	// (v) ì ‘ì† ì¢…ë£Œ ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó Á¾·á ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_disconnect(uint64_t /*_disconnect_reason*/) override 
 	{
 		std::cout << " @ disconnected"sv << '\n'; 
 	}
 
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜.
+	// (v) ¸Ş½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö.
 	virtual result_code on_message(sMESSAGE_NETWORK& _msg) override
 	{
 		std::cout << " message received and echo sended!"sv << std::endl;
@@ -43,18 +43,18 @@ int main()
 
 	try
 	{
-		// 1) acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 1) acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pacceptor = make_own<net::acceptor<socket_tcp>>();
 
-		// 2) acceptorë¥¼ ì‹œì‘í•œë‹¤.(20000ë²ˆ í¬íŠ¸ì—ì„œ listenì„ ì‹œì‘í•œë‹¤.)
-		//    - bindí•  addressë¥¼ ì§ì ‘ ë„£ì–´ë„ ëœë‹¤. ì•„ë˜ì™€ ê°™ì´ í•˜ë©´ bind_any, 20000í¬íŠ¸ë¡œ ì ‘ì†ì„ ë°›ëŠ”ë‹¤.
-		//    - net::ip::tcp::v4()ë¡œ ì„¤ì •í•˜ë©´ ipv4ë§Œ ì ‘ì†ì„ ë°›ìœ¼ë©°
-		//    - net::ip::tcp::v6()ë¡œ ì„¤ì •í•˜ë©´ ipv4ì™€ ipv6 ëª¨ë‘ ì ‘ì†ì„ ë°›ëŠ”ë‹¤.
-		//    - net::ip::make_addressë¥¼ ì‚¬ìš©í•´ ì§ì ‘ ê°’ì„ ì¨ë„£ì„ ìˆ˜ë„ ìˆë‹¤.
+		// 2) acceptor¸¦ ½ÃÀÛÇÑ´Ù.(20000¹ø Æ÷Æ®¿¡¼­ listenÀ» ½ÃÀÛÇÑ´Ù.)
+		//    - bindÇÒ address¸¦ Á÷Á¢ ³Ö¾îµµ µÈ´Ù. ¾Æ·¡¿Í °°ÀÌ ÇÏ¸é bind_any, 20000Æ÷Æ®·Î Á¢¼ÓÀ» ¹Ş´Â´Ù.
+		//    - net::ip::tcp::v4()·Î ¼³Á¤ÇÏ¸é ipv4¸¸ Á¢¼ÓÀ» ¹ŞÀ¸¸ç
+		//    - net::ip::tcp::v6()·Î ¼³Á¤ÇÏ¸é ipv4¿Í ipv6 ¸ğµÎ Á¢¼ÓÀ» ¹Ş´Â´Ù.
+		//    - net::ip::make_address¸¦ »ç¿ëÇØ Á÷Á¢ °ªÀ» ½á³ÖÀ» ¼öµµ ÀÖ´Ù.
 		//pacceptor->start({net::ip::tcp::v6(), 20000});
 		pacceptor->start({{ net::ip::make_address("any"sv), 20000 }});
 
-		// 3) ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+		// 3) ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 		while(_getch() != 27);
 	}
 	catch (...)
@@ -65,6 +65,6 @@ int main()
 	// trace) 
 	std::cout << "stop server [tut.socket.01.tcp_simple.server]..."sv << std::endl;
 
-	// end) ì„œë²„ ì¢…ë£Œ
+	// end) ¼­¹ö Á¾·á
 	return 0;
 }

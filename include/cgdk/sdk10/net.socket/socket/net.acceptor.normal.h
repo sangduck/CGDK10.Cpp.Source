@@ -22,28 +22,23 @@ namespace CGDK
 {
 //-----------------------------------------------------------------------------
 //
-// net::acceptor<T> - 
+// net::acceptor<T> for normal socket
 //
 //-----------------------------------------------------------------------------
 template <typename TSOCKET>
-class net::acceptor<TSOCKET, typename std::enable_if<!std::is_base_of<net::io::Nhttp_server, TSOCKET>::value && !std::is_base_of<net::io::Nsocket_secure, TSOCKET>::value>::type> :
+class net::acceptor<TSOCKET, typename std::enable_if<!std::is_base_of<net::io::Nhttp_server, TSOCKET>::value>::type> :
 	public						net::io::connective::acceptor::Ntcp,
 	public						Nmessage_transmitter,
 	public						net::io::connectable_manager::list<TSOCKET>
 {
 public:
-			acceptor()
+			acceptor() 
 			{
-				// - 기본 acceptor의 Name을 기본 이름으로 설정한다.
-				this->set_name(NFMT::format("acceptor<{}>", typeid(TSOCKET).name()));
-			}
-			acceptor(std::string_view _name) : net::io::connective::acceptor::Ntcp{ _name }
-			{
-				// - Name이 없을 경우 acceptor의 Name을 설정한다.
-				if (_name.empty())
-				{
-					this->set_name(NFMT::format("acceptor<{}>", typeid(TSOCKET).name()));
-				}
+				std::string temp_name("acceptor<");
+				temp_name += typeid(TSOCKET).name();
+				temp_name += ">"sv;
+
+				this->name(temp_name);
 			}
 	virtual	~acceptor() noexcept {}
 
@@ -52,5 +47,28 @@ protected:
 	virtual result_code			_process_destroy() noexcept override { auto result = this->net::io::connective::acceptor::Ntcp::_process_destroy(); this->reset_message_transmitter(); return result; }
 };
 
+
+//-----------------------------------------------------------------------------
+//
+// net::acceptor_lambda<T> - 
+//
+//-----------------------------------------------------------------------------
+template <>
+class net::acceptor<net::io::socket::Ntcp> :
+	public						net::io::connective::acceptor::Ntcp,
+	public						Nmessage_transmitter,
+	public						net::io::connectable_manager::list<net::io::socket::Ntcp>
+{
+public:
+	using function_alloc_socket = std::function<object_ptr<net::io::socket::Ntcp>(void)>;
+
+	acceptor(function_alloc_socket&& _function) : m_function_alloc_socket(_function){}
+	virtual	~acceptor() noexcept {}
+
+protected:
+	virtual	object_ptr<net::io::Iconnectable> process_alloc_connectable() override { return this->m_function_alloc_socket();}
+			function_alloc_socket m_function_alloc_socket;
+
+};
 
 }

@@ -32,7 +32,7 @@ public:
 public:
 			result_code			start() { context _context; return this->start(_context);}
 			template<class TPARAMETER>
-			result_code			start(const TPARAMETER& _parameter) { context temp{ buffer_view((char*)&_parameter, sizeof(TPARAMETER)) }; return this->start(temp); }
+			result_code			start(const TPARAMETER& _parameter) { context temp; temp = buffer_view((char*)&_parameter, sizeof(TPARAMETER)); return this->start(temp); }
 			result_code			start(const context& _context) { context context_copy(_context); return this->start(context_copy);}
 	virtual	result_code			start(context& _context) override;
 	virtual	result_code			stop() noexcept override;
@@ -59,11 +59,11 @@ public:
 	virtual result_code			_process_stop() noexcept { try { this->on_stop(); } catch (...) { CGASSERT_ERROR(false); } return result_code(eRESULT::SUCCESS);}
 
 protected:
-			result_code			_process_starting_child(context& _context);
-			result_code			_process_starting_child_complete(context& _context);
-			void				_process_start_complete(context& _context);
+	virtual	result_code			_process_starting_child(context& _context);
+	virtual	result_code			_process_starting_child_complete(context& _context);
+	virtual	void				_process_start_complete(context& _context);
 
-			result_code			_process_stopping_child() noexcept;
-			result_code			_process_stopping_child_complete() noexcept;
-			void				_process_stop_complete() noexcept;
+	virtual	result_code			_process_stopping_child() noexcept;
+	virtual	result_code			_process_stopping_child_complete() noexcept;
+	virtual	void				_process_stop_complete() noexcept;
 };

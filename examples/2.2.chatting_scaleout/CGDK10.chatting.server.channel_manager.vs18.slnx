@@ -1,0 +1,9 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="server.channel_manager\shared\CGDK10.chatting.server.channel_manager.vcxitems" Id="f4680583-4ed3-428e-93fb-372d6e9ef33b" />
+  <Project Path="server.channel_manager\console\CGDK10.chatting.server.channel_manager.console.vs18.vcxproj" Id="5140a31b-2788-461f-978c-8983fcf164e1" />
+  <Project Path="server.channel_manager\mfc\CGDK10.chatting.server.channel_manager.mfc.vs18.vcxproj" Id="e7d8e319-3982-4537-b2b1-c80ad857ac8e" />
+  <Project Path="common\common.vcxitems" Id="e3a4bd8d-2a03-4789-b05e-34ee5857984c" />
+</Solution>

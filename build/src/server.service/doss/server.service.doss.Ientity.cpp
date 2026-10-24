@@ -2,14 +2,14 @@
 
 namespace CGDK
 {
-	
+
 
 object_ptr<doss::Isession> doss::Ientity::find_session(const sCHECKIN_ID& _cid) const noexcept
 {
-	// locked) 
+	// locked)
 	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(m_lockable_entity));
+		// SCOPED_LOCK)
+		std::lock_guard cs(const_cast<lock_object&>(m_lockable_entity));
 
 		// 1) find
 		auto iter_find = std::find_if(m_list_cid.begin(), m_list_cid.end(), [=](const std::pair<sCHECKIN_ID, Isession*>& _iter) { return _iter.first == _cid; });
@@ -24,33 +24,53 @@ object_ptr<doss::Isession> doss::Ientity::find_session(const sCHECKIN_ID& _cid) 
 
 bool doss::Ientity::complete_transaction(Itransactable* _ptransactable) noexcept
 {
-	// 1) complete command
+	// 1) complete the transaction and get the next queued one
 	auto ptransactable_next = process_complete_transaction(_ptransactable);
 
-	// 2) execute net transactable
-	while (ptransactable_next.exist())
+	// 2) execute the next transaction (as a coroutine : it completes itself and gets the one after it)
+	if (ptransactable_next.exist())
 	{
-		// - call 'process_request_transaction'
-		auto result = m_prepository->process_request_transaction(ptransactable_next);
-
-		// check) return if result is eRESULT::PENDED
-		BREAK_IF(result == eRESULT::PENDED);
-
-		// - process complete command and get next command
-		ptransactable_next = process_complete_transaction(ptransactable_next);
+		this->process_execute_transaction(std::move(ptransactable_next));
 	}
 
-	// return) 
+	// return)
 	return true;
+}
+
+void doss::Ientity::process_execute_transaction(object_ptr<Itransactable>&& _ptransactable) noexcept
+{
+	// - keep this entity and the transaction alive until the coroutine finishes
+	try
+	{
+		// 1) make the transaction coroutine (the only coroutine frame of this transaction)
+		auto task_transaction = m_prepository->co_request_transaction(_ptransactable);
+
+		// 2) start it on the system_executor with a completion (no wrapper coroutine frame)
+		//    - the completion runs in final_suspend of the transaction coroutine.
+		//    - the entity and the transaction are kept alive by the completion until then.
+		task_transaction.start([pself = object_ptr<Ireferenceable>(this), ptransaction = _ptransactable](std::exception_ptr /*_exception*/) mutable
+			{
+				// - complete the transaction (the next queued transaction is executed)
+				//   co_request_transaction never throws out : the result is set already.
+				ptransaction->m_pentity->complete_transaction(ptransaction.get());
+			});
+	}
+	catch (...)
+	{
+		// - failed to even start the coroutine (ex. the executor is stopped / frame allocation failure)
+		//   complete the transaction as a failure so the entity does not stall. (and run the next one)
+		_ptransactable->_set_result_if_not_set(eRESULT::NOT_READY);
+		this->complete_transaction(_ptransactable.get());
+	}
 }
 
 void doss::Ientity::checkout_all() noexcept
 {
-	// declare) 
+	// declare)
 	decltype(this->m_list_cid) list_cid;
 
 	// 1) copy
-	scoped_lock(this->m_lockable_entity)
+	SCOPED_LOCK(this->m_lockable_entity)
 	{
 		// check)
 		RETURN_IF(this->m_list_cid.empty(), );
@@ -64,10 +84,10 @@ void doss::Ientity::checkout_all() noexcept
 	{
 		try
 		{
-			// - Transactable을 생성한다.
+			// - alloc a transactable
 			auto ptransactable = make_object<Itransactable>();
 
-			// - 값을 설정한다.
+			// - set the values
 			ptransactable->m_type = eTRANSACTION_TYPE::CHECKOUT;
 			ptransactable->m_prepository = this->m_prepository;
 			ptransactable->m_psession = iter.second;
@@ -85,76 +105,93 @@ void doss::Ientity::checkout_all() noexcept
 
 result_code doss::Ientity::process_request_transaction(Itransactable* _ptransactable)
 {
-	// check) _ptransactable이 nullptr이면안됀다.
-	CGASSERT_ERROR(_ptransactable != nullptr);
+	// check) _ptransactable must not be nullptr
+	CGASSERT_FATAL(_ptransactable != nullptr);
 
-	// check) _ptransactable의 Transaction state는 반드시 eRESULT::NOT_DEFINED상태여야 한다.
+	// check) the transaction state must be eRESULT::NOT_DEFINED
 	CGASSERT_ERROR(_ptransactable->m_result == eRESULT::NOT_DEFINED);
 
-	// check) m_iter_pending._Ptr이 nullptr이어야만 한다.
+	// check) m_iter_pending._Ptr must be nullptr
 	CGASSERT_ERROR(_ptransactable->m_iter_pending.get<circular_list<object_ptr<Itransactable>>::iterator>()._Ptr == nullptr);
 
-	// check) m_iter_pending._Ptr이 nullptr이어야만 한다.
-	THROW_IF(_ptransactable->m_iter_pending.get<circular_list<object_ptr<Itransactable>>::iterator>()._Ptr != nullptr, throwable::failure(eRESULT::ALEADY_EXIST));
+	// check) m_iter_pending._Ptr must be nullptr
+	THROW_IF(_ptransactable->m_iter_pending.get<circular_list<object_ptr<Itransactable>>::iterator>()._Ptr != nullptr, throwable::failure(eRESULT::ALREADY_EXIST));
 
 	// declare)
 	bool is_exists;
 
-	scoped_lock(m_lockable_queue_transaction)
+	// - keep the transactable alive while queued (the entity owns it through the queue)
+	object_ptr<Itransactable> ptransactable(_ptransactable);
+
+	SCOPED_LOCK(m_lockable_queue_transaction)
 	{
-		// 1) is queue empty?
+		// 1) is the queue not empty?
 		is_exists = !m_queue_command.empty();
 
-		// 2) queing first
-		m_queue_command.push_back(_ptransactable);
+		// 2) queue it
+		m_queue_command.push_back(ptransactable);
 
-		// 3) set value
+		// 3) set the values
 		_ptransactable->m_iter_pending.get<circular_list<object_ptr<Itransactable>>::iterator>() = --m_queue_command.end();
 		_ptransactable->m_prepository = m_prepository;
 		_ptransactable->m_pentity = this;
 		_ptransactable->m_rid = generate_request_id();
 	}
 
-	// check) return eRESULT::PENDED, if empty
+	// check) another transaction is being processed : this one waits in the queue (PENDED)
 	RETURN_IF(is_exists, eRESULT::PENDED);
 
-	// 4) TransactionRequest 호출
-	auto result = m_prepository->process_request_transaction(_ptransactable);
+	// 4) execute the transaction (coroutine : it completes itself and runs the next queued one)
+	this->process_execute_transaction(std::move(ptransactable));
 
-	// 5) Pending이 아니라면 바로 완료 처리를 한다.(계속적 Recursion으로 불안정)
-	if (result != eRESULT::PENDED)
-	{
-		complete_transaction(_ptransactable);
-	}
-
-	// return)
-	return result;
+	// return) the transaction runs asynchronously
+	return eRESULT::PENDED;
 }
 
 object_ptr<doss::Itransactable> doss::Ientity::process_complete_transaction(Itransactable* _ptransactable) noexcept
 {
-	// check) _ptransactable의 m_pTransactor는 this여야만 한다.
+	// check) _ptransactable->m_pentity must be this
 	CGASSERT_ERROR(_ptransactable->m_pentity == this);
 
 	// check)
 	CGASSERT_ERROR(m_prepository.exist());
 
-	// check) 
+	// check)
 	CGASSERT_ERROR(_ptransactable->m_result != eRESULT::COMPLETE && _ptransactable->m_result != eRESULT::NOT_DEFINED && _ptransactable->m_result != eRESULT::REQUEST);
 
-	// 1) OnComplete 수행
+	// 1) complete the transaction on the repository
 	m_prepository->process_complete_transaction(_ptransactable);
+
+	// 2) call the completion of the awaiting coroutine (session::co_checkin/co_checkout/co_request)
+	if (_ptransactable->m_completion.has_value())
+	{
+		try
+		{
+			_ptransactable->m_completion->set_result(_ptransactable->m_result);
+		}
+		catch (...)
+		{
+		}
+	}
+
+	// 3) call process_entity_transaction_complete of the session (noexcept)
+	if (_ptransactable->m_psession.exist())
+	{
+		_ptransactable->m_psession->process_entity_transaction_complete(_ptransactable);
+	}
 
 	// declare)
 	object_ptr<Itransactable> ptransactable_next;
 
-	scoped_lock(m_lockable_queue_transaction)
+	SCOPED_LOCK(m_lockable_queue_transaction)
 	{
-		// check) 
-		CGASSERT_ERROR(m_queue_command.empty() == false);
-
-		// check)
-		CGASSERT_ERROR(m_queue_command.front() == _ptransactable);
+		// check) the queue was cleared (the repository was destroyed : clear_references())
+		if (m_queue_command.empty() || m_queue_command.front() != _ptransactable)
+		{
+			_ptransactable->m_pentity.reset();
+			_ptransactable->m_psession.reset();
+			return ptransactable_next;
+		}
 
 		// 2) pop front
 		m_queue_command.pop_front();
@@ -162,13 +199,13 @@ object_ptr<doss::Itransactable> doss::Ientity::process_complete_transaction(Itra
 		_ptransactable->m_pentity.reset();
 		_ptransactable->m_psession.reset();
 
-		// check) return if queue is empty
+		// check) return if the queue is empty
 		if (m_queue_command.empty() == false)
 		{
-			// 3) stor next command object if exist
+			// 3) store the next command object if it exists
 			ptransactable_next = m_queue_command.front();
 
-			// check) _ptransactable의 m_pTransactor는 this여야만 한다.
+			// check) _ptransactable->m_pentity must be this
 			CGASSERT_ERROR(ptransactable_next->m_pentity == this);
 		}
 	}
@@ -177,20 +214,44 @@ object_ptr<doss::Itransactable> doss::Ientity::process_complete_transaction(Itra
 	return ptransactable_next;
 }
 
+void doss::Ientity::clear_references() noexcept
+{
+	// 1) pending transactions (entity <-> transaction)
+	circular_list<object_ptr<Itransactable>> queue_command;
+	SCOPED_LOCK(m_lockable_queue_transaction)
+	{
+		queue_command = std::move(m_queue_command);
+		m_queue_command.clear();
+	}
+	for (auto& iter : queue_command)
+	{
+		iter->m_iter_pending.get<circular_list<object_ptr<Itransactable>>::iterator>()._Ptr = nullptr;
+		iter->m_pentity.reset();
+		iter->m_psession.reset();
+	}
+
+	// 2) checked-in sessions (entity <-> session)
+	decltype(m_list_cid) list_cid;
+	SCOPED_LOCK(m_lockable_entity)
+	{
+		list_cid.swap(m_list_cid);
+	}
+}
+
 bool doss::Ientity::process_cancel_command(Itransactable* _ptransactable) noexcept
 {
-	scoped_lock(m_lockable_queue_transaction)
+	SCOPED_LOCK(m_lockable_queue_transaction)
 	{
-		// check) return if queue is empty
+		// check) return if the queue is empty
 		RETURN_IF(m_queue_command.empty(), false);
 
-		// check) return if aleady executing
+		// check) return if already executing
 		RETURN_IF(m_queue_command.front() == _ptransactable, false);
 
-		// 1) get iterator
+		// 1) get the iterator
 		auto& iter = _ptransactable->m_iter_pending.get<circular_list<object_ptr<Itransactable>>::iterator>();
 
-		// check) fail if processing transataction
+		// check) fail if it is the processing transaction
 		RETURN_IF(iter == m_queue_command.begin(), false);
 
 		// 2) erase
@@ -202,42 +263,42 @@ bool doss::Ientity::process_cancel_command(Itransactable* _ptransactable) noexce
 		_ptransactable->m_psession.reset();
 	}
 
-	// return) 
+	// return)
 	return true;
 }
 
 
 void doss::Ientity::process_insert_cid_and_remove_existing_cid(Itransactable* _ptransactable)
 {
-	// declare) 
+	// declare)
 	Isession* psession = _ptransactable->m_psession;
 	auto& cid = _ptransactable->m_cid;
 
 	// check)
 	CGASSERT_ERROR(cid.exist());
 
-	// declare) 
+	// declare)
 	std::vector<std::pair<sCHECKIN_ID, object_ptr<Isession>>> list_cid_old;
 
-	scoped_lock(m_lockable_entity)
+	SCOPED_LOCK(m_lockable_entity)
 	{
-		// check) 이미 동일한 checkin이 존재하면 exception을 던진다.
+		// check) throw if the same checkin exists already
 		for (auto& iter : m_list_cid)
 		{
-			THROW_IF(iter.first.id_session == cid.id_session, throwable::failure(eRESULT::ALEADY_EXIST));
+			THROW_IF(iter.first.id_session == cid.id_session, throwable::failure(eRESULT::ALREADY_EXIST));
 		}
 
-		// 1) swap  cid ...
+		// 1) swap cid ...
 		list_cid_old.swap(m_list_cid);
 
 		// 2) insert new
 		m_list_cid.push_back({ _ptransactable->m_cid, psession });
 
-		// 3) psession에 pentity를 설정한다.
+		// 3) set pentity on the session
 		psession->process_entity_set(_ptransactable);
 
-		// statistics) 
-		++m_prepository->m_statistics.m_statistics_checkin;
+		// statistics)
+		doss::statistics::repository::increase(m_prepository->m_statistics.m_statistics_checkin);
 	}
 
 	// 4) force checkout
@@ -248,28 +309,27 @@ void doss::Ientity::process_insert_cid_and_remove_existing_cid(Itransactable* _p
 
 		if (result)
 		{
-			// statistics) 
-			--m_prepository->m_statistics.m_statistics_checkin;
-			++m_prepository->m_statistics.m_statistics_checkout_forcible;
+			// statistics)
+			doss::statistics::repository::decrease(m_prepository->m_statistics.m_statistics_checkin);
+			doss::statistics::repository::increase(m_prepository->m_statistics.m_statistics_checkout_forcible);
 		}
 	}
 }
 void doss::Ientity::process_insert_cid_posterior(Itransactable* _ptransactable)
 {
-	// 설명) 후순위 checkin
-	//       - 기존에 checin된 것이 있으면 무조건 거부된다.
+	// - a posterior checkin : rejected if any checkin exists already
 	std::pair pair_new{ _ptransactable->m_cid, _ptransactable->m_psession };
 
-	scoped_lock(m_lockable_entity)
+	SCOPED_LOCK(m_lockable_entity)
 	{
-		// check) 기존에 존재하는 ehcekin이 있으면 무조건 거부된다.
-		THROW_IF(m_list_cid.empty() == false, throwable::failure(eRESULT::ALEADY_EXIST));
+		// check) rejected if any checkin exists already
+		THROW_IF(m_list_cid.empty() == false, throwable::failure(eRESULT::ALREADY_EXIST));
 
-		// 1) 설정한다.
+		// 1) set
 		pair_new.second->process_entity_set(_ptransactable);
 
-		// statistics) 
-		++m_prepository->m_statistics.m_statistics_checkin;
+		// statistics)
+		doss::statistics::repository::increase(m_prepository->m_statistics.m_statistics_checkin);
 
 		// 2) add new
 		m_list_cid.emplace_back(std::move(pair_new));
@@ -279,12 +339,12 @@ void doss::Ientity::process_insert_cid_duplicate(Itransactable* _ptransactable)
 {
 	std::pair<sCHECKIN_ID, object_ptr<Isession>> pair_new{ _ptransactable->m_cid, _ptransactable->m_psession };
 
-	// declare) 
+	// declare)
 	object_ptr<Isession> psession_old;
 
-	scoped_lock(m_lockable_entity)
+	SCOPED_LOCK(m_lockable_entity)
 	{
-		// 1) 동일한 cid가 존재하는지 확인한다.
+		// 1) find the same cid
 		auto iter = m_list_cid.begin();
 		auto iter_end = m_list_cid.end();
 
@@ -294,58 +354,57 @@ void doss::Ientity::process_insert_cid_duplicate(Itransactable* _ptransactable)
 				&& iter->first.object_id()  == pair_new.first.object_id()
 				&& iter->first.certify_id() == pair_new.first.certify_id())
 			{
-				// break) 
+				// break)
 				break;
 			}
 		}
 
-		// 2) 설정한다.
-		pair_new.second->process_entity_set(_ptransactable);  // pair_new.first, this);
+		// 2) set
+		pair_new.second->process_entity_set(_ptransactable);
 
-		// statistics) 
-		++m_prepository->m_statistics.m_statistics_checkin;
+		// statistics)
+		doss::statistics::repository::increase(m_prepository->m_statistics.m_statistics_checkin);
 
-		// 3-1) 존재하지 않을 경우 => 신규로 추가한다.
+		// 3-1) not found => add new
 		if (iter == m_list_cid.end())
 		{
 			m_list_cid.emplace_back(pair_new);
 		}
-		// 3-2) 존재하는 경우 => 업데이트 한다.
+		// 3-2) found => update
 		else
 		{
 			psession_old = iter->second;
 			iter->second = pair_new.second;
 		}
 
-		// 4) psession_old가 존재하면 제거한다.
+		// 4) remove psession_old if it exists
 		if (psession_old.exist())
 		{
 			// - reset entity from session
 			psession_old->process_entity_reset(this, _ptransactable->m_cid, true);
 
-			// statistics) 
-			--m_prepository->m_statistics.m_statistics_checkin;
-			++m_prepository->m_statistics.m_statistics_checkout_forcible;
+			// statistics)
+			doss::statistics::repository::decrease(m_prepository->m_statistics.m_statistics_checkin);
+			doss::statistics::repository::increase(m_prepository->m_statistics.m_statistics_checkout_forcible);
 		}
 	}
 }
 void doss::Ientity::process_transfer_cid_to_other_session(Itransactable* _ptransactable)
 {
-	// 설명) cid 이전 처리
-	//  - 기존에 존재하는 cid를 찾아 _new의 session로 대체하고 기존의 psession을 리턴해준다.
-	//  - 만약 기존의 cid를 찾지 못했을 경우 nullptr을 리턴한다.
+	// - transfers a cid : replaces the session of an existing cid with the new one and returns the old session.
+	//   (throws NOT_EXIST if the cid does not exist)
 
 	// declare)
 	auto cid_new = _ptransactable->m_cid;
 	Isession* psession = _ptransactable->m_psession;
 
-	// check) 
-	CGASSERT_ERROR(psession != nullptr);
+	// check)
+	CGASSERT_FATAL(psession != nullptr);
 
-	// declare) 
+	// declare)
 	object_ptr<Isession> psession_old;
 
-	scoped_lock(m_lockable_entity)
+	SCOPED_LOCK(m_lockable_entity)
 	{
 		// - find session
 		auto iter = m_list_cid.begin();
@@ -357,49 +416,49 @@ void doss::Ientity::process_transfer_cid_to_other_session(Itransactable* _ptrans
 				&& iter->first.object_id()  == cid_new.object_id()
 				&& iter->first.certify_id() == cid_new.certify_id())
 			{
-				// - store old 
+				// - store old
 				psession_old = iter->second;
 
-				// - 설정한다.
+				// - set
 				psession->process_entity_set(_ptransactable);
 
-				// statistics) 
-				++m_prepository->m_statistics.m_statistics_checkin;
+				// statistics)
+				doss::statistics::repository::increase(m_prepository->m_statistics.m_statistics_checkin);
 
-				// - update value (순서주의 - process_entity_set에서 exception을 던질 수 있으므로...)
+				// - update the value (order matters : process_entity_set may throw)
 				iter->second = psession;
 
-				// break) 
+				// break)
 				break;
 			}
 		}
 
-		// check) 기존 session이 empty()면 기존에 checkin된 session이 없었다는 것이므로 실패다.
+		// check) fail if no existing session was checked in
 		THROW_IF(psession_old.empty(), throwable::failure(eRESULT::NOT_EXIST));
 
-		// - force checkout old entity
+		// - force checkout the old entity
 		auto result = psession_old->process_entity_reset(this, cid_new, true);
 
 		if (result)
 		{
-			// statistics) 
-			--m_prepository->m_statistics.m_statistics_checkin;
-			++m_prepository->m_statistics.m_statistics_checkout_forcible;
+			// statistics)
+			doss::statistics::repository::decrease(m_prepository->m_statistics.m_statistics_checkin);
+			doss::statistics::repository::increase(m_prepository->m_statistics.m_statistics_checkout_forcible);
 		}
 	}
 }
 bool doss::Ientity::process_remove_cid(Isession* _psession) noexcept
 {
-	// check) 
+	// check)
 	RETURN_IF(_psession == nullptr, false);
 
-	// declare) 
+	// declare)
 	sCHECKIN_ID cid_old;
 
-	// locked) 
+	// locked)
 	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(m_lockable_entity);
+		// SCOPED_LOCK)
+		std::lock_guard cs(m_lockable_entity);
 
 		// 1) find
 		auto iter_find = std::find_if(m_list_cid.begin(), m_list_cid.end(), [=](const std::pair<sCHECKIN_ID, object_ptr<Isession>>& _iter) { return _iter.second == _psession; });
@@ -410,13 +469,13 @@ bool doss::Ientity::process_remove_cid(Isession* _psession) noexcept
 		// 2) store old
 		cid_old = iter_find->first;
 
-		// 3) reset session cid
+		// 3) reset the session cid
 		auto result = iter_find->second->process_entity_reset(this, cid_old, false);
 
 		if (result)
 		{
-			// statistics) 
-			--m_prepository->m_statistics.m_statistics_checkin;
+			// statistics)
+			doss::statistics::repository::decrease(m_prepository->m_statistics.m_statistics_checkin);
 		}
 
 		// 4) erase
@@ -428,12 +487,12 @@ bool doss::Ientity::process_remove_cid(Isession* _psession) noexcept
 }
 bool doss::Ientity::process_remove_cid(const sCHECKIN_ID& _cid)
 {
-	// declare) 
+	// declare)
 	object_ptr<Isession> psession;
 
 	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(m_lockable_entity);
+		// SCOPED_LOCK)
+		std::lock_guard cs(m_lockable_entity);
 
 		// 1) find
 		auto iter_find = std::find_if(m_list_cid.begin(), m_list_cid.end(), [=](const std::pair<sCHECKIN_ID, object_ptr<Isession>>& _iter) { return _iter.first == _cid; });
@@ -444,13 +503,13 @@ bool doss::Ientity::process_remove_cid(const sCHECKIN_ID& _cid)
 		// 2) store old
 		psession = iter_find->second;
 
-		// 6) reset session cid
+		// 6) reset the session cid
 		auto result = iter_find->second->process_entity_reset(this, iter_find->first, false);
 
 		if (result)
 		{
-			// statistics) 
-			--m_prepository->m_statistics.m_statistics_checkin;
+			// statistics)
+			doss::statistics::repository::decrease(m_prepository->m_statistics.m_statistics_checkin);
 		}
 
 		// 3) erase
@@ -463,18 +522,17 @@ bool doss::Ientity::process_remove_cid(const sCHECKIN_ID& _cid)
 
 uint64_t doss::Ientity::generate_request_id() noexcept
 {
-	// 1) generate indexf
-	auto index = ++m_index_request;
+	// 1) generate index
+	auto index = (m_index_request.fetch_add(1, std::memory_order_relaxed) + 1);
 
-	// 2) retry if index is 0
+	// 2) retry if the index is 0
 	if (index == 0)
 	{
-		index = ++m_index_request;
+		index = (m_index_request.fetch_add(1, std::memory_order_relaxed) + 1);
 	}
 
 	// return)
 	return index;
 }
-
 
 }

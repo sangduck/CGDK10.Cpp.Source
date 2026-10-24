@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 class socket_tcp : public asio::Nsocket_tcp
 {

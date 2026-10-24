@@ -46,6 +46,7 @@ public:
 	virtual void				on_restoring () {}
 	virtual void				on_restore () {}
 	virtual void				on_suspend (uint64_t /*_disconnect_reason*/) {}
+	virtual result_code			on_message(sMESSAGE_NETWORK& /*_msg*/) override { return eRESULT::BYPASS; }
 
 public:
 	virtual	void				process_create_socket(ADDRESS_FAMILY _address_family) override;
@@ -56,8 +57,8 @@ public:
 	virtual	bool				process_complete_disconnect () override;
 	virtual	bool				process_close_socket (uint64_t _disconnect_reason = DISCONNECT_REASON_NONE) noexcept override;
 
-	virtual void				process_request_io_restore  (result_code _result, SEQUENCE_ID _ack_received) override;
-	virtual void				process_response_io_restore (result_code _result, SEQUENCE_ID _ack_received) override;
+	virtual void				process_request_io_restore  (result_code _result, sequence_id_t _ack_received) override;
+	virtual void				process_response_io_restore (result_code _result, sequence_id_t _ack_received) override;
 	virtual void				process_complete_io_restore (result_code _result) override;
 
 	virtual	void				process_on_connect ();

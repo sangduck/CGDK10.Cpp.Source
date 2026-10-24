@@ -19,9 +19,7 @@ result_code schedulable::Ninitializable_startable::_process_start(context& _cont
 
 	// 2) executor를  설정한다.
 	if (this->has_executor() == false)
-	{
 		this->executor(system_executor::executor());
-	}
 
 	// 3) register
 	system_executor::register_schedulable(this);
@@ -67,7 +65,6 @@ result_code schedulable::Ninitializable_startable::_process_destroying() noexcep
 	// return)
 	return result_code(eRESULT::SUCCESS);
 }
-
 
 
 }

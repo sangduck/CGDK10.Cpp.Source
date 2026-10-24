@@ -27,7 +27,7 @@ namespace CGDK
 // 1. net::io::connectable_manager::list_keep_alive_passive
 //    1) acceptor가 받아 접속에 성공한 socket들에 대해서 KeepAlive를 수행하는 
 //       connectable manager이다.
-//       (엄밀하게 말하면 keep-Alive라기 보다는 Ghost socket 제거기라 할수 있다.)
+//       (엄밀하게 말하면 keep-Alive라기 보다는 Ghost socket 제거기라 할 수 있다.)
 //    2) 각 socket에서 마지막 전송받은 시간으로부터 일정시간이 지나면 그 socket의 
 //       접속을 종료시켜버린다.
 //       Active keep alive와 다른 점은 Active keep alive와 같이 마지막 전송받은
@@ -37,9 +37,9 @@ namespace CGDK
 //    3) 만약 socket별로 keep Alive를 하고 싶다면 이것을 쓰지 말고 socket에 
 //       keep alive Add-On을 상속받는 것이 좋다.
 //    4) enable_keep_alive()함수와 disable_keep_alive()를 사용하여 keep alive기능을
-//       켜고 끌수 있다.
+//       켜고 끌 수 있다.
 //       하지만 acceptor차원에서 제공해주는 keep alive는 socket별로 keep alive
-//       기능을 켜고 끌수는 없다.
+//       기능을 켜고 끌 수는 없다.
 //    5) set_keep_alive_time_out()함수를 사용하여 keep alive 타임아웃 시간을 설정할 
 //       수 있다. (기본값은 2분(120000tick)으로 설정되어 있다.)
 //    6) keep alive의 정밀도는 1초 단위이기 때문에 최대 2초의 오차가 날 수 있다.
@@ -113,15 +113,15 @@ bool net::io::connectable_manager::list_keep_alive_passive<TCONNECTABLE>::add_co
 	// declare) 
 	bool result;
 
-	scoped_lock(this->m_list_connectable)
+	SCOPED_LOCK(this->m_list_connectable)
 	{
 		// 1) connectable을 추가한다.
-		result = net::io::cnnectable_manager::list<TCONNECTABLE>::add_connectable(_pconnectable);
+		result = net::io::connectable_manager::list<TCONNECTABLE>::add_connectable(_pconnectable);
 
 		// check) 추가에 실패했다면 그냥 끝낸다.
 		RETURN_IF(result == false, false);
 
-		// 2) 만약 첫번째 접속자라면 KeepAlive를 시작한다.
+		// 2) 만약 첫 번째 접속자라면 KeepAlive를 시작한다.
 		if(this->m_list_connectable.size() == 1)
 		{
 			// - executor에 붙인다.
@@ -142,7 +142,7 @@ bool net::io::connectable_manager::list_keep_alive_passive<TCONNECTABLE>::remove
 	// declare) 
 	bool result;
 
-	scoped_lock(this->m_list_connectable)
+	SCOPED_LOCK(this->m_list_connectable)
 	{
 		// 1) connectable을 제거한다.
 		result = net::io::connectable_manager::list<TCONNECTABLE>::remove_connectable(_pconnectable);
@@ -169,10 +169,10 @@ template <class TCONNECTABLE>
 void net::io::connectable_manager::list_keep_alive_passive<TCONNECTABLE>::remove_all_connectable() noexcept
 {
 	// 1) 모든 접속을 종료한다.
-	net::io::cnnectable_manager::list<TCONNECTABLE>::remove_all_connectable();
+	net::io::connectable_manager::list<TCONNECTABLE>::remove_all_connectable();
 
 	// 2) executor에서 떼낸다.
-	scoped_lock(this->m_list_connectable)
+	SCOPED_LOCK(this->m_list_connectable)
 	{
 		// - executor에서 떼어낸다.
 		system_executor::instance()->unregister_executor(this);
@@ -192,7 +192,7 @@ intptr_t net::io::connectable_manager::list_keep_alive_passive<TCONNECTABLE>::pr
 	auto tick_now = tick::now();
 
 	// 2) 모든 connectable을 돌아가며 keep Alive 테스트를 수행한다.
-	scoped_lock(this->m_list_connectable)
+	SCOPED_LOCK(this->m_list_connectable)
 	{
 		for(auto& iter:this->m_list_connectable)
 		{

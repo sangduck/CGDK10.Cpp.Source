@@ -11,7 +11,7 @@
 //*****************************************************************************
 #pragma once
 
-class service : public server_system::service_ex
+class service : public server_system::Xservice
 {
 public:
 			service();

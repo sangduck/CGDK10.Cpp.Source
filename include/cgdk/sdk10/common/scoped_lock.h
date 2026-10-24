@@ -27,7 +27,7 @@ namespace CGDK
 {
 //-----------------------------------------------------------------------------
 // 
-// CGDK::scoped_lock - for std::shared_mutex
+// CGDK::SCOPED_LOCK - for std::shared_mutex
 //
 //-----------------------------------------------------------------------------
 // 1) unique_lock (unnamed)
@@ -51,23 +51,23 @@ template <class Tlockable> class _shared_lock<Tlockable, std::enable_if_t<std::i
 }
 
 // ----------------------------------------------------------------------------
-//  CGDK::scoped_lock
+//  CGDK::SCOPED_LOCK
 // ----------------------------------------------------------------------------
 // 1) unique lock
-#define	scoped_unique_lock(cs)				if(typename CGDK::_unique_lock<std::decay_t<decltype(cs)>>::type _UNIQUE_TEMPORARY_NAME(_temp_cs_lock) {const_cast<std::decay_t<decltype(cs)>&>(cs)}; true)
-#define	scoped_unique_lock_named(cs, name)	if(typename CGDK::_unique_lock_named<std::decay_t<decltype(cs)>>::type name {const_cast<typename std::decay<decltype(cs)>::type&>(cs)}; true)
+#define	SCOPED_UNIQUE_LOCK(cs)				if(typename CGDK::_unique_lock<std::decay_t<decltype(cs)>>::type _UNIQUE_TEMPORARY_NAME(_temp_cs_lock) {const_cast<std::decay_t<decltype(cs)>&>(cs)}; true)
+#define	SCOPED_UNIQUE_LOCK_NAMED(cs, name)	if(typename CGDK::_unique_lock_named<std::decay_t<decltype(cs)>>::type name {const_cast<typename std::decay<decltype(cs)>::type&>(cs)}; true)
 
 // 2) shared lock
-#define	scoped_shared_lock(cs)				if(typename CGDK::_shared_lock<std::decay_t<decltype(cs)>>::type _UNIQUE_TEMPORARY_NAME(_temp_cs_lock) {const_cast<std::decay_t<decltype(cs)>&>(cs)}; true)
-#define	scoped_shared_lock_named(cs, name)	if(typename CGDK::_shared_lock<std::decay_t<decltype(cs)>>::type name {const_cast<std::decay_t<decltype(cs)>&>(cs)}; true)
+#define	SCOPED_SHARED_LOCK(cs)				if(typename CGDK::_shared_lock<std::decay_t<decltype(cs)>>::type _UNIQUE_TEMPORARY_NAME(_temp_cs_lock) {const_cast<std::decay_t<decltype(cs)>&>(cs)}; true)
+#define	SCOPED_SHARED_LOCK_NAMED(cs, name)	if(typename CGDK::_shared_lock<std::decay_t<decltype(cs)>>::type name {const_cast<std::decay_t<decltype(cs)>&>(cs)}; true)
 
 // 3) lock_guard
-#define	scoped_lock(cs)						scoped_unique_lock(cs)
-#define	synchronized(cs)					scoped_lock(cs)
+#define	SCOPED_LOCK(cs)						SCOPED_UNIQUE_LOCK(cs)
+#define	SYNCHRONIZED(cs)					SCOPED_LOCK(cs)
 
 // 4) for capability
-#define	scoped_lock_named(cs, name)			scoped_unique_lock_named(cs, name)
-#define	scoped_lock_leave(name)				name.unlock();
+#define	SCOPED_LOCK_NAMED(cs, name)			SCOPED_UNIQUE_LOCK_NAMED(cs, name)
+#define	SCOPED_LOCK_LEAVE(name)				name.unlock();
 
 // 5) lock_guard
-#define	conditional_lock(cs, name)			if(std::unique_lock<std::mutex> name {cs}; true)
+#define	CONDITIONAL_LOCK(cs, name)			if(std::unique_lock<std::mutex> name {cs}; true)

@@ -72,7 +72,7 @@ protected:
 	virtual	void				process_on_disconnect (uint64_t _disconnect_reason, eSOCKET_STATE /*_socket_state*/) { on_disconnect(_disconnect_reason); }
 	virtual	void				process_on_fail_connect (net::io::Iconnective* _pconnective, uint64_t _disconnect_reason) { on_fail_connect(_pconnective, _disconnect_reason); }
 
-	// 3) reset할때 호출하는 함수.
+	// 3) reset할 때 호출하는 함수.
 	virtual	void				process_reset_connectable () noexcept override;
 };
 

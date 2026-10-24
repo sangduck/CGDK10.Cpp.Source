@@ -30,7 +30,7 @@ namespace CGDK
  @details	\n
  List형 Observer Class 객체
  Group과 다른 점은 독점적이지 않다는 것이다.
- 여러개의 Observer에도 붙어서 동작할 수 있다.
+ 여러 개의 Observer에도 붙어서 동작할 수 있다.
 
 *///-----------------------------------------------------------------------------
 template <class _TMEMBER, class TPARAM = sMESSAGE, template <class... _A> class _GROUP = group::list_sender>

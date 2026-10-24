@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 #include "../../define_message.h"
 
 #include <iostream>
@@ -8,18 +8,18 @@
 
 using namespace CGDK;
 
-// 1) socket í´ë˜ìŠ¤ë¥¼ ì •ì˜í•œë‹¤.
+// 1) socket Å¬·¡½º¸¦ Á¤ÀÇÇÑ´Ù.
 class socket_udp : public net::socket::udp
 {
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜.
+	// (v) ¸Ş½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö.
 	virtual result_code on_message(sMESSAGE_NETWORK& _msg) override
 	{
 		auto str_recv = _msg.buf_message.front<std::string_view>();
 
-		// - í™”ë©´ì— ë¬¸ìì—´ ì¶œë ¥
+		// - È­¸é¿¡ ¹®ÀÚ¿­ Ãâ·Â
 		std::cout << ' ' << str_recv << '\n';
 
-		// - echo ì „ì†¡
+		// - echo Àü¼Û
 		send_to(_msg.buf_message, _msg.address);
 
 		// return) 
@@ -32,21 +32,21 @@ int main()
 	// trace) 
 	std::cout << "start client [tut.socket.04.udp_simple.client]..."sv << '\n';
 
-	// 2) 'socket_udp'ì„ ì‚¬ìš©í•˜ëŠ” acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 2) 'socket_udp'À» »ç¿ëÇÏ´Â acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto psocket = make_own<socket_udp>();
 
-	// 3) udp socketì„ ì‹œì‘í•œë‹¤. (portë¥¼ ì„¤ì •í•˜ì§€ ì•Šìœ¼ë©´ ì•„ë¬´ portì— bindí•œë‹¤.)
+	// 3) udp socketÀ» ½ÃÀÛÇÑ´Ù. (port¸¦ ¼³Á¤ÇÏÁö ¾ÊÀ¸¸é ¾Æ¹« port¿¡ bindÇÑ´Ù.)
 	psocket->start({{net::ip::udp::v4(), 0}});
 
 	// 4) send udp message
 	psocket->send_to(make_shared_buffer("test udp string"sv), { net::ip::make_address_v4({127,0,0,1}), 22500 });
 
-	// 5) ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+	// 5) ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 	while (_getch() != 27);
 
 	// trace) 
 	std::cout << "stop server [tut.socket.04.udp_simple.client]..."sv << '\n';
 
-	// end) ì¢…ë£Œ
+	// end) Á¾·á
 	return 0;
 }

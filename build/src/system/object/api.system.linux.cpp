@@ -1,21 +1,30 @@
 #include "pch.h"
+#include <charconv>
 
 #if defined(__linux__)
 
 CGDK::sDEVICE_INFO		g_device_info;
 
 #include <thread>
+#include <pthread.h>
+#include <sched.h>
 #include <sys/utsname.h>
 #include <sys/resource.h>
+#include <sys/syscall.h>
 #include <sys/sysinfo.h>
 #include <fstream>
 #include <stdio.h>
 #include <fcntl.h>
+#if defined(__x86_64__) || defined(__i386__)
 #include <cpuid.h>
+#endif
 
 // - for _kbhit, _getch
 #include <unistd.h>
 #include <termios.h>  
+#include <dirent.h>
+#include <sstream>
+#include <mutex>
 
 
 namespace CGDK
@@ -25,7 +34,9 @@ std::array<unsigned int, 4> _get_cpu_id() noexcept
 {
 	std::array<unsigned int, 4> cpui{ 0,0,0,0 };
 
+#if defined(__x86_64__) || defined(__i386__)
 	__get_cpuid(1, &cpui[0], &cpui[1], &cpui[2], &cpui[3]);
+#endif
 
 	return cpui;
 }
@@ -62,7 +73,7 @@ void _get_system_memory_info(SYSTEM::sMEMORY& _memory) noexcept
 			}
 		}
 
-		// ignore rest of the line (Not sure if benefitical)
+		// ignore rest of the line (Not sure if beneficial)
 		file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
 }
@@ -97,7 +108,7 @@ uint64_t _get_memory_status() noexcept
 			}
 		}
 
-		// ignore rest of the line (Not sure if benefitical)
+		// ignore rest of the line (Not sure if beneficial)
 		file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
 
@@ -113,103 +124,103 @@ ePROCESSOR_TYPE _get_processor_type() noexcept
 	// 2) set os version & name
 	RETURN_IF(uname(&os_name) != 0, ePROCESSOR_TYPE::NOT_DEFINED)
 
-	if (__stricmp(os_name.machine, "x86"sv) == 0)
+	if (CGDK::__stricmp(os_name.machine, "x86") == 0)
 	{
 	return ePROCESSOR_TYPE::x86_64;
 	}
-	else if(__stricmp(os_name.machine, "x86-64"sv)==0)
+	else if(CGDK::__stricmp(os_name.machine, "x86-64")==0)
 	{
 		return ePROCESSOR_TYPE::x86_64;
 	}
 
-	else if (__stricmp(os_name.machine, "i86pc"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "i86pc") == 0)
 	{
 		return ePROCESSOR_TYPE::x86_64;
 	}
-	else if (__stricmp(os_name.machine, "i386"sv) == 0)
-	{
-		return ePROCESSOR_TYPE::x86_64;
-	}
-
-	else if (__stricmp(os_name.machine, "i686"sv) == 0)
-	{
-		return ePROCESSOR_TYPE::x86_64;
-	}
-	else if (__stricmp(os_name.machine, "i686-64"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "i386") == 0)
 	{
 		return ePROCESSOR_TYPE::x86_64;
 	}
 
-	else if (__stricmp(os_name.machine, "amd64"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "i686") == 0)
+	{
+		return ePROCESSOR_TYPE::x86_64;
+	}
+	else if (CGDK::__stricmp(os_name.machine, "i686-64") == 0)
 	{
 		return ePROCESSOR_TYPE::x86_64;
 	}
 
-	else if (__stricmp(os_name.machine, "armv6l"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "amd64") == 0)
+	{
+		return ePROCESSOR_TYPE::x86_64;
+	}
+
+	else if (CGDK::__stricmp(os_name.machine, "armv6l") == 0)
 	{
 		return ePROCESSOR_TYPE::ANDROID;
 	}
-	else if (__stricmp(os_name.machine, "armv7l"sv) == 0)
-	{
-		return ePROCESSOR_TYPE::ANDROID;
-	}
-
-	else if (__stricmp(os_name.machine, "aarch64"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "armv7l") == 0)
 	{
 		return ePROCESSOR_TYPE::ANDROID;
 	}
 
-	else if (__stricmp(os_name.machine, "IP22"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "aarch64") == 0)
+	{
+		return ePROCESSOR_TYPE::ANDROID;
+	}
+
+	else if (CGDK::__stricmp(os_name.machine, "IP22") == 0)
 	{
 		return ePROCESSOR_TYPE::NOT_DEFINED;
 	}
-	else if (__stricmp(os_name.machine, "IP30"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "IP30") == 0)
 	{
 		return ePROCESSOR_TYPE::NOT_DEFINED;
 	}
-	else if (__stricmp(os_name.machine, "IP35"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "IP35") == 0)
 	{
 		return ePROCESSOR_TYPE::NOT_DEFINED;
 	}
 
-	else if (__stricmp(os_name.machine, "RM600"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "RM600") == 0)
 	{
 		return ePROCESSOR_TYPE::NOT_DEFINED;
 	}
 
-	else if (__stricmp(os_name.machine, "sun4u"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "sun4u") == 0)
 	{
 		return ePROCESSOR_TYPE::NOT_DEFINED;
 	}
 
-	else if (__stricmp(os_name.machine, "alpha"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "alpha") == 0)
 	{
 		return ePROCESSOR_TYPE::NOT_DEFINED;
 	}
 
-	else if (__stricmp(os_name.machine, "ppc64"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "ppc64") == 0)
 	{
 		return ePROCESSOR_TYPE::NOT_DEFINED;
 	}
-	else if (__stricmp(os_name.machine, "sparc"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "sparc") == 0)
 	{
 		return ePROCESSOR_TYPE::NOT_DEFINED;
 	}
-	else if (__stricmp(os_name.machine, "sparc64"sv) == 0)
-	{
-		return ePROCESSOR_TYPE::NOT_DEFINED;
-	}
-
-	else if (__stricmp(os_name.machine, "VAX"sv) == 0)
-	{
-		return ePROCESSOR_TYPE::NOT_DEFINED;
-	}
-	else if (__stricmp(os_name.machine, "vax-6340"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "sparc64") == 0)
 	{
 		return ePROCESSOR_TYPE::NOT_DEFINED;
 	}
 
-	else if (__stricmp(os_name.machine, "2097"sv) == 0)
+	else if (CGDK::__stricmp(os_name.machine, "VAX") == 0)
+	{
+		return ePROCESSOR_TYPE::NOT_DEFINED;
+	}
+	else if (CGDK::__stricmp(os_name.machine, "vax-6340") == 0)
+	{
+		return ePROCESSOR_TYPE::NOT_DEFINED;
+	}
+
+	else if (CGDK::__stricmp(os_name.machine, "2097") == 0)
 	{
 		return ePROCESSOR_TYPE::NOT_DEFINED;
 	}
@@ -218,6 +229,8 @@ ePROCESSOR_TYPE _get_processor_type() noexcept
 	{
 		return ePROCESSOR_TYPE::NOT_DEFINED;
 	}
+
+	return ePROCESSOR_TYPE::NOT_DEFINED;
 }
 
 SYSTEM::sINFO api::get_system_info() noexcept
@@ -246,18 +259,142 @@ SYSTEM::sINFO api::get_system_info() noexcept
 	return system_resource_info;
 }
 
+//-----------------------------------------------------------------------------
+// system status (/proc)
+//-----------------------------------------------------------------------------
+namespace
+{
+	// - cpu 사용률 (%x1000). /proc/stat의 첫 줄(cpu)을 이전 값과 비교한다. (처음 부르면 부팅 후 평균)
+	uint64_t _get_processor_usage() noexcept
+	{
+		static std::mutex lockable;
+		static uint64_t total_last = 0;
+		static uint64_t idle_last = 0;
+
+		std::ifstream file("/proc/stat");
+		std::string token;
+		if (!(file >> token) || token != "cpu")
+			return 0;
+
+		// - user nice system idle iowait irq softirq steal (guest는 user에 포함되어 있다.)
+		uint64_t values[8]{ 0 };
+		for (auto& iter : values)
+		{
+			if (!(file >> iter))
+				break;
+		}
+
+		uint64_t total = 0;
+		for (auto iter : values)
+			total += iter;
+		uint64_t idle = values[3] + values[4];
+
+		std::lock_guard lock(lockable);
+		uint64_t total_delta = total - total_last;
+		uint64_t idle_delta = idle - idle_last;
+		total_last = total;
+		idle_last = idle;
+
+		if (total_delta == 0 || idle_delta > total_delta)
+			return 0;
+
+		return (total_delta - idle_delta) * 100000 / total_delta;
+	}
+
+	// - thread 수 (/proc/loadavg의 'running/total')
+	uint64_t _get_thread_count() noexcept
+	{
+		std::ifstream file("/proc/loadavg");
+		std::string load1, load5, load15, entities;
+		if (!(file >> load1 >> load5 >> load15 >> entities))
+			return 0;
+
+		auto pos = entities.find('/');
+		return (pos == std::string::npos) ? 0 : std::strtoull(entities.c_str() + pos + 1, nullptr, 10);
+	}
+
+	// - process 수 (/proc의 숫자 directory)
+	uint64_t _get_process_count() noexcept
+	{
+		auto pdir = opendir("/proc");
+		if (pdir == nullptr)
+			return 0;
+
+		uint64_t count = 0;
+		while (auto pentry = readdir(pdir))
+		{
+			if (pentry->d_name[0] >= '1' && pentry->d_name[0] <= '9')
+				++count;
+		}
+		closedir(pdir);
+
+		return count;
+	}
+
+	// - 열린 file 수 (/proc/sys/fs/file-nr의 첫 값)
+	uint64_t _get_handle_count() noexcept
+	{
+		std::ifstream file("/proc/sys/fs/file-nr");
+		uint64_t count = 0;
+		file >> count;
+		return count;
+	}
+
+	// - network 누적 송수신 byte (/proc/net/dev. lo 제외)
+	uint64_t _get_network_bytes() noexcept
+	{
+		std::ifstream file("/proc/net/dev");
+		std::string line;
+		uint64_t bytes_total = 0;
+
+		// - 앞의 두 줄은 제목
+		std::getline(file, line);
+		std::getline(file, line);
+
+		while (std::getline(file, line))
+		{
+			auto pos = line.find(':');
+			if (pos == std::string::npos)
+				continue;
+
+			auto name = line.substr(0, pos);
+			name.erase(0, name.find_first_not_of(' '));
+			if (name == "lo")
+				continue;
+
+			// - receive: bytes packets errs drop fifo frame compressed multicast / transmit: bytes ...
+			std::istringstream stream(line.substr(pos + 1));
+			uint64_t values[9]{ 0 };
+			for (auto& iter : values)
+			{
+				if (!(stream >> iter))
+					break;
+			}
+			bytes_total += values[0] + values[8];
+		}
+
+		return bytes_total;
+	}
+}
+
 SYSTEM::sSTATUS api::get_system_status() noexcept
 {
 	// declare)
 	SYSTEM::sSTATUS temp_system_status;
 
 	// 1) 값을 설정한다.
-	temp_system_status.processor_usage = 0;
-	temp_system_status.thread_count = 0;
-	temp_system_status.process_count = 0;
-	temp_system_status.handle_count = 0;
-	temp_system_status.bytes_memory_usage = _get_memory_status();
-	temp_system_status.bytes_traffic = 0;
+	try
+	{
+		temp_system_status.processor_usage = _get_processor_usage();
+		temp_system_status.thread_count = _get_thread_count();
+		temp_system_status.process_count = _get_process_count();
+		temp_system_status.handle_count = _get_handle_count();
+		temp_system_status.bytes_memory_usage = _get_memory_status();
+		temp_system_status.bytes_traffic = _get_network_bytes();
+	}
+	catch (...)
+	{
+	}
 	temp_system_status.time_update = chrono::time::utc::now();
 
 	// return) 
@@ -283,17 +420,17 @@ sVERSION_EX _get_os_version() noexcept
 		// 1) major
 		for (; iter != iter_end; ++iter) if (*iter == '.') break;
 		std::string_view str_1(iter_pre, iter - iter_pre);
-		temp_version.major = __from_string<int>(str_1);
+		std::from_chars(str_1.data(), str_1.data() + str_1.size(), temp_version.major);
 
 		// 2) minor
 		for (iter_pre = ++iter; iter != iter_end; ++iter) if (*iter == '.') break;
 		std::string_view str_2(iter_pre, iter - iter_pre);
-		temp_version.minor = __from_string<int>(str_2);
+		std::from_chars(str_2.data(), str_2.data() + str_2.size(), temp_version.minor);
 
 		// 3) build
 		for (iter_pre = ++iter; iter != iter_end; ++iter) if (*iter < '0' || *iter > '9') break;
 		std::string_view str_3(iter_pre, iter - iter_pre);
-		temp_version.build = __from_string<int>(str_3);
+		std::from_chars(str_3.data(), str_3.data() + str_3.size(), temp_version.build);
 
 		// 4) string_version
 		temp_version.str_version = os_name.release;
@@ -366,9 +503,63 @@ uint64_t api::get_process_id()
 }
 
 
-size_t	api::get_core_count()
+size_t	api::get_core_count() noexcept
 {
 	return std::thread::hardware_concurrency();
+}
+
+bool api::set_current_thread_affinity(int _cpu) noexcept
+{
+	// check)
+	RETURN_IF(_cpu < 0 || _cpu >= CPU_SETSIZE, false);
+
+	// 1) the CPU set with the one CPU
+	cpu_set_t set_cpu;
+	CPU_ZERO(&set_cpu);
+	CPU_SET(_cpu, &set_cpu);
+
+	// 2) pin this thread
+	return ::pthread_setaffinity_np(::pthread_self(), sizeof(set_cpu), &set_cpu) == 0;
+}
+
+bool api::set_current_thread_priority(eTHREAD_PRIORITY _priority) noexcept
+{
+	// check) DEFAULT : not changed
+	RETURN_IF(_priority == eTHREAD_PRIORITY::DEFAULT, true);
+
+	// - the nice of this thread (linux : the nice of PRIO_PROCESS with a tid is the one of the thread)
+	const auto tid = static_cast<id_t>(::syscall(SYS_gettid));
+	auto set_nice = [tid](int _nice) noexcept { return ::setpriority(PRIO_PROCESS, tid, _nice) == 0; };
+
+	// 1) TIME_CRITICAL : real-time round robin
+	//    - priority 10 : above every SCHED_OTHER thread, below the threaded IRQ handlers of the kernel (50 : the network keeps being served)
+	//    - no permission (CAP_SYS_NICE / RLIMIT_RTPRIO) : the highest nice
+	if (_priority == eTHREAD_PRIORITY::TIME_CRITICAL)
+	{
+		sched_param param{};
+		param.sched_priority = (std::min)(10, ::sched_get_priority_max(SCHED_RR));
+
+		if (::pthread_setschedparam(::pthread_self(), SCHED_RR, &param) == 0)
+			return true;
+
+		return set_nice(-20);
+	}
+
+	// 2) the others : a normal thread (SCHED_OTHER) with a nice
+	{
+		sched_param param{};
+		::pthread_setschedparam(::pthread_self(), SCHED_OTHER, &param);
+	}
+
+	switch (_priority)
+	{
+	case eTHREAD_PRIORITY::LOWEST:			return set_nice(19);
+	case eTHREAD_PRIORITY::LOW:				return set_nice(10);
+	case eTHREAD_PRIORITY::NORMAL:			return set_nice(0);
+	case eTHREAD_PRIORITY::HIGH:			return set_nice(-10);
+	case eTHREAD_PRIORITY::HIGHEST:			return set_nice(-20);
+	default:								return true;
+	}
 }
 
 int64_t	api::get_memory_usage() noexcept
@@ -577,7 +768,7 @@ public:
 		unsigned char ch;
 		int nread;
 
-		// check) aleady exist
+		// check) already exist
 		if (peek_character != -1 && peek_character != 27)
 			return 1;
 
@@ -647,7 +838,7 @@ public:
 		// 8) 
 		peek_character = (peek_character << 8) | ch;
 
-		// 9) get thrid character
+		// 9) get third character
 		nread = read(0, &ch, 1);
 
 		// 10) set 

@@ -112,7 +112,8 @@
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Unicode Release|x64'">TestClient</TargetName>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
-    <VcpkgEnableManifest>true</VcpkgEnableManifest>
+    <VcpkgEnableManifest>false</VcpkgEnableManifest>
+    <VcpkgEnabled>false</VcpkgEnabled>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Unicode Debug|Win32'">
     <Midl>
@@ -134,7 +135,6 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <StringPooling>true</StringPooling>
-      <ExceptionHandling>Async</ExceptionHandling>
       <AdditionalOptions>-Zm256 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <ResourceCompile>
@@ -168,7 +168,6 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <StringPooling>true</StringPooling>
-      <ExceptionHandling>Async</ExceptionHandling>
       <AdditionalOptions>-Zm256 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <ResourceCompile>
@@ -253,13 +252,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="SampleSocketClientTCPEcho.cpp" />
-    <ClCompile Include="SampleSocketClientTCPEchoDlg.cpp" />
-    <ClCompile Include="ServerLobbyGroupImmigrationSocket.cpp" />
-    <ClCompile Include="ServerLobbyGroupSocket.cpp" />
-    <ClCompile Include="ServerLobbySocket.cpp" />
-    <ClCompile Include="ServerLoginGroupImmigrationSocket.cpp" />
-    <ClCompile Include="ServerLoginSocket.cpp" />
+    <ClCompile Include="CGDK1.game_login.client.test.cpp" />
+    <ClCompile Include="CGDK1.game_login.client.test.dlg.cpp" />
+    <ClCompile Include="server_lobby_group_immigration_socket.cpp" />
+    <ClCompile Include="server_lobby_group_socket.cpp" />
+    <ClCompile Include="server_lobby_socket.cpp" />
+    <ClCompile Include="server_login_group_immigration_socket.cpp" />
+    <ClCompile Include="server_login_socket.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Unicode Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Unicode Debug|x64'">Create</PrecompiledHeader>
@@ -270,22 +269,22 @@
   <ItemGroup>
     <ClInclude Include="..\Common\Definitions.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="SampleSocketClientTCPEcho.h" />
-    <ClInclude Include="SampleSocketClientTCPEchoDlg.h" />
-    <ClInclude Include="ServerLobbyGroupImmigrationSocket.h" />
-    <ClInclude Include="ServerLobbyGroupSocket.h" />
-    <ClInclude Include="ServerLobbySocket.h" />
-    <ClInclude Include="ServerLoginGroupImmigrationSocket.h" />
-    <ClInclude Include="ServerLoginSocket.h" />
+    <ClInclude Include="CGDK1.game_login.client.test.h" />
+    <ClInclude Include="CGDK1.game_login.client.test.dlg.h" />
+    <ClInclude Include="server_lobby_group_immigration_socket.h" />
+    <ClInclude Include="server_lobby_group_socket.h" />
+    <ClInclude Include="server_lobby_socket.h" />
+    <ClInclude Include="server_login_group_immigration_socket.h" />
+    <ClInclude Include="server_login_socket.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\SampleSocketClientTCPEcho.ico" />
-    <None Include="res\SampleSocketClientTCPEcho.rc2" />
+    <None Include="res\CGDK1.game_login.client.test.ico" />
+    <None Include="res\CGDK1.game_login.client.test.rc2" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="SampleSocketClientTCPEcho.rc" />
+    <ResourceCompile Include="CGDK1.game_login.client.test.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

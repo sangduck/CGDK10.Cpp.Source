@@ -1,4 +1,4 @@
-//*****************************************************************************
+ï»¿//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
@@ -24,53 +24,58 @@ namespace CGDK
 //
 // C_logEvent
 //
-// 1. C_logEventÀº~
-//     LogÃ³¸®¸¦ À§ÇÑ °ÍÀÌ´Ù.
+// 1. C_logEventï¿½ï¿½~
+//     LogÃ³ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì´ï¿½.
 //
-// 2. LogÀÇ ³»¿ë
-//	  0) Date/Time		Log°¡ ³²Àº ½Ã°£ÀÌ´Ù.(ÀÚµ¿±â·Ï)
-//	  1) Logger			Log¸¦ ³²±â´Â ÀÚÀÇ ÀÌ¸§ÀÌ´Ù.(ÀÚµ¿ µî·Ï)
-//	  2) type			LogÀÇ Á¾·ùÀÌ´Ù. Errror, Progress, Warning, Info, ...
-//	  3) Level			LogÀÇ Áß¿äµµÀÌ´Ù.
-//	  4) Source			Log¿¡ ³²±â´Â EventÀÇ ÁÖÃ¼°¡ µÇ´Â °ÍÀ» ÀÇ¹ÌÇÑ´Ù.
-//	  5) Dest			Log¿¡ ³²±â´Â EventÀÇ ´ë»óÀÌ µÇ´Â °ÍÀ» ÀÇ¹ÌÇÑ´Ù.
-//	  6) Where			Log¿¡ ³²±â´Â Event°¡ ¹ß»ýÇÏ´Â °´Ã¼¸¦ ÀÇ¹ÌÇÑ´Ù.
-//	  7) Function		Log°¡ ³²´Â Event¸¦ È£ÃâÇÑ ÇÔ¼ö¸¦ ÀÇ¹ÌÇÑ´Ù.
-//	  8) Message		³²±æ Log Message¸¦ ÀÇ¹ÌÇÑ´Ù.
+// 2. Logï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+//	  0) Date/Time		Logï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½ï¿½Ì´ï¿½.(ï¿½Úµï¿½ï¿½ï¿½ï¿½)
+//	  1) Logger			Logï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¸ï¿½ï¿½Ì´ï¿½.(ï¿½Úµï¿½ ï¿½ï¿½ï¿½)
+//	  2) type			Logï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ì´ï¿½. Error, Progress, Warning, Info, ...
+//	  3) Level			Logï¿½ï¿½ ï¿½ß¿äµµï¿½Ì´ï¿½.
+//	  4) Source			Logï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ Eventï¿½ï¿½ ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½Ç´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ç¹ï¿½ï¿½Ñ´ï¿½.
+//	  5) Dest			Logï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ Eventï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ç´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ç¹ï¿½ï¿½Ñ´ï¿½.
+//	  6) Where			Logï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ Eventï¿½ï¿½ ï¿½ß»ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½Ç¹ï¿½ï¿½Ñ´ï¿½.
+//	  7) Function		Logï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Eventï¿½ï¿½ È£ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½ï¿½ï¿½ ï¿½Ç¹ï¿½ï¿½Ñ´ï¿½.
+//	  8) Message		ï¿½ï¿½ï¿½ï¿½ Log Messageï¿½ï¿½ ï¿½Ç¹ï¿½ï¿½Ñ´ï¿½.
 //
 // 3. Initializing Parameters
-//    1) ÆÄÀÏ ÀÌ¸§		'filename'			ÆÄÀÏ¸í  ex) "log_file ({}{}[}-{}{}{}.log"
-//    2) ±âÁ¸ ½Ã°£		'recreation'		Àç»ý¼º À¯ºÎ (true, false)
-//    3) Àç»ý¼º °£°Ý	'interval'			1ºÐ´ÜÀ§ÀÇ Àç»ý¼º ½Ã°£ 
-//    4) ±âÁØ ½Ã°£		'origin_time_type'	Àç»ý¼º½Ã ½ÃÀÛ ½Ã°£ À¯Çü ("now", "minute_begin", "hour_begin", "day_begin", "week_begin", "month_begin", "year_begin", "specified", "default")
-//    5) ±âÁ¸ ½Ã°£		'origin_time'		½ÃÀÛ ½Ã°£ (origin_time_typeÀÌ "specified"ÀÏ °æ¿ì ½ÃÀÛ ½Ã°£
-//    6) ±âÁ¸ ½Ã°£		'create_new'		»õ·Î »ý¼º ¿©ºÎ (true, false)
-//    7) ±âÁ¸ ½Ã°£		'char_encoding'			¹®ÀÚ ÀÎÄÚµù ("multiibyte", "utf8", "utf16", "utf32", "ucs16", "ucs32", "default")
+//    1) ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¸ï¿½		'filename'			ï¿½ï¿½ï¿½Ï¸ï¿½  ex) "log_file ({}{}[}-{}{}{}.log"
+//    2) ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½		'recreation'		ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (true, false)
+//    3) ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½	'interval'			1ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½ 
+//    4) ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½		'origin_time_type'	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½ ï¿½ï¿½ï¿½ï¿½ ("now", "minute_begin", "hour_begin", "day_begin", "week_begin", "month_begin", "year_begin", "specified", "default")
+//    5) ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½		'origin_time'		ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½ (origin_time_typeï¿½ï¿½ "specified"ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½
+//    6) ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½		'create_new'		ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (true, false)
+//    7) ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½		'char_encoding'			ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Úµï¿½ ("multibyte", "utf8", "utf16", "utf32", "ucs16", "ucs32", "default")
 //
 //-----------------------------------------------------------------------------
 class logger_file : 
-	public						Nlogger
+	public						Nlogger_async
 {
 public:
 			struct INITIALIZE_PARAMETER
 			{
-				std::string_view				filename;
+				std::string_view				filename{};
+				std::string_view				path{};
+				std::string_view				backup_path{};
 				chrono::time::duration			recreation_interval = chrono::time::duration::zero();
 				eORIGIN_TIME_TYPE				origin_time_type = eORIGIN_TIME_TYPE::DEFAULT;
 				chrono::time::utc::time_point	begin_time = (chrono::time::utc::time_point::min)();
+				uint64_t						limit_bytes{ 0 };
+				uint64_t						limit_lines{ 0 };
 				eCHARACTER_SET					char_code = _DEFAULT_CHAR_CHARACTER_SET;
 				eEOL_TYPE						eol_type = _DEFAULT_FILE_EOL_TYPE;
+				bool							is_instant_open{ false };		// - opens the file for the writes and closes it when no write for instant_close_delay
+				std::chrono::milliseconds		instant_close_delay{ 100 };		// - 0 : closes after every write
 			};
 
 			logger_file();
-			logger_file(const std::string_view _name);
 	virtual ~logger_file() noexcept;
 
 			result_code			initialize() { return this->object::Ninitializable::initialize(); }
 			result_code			initialize(const INITIALIZE_PARAMETER& _initialize_param);
 	virtual	result_code			initialize(context& _context) override	{ return this->object::Ninitializable::initialize(_context); }
 
-	[[nodiscard]] eCHARACTER_SET character_encoding() const noexcept { return this->m_char_encoding; }
+	[[nodiscard]] auto			character_encoding() const noexcept -> eCHARACTER_SET { return this->m_char_encoding; }
 			void				character_encoding(eCHARACTER_SET _char_code) noexcept { this->m_char_encoding = _char_code; }
 
 protected:
@@ -81,29 +86,58 @@ protected:
 	static	void				_process_append_EOL(shared_buffer& _buf_target, eEOL_TYPE _eol_type);
 	static	bool				_process_get_parameter_enabled(context& _context);
 	static	std::string			_process_get_parameter_path(context& _context);
+	static	std::string			_process_get_parameter_path_backup(context& _context);
 	static	std::string			_process_get_parameter_filename(context& _context);
-	static	chrono::time::duration _process_get_parameter_interval(context& _context);
+	static	auto				_process_get_parameter_interval(context& _context) -> chrono::time::duration;
 	static	eORIGIN_TIME_TYPE	_process_get_parameter_origin_time_type(context& _context);
-	static	chrono::time::utc::time_point _process_get_parameter_origin_time(context& _context, chrono::time::utc::time_point _time_now, eORIGIN_TIME_TYPE _origin_time_type, std::string _filename);
-	static	bool				_process_get_parameter_enable_recreation(context& _context);
+	static	auto				_process_get_parameter_origin_time(context& _context, chrono::time::utc::time_point _time_now, eORIGIN_TIME_TYPE _origin_time_type, std::string _filename) -> chrono::time::utc::time_point;
+	static	uint64_t			_process_get_parameter_recreation_bytes_limit(context& _context);
+	static	uint64_t			_process_get_parameter_recreation_lines_limit(context& _context);
 	static	bool				_process_get_parameter_create_new(context& _context);
 	static	eCHARACTER_SET		_process_get_parameter_char_encoding(context& _context);
 	static	int					_process_get_parameter_filter(context& _context);
 	static	bool				_process_get_parameter_is_instant_open(context& _context);
+	static	auto				_process_get_parameter_instant_close_delay(context& _context) -> std::chrono::milliseconds;
 
-	virtual	void				process_log(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record) override;
+	virtual	void				process_log_batch(std::vector<object_ptr<LOG_RECORD>>& _vector_plog_record) override;
+			bool				_process_write_text();
+			void				process_log_write(shared_buffer& _buf_output, const object_ptr<LOG_RECORD>& _log);
 
-			std::shared_mutex	m_lockable_pfile;
-			object_ptr<archive::file> m_pfile;
+	// - file : written by this logger itself (on its execution : synchronous, the callers never wait)
+			std::mutex			m_lockable_file;
+			FILE_HANDLE			m_handle_file{ INVALID_FILE_HANDLE };
+			std::string			m_full_path_now;
+			eFILE_OPERATION		m_file_operation{ eFILE_OPERATION::APPEND };
+			std::atomic<bool>	m_is_file_enabled{ false };	// - read without lock by the batch (checked again with the lock)
+			bool				m_is_write_failed{ false };	// - the error is logged only when the writing fails first
+			chrono::tick::time_point m_tick_last_write{};
+			bool				m_is_close_scheduled{ false };
+			bool				_process_open_file();
+			void				_process_close_file() noexcept;
+			void				_process_post_check_close(chrono::tick::duration _delay);
+			void				_process_check_close();
 			eCHARACTER_SET		m_char_encoding{ _DEFAULT_CHAR_CHARACTER_SET };
 			eEOL_TYPE			m_EOL_type{ _DEFAULT_FILE_EOL_TYPE };
 
 			std::string			m_path;
+			std::string			m_path_backup;
 			std::string			m_filename;
 
-			bool				m_enable_recreation{ false };
-			chrono::time::duration m_recreation_duration;
-			chrono::time::utc::time_point m_recreation_next_time;
+			chrono::time::duration m_recreation_duration{};
+			chrono::time::utc::time_point m_recreation_last{};
+			std::atomic<uint64_t> m_recreation_bytes_now{ 0 };	// atomic for lock-free reads
+			uint64_t			m_recreation_bytes_limit{ 0 };
+			std::atomic<uint64_t> m_recreation_lines_now{ 0 };	// atomic for lock-free reads
+			uint64_t			m_recreation_lines_limit{ 0 };
+
+	// - instant open (kept for the recreation of the file)
+			bool				m_is_instant_open{ false };
+			std::chrono::milliseconds m_instant_close_delay{ 100 };
+
+	// - text buffer (used on the execution only)
+	//   the logs are appended until it is full, then written at once (reused : the write is synchronous)
+			shared_buffer		m_buf_text;
+			uint64_t			m_lines_text{ 0 };
 };
 
 

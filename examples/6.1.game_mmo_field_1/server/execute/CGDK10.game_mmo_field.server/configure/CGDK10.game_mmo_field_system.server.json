@@ -1,0 +1,36 @@
+{
+  "service": {
+    "name": "CGCII.field_server",
+    "id": 1301,
+
+    "Xsocket_to_admin": {
+      "remote_endpoint": {
+        "addressx": "192.168.0.55",
+        "address": "127.0.0.1",
+        "port": 22044
+      },
+      "reconnection": true,
+      "reconnection_interval": 10
+    },
+
+    "logger_file": {
+      "path": "log",
+      "filename": "log_account@{:04}{:02}{:02}_{:02}{:02}{:02}.log",
+      "recreation": true,
+      "origin_time_type": "day_begin",
+      "interval": 1440,
+      "character_set": "mbcs"
+    }
+  },
+
+  "acceptor_user": {
+    "local_endpoint": {
+      "port": 33020
+    },
+    "accept_endpoint": {
+      "address": "127.0.0.1",
+      "port": 33020
+    },
+    "prepare_on_start": "x16"
+  }
+}

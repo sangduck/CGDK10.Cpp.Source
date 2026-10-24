@@ -13,9 +13,9 @@ CChild_traffic_info::CChild_traffic_info(const statistics::unit_traffic* _pinfo,
 {
 	this->m_pstatistics				 = _pinfo;
 
-	this->m_count_sended			 = 0;
+	this->m_count_sent			 = 0;
 	this->m_count_received			 = 0;
-	this->m_count_sendedByte		 = 0;
+	this->m_count_sentByte		 = 0;
 	this->m_count_receivedByte		 = 0;
 	this->m_count_send_io_call		 = 0;
 	this->m_count_receive_io_call	 = 0;
@@ -34,7 +34,7 @@ void CChild_traffic_info::DoDataExchange(CDataExchange* pDX)
 
 
 BEGIN_MESSAGE_MAP(CChild_traffic_info, CChildDialog)
-	ON_BN_CLICKED(IDC_CHECK_GRAPH_SENDED, &CChild_traffic_info::OnBnClickedCheckSend)
+	ON_BN_CLICKED(IDC_CHECK_GRAPH_SENT, &CChild_traffic_info::OnBnClickedCheckSend)
 	ON_BN_CLICKED(IDC_CHECK_GRAPH_RECEIVED, &CChild_traffic_info::OnBnClickedCheckReceive)
 	ON_WM_TIMER()
 	ON_WM_VSCROLL()
@@ -78,7 +78,7 @@ BOOL CChild_traffic_info::OnInitDialog()
 	this->m_slider_scale_traffic.SetPos(0);			// 1024/32=32해서 얻은 값
 
 	// 3) Check를 Checked로...
-	((CButton*)GetDlgItem(IDC_CHECK_GRAPH_SENDED))->SetCheck(BST_CHECKED);
+	((CButton*)GetDlgItem(IDC_CHECK_GRAPH_SENT))->SetCheck(BST_CHECKED);
 	((CButton*)GetDlgItem(IDC_CHECK_GRAPH_RECEIVED))->SetCheck(BST_CHECKED);
 
 	// 4) Tick 초기화.
@@ -99,7 +99,7 @@ BOOL CChild_traffic_info::OnInitDialog()
 void CChild_traffic_info::OnBnClickedCheckSend()
 {
 	// 1) 현재의 버튼 상태를 얻는다.
-	int	status = ((CButton*)GetDlgItem(IDC_CHECK_GRAPH_SENDED))->GetCheck();
+	int	status = ((CButton*)GetDlgItem(IDC_CHECK_GRAPH_SENT))->GetCheck();
 
 	 // check) 결정되지 않은 상태면 그냥 끝낸다.
 	RETURN_IF(status == BST_INDETERMINATE);
@@ -150,10 +150,10 @@ void CChild_traffic_info::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent==0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(this->IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(this->IsWindowVisible() == FALSE)
 
 		// 1) Update한다.
@@ -172,7 +172,7 @@ void CChild_traffic_info::UpdateTrafficInfo()
 	// check) 
 	RETURN_IF(this->m_pstatistics == nullptr);
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(this->IsWindowEnabled() == FALSE)
 
 
@@ -191,27 +191,27 @@ void CChild_traffic_info::UpdateTrafficInfo()
 
 
 	//-----------------------------------------------------------------
-	// 2. Traffice Info 계산하기.
+	// 2. Traffic Info 계산하기.
 	//-----------------------------------------------------------------
 	// 1) 이전과 현재의 차이를 구한다. (Overflow가 났을 경우를 대비하여 계산해야 한다.)
-	uint64_t	countSended				 = this->m_pstatistics->count_sended_message;
-	uint64_t	countSendedByte			 = this->m_pstatistics->count_sended_bytes;
+	uint64_t	countSent				 = this->m_pstatistics->count_sent_message;
+	uint64_t	countSentByte			 = this->m_pstatistics->count_sent_bytes;
 	uint64_t	countSendIOCall			 = this->m_pstatistics->count_send_io;
 	uint64_t	countReceived			 = this->m_pstatistics->count_received_message;
 	uint64_t	countReceivedByte		 = this->m_pstatistics->count_received_bytes;
 	uint64_t	countReceiveIOCall		 = this->m_pstatistics->count_receive_io;
 
 	// 2) 초당 전송률을 구한다.
-	float	totalSended_Message_PerSec	 = ((float)(countSended - this->m_count_sended))*1000.0f/tick_differ.count();
-	float	totalSended_Byte_PerSec		 = ((float)(countSendedByte - this->m_count_sendedByte))*1000.0f/tick_differ.count();
+	float	totalSent_Message_PerSec	 = ((float)(countSent - this->m_count_sent))*1000.0f/tick_differ.count();
+	float	totalSent_Byte_PerSec		 = ((float)(countSentByte - this->m_count_sentByte))*1000.0f/tick_differ.count();
 	float	totalSend_IOCall_PerSec		 = ((float)(countSendIOCall - this->m_count_send_io_call))*1000.0f/tick_differ.count();
 	float	totalReceive_Message_PerSec	 = ((float)(countReceived - this->m_count_received))*1000.0f/tick_differ.count();
 	float	totalReceive_Byte_PerSec	 = ((float)(countReceivedByte - this->m_count_receivedByte))*1000.0f/tick_differ.count();
 	float	totalReceive_IOCall_PerSec	 = ((float)(countReceiveIOCall - this->m_count_receive_io_call))*1000.0f/tick_differ.count();
 
 	// 3) 이전 값을 현재 값으로 Update한다.(다음 Frame에서의 계산을 위해)
-	this->m_count_sended				 = countSended;
-	this->m_count_sendedByte			 = countSendedByte;
+	this->m_count_sent				 = countSent;
+	this->m_count_sentByte			 = countSentByte;
 	this->m_count_send_io_call			 = countSendIOCall;
 	this->m_count_received				 = countReceived;
 	this->m_count_receivedByte			 = countReceivedByte;
@@ -225,28 +225,28 @@ void CChild_traffic_info::UpdateTrafficInfo()
 	TCHAR tempString[256] = { NULL, };
 
 	// 1) Total send/receive 정보.
-	SetDlgItemText(IDC_STATIC_SENDEDPACKET,		to_string_scaled_byte(tempString, 256, countSended).data());
-	SetDlgItemText(IDC_STATIC_RECEIVEDPACKET,	to_string_scaled_byte(tempString, 256, countReceived).data());
+	SetDlgItemText(IDC_STATIC_SENTPACKET, CString(to_string_scaled_byte(countSent).c_str()));
+	SetDlgItemText(IDC_STATIC_RECEIVEDPACKET, CString(to_string_scaled_byte(countReceived).c_str()));
 
 	// 2) 초당 전송률 표시.
-	__sprintf(tempString, TEXT("%.2f"), totalSended_Message_PerSec);	SetDlgItemText(IDC_STATIC_SENDEDPACKET_PERSEC,	tempString);
-	SetDlgItemText(IDC_STATIC_SENDEDDATA_PERSEC,to_string_scaled_byte(tempString, 256, totalSended_Byte_PerSec).data());
-	SetDlgItemText(IDC_STATIC_SEND_IO_CALL_PERSEC,to_string_scaled_byte(tempString, 256, totalSend_IOCall_PerSec).data());
-	__sprintf(tempString, TEXT("%.2f"), totalReceive_Message_PerSec);SetDlgItemText(IDC_STATIC_RECEIVEDPACKET_PERSEC,tempString);
-	SetDlgItemText(IDC_STATIC_RECEIVEDDATA_PERSEC, to_string_scaled_byte(tempString, 256, totalReceive_Byte_PerSec).data());
-	SetDlgItemText(IDC_STATIC_RECEIVE_IO_CALL_PERSEC, to_string_scaled_byte(tempString, 256, totalReceive_IOCall_PerSec).data());
+	std::swprintf(tempString, std::size(tempString), std::wstring_view(TEXT("%.2f")).data(), totalSent_Message_PerSec);	SetDlgItemText(IDC_STATIC_SENTPACKET_PERSEC,	tempString);
+	SetDlgItemText(IDC_STATIC_SENTDATA_PERSEC, CString(to_string_scaled_byte(totalSent_Byte_PerSec).c_str()));
+	SetDlgItemText(IDC_STATIC_SEND_IO_CALL_PERSEC, CString(to_string_scaled_byte(totalSend_IOCall_PerSec).c_str()));
+	std::swprintf(tempString, std::size(tempString), std::wstring_view(TEXT("%.2f")).data(), totalReceive_Message_PerSec);SetDlgItemText(IDC_STATIC_RECEIVEDPACKET_PERSEC,tempString);
+	SetDlgItemText(IDC_STATIC_RECEIVEDDATA_PERSEC, CString(to_string_scaled_byte(totalReceive_Byte_PerSec).c_str()));
+	SetDlgItemText(IDC_STATIC_RECEIVE_IO_CALL_PERSEC, CString(to_string_scaled_byte(totalReceive_IOCall_PerSec).c_str()));
 
 	// 3) 초당 send/receive햡 표시.(send+Receie)
-	__sprintf(tempString, TEXT("%.2f"),	totalSended_Message_PerSec+totalReceive_Message_PerSec);	SetDlgItemText(IDC_STATIC_IO_PACKET_PERSEC,tempString);
-	SetDlgItemText(IDC_STATIC_IO_BYTE_PERSEC,	to_string_scaled_byte(tempString, 256, totalSended_Byte_PerSec+totalReceive_Byte_PerSec).data());
-	SetDlgItemText(IDC_STATIC_IO_CALL_PERSEC,	to_string_scaled_byte(tempString, 256, totalSend_IOCall_PerSec+totalReceive_IOCall_PerSec).data());
+	std::swprintf(tempString, std::size(tempString), std::wstring_view(TEXT("%.2f")).data(), totalSent_Message_PerSec+totalReceive_Message_PerSec);	SetDlgItemText(IDC_STATIC_IO_PACKET_PERSEC,tempString);
+	SetDlgItemText(IDC_STATIC_IO_BYTE_PERSEC, CString(to_string_scaled_byte(totalSent_Byte_PerSec+totalReceive_Byte_PerSec).c_str()));
+	SetDlgItemText(IDC_STATIC_IO_CALL_PERSEC, CString(to_string_scaled_byte(totalSend_IOCall_PerSec+totalReceive_IOCall_PerSec).c_str()));
 
 
 	//-----------------------------------------------------------------
 	// 4. Graph처리
 	//-----------------------------------------------------------------
 	// 1) Traffic Data
-	m_graph_traffic.AppendData(0, static_cast<int>(totalSended_Message_PerSec));
+	m_graph_traffic.AppendData(0, static_cast<int>(totalSent_Message_PerSec));
 	m_graph_traffic.AppendData(1, static_cast<int>(totalReceive_Message_PerSec));
 	m_graph_traffic.Scroll(1);
 }
@@ -259,16 +259,16 @@ void CChild_traffic_info::OnEnable(BOOL is_enable)
 	GetDlgItem(IDC_CUSTOM_TRAFFIC)->EnableWindow(is_enable);
 	GetDlgItem(IDC_SLIDER_TRAFFIC)->EnableWindow(is_enable);
 
-	GetDlgItem(IDC_CHECK_GRAPH_SENDED)->EnableWindow(is_enable);
+	GetDlgItem(IDC_CHECK_GRAPH_SENT)->EnableWindow(is_enable);
 	GetDlgItem(IDC_CHECK_GRAPH_RECEIVED)->EnableWindow(is_enable);
 
-	GetDlgItem(IDC_STATIC_SENDEDPACKET)->EnableWindow(is_enable);
+	GetDlgItem(IDC_STATIC_SENTPACKET)->EnableWindow(is_enable);
 	GetDlgItem(IDC_STATIC_RECEIVEDPACKET)->EnableWindow(is_enable);
-	GetDlgItem(IDC_STATIC_SENDEDPACKET_PERSEC)->EnableWindow(is_enable);
+	GetDlgItem(IDC_STATIC_SENTPACKET_PERSEC)->EnableWindow(is_enable);
 	GetDlgItem(IDC_STATIC_RECEIVEDPACKET_PERSEC)->EnableWindow(is_enable);
 	GetDlgItem(IDC_STATIC_IO_PACKET_PERSEC)->EnableWindow(is_enable);
 
-	GetDlgItem(IDC_STATIC_SENDEDDATA_PERSEC)->EnableWindow(is_enable);
+	GetDlgItem(IDC_STATIC_SENTDATA_PERSEC)->EnableWindow(is_enable);
 	GetDlgItem(IDC_STATIC_RECEIVEDDATA_PERSEC)->EnableWindow(is_enable);
 	GetDlgItem(IDC_STATIC_IO_BYTE_PERSEC)->EnableWindow(is_enable);
 

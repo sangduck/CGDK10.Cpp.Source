@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 
 void CGDK::update::sender::set_transmitter(Ireferenceable* _psource)
@@ -6,14 +6,14 @@ void CGDK::update::sender::set_transmitter(Ireferenceable* _psource)
 	// 1) get sender
 	auto* psender = dynamic_cast<net::io::Isender*>(_psource);
 
-	// cheeck)
+	// check)
 	THROW_IF(psender == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT, 0, "'_psource is not' 'net::io::Isender' object"sv));
 
 	// 2) get sender
 	auto* pmessage_transmitter = dynamic_cast<Imessage_transmitter*>(_psource);
 
-	// cheeck)
-	THROW_IF(pmessage_transmitter == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT, 0, "'_psource is not' 'Imessage_transmitter' objject"sv));
+	// check)
+	THROW_IF(pmessage_transmitter == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT, 0, "'_psource is not' 'Imessage_transmitter' object"sv));
 
 	// 3) set and register
 	pmessage_transmitter->register_messageable(this);
@@ -28,16 +28,16 @@ void CGDK::update::sender::reset_transmitter(Ireferenceable* _psource) noexcept
 	// 1) get sender
 	auto* psender = dynamic_cast<net::io::Isender*>(_psource);
 
-	// cheeck)
+	// check)
 	RETURN_IF(psender == nullptr, );
 
-	// cheeck)
+	// check)
 	RETURN_IF(this->m_psender != psender, );
 
 	// 2) get sender
 	auto* pmessage_transmitter = dynamic_cast<Imessage_transmitter*>(_psource);
 
-	// cheeck)
+	// check)
 	RETURN_IF(this->m_pmessage_transmitter != pmessage_transmitter, );
 
 	// 3) 

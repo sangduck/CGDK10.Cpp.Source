@@ -1,0 +1,72 @@
+#-----------------------------------------------------------------------------
+# prometheus alert rules (admin server /metrics)
+#
+#  metrics)
+#   cgdk_admin_hosts / cgdk_admin_services / cgdk_admin_pending_requests
+#   cgdk_service_state / cgdk_service_running / cgdk_service_desired_running / cgdk_service_restart_suspended
+#   cgdk_service_connections / cgdk_service_*_total
+#   cgdk_host_cpu_usage_percent / cgdk_host_memory_used_bytes / cgdk_host_threads / cgdk_host_processes / cgdk_host_handles / cgdk_host_network_bytes_total
+#-----------------------------------------------------------------------------
+groups:
+  - name: cgdk_admin
+    rules:
+      # - admin server is not scraped
+      - alert: CgdkAdminDown
+        expr: up{job="cgdk_admin"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "admin server {{ $labels.instance }} is down"
+
+      # - no host agent is connected
+      - alert: CgdkNoHostAgent
+        expr: cgdk_admin_hosts == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "no host agent is connected to the admin server"
+
+      # - the number of host agents decreased
+      - alert: CgdkHostAgentLost
+        expr: delta(cgdk_admin_hosts[5m]) < 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "a host agent is disconnected"
+
+      # - desired 'running' but not running
+      - alert: CgdkServiceNotRunning
+        expr: cgdk_service_desired_running == 1 and cgdk_service_running == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "service {{ $labels.name }} (iid {{ $labels.iid }}) is not running"
+
+      # - auto restart is suspended (crash loop)
+      - alert: CgdkServiceCrashLoop
+        expr: cgdk_service_restart_suspended == 1
+        labels:
+          severity: critical
+        annotations:
+          summary: "service {{ $labels.name }} (iid {{ $labels.iid }}) is in a crash loop (auto restart suspended)"
+
+      # - requests are not answered
+      - alert: CgdkPendingRequests
+        expr: cgdk_admin_pending_requests > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value }} requests are waiting for the result"
+
+      # - host resources
+      - alert: CgdkHostCpuHigh
+        expr: cgdk_host_cpu_usage_percent > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cpu usage of host {{ $labels.name }} is {{ $value }}%"

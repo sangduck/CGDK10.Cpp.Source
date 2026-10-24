@@ -1,0 +1,42 @@
+#-----------------------------------------------------------------------------
+# CGDK10 admin server image
+#
+#  - build context : build/execute (the linux executable must be built first)
+#    docker build -f ../src/server.admin/deploy/docker/Dockerfile.admin_server \
+#        --build-arg BUILD_TYPE=Release \
+#        -t cgdk-admin-server:latest .
+#
+#  - run
+#    docker run -d --name cgdk-admin-server -p 21887:21887 \
+#        -e CGDK_ADMIN_CERTIFY_KEY=<key> \
+#        -v cgdk-admin-state:/app/state \
+#        cgdk-admin-server:latest
+#
+#  - BASE_IMAGE : runtime image. glibc must be the same or newer than the build host.
+#  - BUILD_TYPE : Release / Debug (executable: CGDK10.server_admin.admin_server.console_linux.<BUILD_TYPE>)
+#  - desired state is saved to /app/state (volume) : "desired_file" in the setting.
+#  - stop : 'docker stop' sends SIGTERM and the server is destroyed gracefully.
+#
+#  * host agent is not provided as an image : it starts/stops the service processes
+#    of the host (use systemd: deploy/systemd/cgdk-host-agent.service).
+#-----------------------------------------------------------------------------
+ARG BASE_IMAGE=ubuntu:26.04
+FROM ${BASE_IMAGE}
+
+ARG BUILD_TYPE=Release
+
+WORKDIR /app
+
+# 1) config & executable (the executable is copied as '/app/server'. exec form ENTRYPOINT does not expand variables)
+COPY CGDK10.server_admin.admin_server.console/config/admin_server.setting.json /app/config/admin_server.setting.json
+COPY CGDK10.server_admin.admin_server.console/CGDK10.server_admin.admin_server.console_linux.${BUILD_TYPE} /app/server
+RUN chmod +x /app/server && mkdir -p /app/log /app/state \
+ && sed -i 's#"--desired_file": "config/admin_server.desired_state.json"#"desired_file": "state/admin_server.desired_state.json"#' /app/config/admin_server.setting.json
+
+# 2) port (host agent -> admin server)
+#    (control api 21888 is 127.0.0.1 by default. to use it from outside, set "acceptor_control" (address 0.0.0.0 + certify_key/allowed_addresses) and publish 21888)
+EXPOSE 21887
+
+# 3) run (SIGTERM : graceful stop)
+STOPSIGNAL SIGTERM
+ENTRYPOINT ["/app/server"]

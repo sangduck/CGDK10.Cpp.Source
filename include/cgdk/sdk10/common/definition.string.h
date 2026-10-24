@@ -46,9 +46,6 @@ using namespace std::literals::string_view_literals;
 //                                                                            
 // 2. Configure of character type
 //
-// - Wide char는 compiler나 platform에 따라 다를 수가 있다.
-//   C++표준인 char16_t를 사용을 권장하지만 필요에 따라 wchar_t를 사용해도 된다.
-//   (CGCII의 Default는 char16_t로 설정되어 있다.)
 //
 // - wchar_t는 clang에서는 32bit이며 Visual C++ compiler에서는 16Bit이다.
 //                                                                            
@@ -64,7 +61,7 @@ using namespace std::literals::string_view_literals;
 #include "cgdk/sdk10/common/string_functions.h"
 
 // 2) Default String format 
-#if !defined(_USE_CHAR_STRING) && !defined(_USE_WCHAR_STRING) && !defined(_USE_CHAR16_STRING) && !defined(_USE_CHAR32_STRING)
+#if !defined(_USE_CHAR_STRING) && !defined(_USE_WCHAR_STRING)
 	#define	_USE_CHAR_STRING
 #endif
 
@@ -82,8 +79,6 @@ using namespace std::literals::string_view_literals;
 //
 //	  _USE_CHAR_STRING
 //	  _USE_WCHAR_STRING
-//	  _USE_CHAR16_STRING
-//	  _USE_CHAR32_STRING
 //
 //
 // 4. char encoding
@@ -120,13 +115,11 @@ enum class eEOL_TYPE
 };
 
 // 2) to_string functions
-template <class T>	std::basic_string_view<T> to_string(eCHARACTER_SET _character_set) noexcept;
-template <> std::string_view to_string<char>(eCHARACTER_SET _character_set) noexcept;
-template <> std::wstring_view to_string<wchar_t>(eCHARACTER_SET _character_set) noexcept;
-
-template <class T> std::basic_string_view<T> to_string(eEOL_TYPE _eol_code) noexcept;
-template <> std::string_view to_string<char>(eEOL_TYPE _eol_code) noexcept;
-template <> std::wstring_view to_string<wchar_t>(eEOL_TYPE _eol_code) noexcept;
+namespace CGDK
+{
+	std::string_view to_string(eCHARACTER_SET _character_set) noexcept;
+	std::string_view to_string(eEOL_TYPE _eol_code) noexcept;
+}
 
 
 //-----------------------------------------------------------------------------
@@ -137,8 +130,6 @@ template <> std::wstring_view to_string<wchar_t>(eEOL_TYPE _eol_code) noexcept;
 // 1) default character encoding
 #define	_DEFAULT_CHAR_CHARACTER_SET		eCHARACTER_SET::MBCS
 #define	_DEFAULT_WCHAR_CHARACTER_SET	eCHARACTER_SET::UCS2
-#define	_DEFAULT_CHAR16_CHARACTER_SET	eCHARACTER_SET::UCS2
-#define	_DEFAULT_CHAR32_CHARACTER_SET	eCHARACTER_SET::UCS4
 
 // 2) File END OF LINE
 #if defined(_WIN32)
@@ -161,15 +152,6 @@ template <> std::wstring_view to_string<wchar_t>(eEOL_TYPE _eol_code) noexcept;
 	using _CHAR = wchar_t;
 	#define	_CGTEXT(quote)				__CGTEXT_WCHAR_(quote)
 
-// 5) char16_t
-#elif defined(_USE_CHAR16_STRING)
-	using _CHAR = char16_t;
-	#define	_CGTEXT(quote)				__CGTEXT_CHAR16_(quote)
-
-// 6) char32_t
-#elif defined(_USE_CHAR32_STRING)
-	using _CHAR = char32_t;
-	#define	_CGTEXT(quote)				__CGTEXT_CHAR32_(quote)
 #else
 	#error "CGCII String Set is NOT Defined"
 #endif

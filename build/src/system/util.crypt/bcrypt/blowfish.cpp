@@ -408,11 +408,10 @@ void blowfish_key(blowfish_context* _ctx, const uint8_t* _key, size_t _key_bytes
 
 void blowfish_enc(blowfish_context* _ctx, uint32_t* _data, size_t _data_len)
 {
-	auto data = _data;
 	for (size_t i = 0; i < _data_len; ++i)
 	{
-		blowfish_encipher(_ctx, data, data + 1);
-		data += 2;
+		blowfish_encipher(_ctx, _data, _data + 1);
+		_data += 2;
 	}
 }
 

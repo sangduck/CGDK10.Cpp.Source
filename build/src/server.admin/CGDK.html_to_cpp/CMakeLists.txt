@@ -19,45 +19,22 @@
 #-----------------------------------------------------------------------------
 # setting
 #-----------------------------------------------------------------------------
-# 1) project name
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY ( VERSION 3.20 )
+
+# 2) project name
 PROJECT ( "CGDK10.html_to_cpp" )
 
-# 2) project version
+# 3) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
+# 4) common build rules (platform, compile options, output name/directory)
+INCLUDE ( ${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/cgdk.cmake )
 
-# 4) default BUILD_TYPE
-IF (NOT DEFINED CMAKE_BULD_TYPE)
-	SET (CMAKE_BULD_TYPE "Debug")
-ENDIF()
-
-# 5) directories
-SET ( CMAKE_RUNTIME_OTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../../execute )
-SET ( EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../execute )
-
-# 6) compile options
-set ( CMAKE_CXX_STANDARD 20)
-set ( CMAKE_CXX_STANDARD_REQUIRED ON)
-SET ( CMAKE_CXX_FLAGS "-DC_FLAGS -fexceptions -std=c++20" )
-SET ( CMAKE_CXX_FLAGS_DEBUG "-D_DEBUG -g3 -Wall -Wextra" )
-SET ( CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -Wall -Wextra" )
-
-# 7) include directories
-INCLUDE_DIRECTORIES(
-	${CMAKE_CURRENT_SOURCE_DIR}/../../../include
-	./
-)
-
-# 8) library directories
-LINK_DIRECTORIES(
-	${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/cgdk/sdk10/${DIST}
-)
 
 #-----------------------------------------------------------------------------
 # source files
@@ -71,16 +48,18 @@ CGDK.html_to_cpp.cpp
 #-----------------------------------------------------------------------------
 # compile
 #-----------------------------------------------------------------------------
-# 1) messages
-MESSAGE (STATUS "compile ${PROJECT_NAME}")
-
-# 2) compile
-ADD_EXECUTABLE(${PROJECT_NAME} ${SRC_FILES})
-
-# 3) configure file
-#CONFIGURE_FILE ( version.h.in version.h )
-
-# 4) add library
-TARGET_LINK_LIBRARIES( ${PROJECT_NAME}
-	rt
+# 1) executable (output: build/execute)
+CGDK_ADD_EXECUTABLE ( ${PROJECT_NAME}
+	SOURCES     ${SRC_FILES}
+	UNICODE
+	LINUX_LIBS  rt
 )
+
+# 2) windows: same file name as the vcxproj (CGDK.html_to_cpp.exe), latest c++ standard
+IF (WIN32)
+	SET_TARGET_PROPERTIES ( ${PROJECT_NAME} PROPERTIES OUTPUT_NAME "CGDK.html_to_cpp" )
+	TARGET_COMPILE_OPTIONS ( ${PROJECT_NAME} PRIVATE /std:c++latest )
+ENDIF ()
+
+# 3) build alias for convenience
+ADD_CUSTOM_TARGET ( html_to_cpp DEPENDS ${PROJECT_NAME} )

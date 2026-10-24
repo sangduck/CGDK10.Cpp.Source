@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 
 
 int main()
@@ -6,22 +6,22 @@ int main()
 	// trace) 
 	std::cout << "CGCII tutorial.group.server 04..."sv << std::endl;
 
-	// 1) ëŒ€ê¸°ì‹¤ groupì„ ë§Œë“ ë‹¤.
+	// 1) ´ë±â½Ç groupÀ» ¸¸µç´Ù.
 	g_pgroup_immigration = make_own<group_immigration>();
 
-	// 2) groupì— ì…ì¥ ê°€ëŠ¥í•˜ê²Œ ì„¤ì •í•œë‹¤ / enable entering of group object
+	// 2) group¿¡ ÀÔÀå °¡´ÉÇÏ°Ô ¼³Á¤ÇÑ´Ù / enable entering of group object
 	g_pgroup_immigration->enable_member_enter();
 
-	// 3) Acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤ / create acceptor object
+	// 3) Acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù / create acceptor object
 	g_pacceptor = make_own<CGDK::net::acceptor<socket_user>>();
 
-	// 4) 20000ë²ˆ í¬íŠ¸ì— Listenì„ ì‹œì‘í•œë‹¤ / start listening on 20000 port
+	// 4) 20000¹ø Æ÷Æ®¿¡ ListenÀ» ½ÃÀÛÇÑ´Ù / start listening on 20000 port
 	g_pacceptor->start({{ CGDK::net::ip::tcp::v6(), 20000 }});
 
-	// 5) ESCë¥¼ ëˆŒëŸ¬ ì¢…ë£Œí•˜ê¸°ë¥¼ ê¸°ë‹¤ë¦°ë‹¤. / wait for exit pressing ESC key
+	// 5) ESC¸¦ ´­·¯ Á¾·áÇÏ±â¸¦ ±â´Ù¸°´Ù. / wait for exit pressing ESC key
 	while(_getch() != 27);
 
-	// 6) Acceptorë¥¼ ë‹«ëŠ”ë‹¤ / close acceptor
+	// 6) Acceptor¸¦ ´İ´Â´Ù / close acceptor
 	g_pacceptor->stop();
 
 	return 0;

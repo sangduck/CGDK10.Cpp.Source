@@ -120,14 +120,14 @@ int User::CGroupImmigrationSocket::OnMessage_REQUEST_ACCOUNT_CHECKIN(CGNETMSG& _
 	// 1) Message Casting
 	auto	pSocket = _msg.GetSource<User::CSocket>();
 
-	// check) pSocket이 nullptr이면 안됀다.
+	// check) pSocket이 nullptr이면 안 된다.
 	CGASSERT_ERROR(pSocket != nullptr);
 
 	// 2) ACCOUNT_ID를 읽는다.
 	auto&	idAccount	 = _msg.Buffer.front<ACCOUNT_ID>(8);
 
 	// 3) Checkin을 요청한다.
-	g_pService->m_psocketServerLogin->RequestAccountCheckin(idAccount, pSocket);
+	g_pservice->m_psocketServerLogin->RequestAccountCheckin(idAccount, pSocket);
 
 	// Return)
 	return	1;
@@ -138,7 +138,7 @@ int User::CGroupImmigrationSocket::OnMessage_RESPONSE_ACCOUNT_CHECKIN(CGNETMSG& 
 	// 1) pSocket에 Result를 전송!
 
 
-	//g_pService->m_psocketServerLogin->RequestAccountCheckin(_msg.Buffer);
+	//g_pservice->m_psocketServerLogin->RequestAccountCheckin(_msg.Buffer);
 
 
 	// Return)

@@ -129,7 +129,7 @@ int User::CGroupImmigrationSocket::OnMessage_REQUEST_ACCOUNT_LOGIN(CGNETMSG& _ms
 
 		// 5) ID와 Password를 Query를 요청한다.
 		//    성공한다면 적당한 Lobby Server 정보를 얻어 전송한다.
-		g_pService->m_pmanagerAccount->RequestAccountLogin(strID, strPassword, pSocket);
+		g_pservice->m_pmanagerAccount->RequestAccountLogin(strID, strPassword, pSocket);
 	}
 	catch (...)
 	{

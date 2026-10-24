@@ -58,7 +58,7 @@ public:
 template<class TPROTOCOL>
 [[nodiscard]] bool operator==(const basic_resolver_entry<TPROTOCOL>& _lhs, const basic_resolver_entry<TPROTOCOL>& _rhs)
 {
-	return _lhs.endpoint() == _rhs.endpoint() && _lhs.host_name() == _rhs.host_name() && _lhs.service_name() == _rhs.service_name();
+	return _lhs.m_endpoint == _rhs.m_endpoint && std::string_view(_lhs.m_hostname) == std::string_view(_rhs.m_hostname) && std::string_view(_lhs.m_servicename) == std::string_view(_rhs.m_servicename);
 }
 template<class TPROTOCOL>
 [[nodiscard]] bool operator!=(const basic_resolver_entry<TPROTOCOL>& _lhs, const basic_resolver_entry<TPROTOCOL>& _rhs)

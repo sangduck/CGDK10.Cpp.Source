@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/server.log.h"
+#include "cgdk/sdk10/server.log.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -16,23 +16,23 @@ using namespace CGDK;
 int main()
 {
 	// ------------------------------------------------------------------
-	// ì„¤ëª…)
+	// ¼³¸í)
 	//
-	//  Consoleì°½ì— LOGë¥¼ ë‚¨ê¸¸ ìˆ˜ë„ ìžˆë‹¤.
-	//  ê°„ë‹¨ížˆ [ë¡œê·¸ ê°ì²´]ë¥¼ ì½˜ì†”ì°½ìš©ìœ¼ë¡œ ìƒì„±í•˜ë©´ ëœë‹¤.
+	//  ConsoleÃ¢¿¡ LOG¸¦ ³²±æ ¼öµµ ÀÖ´Ù.
+	//  °£´ÜÈ÷ [·Î±× °´Ã¼]¸¦ ÄÜ¼ÖÃ¢¿ëÀ¸·Î »ý¼ºÇÏ¸é µÈ´Ù.
 	//  
-	//    CCGLogConsole ì´ ì½˜ì†”ì°½ ì¶œë ¥ìš© [ë¡œê·¸ ê°ì²´]ì´ë‹¤.
+	//    CCGLogConsole ÀÌ ÄÜ¼ÖÃ¢ Ãâ·Â¿ë [·Î±× °´Ã¼]ÀÌ´Ù.
 	//
-	//  ì½˜ì†”ì°½ ì¶œë ¥ ìš© [ë¡œê·¸ ê°ì²´]ëŠ” íŠ¹ë³„í•œ ì´ˆê¸°í™”ê°€ í•„ìš” ì—†ë‹¤.
+	//  ÄÜ¼ÖÃ¢ Ãâ·Â ¿ë [·Î±× °´Ã¼]´Â Æ¯º°ÇÑ ÃÊ±âÈ­°¡ ÇÊ¿ä ¾ø´Ù.
 	//
 	// ------------------------------------------------------------------
 	// ------------------------------------------------------------------
-	// 1. ë¨¼ì € ë¡œê·¸ë¥¼ ë‚¨ê¸¸ ëŒ€ìƒì„ ê²°ì •í•˜ëŠ” ëŒ€ìƒê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1. ¸ÕÀú ·Î±×¸¦ ³²±æ ´ë»óÀ» °áÁ¤ÇÏ´Â ´ë»ó°´Ã¼¸¦ »ý¼ºÇÑ´Ù.
 	// ------------------------------------------------------------------
-	// 1) ì½˜ì†”ì°½ìš© [ë¡œê·¸ ê°ì²´]ì¸ 'CCGLogConsole'ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) ÄÜ¼ÖÃ¢¿ë [·Î±× °´Ã¼]ÀÎ 'CCGLogConsole'¸¦ »ý¼ºÇÑ´Ù.
 	auto plogger = make_own<logger_console>();
 
-	// 2) ì‹œìž‘í•œë‹¤.
+	// 2) ½ÃÀÛÇÑ´Ù.
 	plogger->initialize();
 
 	// view) 
@@ -40,18 +40,18 @@ int main()
 
 
 	// ------------------------------------------------------------------
-	// 2. LOG()í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•˜ì—¬ ë¡œê·¸ë¥¼ ì¶œë ¥í•œë‹¤.
-	//    (ë¡œê·¸ ëŒ€ìƒ ê°ì²´ë¥¼ ploggerë¡œ í•œë‹¤.)
+	// 2. LOG()ÇÔ¼ö¸¦ »ç¿ëÇÏ¿© ·Î±×¸¦ Ãâ·ÂÇÑ´Ù.
+	//    (·Î±× ´ë»ó °´Ã¼¸¦ plogger·Î ÇÑ´Ù.)
 	// ------------------------------------------------------------------
 
-	// 1) ë‹¤ìŒê³¼ ê°™ì´ Logë¥¼ ì¶œë ¥í•  ìˆ˜ ìžˆë‹¤.
+	// 1) ´ÙÀ½°ú °°ÀÌ Log¸¦ Ãâ·ÂÇÒ ¼ö ÀÖ´Ù.
 	LOG(plogger, log_type_t::info)		<< log_level_t::normal() << "[A] This paragraph is log"sv;
 
-	// 2) ë¡œê·¸ ì¢…ë¥˜(log_type_t)ì™€ ë¡œê·¸ ë ˆë²¨(log_level)ì— ë”°ë¼ ë‹¤ë¥¸ ìƒ‰ìƒì„ ì¶œë ¥í•œë‹¤.
+	// 2) ·Î±× Á¾·ù(log_type_t)¿Í ·Î±× ·¹º§(log_level)¿¡ µû¶ó ´Ù¸¥ »ö»óÀ» Ãâ·ÂÇÑ´Ù.
 	LOG(plogger, log_type_t::info)		<< log_level_t::normal() << "[A-1] INFO Important Log"sv;
 	LOG(plogger, log_type_t::info)		<< log_level_t::higher() << "[A-2] Important INFO Important Log"sv;
 	LOG(plogger, log_type_t::progress)  << log_level_t::normal() << "[A-3] PROGRESS Log (1)"sv;
-	LOG(plogger, log_type_t::progress)	<< log_continue_t() << log_level_t::normal() << "[A-4] PROGRESS Log (2)"sv;
+	LOG(plogger, log_type_t::progress)	<< log_continue_t()		 << "[A-4] PROGRESS Log (2)"sv;
 	LOG(plogger, log_type_t::progress)	<< log_level_t::higher() << "[A-5] Important PROGRESS Log"sv;
 	LOG(plogger, log_type_t::error)		<< log_level_t::normal() << "[A-6] ERROR Log"sv;
 	LOG(plogger, log_type_t::fatal)		<< log_level_t::normal() << "[A-7] FATAL Log"sv;
@@ -61,23 +61,23 @@ int main()
 	LOG(plogger, log_type_t::system)	<< log_level_t::normal() << "[A-11] SYSTEM Log"sv;
 
 	// declare) 
-	std::wstring_view temp_string(L"í…ŒìŠ¤íŠ¸ ë¬¸ìžì—´"sv);
+	std::wstring_view temp_string(L"\uD14C\uC2A4\uD2B8 \uBB38\uC790\uC5F4."sv);	// "Å×½ºÆ® ¹®ÀÚ¿­."
 
-	// 3) íŒŒë¼ë¯¸í„°ê°€ ìžˆëŠ” fmt::format
-	LOG(plogger, log_type_t::info) << format("[B-1] ì´ ë¬¸ìž¥ì€ ë©€í‹°ë°”ì´íŠ¸ í•œê¸€ ë¬¸ìžì—´ ë¡œê·¸ [{}]"sv, "STRING"sv);
-	LOG(plogger, log_type_t::info) << format(L"[B-2] ì´ ë¬¸ìž¥ì€ ìœ ë‹ˆì½”ë“œ í•œê¸€ ë¬¸ìžì—´ ë¡œê·¸ [{}]"sv, L"STRING"sv);
-	LOG(plogger, log_type_t::info) << format("[B-3] fmtë¥¼ ì‚¬ìš©í•œ ë¡œê·¸ ì¶œë ¥ {}"sv, 10);
-	LOG(plogger, log_type_t::info) << format(L"[B-4] fmtë¥¼ ì‚¬ìš©í•œ ë¡œê·¸ ì¶œë ¥ {} - {}"sv, 10, L"STRING"sv);
-	LOG(plogger, log_type_t::info) << format(L"[B-5] fmtë¥¼ ì‚¬ìš©í•œ ë¡œê·¸ ì¶œë ¥ {} - {}"sv, 10, temp_string);
-	LOG(plogger, log_type_t::info) << format(L"[B-6] fmtë¥¼ ì‚¬ìš©í•œ ë¡œê·¸ ì¶œë ¥ {0} - {1} - {0}"sv, 10, temp_string);
+	// 3) ÆÄ¶ó¹ÌÅÍ°¡ ÀÖ´Â fmt::format
+	LOG(plogger, log_type_t::info) << CGDK::format("[B-1] \uC774 \uBB38\uC7A5\uC740 \uBA40\uD2F0\uBC14\uC774\uD2B8 \uD55C\uAE00 \uBB38\uC790\uC5F4 \uB85C\uADF8 [{}]"sv, "STRING"sv);	// "[B-1] ÀÌ ¹®ÀåÀº ¸ÖÆ¼¹ÙÀÌÆ® ÇÑ±Û ¹®ÀÚ¿­ ·Î±× [{}]"
+	LOG(plogger, log_type_t::info) << format(L"[B-2] \uC774 \uBB38\uC7A5\uC740 \uC720\uB2C8\uCF54\uB4DC \uD55C\uAE00 \uBB38\uC790\uC5F4 \uB85C\uADF8 [{}]"sv, L"STRING"sv);	// "[B-2] ÀÌ ¹®ÀåÀº À¯´ÏÄÚµå ÇÑ±Û ¹®ÀÚ¿­ ·Î±× [{}]"
+	LOG(plogger, log_type_t::info) << CGDK::format("[B-3] fmt\uB97C \uC0AC\uC6A9\uD55C \uB85C\uADF8 \uCD9C\uB825 {}"sv, 10);	// "[B-3] fmt¸¦ »ç¿ëÇÑ ·Î±× Ãâ·Â {}"
+	LOG(plogger, log_type_t::info) << format(L"[B-4] fmt\uB97C \uC0AC\uC6A9\uD55C \uB85C\uADF8 \uCD9C\uB825 {} - {}"sv, 10, L"STRING"sv);	// "[B-4] fmt¸¦ »ç¿ëÇÑ ·Î±× Ãâ·Â {} - {}"
+	LOG(plogger, log_type_t::info) << format(L"[B-5] fmt\uB97C \uC0AC\uC6A9\uD55C \uB85C\uADF8 \uCD9C\uB825 {} - {}"sv, 10, temp_string);	// "[B-5] fmt¸¦ »ç¿ëÇÑ ·Î±× Ãâ·Â {} - {}"
+	LOG(plogger, log_type_t::info) << format(L"[B-6] fmt\uB97C \uC0AC\uC6A9\uD55C \uB85C\uADF8 \uCD9C\uB825 {0} - {1} - {0}"sv, 10, temp_string);	// "[B-6] fmt¸¦ »ç¿ëÇÑ ·Î±× Ãâ·Â {0} - {1} - {0}"
 
-	// 4) LOG_MESSAGE() ê°ì²´ë¥¼ ìž„ì‹œë¡œ ìƒì„±í•´ operator <<ë¥¼ ì‚¬ìš©í•´ ë¡œê·¸ ë©”ì‹œì§€ë¥¼ ë‚¨ê¸°ê³  LOG_END()ë¥¼ << í•¨ìœ¼ë¡œì¨ ë¡œê·¸ë¥¼ ì¶œë ¥í•œë‹¤.
+	// 4) LOG_MESSAGE() °´Ã¼¸¦ ÀÓ½Ã·Î »ý¼ºÇØ operator <<¸¦ »ç¿ëÇØ ·Î±× ¸Þ½ÃÁö¸¦ ³²±â°í LOG_END()¸¦ << ÇÔÀ¸·Î½á ·Î±×¸¦ Ãâ·ÂÇÑ´Ù.
 	LOG(plogger, log_type_t::debug) << "[C-1] This is log"sv << " X: "sv << 10 << " Y: "sv << float(10.0f) << L" Z: "sv << temp_string;
 
-	// 5) ë‹¤ì¤‘ ë¼ì¸ ì¶œë ¥
-	LOG(plogger, log_type_t::info) << L"[C-2] ì²«ì§¸ì¤„ ["sv << L"STRING"sv << "]"sv << log_endl
-								  << L"[C-3] ë‘ì§¸ì¤„ "sv << 10 << log_endl
-								  << L"[C-4] ë§ˆì§€ë§‰ì¤„"sv;
+	// 5) ´ÙÁß ¶óÀÎ Ãâ·Â
+	LOG(plogger, log_type_t::info) << L"[C-2] \uCCAB\uC9F8\uC904 ["sv << L"STRING"sv << "]"sv << log_endl	// "[C-2] Ã¹Â°ÁÙ ["
+								  << L"[C-3] \uB450\uC9F8\uC904 "sv << 10 << log_endl	// "[C-3] µÑÂ° ÁÙ "
+								  << L"[C-4] \uB9C8\uC9C0\uB9C9\uC904"sv;	// "[C-4] ¸¶Áö¸·ÁÙ"
 
 
 	// ------------------------------------------------------------------
@@ -94,10 +94,10 @@ int main()
 	// 2) get time
 	auto tick_diff = chrono::tick::now() - tick_start;
 
-	// 3) ì‹œê°„ì„ ì¶œë ¥í•œë‹¤.
+	// 3) ½Ã°£À» Ãâ·ÂÇÑ´Ù.
 	std::cout << "elapsed time: "sv << std::chrono::duration_cast<std::chrono::milliseconds>(tick_diff).count() << "ms"sv << std::endl;
 
 
-	// return) ë.
+	// return) ³¡.
 	return 0;
 }

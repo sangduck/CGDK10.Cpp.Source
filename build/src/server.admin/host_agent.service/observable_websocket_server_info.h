@@ -27,13 +27,13 @@ class observable_websocket_peer_info :
 	public						Iobservable_websocket
 {
 protected:
-	explicit observable_websocket_peer_info(const std::string_view _name);
+			observable_websocket_peer_info();
 	virtual ~observable_websocket_peer_info();
 
 public:
-			void				notify_to_web_controls_INSTANCE_ENTER(server_admin::Iinstance* _pservice_entity);
-			void				notify_to_web_controls_INSTANCE_LEAVE(server_admin::Iinstance* _pservice_entity);
-			void				notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_admin::Iinstance* _pservice_entity);
+			void				notify_to_web_controls_INSTANCE_ENTER(server_system::Iinstance* _pservice_entity);
+			void				notify_to_web_controls_INSTANCE_LEAVE(server_system::Iinstance* _pservice_entity);
+			void				notify_to_web_controls_INSTANCE_STATUS_UPDATE(server_system::Iinstance* _pservice_entity);
 			void				notify_to_web_controls_INSTANCE_STATUS_UPDATE();
 private:
 	virtual	void				on_observer_registered(socket_websocket* _pobserver, observer_channel_t _ocid, const observer_data_t& _observer_data) override;

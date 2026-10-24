@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "framework.h"
 #include "CGDK10.chatting.server.mfc.h"
 #include "CGDK10.chatting.server.mfc.dlg.h"
@@ -11,7 +11,7 @@ bool g_b_auto_start = true;
 	#define new DEBUG_NEW
 #endif
 
-// chatting_server_dlg ëŒ€í™” ìƒì
+// chatting_server_dlg ´ëÈ­ »óÀÚ
 chatting_server_dlg::chatting_server_dlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_CHATTING_SERVER_DIALOG, pParent)
 {
@@ -35,7 +35,7 @@ BEGIN_MESSAGE_MAP(chatting_server_dlg, CDialogEx)
 	ON_COMMAND(ID_SYSTEM_START, &chatting_server_dlg::OnSystemServiceStart)
 	ON_COMMAND(ID_SYSTEM_STOP, &chatting_server_dlg::OnSystemServiceStop)
 	ON_COMMAND(ID_SYSTEM_EXIT, &chatting_server_dlg::OnSystemExit)
-	//ON_COMMAND(ID_SETTING_CONFIQURES, &chatting_server_dlg::OnSettingConfigures)
+	//ON_COMMAND(ID_SETTING_CONFIGURES, &chatting_server_dlg::OnSettingConfigures)
 	ON_COMMAND(ID_SETTING_SYSTEM_TUNNING, &chatting_server_dlg::OnSettingEnginetunning)
 	ON_COMMAND(ID_ABOUT_SYSTEM_INFO, &chatting_server_dlg::OnAboutSystemInfo)
 	ON_COMMAND(ID_SYSTEM_CANCEL, &chatting_server_dlg::OnSystemServiceCancel)
@@ -59,14 +59,14 @@ BOOL chatting_server_dlg::OnInitDialog()
 
 
 	//-----------------------------------------------------------------
-	// 2. Log ì„¤ì •
+	// 2. Log ¼³Á¤
 	//-----------------------------------------------------------------
 	// 1) Log View
 	m_child_log_view.CreateChild(nullptr, this);
 	m_child_log_view.Resize(70, -26);
 	m_child_log_view.Move(4, 195, ORIGIN_LEFT | ORIGIN_BELOW, GetDlgItem(IDC_STATIC_FRAME_CHANNEL_INFO));
 
-	// 2) mfc log controlì„ ì—°ê²°í•œë‹¤.
+	// 2) mfc log controlÀ» ¿¬°áÇÑ´Ù.
 	service::get_logger()->register_log_targetable(&m_child_log_view);
 
 
@@ -84,30 +84,30 @@ BOOL chatting_server_dlg::OnInitDialog()
 
 
 	//-----------------------------------------------------------------
-	// 4. ì´ˆê¸°í™”.
+	// 4. ÃÊ±âÈ­.
 	//-----------------------------------------------------------------
-	// 1) Serviceë¥¼ ìƒì„±í•œë‹¤.
+	// 1) Service¸¦ »ı¼ºÇÑ´Ù.
 	g_pservice = make_own<service>();
 
-	// 2) unregisterí•œë‹¤.
+	// 2) unregisterÇÑ´Ù.
 	g_pservice->register_messageable(this);
 
-	// 3) Serviceë¥¼ initializeí•œë‹¤.
+	// 3) Service¸¦ initializeÇÑ´Ù.
 	request_service_initialize();
 
 
 	//-----------------------------------------------------------------
-	// 5. Control ì„¤ì •.
+	// 5. Control ¼³Á¤.
 	//-----------------------------------------------------------------
 	// Declare) 
-	context	tempContext;
+	context	context_temp;
 
 	// 1) Load Json file for setting
-	tempContext.read_from_json_file("../chatting_server/chatting_server_setting.json"sv);
+	context_temp.from_json(api::file::read_file(JSON_SETTING_FILE));
 
 	// 2) User
-	m_child_acceptor_user.CreateChild(g_pservice->m_pacceptor_user, this);
-	m_child_acceptor_user.SetDefaultPort(tempContext["acceptor_user"sv]["local endpoint"sv]["Port"sv]);
+	m_child_acceptor_user.CreateChild(g_pservice->pacceptor_user, this);
+	m_child_acceptor_user.SetDefaultPort(context_temp["acceptor_user"sv]["local endpoint"sv]["Port"sv]);
 	m_child_acceptor_user.Move(5, 0, ORIGIN_REAR | ORIGIN_CENTER_Y, GetDlgItem(IDC_STATIC_ACCEPTOR_USER));
 
 	// 3) User
@@ -122,7 +122,7 @@ BOOL chatting_server_dlg::OnInitDialog()
 	// 5) Thread StatusDialog
 	m_dlg_thread_status.CreateModaless(api::manager_thread::instance(), executor::manager::instance(), system_executor::instance(), this);
 
-	// 6) Controlì„ ëª¨ë‘ Disableí•œë‹¤.
+	// 6) ControlÀ» ¸ğµÎ DisableÇÑ´Ù.
 	EnableServerControls(FALSE);
 
 
@@ -137,22 +137,22 @@ BOOL chatting_server_dlg::OnInitDialog()
 
 
 	// return)
-	return TRUE;  // í¬ì»¤ìŠ¤ë¥¼ ì»¨íŠ¸ë¡¤ì— ì„¤ì •í•˜ì§€ ì•Šìœ¼ë©´ TRUEë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.
+	return TRUE;  // Æ÷Ä¿½º¸¦ ÄÁÆ®·Ñ¿¡ ¼³Á¤ÇÏÁö ¾ÊÀ¸¸é TRUE¸¦ ¹İÈ¯ÇÕ´Ï´Ù.
 }
 
-// ëŒ€í™” ìƒìì— ìµœì†Œí™” ë‹¨ì¶”ë¥¼ ì¶”ê°€í•  ê²½ìš° ì•„ì´ì½˜ì„ ê·¸ë¦¬ë ¤ë©´
-//  ì•„ë˜ ì½”ë“œê°€ í•„ìš”í•©ë‹ˆë‹¤.  ë¬¸ì„œ/ë·° ëª¨ë¸ì„ ì‚¬ìš©í•˜ëŠ” MFC ì‘ìš© í”„ë¡œê·¸ë¨ì˜ ê²½ìš°ì—ëŠ”
-//  í”„ë ˆì„ì›Œí¬ì—ì„œ ì´ ì‘ì—…ì„ ìë™ìœ¼ë¡œ ìˆ˜í–‰í•©ë‹ˆë‹¤.
+// ´ëÈ­ »óÀÚ¿¡ ÃÖ¼ÒÈ­ ´ÜÃß¸¦ Ãß°¡ÇÒ °æ¿ì ¾ÆÀÌÄÜÀ» ±×¸®·Á¸é
+//  ¾Æ·¡ ÄÚµå°¡ ÇÊ¿äÇÕ´Ï´Ù.  ¹®¼­/ºä ¸ğµ¨À» »ç¿ëÇÏ´Â MFC ÀÀ¿ë ÇÁ·Î±×·¥ÀÇ °æ¿ì¿¡´Â
+//  ÇÁ·¹ÀÓ¿öÅ©¿¡¼­ ÀÌ ÀÛ¾÷À» ÀÚµ¿À¸·Î ¼öÇàÇÕ´Ï´Ù.
 
 void chatting_server_dlg::OnPaint()
 {
 	if (IsIconic())
 	{
-		CPaintDC dc(this); // ê·¸ë¦¬ê¸°ë¥¼ ìœ„í•œ ë””ë°”ì´ìŠ¤ ì»¨í…ìŠ¤íŠ¸ì…ë‹ˆë‹¤.
+		CPaintDC dc(this); // ±×¸®±â¸¦ À§ÇÑ µğ¹ÙÀÌ½º ÄÁÅØ½ºÆ®ÀÔ´Ï´Ù.
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		// í´ë¼ì´ì–¸íŠ¸ ì‚¬ê°í˜•ì—ì„œ ì•„ì´ì½˜ì„ ê°€ìš´ë°ì— ë§ì¶¥ë‹ˆë‹¤.
+		// Å¬¶óÀÌ¾ğÆ® »ç°¢Çü¿¡¼­ ¾ÆÀÌÄÜÀ» °¡¿îµ¥¿¡ ¸ÂÃä´Ï´Ù.
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
@@ -160,7 +160,7 @@ void chatting_server_dlg::OnPaint()
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
 
-		// ì•„ì´ì½˜ì„ ê·¸ë¦½ë‹ˆë‹¤.
+		// ¾ÆÀÌÄÜÀ» ±×¸³´Ï´Ù.
 		dc.DrawIcon(x, y, m_hIcon);
 	}
 	else
@@ -237,7 +237,7 @@ result_code chatting_server_dlg::process_message(sMESSAGE& _msg)
 		case	CGNOTIFY_CHANNEL_REMOVE:
 		case	CGNOTIFY_CHANNEL_UPDATE:
 				{
-					scoped_lock(m_lockable_vector_event)
+					SCOPED_LOCK(m_lockable_vector_event)
 					{
 						m_vector_event_queuing.emplace_back(EVENT_NOTIFY{ msg.command, reinterpret_cast<channel::Igroup*>(msg.lParam) });
 					}
@@ -383,10 +383,10 @@ void chatting_server_dlg::OnTimer(UINT_PTR nIDEvent)
 		// check) 
 		RETURN_IF(g_pservice.empty());
 
-		// - í™”ë©´ì— ë³´ì´ëŠ” Channelì„ Update~
+		// - È­¸é¿¡ º¸ÀÌ´Â ChannelÀ» Update~
 		List_UpdateChannel();
 
-		SetDlgItemInt(IDC_STATIC_USER_COUNT, static_cast<UINT>(g_pservice->m_pacceptor_user->count()));
+		SetDlgItemInt(IDC_STATIC_USER_COUNT, static_cast<UINT>(g_pservice->pacceptor_user->count()));
 		SetDlgItemInt(IDC_STATIC_CHANNEL_COUNT, static_cast<int>(g_pservice->m_pmanager_channel->get_channel_count()));
 	}
 
@@ -419,19 +419,19 @@ void chatting_server_dlg::OnBnClickedButtonChannelNew()
 		// check) 
 		CGASSERT_ERROR(dlg.m_max_member != 0);
 
-		// 1) ì—†ìœ¼ë©´ Channel ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 1) ¾øÀ¸¸é Channel °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pgroup_channel_create = make_own<channel::group_chatting>();
 			
-		// 2) Typeê³¼ Optionì„ ì„¤ì •í•œë‹¤.
-		pgroup_channel_create->set_name(dlg.m_str_name);
+		// 2) Type°ú OptionÀ» ¼³Á¤ÇÑ´Ù.
+		pgroup_channel_create->name(dlg.m_str_name);
 		pgroup_channel_create->m_type_channel = dlg.m_channel_type;
 		pgroup_channel_create->m_option_channel = dlg.m_channel_option;
 		pgroup_channel_create->member_capacity(dlg.m_max_member);
 
-		// 3) ìƒì„±í•œ Channel ê°ì²´ë¥¼ ë“±ë¡í•œë‹¤.
+		// 3) »ı¼ºÇÑ Channel °´Ã¼¸¦ µî·ÏÇÑ´Ù.
 		auto pgroup_channel = g_pservice->m_pmanager_channel->register_channel(dlg.m_id_channel, std::move(pgroup_channel_create));
 
-		// 4) pgroup_channelì„ startí•œë‹¤.
+		// 4) pgroup_channelÀ» startÇÑ´Ù.
 		if (pgroup_channel.exist())
 		{
 			pgroup_channel->start();
@@ -444,26 +444,26 @@ void chatting_server_dlg::OnBnClickedButtonChannelNew()
 }
 void chatting_server_dlg::OnBnClickedButtonChannelDestroy()
 {
-	scoped_lock(m_list_channel)
+	SCOPED_LOCK(m_lockable_list_channel)
 	{
 		for (int i=0;i<m_list_channel.GetItemCount(); ++i)
 		{
 			if (m_list_channel.GetItemState(i, LVIS_SELECTED) != 0)
 			{
-				// - Itemì„ ì–»ëŠ”ë‹¤.
+				// - ItemÀ» ¾ò´Â´Ù.
 				channel::Igroup* pchannel = (channel::Igroup*)m_list_channel.GetItemData(i);
 
-				// check) System ì†ì„±ì€ ê³ ì˜ë¡œ ì§€ìš¸ ìˆ˜ ì—†ë‹¤.
+				// check) System ¼Ó¼ºÀº °íÀÇ·Î Áö¿ï ¼ö ¾ø´Ù.
 				if ((pchannel->m_option_channel & eCHANNEL_OPTION::SYSTEM) != eCHANNEL_OPTION::NONE)
 				{
 					LOG_SYSTEM << "!err) can't destroy eCHANNEL_OPTION::SYSTEM channel ("sv << pchannel->name() << "["sv << pchannel->get_channel_id() << "])"sv;
 					continue;
 				}
 
-				// - Channelì„ íŒŒê´´í•œë‹¤.
+				// - ChannelÀ» ÆÄ±«ÇÑ´Ù.
 				LOG_SYSTEM << "  < destroy channel("sv << pchannel->name() << "["sv << pchannel->get_channel_id() << "]) by force"sv;
 
-				// - ì§€ìš´ë‹¤.
+				// - Áö¿î´Ù.
 				pchannel->destroy();
 			}
 		}
@@ -486,10 +486,17 @@ void chatting_server_dlg::request_service_start()
 	GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_ENABLED);
 	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
 
-	// 2) Openì˜ ì‹¤í–‰ì„ ìš”ì²­í•œë‹¤.
+	// 2) OpenÀÇ ½ÇÇàÀ» ¿äÃ»ÇÑ´Ù.
 	system_executor::post(make_executable([]()
 	{
-		g_pservice->start();
+		// declare)
+		context context_start;
+
+		// - Load Json file for setting
+		context_start.from_json(api::file::read_file(JSON_SETTING_FILE));
+
+		// - start
+		g_pservice->start(context_start);
 	}));
 }
 
@@ -508,7 +515,7 @@ void chatting_server_dlg::RequestServiceStop()
 	GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
 	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
 
-	// 2) stopì˜ ì‹¤í–‰ì„ ìš”ì²­í•œë‹¤.
+	// 2) stopÀÇ ½ÇÇàÀ» ¿äÃ»ÇÑ´Ù.
 	system_executor::post(make_executable([]()
 	{
 		g_pservice->stop();
@@ -524,44 +531,44 @@ void chatting_server_dlg::RequestServiceDestroy()
 	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
 
 	// 2) 
-	scoped_lock(m_lockable_vector_event)
+	SCOPED_LOCK(m_lockable_vector_event)
 	{
 		m_vector_event_queuing.clear();
 		m_vector_event_processing.clear();
 	}
 
-	// 3) Listë¥¼ ì œê±°í•œë‹¤.
-	scoped_lock(m_list_channel)
+	// 3) List¸¦ Á¦°ÅÇÑ´Ù.
+	SCOPED_LOCK(m_lockable_list_channel)
 	{
 		for(int i=0; i<m_list_channel.GetItemCount(); ++i)
 		{
-			// - Itemì„ ì–»ëŠ”ë‹¤.
+			// - ItemÀ» ¾ò´Â´Ù.
 			channel::Igroup* pchannel = (channel::Igroup*)m_list_channel.GetItemData(i);
 
-			// - releaseí•œë‹¤.
+			// - releaseÇÑ´Ù.
 			pchannel->release();
 		}
 
-		// - ëª¨ë“  Itemì„ ì§€ìš´ë‹¤.
+		// - ¸ğµç ItemÀ» Áö¿î´Ù.
 		m_list_channel.DeleteAllItems();
 	}
 
-	// 4) í˜„ì¬ ThreadIDë¥¼ êµ¬í•œë‹¤.(WM_QUIT messageëŠ” í˜„ì¬ Threadê°€ ë°›ì•„ì•¼ ì²˜ë¦¬ëœë‹¤.)
+	// 4) ÇöÀç ThreadID¸¦ ±¸ÇÑ´Ù.(WM_QUIT message´Â ÇöÀç Thread°¡ ¹Ş¾Æ¾ß Ã³¸®µÈ´Ù.)
 	auto thread_id = GetCurrentThreadId();
 
-	// 5) destroyì˜ ì‹¤í–‰ì„ ìš”ì²­í•œë‹¤.
+	// 5) destroyÀÇ ½ÇÇàÀ» ¿äÃ»ÇÑ´Ù.
 	system_executor::post(make_executable([=]
 	{
-		// - Serverë¥¼ ë‹«ëŠ”ë‹¤.
+		// - Server¸¦ ´İ´Â´Ù.
 		g_pservice->destroy();
 
-		// - Traceë¥¼ ë“±ë¡í•´ì œí•œë‹¤.
+		// - Trace¸¦ µî·ÏÇØÁ¦ÇÑ´Ù.
 		service::get_logger()->unregister_log_targetable(&m_child_log_view);
 
-		// - unregisterí•œë‹¤.
+		// - unregisterÇÑ´Ù.
 		g_pservice->unregister_messageable(this);
 
-		// - QUIT Messageë¥¼ í˜„ì¬ì˜ Threadì— ë‚ ë¦°ë‹¤.(ì´ê²ƒìœ¼ë¡œ ì–´í”Œë¦¬ì¼€ì´ì…˜ì€ ì¢…ë£Œëœë‹¤.)
+		// - QUIT Message¸¦ ÇöÀçÀÇ Thread¿¡ ³¯¸°´Ù.(ÀÌ°ÍÀ¸·Î ¾ÖÇÃ¸®ÄÉÀÌ¼ÇÀº Á¾·áµÈ´Ù.)
 		PostThreadMessage(thread_id, WM_QUIT, (WPARAM)-1, 0);
 	}));
 }
@@ -593,9 +600,9 @@ int chatting_server_dlg::List_AddChannel(channel::Igroup* _pgroupchannel)
 	LV_ITEM	list_item;
 	int		countChannel;
 
-	scoped_lock(m_list_channel)
+	SCOPED_LOCK(m_lockable_list_channel)
 	{
-		// 1) ì¶”ê°€í•œë‹¤.
+		// 1) Ãß°¡ÇÑ´Ù.
 		list_item.iItem = m_list_channel.InsertItem(m_list_channel.GetItemCount(), TEXT(""));
 
 		// 2) Channel
@@ -637,23 +644,23 @@ int chatting_server_dlg::List_AddChannel(channel::Igroup* _pgroupchannel)
 		list_item.pszText = text;
 		m_list_channel.SetItem(&list_item);
 
-		// 4) Item Dataë¡œ í¬ì¸í„°ë¥¼ ì¶”ê°€í•œë‹¤.
+		// 4) Item Data·Î Æ÷ÀÎÅÍ¸¦ Ãß°¡ÇÑ´Ù.
 		m_list_channel.SetItemData(list_item.iItem, (DWORD_PTR)_pgroupchannel);
 
-		// 5) Indexë¥¼ IDë¡œ ë§µí•‘í•˜ì—¬ ì €ì¥í•œë‹¤.
+		// 5) Index¸¦ ID·Î ¸ÊÇÎÇÏ¿© ÀúÀåÇÑ´Ù.
 		_pgroupchannel->m_idx_list = m_list_channel.MapIndexToID(list_item.iItem);
 
-		// 6) AddRefí•œë‹¤.
+		// 6) AddRefÇÑ´Ù.
 		_pgroupchannel->add_ref();
 
-		// 7) Updateí•œë‹¤.
+		// 7) UpdateÇÑ´Ù.
 		List_UpdateChannel(list_item.iItem);
 
 		// 8) ..
 		countChannel = m_list_channel.GetItemCount();
 	}
 
-	//// 10) Userìˆ˜ í‘œì‹œ Update
+	//// 10) User¼ö Ç¥½Ã Update
 	//SetDlgItemInt(IDC_STATIC_CHANNELS_COUNT, countChannel);
 
 	// return)
@@ -665,39 +672,39 @@ void chatting_server_dlg::List_RemoveChannel(channel::Igroup* _pgroupchannel)
 	// Declare) 
 	int		iCountUser;
 
-	scoped_lock(m_list_channel)
+	SCOPED_LOCK(m_lockable_list_channel)
 	{
-		// 1) Indexë¥¼ ì–»ëŠ”ë‹¤.
+		// 1) Index¸¦ ¾ò´Â´Ù.
 		int	iIndex = m_list_channel.MapIDToIndex(_pgroupchannel->m_idx_list);
 
-		// 2) Itemì„ ì–»ëŠ”ë‹¤.
+		// 2) ItemÀ» ¾ò´Â´Ù.
 		channel::Igroup* pchannel = (channel::Igroup*)m_list_channel.GetItemData(iIndex);
 
 		// check)
 		CGASSERT_ERROR(_pgroupchannel == pchannel);
 
-		// 3) ì§€ìš´ë‹¤.
+		// 3) Áö¿î´Ù.
 		m_list_channel.DeleteItem(iIndex);
 
-		// 4) releaseí•œë‹¤.
+		// 4) releaseÇÑ´Ù.
 		pchannel->release();
 
 		// 5) ..
 		iCountUser = m_list_channel.GetItemCount();
 	}
 
-	//// 6) Userìˆ˜ í‘œì‹œ Update
+	//// 6) User¼ö Ç¥½Ã Update
 	//SetDlgItemInt(IDC_STATIC_CHANNELS_COUNT, iCountUser);
 }
 
 void chatting_server_dlg::List_UpdateChannel(channel::Igroup* _pgroupchannel)
 {
-	scoped_lock(m_list_channel)
+	SCOPED_LOCK(m_lockable_list_channel)
 	{
-		// 1) Indexë¥¼ ì–»ëŠ”ë‹¤.
+		// 1) Index¸¦ ¾ò´Â´Ù.
 		int	iIndex = m_list_channel.MapIDToIndex(_pgroupchannel->m_idx_list);
 
-		// 2) Group Roomì„ Updateí•œë‹¤.
+		// 2) Group RoomÀ» UpdateÇÑ´Ù.
 		List_UpdateChannel(iIndex);
 	}
 }
@@ -707,12 +714,12 @@ void chatting_server_dlg::List_UpdateChannel(int _Index)
 	TCHAR	text[256];
 	LV_ITEM	list_item;
 
-	scoped_lock(m_list_channel)
+	SCOPED_LOCK(m_lockable_list_channel)
 	{
 		// check) 
 		RETURN_IF(_Index < 0 || _Index >= m_list_channel.GetItemCount());
 
-		// 1) Groupchannelì„ ì–»ëŠ”ë‹¤.
+		// 1) GroupchannelÀ» ¾ò´Â´Ù.
 		channel::Igroup* pgroup_channel = (channel::Igroup*)m_list_channel.GetItemData(_Index);
 
 		// 2) Channel
@@ -723,7 +730,7 @@ void chatting_server_dlg::List_UpdateChannel(int _Index)
 
 		// 1. Name
 		list_item.iSubItem = 1;
-		auto str_name = pgroup_channel->get_name<TCHAR>();
+		auto str_name = pgroup_channel->name<TCHAR>();
 		list_item.pszText = (LPWSTR)str_name.c_str();
 		m_list_channel.SetItem(&list_item);
 
@@ -743,7 +750,7 @@ void chatting_server_dlg::List_UpdateChannel(int _Index)
 			list_item.pszText = text;
 			m_list_channel.SetItem(&list_item);
 
-			// - ìµœëŒ€ ë©¤ë²„ìˆ˜ë¥¼ ì–»ëŠ”ë‹¤.
+			// - ÃÖ´ë ¸â¹ö¼ö¸¦ ¾ò´Â´Ù.
 			auto max_users = pgroup_list->member_capacity();
 
 			list_item.iSubItem = 4;
@@ -763,14 +770,14 @@ void chatting_server_dlg::List_UpdateChannel(int _Index)
 
 void chatting_server_dlg::List_UpdateChannel()
 {
-	scoped_lock(m_lockable_vector_event)
+	SCOPED_LOCK(m_lockable_vector_event)
 	{
 		m_vector_event_queuing.swap(m_vector_event_processing);
 	}
 
 	m_list_channel.SetRedraw(false);
 
-	scoped_lock(m_list_channel)
+	SCOPED_LOCK(m_lockable_list_channel)
 	{
 		for(auto& iter : m_vector_event_processing)
 		{
@@ -798,7 +805,7 @@ void chatting_server_dlg::List_UpdateChannel()
 			}
 		}
 
-		// 1) í™”ë©´ì— ë³´ì´ëŠ” ê²ƒë§Œ Updateí•œë‹¤.
+		// 1) È­¸é¿¡ º¸ÀÌ´Â °Í¸¸ UpdateÇÑ´Ù.
 		int	start = m_list_channel.GetTopIndex();
 		int	end = m_list_channel.GetTopIndex() + m_list_channel.GetCountPerPage();
 

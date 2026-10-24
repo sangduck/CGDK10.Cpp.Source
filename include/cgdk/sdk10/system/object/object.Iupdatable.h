@@ -29,20 +29,13 @@
 */
 //-----------------------------------------------------------------------------
 class CGDK::object::Iupdatable :
-// Inherited Classes) 
 	virtual public				Ireferenceable
 {
-// destructor)
 public:
 	virtual ~Iupdatable() noexcept {}
 
-// public)
-public:
 			result_code			update() { context _context; return this->process_update(_context); }
 			result_code			update(context& _context) { return this->process_update(_context); }
 
-// framework)
-public:
-	//! @brief 업데이트 과정을 정의한다. @param _pMSG 전달할 인자 @return true 성공 @return false 실패
 	virtual	result_code			process_update(context& _context) PURE;
 };

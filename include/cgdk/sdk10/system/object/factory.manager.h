@@ -28,11 +28,12 @@ namespace CGDK
 
 */
 //-----------------------------------------------------------------------------
-class factory::manager :
+class factory::manager:
 	public						CGDK::object::Nnameable,
 	public						Nmessage_transmitter,
 	virtual public				CGDK::object::Idestroyable,
-	public						factory::_traits_system
+	public						factory::_traits_system,
+	private						non_copyable
 {
 protected:
 			manager() noexcept;
@@ -63,7 +64,7 @@ public:
 	[[nodiscard]] 				operator std::shared_mutex&() noexcept { return this->get_lockable();}
 	[[nodiscard]] 				operator const std::shared_mutex&() const noexcept { return this->get_lockable(); }
 
-	static 	auto				instance() { if (m_s_pinstance.empty()) { initialize_instance(); } return object_ptr<manager>(m_s_pinstance); }
+	static 	auto				instance() { auto p = m_s_pinstance.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_s_pinstance.get_acquire(); } return object_ptr<manager>(p); }
 	static	 void				initialize_instance();
 	static	 void				set_instance(own_ptr<manager>&& _instance);
 	static	 void				reset_instance() noexcept;
@@ -84,9 +85,9 @@ private:
 			std::list<Ifactory*> m_list_registered;
 			std::shared_mutex	m_lockable_list_factory;
 			std::list<object_ptr<Ifactory>> m_list_factory;
-			int					m_factory_serial;
-			size_t				m_size_sustain_threshold[4];
-			bool				m_flag_sustain;
+			int					m_factory_serial{ 0 };
+			size_t				m_size_sustain_threshold[4]{ 0,0,0,0 };
+			bool				m_flag_sustain{ true };
 
 	static std::mutex			m_s_lockable_create;
 	static own_ptr<manager>		m_s_pinstance;

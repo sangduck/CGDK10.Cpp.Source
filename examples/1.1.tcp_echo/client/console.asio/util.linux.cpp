@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 #if defined(__linux__)
 #include <termios.h>  

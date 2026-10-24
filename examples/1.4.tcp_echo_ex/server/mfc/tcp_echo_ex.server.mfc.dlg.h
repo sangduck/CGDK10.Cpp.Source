@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 class tcp_echo_ex_server_dlg : public CDialogEx
 {

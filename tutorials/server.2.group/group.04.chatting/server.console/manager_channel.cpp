@@ -6,7 +6,7 @@ CGDK::object_ptr<group_channel> manager_channel::get_channel(uint64_t _channel_i
 	// declare) 
 	CGDK::object_ptr<group_channel> pgroup_channel;
 
-	scoped_lock(m_mutex_map_channel)
+	SCOPED_LOCK(m_mutex_map_channel)
 	{
 		// 1) channel_id에 해당하는 객체를 찾는다.
 		auto iter_find = m_map_channel.find(_channel_id);
@@ -33,7 +33,7 @@ CGDK::object_ptr<group_channel> manager_channel::get_channel(uint64_t _channel_i
 
 void manager_channel::unregister_channel(uint64_t _channel_id) noexcept
 {
-	scoped_lock(m_mutex_map_channel)
+	SCOPED_LOCK(m_mutex_map_channel)
 	{
 		// 1) channel_id에 해당하는 객체를 찾는다.
 		auto iter_find = m_map_channel.find(_channel_id);

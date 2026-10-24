@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                               CGDK::buffer                                *
 //*                       ver 5.0 / release 2021.11.01                        *
@@ -264,20 +264,20 @@ public:
 	constexpr void				_extract(T& _dest) { EXTR_t<self_t,T>::_do_extract(_dest, *this);}
 	constexpr self_t			_extract_bytes(size_type _length)
 			{
-				// check) _lengthê°€ 0ì´í•˜ë©´ ì•ˆëœë‹¤.
+				// check) _length°¡ 0ÀÌÇÏ¸é ¾ÈµÈ´Ù.
 				CGDK_ASSERT(_length >= 0, throw std::invalid_argument("_length is invalid [0]"));
 
-				// check) [ì›ë³¸_ë²„í¼_í¬ê¸°]ë³´ë‹¤ _lengthê°€ ì»¤ì•¼ í•œë‹¤.
+				// check) [¿øº»_¹öÆÛ_Å©±â]º¸´Ù _length°¡ Ä¿¾ß ÇÑ´Ù.
 				_CGD_BUFFER_BOUND_CHECK(this->size_ >= _length);
 
-				// 1) [ì›ë³¸_ë²„í¼_í¬ì¸í„°]ì˜ í¬ê¸°ë¥¼ ì„ì‹œë¡œ ì €ì¥í•œë‹¤.
+				// 1) [¿øº»_¹öÆÛ_Æ÷ÀÎÅÍ]ÀÇ Å©±â¸¦ ÀÓ½Ã·Î ÀúÀåÇÑ´Ù.
 				auto buf_old = this->data_;
 
-				// 1) [ì›ë³¸_ë²„í¼_í¬ì¸í„°]ì˜ í¬ê¸°ë¥¼ _lengthë§Œí¼ ëŠ˜ë¦¬ê³  [ì›ë³¸_ë²„í¼_ê¸¸ì´]ëŠ” ì¤„ì¸ë‹¤.
+				// 1) [¿øº»_¹öÆÛ_Æ÷ÀÎÅÍ]ÀÇ Å©±â¸¦ _length¸¸Å­ ´Ã¸®°í [¿øº»_¹öÆÛ_±æÀÌ]´Â ÁÙÀÎ´Ù.
 				this->data_ += _length;
 				this->size_ -= _length;
 
-				// return) [ì›ë³¸_ë²„í¼_ì²˜ìŒ_í¬ì¸í„°]
+				// return) [¿øº»_¹öÆÛ_Ã³À½_Æ÷ÀÎÅÍ]
 				return self_t(buf_old, _length);
 			}
 
@@ -288,16 +288,16 @@ public:
 			template <class T>
 			COUNT_T				_extract_string_copy(T* _string, size_type _length_in_words=(size_type(0)-1))
 			{
-				// check) _stringì´ nullptrì´ë©´ ì•ˆëœë‹¤.
+				// check) _stringÀÌ nullptrÀÌ¸é ¾ÈµÈ´Ù.
 				CGDK_ASSERT(_string != nullptr, throw std::invalid_argument("_string is nullptr [1]"));
 
-				// check) _length_in_wordsê°€ 0ì´í•˜ë©´ ì•ˆëœë‹¤.
+				// check) _length_in_words°¡ 0ÀÌÇÏ¸é ¾ÈµÈ´Ù.
 				CGDK_ASSERT(_length_in_words >= 0, throw std::invalid_argument("_length_in_words is invalid [0]"));
 
-				// 1) [ë°ì´í„°_í¬ê¸°]ë¥¼ ì–»ì–´ì˜¨ë‹¤.(COUNT_T[ë¬¸ìì—´_ê¸¸ì´]+length(String))
+				// 1) [µ¥ÀÌÅÍ_Å©±â]¸¦ ¾ò¾î¿Â´Ù.(COUNT_T[¹®ÀÚ¿­_±æÀÌ]+length(String))
 				auto length_string = this->_get_front_string_length<T>();
 
-				// check) lengthê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) length°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (length_string == COUNT_T(-1))
 				{
 					this->data_ += sizeof(COUNT_T);
@@ -305,30 +305,30 @@ public:
 					return COUNT_T(-1);
 				}
 
-				// 2) [ë°ì´í„°_í¬ê¸°]ë¥¼ ê³„ì‚°í•œë‹¤.(COUNT_T[ë¬¸ìì—´_ê¸¸ì´]+size(String))
+				// 2) [µ¥ÀÌÅÍ_Å©±â]¸¦ °è»êÇÑ´Ù.(COUNT_T[¹®ÀÚ¿­_±æÀÌ]+size(String))
 				auto size_string = length_string * sizeof(T);
 
-				// check) [ë¬¸ìì—´_ê¸¸ì´]ê°€ [ëª©í‘œ_ë²„í¼_ê¸¸ì´]ë³´ë‹¤ ì‘ì€ ì§€ë¥¼ í™•ì¸í•œë‹¤.
+				// check) [¹®ÀÚ¿­_±æÀÌ]°¡ [¸ñÇ¥_¹öÆÛ_±æÀÌ]º¸´Ù ÀÛÀº Áö¸¦ È®ÀÎÇÑ´Ù.
 				if (size_string >= _length_in_words)
 					throw std::length_error("_buffer_view size is too small!! [5]");
 
-				// 3) [ë³µì‚¬í•  ìœ„ì¹˜]ë¥¼ ì–»ëŠ”ë‹¤.
+				// 3) [º¹»çÇÒ À§Ä¡]¸¦ ¾ò´Â´Ù.
 				auto p = reinterpret_cast<const T*>(this->data_ + sizeof(COUNT_T));
 
-				// 4) [ì›ë³¸_ë²„í¼_í¬ì¸í„°]ì— [ë¬¸ìì—´ì„]ì„ ë³µì‚¬í•œë‹¤.
+				// 4) [¿øº»_¹öÆÛ_Æ÷ÀÎÅÍ]¿¡ [¹®ÀÚ¿­À»]À» º¹»çÇÑ´Ù.
 				if (_string != p)
 				{
 					memcpy(_string, p, size_string);
 				}
 
-				// 5) ë¬¸ìì—´ ê¸¸ì´ë¥¼ sizeof(COUNT_T)ë§Œí¼ ëŠ˜ë¦°ë‹¤.
+				// 5) ¹®ÀÚ¿­ ±æÀÌ¸¦ sizeof(COUNT_T)¸¸Å­ ´Ã¸°´Ù.
 				size_string += sizeof(COUNT_T);
 
-				// 5) [ì›ë³¸_ë²„í¼_í¬ì¸í„°]ë¥¼ [ë°ì´í„°_í¬ê¸°]ë§Œí¼ ë”í•œë‹¤.
+				// 5) [¿øº»_¹öÆÛ_Æ÷ÀÎÅÍ]¸¦ [µ¥ÀÌÅÍ_Å©±â]¸¸Å­ ´õÇÑ´Ù.
 				this->data_ += size_string;
 				this->size_ -= size_string;
 
-				// return) [ë¬¸ìì—´_ê¸¸ì´]ë¥¼ ë¦¬í„´í•œë‹¤.
+				// return) [¹®ÀÚ¿­_±æÀÌ]¸¦ ¸®ÅÏÇÑ´Ù.
 				return length_string;
 			}
 
@@ -383,19 +383,19 @@ public:
 				auto ptr_end = ptr_begin + this->size_ - 1;
 				std::string_view result;
 
-				// 1) /r/nì„ ì°¾ëŠ”ë‹¤.
+				// 1) /r/nÀ» Ã£´Â´Ù.
 				for (; ptr_now < ptr_end; ++ptr_now)
 				{
 					if (*reinterpret_cast<uint16_t*>(ptr_now) == web_terminal)
 					{
-						// - data_ë¥¼ ptr_now+2ë¡œ ì„¤ì •í•œë‹¤. (/r/në¶€ë¶„ì„ ë¹¼ê¸°ìœ„í•´+2ë¥¼ í•¨.)
+						// - data_¸¦ ptr_now+2·Î ¼³Á¤ÇÑ´Ù. (/r/nºÎºĞÀ» »©±âÀ§ÇØ+2¸¦ ÇÔ.)
 						this->data_ = (ptr_now + 2);
 						this->size_ = (ptr_end - ptr_now - 1);
 
-						// - NULLì„ ë„£ëŠ”ë‹¤.
+						// - NULLÀ» ³Ö´Â´Ù.
 						*ptr_now = 0;
 
-						// - ë¬¸ìì—´ì„ ì„¤ì •í•œë‹¤.
+						// - ¹®ÀÚ¿­À» ¼³Á¤ÇÑ´Ù.
 						result = std::string_view(ptr_begin, ptr_now - ptr_begin);
 
 						// break;)
@@ -423,12 +423,12 @@ public:
 				auto ptr_now = ptr_begin;
 				auto ptr_end = ptr_begin + this->size_ - 1;
 
-				// 1) /r/nì„ ì°¾ëŠ”ë‹¤.
+				// 1) /r/nÀ» Ã£´Â´Ù.
 				for (; ptr_now < ptr_end; ++ptr_now)
 				{
 					if (*(uint16_t*)ptr_now == web_terminal)
 					{
-						// - data_ë¥¼ ptr_now+2ë¡œ ì„¤ì •í•œë‹¤. (/r/në¶€ë¶„ì„ ë¹¼ê¸°ìœ„í•´+2ë¥¼ í•¨.)
+						// - data_¸¦ ptr_now+2·Î ¼³Á¤ÇÑ´Ù. (/r/nºÎºĞÀ» »©±âÀ§ÇØ+2¸¦ ÇÔ.)
 						this->data_ = (ptr_now + 2);
 						this->size_ = (ptr_end - ptr_now - 1);
 
@@ -452,10 +452,10 @@ public:
 	}
 	constexpr void _extract_web(std::string_view& _dest, char* _buffer, size_type _buffer_size = (size_type(0)-1))
 			{
-				// check) _buffer_sizeê°€ 0ì´í•˜ë©´ ì•ˆëœë‹¤.
+				// check) _buffer_size°¡ 0ÀÌÇÏ¸é ¾ÈµÈ´Ù.
 				CGDK_ASSERT(_buffer_size >= 0, throw std::invalid_argument("_buffer_size is invalid [0]"));
 
-				// check) _bufferì´ nullptrì´ë©´ ì•ˆëœë‹¤.
+				// check) _bufferÀÌ nullptrÀÌ¸é ¾ÈµÈ´Ù.
 				CGDK_ASSERT(_buffer != nullptr, throw std::invalid_argument("_buffer is nullptr [1]"));
 
 				// definition)
@@ -466,24 +466,24 @@ public:
 				auto ptr_now = ptr_begin;
 				auto ptr_end = ptr_begin + this->size_ - 1;
 
-				// 1) /r/nì„ ì°¾ëŠ”ë‹¤.
+				// 1) /r/nÀ» Ã£´Â´Ù.
 				for (; ptr_now < ptr_end; ++ptr_now)
 				{
 					if (*(uint16_t*)ptr_now == web_terminal)
 					{
-						// - ê¹…ë¦¬ë¥¼ êµ¬í•œë‹¤.
+						// - ±ë¸®¸¦ ±¸ÇÑ´Ù.
 						size_type str_length = ptr_now - ptr_begin;
 
-						// - ìµœëŒ€ ë²„í¼ë¥¼ ë„˜ì§€ì•Šë„ë¡ í•œë‹¤.
+						// - ÃÖ´ë ¹öÆÛ¸¦ ³ÑÁö¾Êµµ·Ï ÇÑ´Ù.
 						if (str_length > (_buffer_size - 1)) str_length = (_buffer_size - 1);
 
-						// - ë³µì‚¬í•œë‹¤
+						// - º¹»çÇÑ´Ù
 						memcpy(_buffer, this->data_, str_length);
 
-						// - ë§ˆì§€ë§‰ì— NULLì„ ì¶”ê°€í•œë‹¤.
+						// - ¸¶Áö¸·¿¡ NULLÀ» Ãß°¡ÇÑ´Ù.
 						*(_buffer + str_length) = 0;
 
-						// - data_ë¥¼ ptr_now+2ë¡œ ì„¤ì •í•œë‹¤. (/r/në¶€ë¶„ì„ ë¹¼ê¸°ìœ„í•´+2ë¥¼ í•¨.)
+						// - data_¸¦ ptr_now+2·Î ¼³Á¤ÇÑ´Ù. (/r/nºÎºĞÀ» »©±âÀ§ÇØ+2¸¦ ÇÔ.)
 						this->data_ = (ptr_now + 2);
 						this->size_ = (ptr_end - ptr_now - 1);
 
@@ -507,10 +507,10 @@ public:
 			}
 			void				_extract_bytes(self_t& _dest, size_type _size, void* _buffer)
 			{
-				// check) _bufferì´ nullptrì´ë©´ ì•ˆëœë‹¤.
+				// check) _bufferÀÌ nullptrÀÌ¸é ¾ÈµÈ´Ù.
 				CGDK_ASSERT(_buffer != nullptr, throw std::invalid_argument("_buffer is nullptr [0]"));
 
-				// check) _sizeê°€ 0ì´í•˜ë©´ ì•ˆëœë‹¤.
+				// check) _size°¡ 0ÀÌÇÏ¸é ¾ÈµÈ´Ù.
 				CGDK_ASSERT(_size >= 0, throw std::invalid_argument("_size is invalid [1]"));
 
 				// check) upper bound
@@ -519,19 +519,19 @@ public:
 				// 1) clear dest
 				_dest = self_t(this->data_, 0);
 
-				// check) ê¸¸ì´ê°€ 0ì´ë©´ ê·¸ëƒ¥ ë˜ëŒë¦°ë‹¤.
+				// check) ±æÀÌ°¡ 0ÀÌ¸é ±×³É µÇµ¹¸°´Ù.
 				if (_size == 0)
 				{
 					return;
 				}
 
-				// 2) ë³µì‚¬í•œë‹¤.
+				// 2) º¹»çÇÑ´Ù.
 				memcpy(_buffer, this->data_, _size);
 
 				// 3) set dest
 				_dest = self_t(this->data_, _size);
 
-				// 4) _sizeë§Œí¼ ë”í•œë‹¤.
+				// 4) _size¸¸Å­ ´õÇÑ´Ù.
 				this->data_ += _size;
 				this->size_ -= _size;
 			}
@@ -545,7 +545,7 @@ public:
 				// declare)
 				_dest = *reinterpret_cast<_buffer_return_t<traits,T>*>(this->data_);
 
-				// 2) _sizeë§Œí¼ ë”í•œë‹¤.
+				// 2) _size¸¸Å­ ´õÇÑ´Ù.
 				this->data_ += sizeof(T);
 				this->size_ -= sizeof(T);
 			}
@@ -558,7 +558,7 @@ public:
 				// declare)
 				T* p = reinterpret_cast<_buffer_return_t<traits,T>*>(this->data_);
 
-				// 2) _sizeë§Œí¼ ë”í•œë‹¤.
+				// 2) _size¸¸Å­ ´õÇÑ´Ù.
 				this->data_ += sizeof(T);
 				this->size_ -= sizeof(T);
 
@@ -578,10 +578,10 @@ public:
 	constexpr std::enable_if_t<is_string_type<T>::value, void>
 								_extract_string_view(std::basic_string_view<T>& _dest)
 			{
-				// 1) [ë°ì´í„°_í¬ê¸°]ë¥¼ ì–»ì–´ì˜¨ë‹¤.(COUNT_T[ë¬¸ìì—´_ê¸¸ì´]+length(String))
+				// 1) [µ¥ÀÌÅÍ_Å©±â]¸¦ ¾ò¾î¿Â´Ù.(COUNT_T[¹®ÀÚ¿­_±æÀÌ]+length(String))
 				COUNT_T	str_length = this->_get_front_string_length<T>();
 
-				// check) lengthê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) length°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (str_length == COUNT_T(-1))
 				{
 					this->data_ += sizeof(COUNT_T);
@@ -590,19 +590,19 @@ public:
 					return;
 				}
 
-				// 2) ë¬¸ìì—´ì˜ ì œì¼ ì• í¬ì¸í„°ë¥¼ ì–»ì–´ë‘”ë‹¤.
+				// 2) ¹®ÀÚ¿­ÀÇ Á¦ÀÏ ¾Õ Æ÷ÀÎÅÍ¸¦ ¾ò¾îµĞ´Ù.
 				auto str_string = this->data<T>(sizeof(COUNT_T));
 
-				// 2) sizeOfData êµ¬í•˜ê¸°
+				// 2) sizeOfData ±¸ÇÏ±â
 				auto size_data = static_cast<COUNT_T>(str_length * sizeof(T) + sizeof(COUNT_T));
 
-				// 3) [ì›ë³¸_ë²„í¼_í¬ì¸í„°]ë¥¼ [ë°ì´í„°_í¬ê¸°]ë§Œí¼ ë”í•œë‹¤.
+				// 3) [¿øº»_¹öÆÛ_Æ÷ÀÎÅÍ]¸¦ [µ¥ÀÌÅÍ_Å©±â]¸¸Å­ ´õÇÑ´Ù.
 				this->data_ += size_data;
 
-				// 4) [ì›ë³¸_ë²„í¼_ê¸¸ì´]ë¥¼ [ë°ì´í„°_í¬ê¸°]ë§Œí¼ ì¤„ì¸ë‹¤.
+				// 4) [¿øº»_¹öÆÛ_±æÀÌ]¸¦ [µ¥ÀÌÅÍ_Å©±â]¸¸Å­ ÁÙÀÎ´Ù.
 				this->size_ -= size_data;
 
-				// return) [ë¬¸ìì—´_ì‹œì‘_í¬ì¸í„°]ì„ ë¦¬í„´í•œë‹¤.
+				// return) [¹®ÀÚ¿­_½ÃÀÛ_Æ÷ÀÎÅÍ]À» ¸®ÅÏÇÑ´Ù.
 				_dest = std::basic_string_view<T>(str_string, static_cast<size_type>(str_length) - 1);
 			}
 
@@ -623,16 +623,16 @@ public:
 				auto ptr_now = ptr_begin;
 				auto ptr_end = reinterpret_cast<T*>(this->data_ + this->size_);
 
-				// 1) /r/nì„ ì°¾ëŠ”ë‹¤.
+				// 1) /r/nÀ» Ã£´Â´Ù.
 				for (; ptr_now < ptr_end; ++ptr_now)
 				{
 					if (*ptr_now == _wchar_terminal)
 					{
-						// - data_ë¥¼ ptr_now+1ë¡œ ì„¤ì •í•œë‹¤. (Terminal ë¬¸ì œ ë¶€ë¶„ì„ ë¹¼ê¸°ìœ„í•´+2ë¥¼ í•¨.)
+						// - data_¸¦ ptr_now+1·Î ¼³Á¤ÇÑ´Ù. (Terminal ¹®Á¦ ºÎºĞÀ» »©±âÀ§ÇØ+2¸¦ ÇÔ.)
 						this->data_ = (ptr_now + 1);
 						this->size_ = (size_type)ptr_end - (size_type)ptr_now;
 
-						// - ë¬¸ìì—´ì„ ì„¤ì •í•œë‹¤.
+						// - ¹®ÀÚ¿­À» ¼³Á¤ÇÑ´Ù.
 						_dest = std::basic_string_view<T>(ptr_begin, ptr_now - ptr_begin);
 
 						// return)
@@ -660,16 +660,16 @@ public:
 				auto ptr_now = ptr_begin;
 				auto ptr_end = reinterpret_cast<T*>(this->data_ + this->size_);
 
-				// 1) _wchar_terminalì„ ì°¾ëŠ”ë‹¤.
+				// 1) _wchar_terminalÀ» Ã£´Â´Ù.
 				for (; ptr_now < ptr_end; ++ptr_now)
 				{
 					if (*ptr_now == _wchar_terminal)
 					{
-						// - data_ë¥¼ ptr_now+2ë¡œ ì„¤ì •í•œë‹¤. (Terminal ë¬¸ì œë¶€ë¶„ì„ ë¹¼ê¸°ìœ„í•´+2ë¥¼ í•¨.)
+						// - data_¸¦ ptr_now+2·Î ¼³Á¤ÇÑ´Ù. (Terminal ¹®Á¦ºÎºĞÀ» »©±âÀ§ÇØ+2¸¦ ÇÔ.)
 						this->data_ = (ptr_now + 1);
 						this->size_ = reinterpret_cast<size_type>(ptr_end) - reinterpret_cast<size_type>(ptr_now);
 
-						// - _wchar_changeë¡œ ê°’ì„ ëŒ€ì²´í•œë‹¤.
+						// - _wchar_change·Î °ªÀ» ´ëÃ¼ÇÑ´Ù.
 						*ptr_now = _wchar_change;
 
 						// - set string
@@ -702,32 +702,32 @@ public:
 			template <class T>
 	constexpr T&				_subtract_general()
 			{
-				// check) Pointerí˜•ì´ë©´ ì•ˆë€ë‹¤.
+				// check) PointerÇüÀÌ¸é ¾È‰Â´Ù.
 				static_assert(!std::is_pointer<T>::value, "must not be Pointer Type!!");
 
-				// check) ë¬¸ìì—´ì˜ ì œì¼ ëì´ NULLì¸ì§€ í™•ì¸í•œë‹¤.
+				// check) ¹®ÀÚ¿­ÀÇ Á¦ÀÏ ³¡ÀÌ NULLÀÎÁö È®ÀÎÇÑ´Ù.
 				if (this->size_ < sizeof(T))
 					throw std::length_error("_buffer_view overflow [0]");
 
-				// 1) [ì›ë³¸_ë²„í¼_ê¸¸ì´]ë¥¼ sizeof(T)ë§Œí¼ ì¤„ì¸ë‹¤.
+				// 1) [¿øº»_¹öÆÛ_±æÀÌ]¸¦ sizeof(T)¸¸Å­ ÁÙÀÎ´Ù.
 				this->size_ -= sizeof(T);
 
-				// return) [ì›ë³¸_ë²„í¼_ì²˜ìŒ_ê°’]ì„ ë¦¬í„´í•œë‹¤.
+				// return) [¿øº»_¹öÆÛ_Ã³À½_°ª]À» ¸®ÅÏÇÑ´Ù.
 				return *reinterpret_cast<T*>(this->data_ + this->size_);
 			}
 	constexpr self_t			_subtract_bytes(size_type _length)
 			{
-				// check) _lengthê°€ 0ì´í•˜ë©´ ì•ˆëœë‹¤.
+				// check) _length°¡ 0ÀÌÇÏ¸é ¾ÈµÈ´Ù.
 				CGDK_ASSERT(_length >= 0, throw std::invalid_argument("_length is invalid [0]"));
 
-				// check) ë¬¸ìì—´ì˜ ì œì¼ ëì´ NULLì¸ì§€ í™•ì¸í•œë‹¤.
+				// check) ¹®ÀÚ¿­ÀÇ Á¦ÀÏ ³¡ÀÌ NULLÀÎÁö È®ÀÎÇÑ´Ù.
 				if (this->size_ < _length)
 					throw std::length_error("_buffer_view Overflow!!");
 
-				// 1) [ì›ë³¸_ë²„í¼_ê¸¸ì´]ë¥¼ _lengthë§Œí¼ ì¤„ì¸ë‹¤.
+				// 1) [¿øº»_¹öÆÛ_±æÀÌ]¸¦ _length¸¸Å­ ÁÙÀÎ´Ù.
 				this->size_ -= _length;
 
-				// return) [ì›ë³¸_ë²„í¼_ë_í¬ì¸í„°]
+				// return) [¿øº»_¹öÆÛ_³¡_Æ÷ÀÎÅÍ]
 				return self_t(this->data_ + this->size_, _length);
 			}
 	// front) 
@@ -752,13 +752,13 @@ public:
 				// check) upper bound
 				_CGD_BUFFER_BOUND_CHECK(_offset + sizeof(T) <= this->size_);
 
-				// 1) [ì›ë³¸_ë²„í¼_ì²˜ìŒ_í¬ì¸í„°]+[_offset]ì„ ì–»ëŠ”ë‹¤.
+				// 1) [¿øº»_¹öÆÛ_Ã³À½_Æ÷ÀÎÅÍ]+[_offset]À» ¾ò´Â´Ù.
 				auto p = this->data<T>(_offset);
 
-				// 2) Offsetì„ Sizeof(T)ì¦ê°€ì‹œí‚¨ë‹¤.
+				// 2) OffsetÀ» Sizeof(T)Áõ°¡½ÃÅ²´Ù.
 				_offset += static_cast<int64_t>(sizeof(T));
 
-				// return) [ì›ë³¸_ë²„í¼_ì²˜ìŒ_í¬ì¸í„°]+[_offset]ê°’ì„ ë¦¬í„´í•œë‹¤.
+				// return) [¿øº»_¹öÆÛ_Ã³À½_Æ÷ÀÎÅÍ]+[_offset]°ªÀ» ¸®ÅÏÇÑ´Ù.
 				return *p;
 			}
 			template <class T>
@@ -770,10 +770,10 @@ public:
 				// check) upper bound
 				_CGD_BUFFER_BOUND_CHECK(_offset + sizeof(T) <= this->size_);
 
-				// 1) [ì›ë³¸_ë²„í¼_ì²˜ìŒ_í¬ì¸í„°]+[_offset]ì„ ì–»ëŠ”ë‹¤.
+				// 1) [¿øº»_¹öÆÛ_Ã³À½_Æ÷ÀÎÅÍ]+[_offset]À» ¾ò´Â´Ù.
 				_dest = *this->data<_buffer_return_t<traits, T>>(_offset);
 
-				// 2) Offsetì„ Sizeof(T)ì¦ê°€ì‹œí‚¨ë‹¤.
+				// 2) OffsetÀ» Sizeof(T)Áõ°¡½ÃÅ²´Ù.
 				_offset += static_cast<int64_t>(sizeof(T));
 			}
 
@@ -781,13 +781,13 @@ public:
 	constexpr std::enable_if_t<is_string_type<T>::value, std::basic_string_view<T>>
 								_front_text(T _terminal = 0, int64_t _offset = 0)
 			{
-				return _buffer_view<ELEM_T>(*this + offset(_offset))._extract_text<T>(_terminal);
+				return _buffer_view<ELEM_T>(*this + offset(_offset)).template _extract_text<T>(_terminal);
 			}
 			template <class T = char>
 	constexpr std::enable_if_t<is_string_type<T>::value, void>
 								_front_text(std::basic_string_view<T>& _dest, T _terminal = 0, int64_t _offset = 0)
 			{
-				_buffer_view<ELEM_T>(*this + offset(_offset))._extract_text<T>(_dest, _terminal);
+				_buffer_view<ELEM_T>(*this + offset(_offset)).template _extract_text<T>(_dest, _terminal);
 			}
 
 			template <class T>
@@ -802,7 +802,7 @@ public:
 	constexpr std::enable_if_t<is_string_type<T>::value, void>
 								_front_text_by_length(std::basic_string_view<T>& _dest, size_t _length, int64_t _offset) const
 			{
-				// check) Pointerí˜•ì´ë©´ ì•ˆë€ë‹¤.
+				// check) PointerÇüÀÌ¸é ¾È‰Â´Ù.
 				static_assert(!std::is_pointer<T>::value, "must no pointer type!");
 
 				const size_t length = _length * sizeof(T);
@@ -813,51 +813,51 @@ public:
 				// check) upper bound
 				_CGD_BUFFER_BOUND_CHECK(_offset + length <= this->size_);
 
-				// 1) [ì›ë³¸_ë²„í¼_ì²˜ìŒ_í¬ì¸í„°]+[_offset]ì„ ì–»ëŠ”ë‹¤.
+				// 1) [¿øº»_¹öÆÛ_Ã³À½_Æ÷ÀÎÅÍ]+[_offset]À» ¾ò´Â´Ù.
 				_dest = std::string_view(this->data<T>(_offset), _length);
 
-				// 2) Offsetì„ Sizeof(T)ì¦ê°€ì‹œí‚¨ë‹¤.
+				// 2) OffsetÀ» Sizeof(T)Áõ°¡½ÃÅ²´Ù.
 				_offset += static_cast<int64_t>(length);
 			}
 
 			template <class T>
 	constexpr T*				_front_string_pointer(int64_t& _offset) const
 			{
-				// check) Lower Bound & Upper Bound í™•ì¸
+				// check) Lower Bound & Upper Bound È®ÀÎ
 				_CGD_BUFFER_BOUND_CHECK((_offset + sizeof(COUNT_T) + sizeof(T)) <= this->size_);
 
-				// check) [ë¬¸ìì—´_ì‹œì‘_ìœ„ì¹˜]ê°€ [ì›ë³¸_ë²„í¼_ê¸¸ì´]ë³´ë‹¤ ê¸¸ë©´ ì•ˆë€ë‹¤.
+				// check) [¹®ÀÚ¿­_½ÃÀÛ_À§Ä¡]°¡ [¿øº»_¹öÆÛ_±æÀÌ]º¸´Ù ±æ¸é ¾È‰Â´Ù.
 				if ((_offset + sizeof(COUNT_T)) > this->size_)
 					throw std::out_of_range("string is too short!! [0]");
 
-				// 1) [ë¬¸ìì—´_ê¸¸ì´]ë¥¼ ì–»ì–´ë‚¸ë‹¤.(ì œì¼ ì²˜ìŒ 4Byteê°€ ë¬¸ìì—´ì˜ ê¸¸ì´ë‹¤.)
+				// 1) [¹®ÀÚ¿­_±æÀÌ]¸¦ ¾ò¾î³½´Ù.(Á¦ÀÏ Ã³À½ 4Byte°¡ ¹®ÀÚ¿­ÀÇ ±æÀÌ´Ù.)
 				auto length_string = static_cast<size_type>(*reinterpret_cast<const COUNT_T*>(this->data_ + _offset));
 
-				// check) [ë¬¸ìì—´_ê¸¸ì´]ê°€ ìµœì†Œ ë¬¸ìì—´ì˜ ê¸¸ì´(NULLë¬¸ì)ì˜ í¬ê¸° ì‘ìœ¼ë©´ ì˜¤ë¥˜ë‹¤!
+				// check) [¹®ÀÚ¿­_±æÀÌ]°¡ ÃÖ¼Ò ¹®ÀÚ¿­ÀÇ ±æÀÌ(NULL¹®ÀÚ)ÀÇ Å©±â ÀÛÀ¸¸é ¿À·ù´Ù!
 				if (length_string < 1)
 					throw std::length_error("string is too short!! [1]");
 
-				// 2) [ë¬¸ìì—´_ì‹œì‘_ìœ„ì¹˜]ë¥¼ êµ¬í•œë‹¤.
+				// 2) [¹®ÀÚ¿­_½ÃÀÛ_À§Ä¡]¸¦ ±¸ÇÑ´Ù.
 				auto pos_begin = _offset + sizeof(COUNT_T);
 
-				// 3) [ë¬¸ìì—´_ë_ìœ„ì¹˜]ë¥¼ êµ¬í•œë‹¤.
+				// 3) [¹®ÀÚ¿­_³¡_À§Ä¡]¸¦ ±¸ÇÑ´Ù.
 				auto pos_end = pos_begin + length_string * sizeof(T);
 
 				// check) upper bound
 				_CGD_BUFFER_BOUND_CHECK(pos_end <= this->size_);
 
-				// check) [ë¬¸ìì—´_ë_ìœ„ì¹˜]ê°€ [ì›ë³¸_ë²„í¼_ê¸¸ì´]ë³´ë‹¤ í¬ë©´ ì•ˆë€ë‹¤.
+				// check) [¹®ÀÚ¿­_³¡_À§Ä¡]°¡ [¿øº»_¹öÆÛ_±æÀÌ]º¸´Ù Å©¸é ¾È‰Â´Ù.
 				if (pos_end > this->size_)
 					throw std::out_of_range("string is to long!! [2]");
 
-				// check) ë¬¸ìì—´ì˜ ì œì¼ ëì´ NULLì¸ì§€ í™•ì¸í•œë‹¤.
+				// check) ¹®ÀÚ¿­ÀÇ Á¦ÀÏ ³¡ÀÌ NULLÀÎÁö È®ÀÎÇÑ´Ù.
 				if (*reinterpret_cast<const T*>(this->data_ + pos_end - sizeof(T)) != 0)
 					throw std::out_of_range("Invalid string! [3]");
 
-				// 4) ìµœì¢…ì ìœ¼ë¡œ ê³„ì‚°ëœ Offsetê°’ì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 4) ÃÖÁ¾ÀûÀ¸·Î °è»êµÈ Offset°ªÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = static_cast<int64_t>(pos_end);
 
-				// return) [ë¬¸ìì—´_ì‹œì‘_í¬ì¸í„°]ì„ ë¦¬í„´í•œë‹¤.
+				// return) [¹®ÀÚ¿­_½ÃÀÛ_Æ÷ÀÎÅÍ]À» ¸®ÅÏÇÑ´Ù.
 				return this->data<T>(pos_begin);
 			}
 			template <class T>
@@ -872,41 +872,41 @@ public:
 	constexpr std::enable_if_t<is_string_type<T>::value, void>
 								_front_string(std::basic_string<T>& _dest, int64_t& _offset) const
 			{
-				// check) Lower Bound & Upper Bound í™•ì¸
+				// check) Lower Bound & Upper Bound È®ÀÎ
 				_CGD_BUFFER_BOUND_CHECK((_offset + sizeof(COUNT_T) + sizeof(T)) <= this->size_);
 
-				// check) [ì›ë³¸_ë²„í¼_ê¸¸ì´]ê°€ ìµœì†Œí•œ sizeof(unit32_t)ë³´ë‹¤ëŠ” ê¸¸ì–´ì•¼ í•œë‹¤.
+				// check) [¿øº»_¹öÆÛ_±æÀÌ]°¡ ÃÖ¼ÒÇÑ sizeof(unit32_t)º¸´Ù´Â ±æ¾î¾ß ÇÑ´Ù.
 				if ((_offset + sizeof(COUNT_T) + sizeof(T)) > this->size_)
 					throw std::length_error("string is too short!! [0]");
 
-				// 1) [ë¬¸ìì—´_ê¸¸ì´]ë¥¼ ì–»ì–´ë‚¸ë‹¤.(ì œì¼ ì²˜ìŒ 4Byteê°€ ë¬¸ìì—´ì˜ ê¸¸ì´ë‹¤.)
+				// 1) [¹®ÀÚ¿­_±æÀÌ]¸¦ ¾ò¾î³½´Ù.(Á¦ÀÏ Ã³À½ 4Byte°¡ ¹®ÀÚ¿­ÀÇ ±æÀÌ´Ù.)
 				auto length_string = static_cast<size_type>(*reinterpret_cast<COUNT_T*>(this->data_ + _offset));
 
-				// check) [ë¬¸ìì—´_ê¸¸ì´]ê°€ ìµœì†Œ ë¬¸ìì—´ì˜ ê¸¸ì´(NULLë¬¸ì)ì˜ í¬ê¸° ì‘ìœ¼ë©´ ì˜¤ë¥˜ë‹¤!
+				// check) [¹®ÀÚ¿­_±æÀÌ]°¡ ÃÖ¼Ò ¹®ÀÚ¿­ÀÇ ±æÀÌ(NULL¹®ÀÚ)ÀÇ Å©±â ÀÛÀ¸¸é ¿À·ù´Ù!
 				if (length_string < 1)
 					throw std::length_error("string is too short!! [1]");
 
-				// 2) [ë¬¸ìì—´_ì‹œì‘_ìœ„ì¹˜]ë¥¼ êµ¬í•œë‹¤.
+				// 2) [¹®ÀÚ¿­_½ÃÀÛ_À§Ä¡]¸¦ ±¸ÇÑ´Ù.
 				auto pos_begin = _offset + sizeof(COUNT_T);
 
-				// 3) [ë¬¸ìì—´_ë_ìœ„ì¹˜]ë¥¼ êµ¬í•œë‹¤.
+				// 3) [¹®ÀÚ¿­_³¡_À§Ä¡]¸¦ ±¸ÇÑ´Ù.
 				auto pos_end = pos_begin + length_string * sizeof(T);
 
-				// check) Lower Bound & Upper Bound í™•ì¸
+				// check) Lower Bound & Upper Bound È®ÀÎ
 				_CGD_BUFFER_BOUND_CHECK(pos_end <= this->size_);
 
-				// check) [ë¬¸ìì—´_ë_ìœ„ì¹˜]ê°€ [ì›ë³¸_ë²„í¼_ê¸¸ì´]ë³´ë‹¤ í¬ë©´ ì•ˆë€ë‹¤.
+				// check) [¹®ÀÚ¿­_³¡_À§Ä¡]°¡ [¿øº»_¹öÆÛ_±æÀÌ]º¸´Ù Å©¸é ¾È‰Â´Ù.
 				if (pos_end > this->size_)
 					throw std::out_of_range("string is to long!! [2]");
 
-				// check) ë¬¸ìì—´ì˜ ì œì¼ ëì´ NULLì¸ì§€ í™•ì¸í•œë‹¤.
+				// check) ¹®ÀÚ¿­ÀÇ Á¦ÀÏ ³¡ÀÌ NULLÀÎÁö È®ÀÎÇÑ´Ù.
 				if (*reinterpret_cast<const T*>(this->data_ + pos_end - sizeof(T)) != 0)
 					throw std::out_of_range("string is too short!! [3]");
 
-				// 4) ìµœì¢…ì ìœ¼ë¡œ ê³„ì‚°ëœ Offsetê°’ì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 4) ÃÖÁ¾ÀûÀ¸·Î °è»êµÈ Offset°ªÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = static_cast<int64_t>(pos_end);
 
-				// return) [ë¬¸ìì—´]ì„ ë¦¬í„´í•œë‹¤. (RVO)
+				// return) [¹®ÀÚ¿­]À» ¸®ÅÏÇÑ´Ù. (RVO)
 				_dest = std::basic_string<T>(reinterpret_cast<T*>(this->data_ + pos_begin));
 			}
 	constexpr std::string_view	_front_web(int64_t& _offset) const
@@ -921,7 +921,7 @@ public:
 				// definition)
 				const uint16_t terminal_compare = ('\n' << 8) | '\r';
 
-				// check) [ë¬¸ìì—´_ê¸¸ì´]ê°€ ìµœì†Œ ë¬¸ìì—´ì˜ ê¸¸ì´(NULLë¬¸ì)ì˜ í¬ê¸° ì‘ìœ¼ë©´ ì˜¤ë¥˜ë‹¤!
+				// check) [¹®ÀÚ¿­_±æÀÌ]°¡ ÃÖ¼Ò ¹®ÀÚ¿­ÀÇ ±æÀÌ(NULL¹®ÀÚ)ÀÇ Å©±â ÀÛÀ¸¸é ¿À·ù´Ù!
 				if (_offset > static_cast<int64_t>(this->size_ - 1)) throw std::out_of_range("_offset is Out of Range!! [0]");
 
 				// declare)
@@ -929,15 +929,15 @@ public:
 				auto ptr_now = ptr_begin;
 				auto ptr_end = ptr_begin + this->size_ - 1;
 
-				// 1) /r/nì„ ì°¾ëŠ”ë‹¤.
+				// 1) /r/nÀ» Ã£´Â´Ù.
 				for (; ptr_now < ptr_end; ++ptr_now)
 				{
 					if (*(uint16_t*)ptr_now == terminal_compare)
 					{
-						// - offsetì„ updateí•œë‹¤.
+						// - offsetÀ» updateÇÑ´Ù.
 						_offset = static_cast<int64_t>(ptr_now + 2 - this->data_);
 
-						// - string ì •ë³´ë¥¼ ì„¤ì •í•œë‹¤.
+						// - string Á¤º¸¸¦ ¼³Á¤ÇÑ´Ù.
 						_dest = std::string_view(ptr_begin, ptr_now - ptr_begin);
 
 						// return) 
@@ -961,38 +961,38 @@ public:
 	constexpr std::enable_if_t<is_string_type<T>::value, void>
 								_front_string_view(std::basic_string_view<T>& _dest, int64_t& _offset) const
 			{
-				// check) [ì›ë³¸_ë²„í¼_ê¸¸ì´]ê°€ ìµœì†Œí•œ sizeof(unit32_t)ë³´ë‹¤ëŠ” ê¸¸ì–´ì•¼ í•œë‹¤.
+				// check) [¿øº»_¹öÆÛ_±æÀÌ]°¡ ÃÖ¼ÒÇÑ sizeof(unit32_t)º¸´Ù´Â ±æ¾î¾ß ÇÑ´Ù.
 				if (static_cast<uint64_t>(_offset + sizeof(COUNT_T) + sizeof(T)) > this->size_)
 					throw std::length_error("string is too short!! [0]");
 
-				// 1) [ë¬¸ìì—´_ê¸¸ì´]ë¥¼ ì–»ì–´ë‚¸ë‹¤.(ì œì¼ ì²˜ìŒ 4Byteê°€ ë¬¸ìì—´ì˜ ê¸¸ì´ë‹¤.)
+				// 1) [¹®ÀÚ¿­_±æÀÌ]¸¦ ¾ò¾î³½´Ù.(Á¦ÀÏ Ã³À½ 4Byte°¡ ¹®ÀÚ¿­ÀÇ ±æÀÌ´Ù.)
 				auto length_string = static_cast<size_type>(*reinterpret_cast<const COUNT_T*>(this->data_ + _offset));
 
-				// check) [ë¬¸ìì—´_ê¸¸ì´]ê°€ ìµœì†Œ ë¬¸ìì—´ì˜ ê¸¸ì´(NULLë¬¸ì)ì˜ í¬ê¸°ë³´ë‹¤ ì‘ìœ¼ë©´ ì˜¤ë¥˜ë‹¤!
+				// check) [¹®ÀÚ¿­_±æÀÌ]°¡ ÃÖ¼Ò ¹®ÀÚ¿­ÀÇ ±æÀÌ(NULL¹®ÀÚ)ÀÇ Å©±âº¸´Ù ÀÛÀ¸¸é ¿À·ù´Ù!
 				if (length_string < 1)
 					throw std::length_error("string is too short!! [1]");
 
-				// 2) [ë¬¸ìì—´_ì‹œì‘_ìœ„ì¹˜]ë¥¼ êµ¬í•œë‹¤.
+				// 2) [¹®ÀÚ¿­_½ÃÀÛ_À§Ä¡]¸¦ ±¸ÇÑ´Ù.
 				auto pos_begin = _offset + sizeof(COUNT_T);
 
-				// 3) [ë¬¸ìì—´_ë_ìœ„ì¹˜]ë¥¼ êµ¬í•œë‹¤.
+				// 3) [¹®ÀÚ¿­_³¡_À§Ä¡]¸¦ ±¸ÇÑ´Ù.
 				auto pos_end = pos_begin + length_string * sizeof(T);
 
 				// check) upper bound
 				_CGD_BUFFER_BOUND_CHECK(pos_end <= this->size_);
 
-				// check) [ë¬¸ìì—´_ë_ìœ„ì¹˜]ê°€ [ì›ë³¸_ë²„í¼_ê¸¸ì´]ë³´ë‹¤ í¬ë©´ ì•ˆë€ë‹¤.
+				// check) [¹®ÀÚ¿­_³¡_À§Ä¡]°¡ [¿øº»_¹öÆÛ_±æÀÌ]º¸´Ù Å©¸é ¾È‰Â´Ù.
 				if (pos_end > this->size_)
 					throw std::out_of_range("string is to long!! [2]");
 
-				// check) ë¬¸ìì—´ì˜ ì œì¼ ëì´ NULLì¸ì§€ í™•ì¸í•œë‹¤.
+				// check) ¹®ÀÚ¿­ÀÇ Á¦ÀÏ ³¡ÀÌ NULLÀÎÁö È®ÀÎÇÑ´Ù.
 				if (*reinterpret_cast<const T*>(this->data_ + pos_end - sizeof(T)) != 0)
 					throw std::out_of_range("string is too short!! [3]");
 
-				// 4) ìµœì¢…ì ìœ¼ë¡œ ê³„ì‚°ëœ Offsetê°’ì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 4) ÃÖÁ¾ÀûÀ¸·Î °è»êµÈ Offset°ªÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = static_cast<int64_t>(pos_end);
 
-				// return) [ë¬¸ìì—´]ì„ ë¦¬í„´í•œë‹¤. (RVO)
+				// return) [¹®ÀÚ¿­]À» ¸®ÅÏÇÑ´Ù. (RVO)
 				_dest = std::basic_string_view<T>(reinterpret_cast<T*>(this->data_ + pos_begin), length_string - 1);
 			}
 			template<class T>
@@ -1005,24 +1005,24 @@ public:
 			template<class T>
 	constexpr void				_front_own_ptr_container_associative(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// 2) clear container
 				_dest = T();
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *reinterpret_cast<COUNT_T*>(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 4) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 4) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					// - get key and insert
@@ -1032,7 +1032,7 @@ public:
 					serializer_peek<self_t, typename T::mapped_type>::_do_peek(iter.first->second, *this, offset);
 				}
 
-				// 5) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 5) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset;
 			}
 
@@ -1046,24 +1046,24 @@ public:
 			template<class T>
 	constexpr void				_front_object_ptr_container_associative(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// 2) reset
 				_dest = T();
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *reinterpret_cast<COUNT_T*>(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 4) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 4) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					// - get key and insert
@@ -1073,7 +1073,7 @@ public:
 					serializer_peek<self_t, typename T::mapped_type>::_do_peek(iter.first->ssecond , *this, offset);
 				}
 
-				// 5) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 5) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset;
 			}
 			template<class T>
@@ -1086,24 +1086,24 @@ public:
 			template<class T>
 	constexpr void				_front_container_associative(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// 2) reset
 				_dest = T();
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *reinterpret_cast<COUNT_T*>(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 4) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 4) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					// - get key and insert
@@ -1113,7 +1113,7 @@ public:
 					serializer_peek<self_t, typename T::mapped_type>::_do_peek(iter.first->second, *this, offset);
 				}
 
-				// 5) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 5) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset;
 			}
 
@@ -1133,14 +1133,14 @@ public:
 				// 2) 
 				_buffer_view<ELEM_T> buf_temp = *this;
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = buf_temp.template _extract<COUNT_T>();
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 					return;
 
-				// 4) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 4) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					// - get key and insert
@@ -1150,7 +1150,7 @@ public:
 					serializer_extract<self_t, typename T::mapped_type>::_do_extract(iter.first->second, buf_temp);
 				}
 
-				// 4) ë³€ê²½ëœ ì •ë³´ ì—¡ë°ì´íŠ¸
+				// 4) º¯°æµÈ Á¤º¸ ¿¦µ¥ÀÌÆ®
 				*this = buf_temp;
 			}
 			template<class T>
@@ -1166,14 +1166,14 @@ public:
 				// 1) clear container
 				_dest = T();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = _extract<COUNT_T>();
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 					return;
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					// - get key and insert
@@ -1197,14 +1197,14 @@ public:
 				// 1) clear container
 				_dest = T();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = _extract<COUNT_T>();
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 					return;
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					// - get key and insert
@@ -1228,14 +1228,14 @@ public:
 				// 1) clear
 				_dest = std::array<T, X>();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = _extract<COUNT_T>();
 
-				// check) [ì›ë³¸_ë²„í¼_ê¸¸ì´]ê°€ ìµœì†Œí•œ sizeof(unit32_t)ë³´ë‹¤ëŠ” ê¸¸ì–´ì•¼ í•œë‹¤.
+				// check) [¿øº»_¹öÆÛ_±æÀÌ]°¡ ÃÖ¼ÒÇÑ sizeof(unit32_t)º¸´Ù´Â ±æ¾î¾ß ÇÑ´Ù.
 				if (static_cast<size_type>(size_data) > X)
 					throw std::length_error("overflow array size");
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ë“¤ì¸ë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾îµéÀÎ´Ù.
 				for (COUNT_T i = 0; i < size_data; ++i)
 				{
 					_extract<T>(_dest[i]);
@@ -1255,14 +1255,14 @@ public:
 				// 1) clear 
 				_dest.clear();
 
-				// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = this->_extract<COUNT_T>();
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 					return;
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace(serializer_extract<self_t, typename T::value_type>::_do_extract(*this));
@@ -1281,14 +1281,14 @@ public:
 				// 1) clear container
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = this->_extract<COUNT_T>();
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 					return;
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace(serializer_extract<self_t, typename T::value_type>::_do_extract(*this));
@@ -1307,14 +1307,14 @@ public:
 				// 1) clear container
 				_dest.clear();
 
-				// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = this->_extract<COUNT_T>();
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 					return;
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace(serializer_extract<self_t, typename T::value_type>::_do_extract(*this));
@@ -1333,14 +1333,14 @@ public:
 				// declare) 
 				_dest.clear();
 
-				// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = this->_extract<COUNT_T>();
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 					return;
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace_back(serializer_extract<self_t, typename T::value_type>::_do_extract(*this));
@@ -1359,14 +1359,14 @@ public:
 				// 1) clear container
 				_dest.clear();
 
-				// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = this->_extract<COUNT_T>();
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 					return;
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace_back(serializer_extract<self_t, typename T::value_type>::_do_extract(*this));
@@ -1385,14 +1385,14 @@ public:
 				// 1) clear container
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = this->_extract<COUNT_T>();
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 					return;
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace_back(serializer_extract<self_t, typename T::value_type>::_do_extract(*this));
@@ -1411,17 +1411,17 @@ public:
 				// 1) clear container
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = this->_extract<COUNT_T>();
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data <= 0)
 					return;
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ vectorë¥¼ Reserveí•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ vector¸¦ ReserveÇÑ´Ù.
 				_dest.reserve(size_data);
 
-				// 4) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 4) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace_back(serializer_extract<self_t, typename T::value_type>::_do_extract(*this));
@@ -1440,17 +1440,17 @@ public:
 				// 1) clear
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = this->_extract<COUNT_T>();
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data <= 0)
 					return;
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ vectorë¥¼ Reserveí•œë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ vector¸¦ ReserveÇÑ´Ù.
 				_dest.reserve(size_data);
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace_back(serializer_extract<self_t, typename T::value_type>::_do_extract(*this));
@@ -1472,17 +1472,17 @@ public:
 				// 1) clear container
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = this->_extract<COUNT_T>();
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data <= 0)
 					return;
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ vectorë¥¼ Reserveí•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ vector¸¦ ReserveÇÑ´Ù.
 				_dest.reserve(size_data);
 
-				// 4) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 4) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					auto& iter = _dest.emplace_back();
@@ -1531,7 +1531,7 @@ public:
 	constexpr std::enable_if_t<is_memcopy_able<typename T::value_type>::value, void>
 								_extract_container_span(T& _dest)
 			{
-				// check) [ì›ë³¸_ë²„í¼_í¬ê¸°]ë³´ë‹¤ _lengthê°€ ì»¤ì•¼ í•œë‹¤.
+				// check) [¿øº»_¹öÆÛ_Å©±â]º¸´Ù _length°¡ Ä¿¾ß ÇÑ´Ù.
 				_CGD_BUFFER_BOUND_CHECK(this->size_ >= sizeof(COUNT_T));
 
 				// 2) extract [data_size]
@@ -1540,7 +1540,7 @@ public:
 				// 3) get size
 				auto size_bytes = sizeof(COUNT_T) + sizeof(typename T::value_type) * size_data;
 
-				// check) [ì›ë³¸_ë²„í¼_í¬ê¸°]ë³´ë‹¤ _lengthê°€ ì»¤ì•¼ í•œë‹¤.
+				// check) [¿øº»_¹öÆÛ_Å©±â]º¸´Ù _length°¡ Ä¿¾ß ÇÑ´Ù.
 				_CGD_BUFFER_BOUND_CHECK(this->size_ >= size_bytes);
 
 				// 3) get pos
@@ -1571,30 +1571,30 @@ public:
 			template <class T>
 	constexpr void				_front_own_ptr_set(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// 2) clear container
 				_dest.clear();
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *(COUNT_T*)(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 4) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 4) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace(serializer_peek<self_t, typename T::value_type>::_do_peek(*this, offset));
 				}
 
-				// 5) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 5) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset;
 			}
 
@@ -1608,30 +1608,30 @@ public:
 			template <class T>
 	constexpr void				_front_object_ptr_set(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// 2) clear container
 				_dest.clear();
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *(COUNT_T*)(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace(serializer_peek<self_t, typename T::value_type>::_do_peek(*this, offset));
 				}
 
-				// 4) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 4) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset;
 			}
 			template <class T>
@@ -1644,30 +1644,30 @@ public:
 			template <class T>
 	constexpr void					_front_set(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// 2) 
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *(COUNT_T*)(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace(serializer_peek<self_t, typename T::value_type>::_do_peek(*this, offset));
 				}
 
-				// 4) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 4) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset;
 			}
 			template <class T>
@@ -1680,30 +1680,30 @@ public:
 			template <class T>
 	constexpr T					_front_container_own_ptr_list(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// 2) clear container
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *(COUNT_T*)(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace_back(serializer_peek<self_t, typename T::value_type>::_do_peek(*this, offset));
 				}
 
-				// 4) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 4) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset;
 			}
 			template <class T>
@@ -1716,30 +1716,30 @@ public:
 			template <class T>
 	constexpr void				_front_container_object_ptr_list(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// 2) clear container
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *(COUNT_T*)(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace_back(serializer_peek<self_t, typename T::value_type>::_do_peek(offset));
 				}
 
-				// 4) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 4) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset;
 			}
 			template <class T>
@@ -1752,30 +1752,30 @@ public:
 			template <class T>
 	constexpr void				_front_container_list(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// 2) clear container
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *(COUNT_T*)(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace_back(serializer_peek<self_t, typename T::value_type>::_do_peek(*this, offset));
 				}
 
-				// 4) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 4) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset;
 			}
 			template <class T>
@@ -1788,33 +1788,33 @@ public:
 			template <class T>
 	constexpr T					_front_own_ptr_vector(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// declare) 
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *(COUNT_T*)(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ vectorë¥¼ Reserveí•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ vector¸¦ ReserveÇÑ´Ù.
 				_dest.reserve(size_data);
 
-				// 4) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 4) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace_back(serializer_peek<self_t, typename T::value_type>::_do_peek(*this, offset));
 				}
 
-				// 5) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 5) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset;
 			}
 			template <class T>
@@ -1827,33 +1827,33 @@ public:
 			template <class S, class T>
 	constexpr void				_front_object_ptr_vector(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// 2) clear container
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *(COUNT_T*)(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ vectorë¥¼ Reserveí•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ vector¸¦ ReserveÇÑ´Ù.
 				_dest.reserve(size_data);
 
-				// 4) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 4) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					_dest.emplace_back(serializer_peek<self_t, typename T::value_type>::_do_peek(*this, offset));
 				}
 
-				// 5) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 5) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset;
 			}
 
@@ -1869,27 +1869,27 @@ public:
 	constexpr std::enable_if_t<!is_memcopy_able<typename T::value_type>::value, void>
 								_front_container_array(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// 2) clear container
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *(COUNT_T*)(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ vectorë¥¼ Reserveí•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ vector¸¦ ReserveÇÑ´Ù.
 				_dest.reserve(size_data);
 
-				// 4) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ ë“¤ì—¬ ì €ì¥í•œë‹¤.
+				// 4) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾î µé¿© ÀúÀåÇÑ´Ù.
 				for (; size_data > 0; size_data--)
 				{
 					// - insert now first
@@ -1899,7 +1899,7 @@ public:
 					serializer_peek<self_t, typename T::value_type>::_do_peek(iter, *this, offset);
 				}
 
-				// 5) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 5) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset;
 			}
 
@@ -1916,30 +1916,30 @@ public:
 	constexpr std::enable_if_t<is_memcopy_able<typename T::value_type>::value, void>
 								_front_container_array(T& _dest, int64_t& _offset) const
 			{
-				// 1) ì„ì‹œë¡œ Offset (Rollbackì‹œë¥¼ ìœ„í•´ ë³µì‚¬í•´ ì‚¬ìš©)
+				// 1) ÀÓ½Ã·Î Offset (Rollback½Ã¸¦ À§ÇØ º¹»çÇØ »ç¿ë)
 				auto offset = _offset;
 
 				// 2) clear container
 				_dest.clear();
 
-				// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+				// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 				auto size_data = *(COUNT_T*)(this->data_ + offset);
 				offset += sizeof(COUNT_T);
 
-				// check) size_dataê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) size_data°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (size_data == COUNT_T(-1))
 				{
 					_offset = offset;
 					return;
 				}
 
-				// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ vectorë¥¼ Resizeí•œë‹¤.
+				// 3) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ vector¸¦ ResizeÇÑ´Ù.
 				_dest.resize(size_data);
 
-				// 4) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ í†µì§¸ë¡œ ì½ì–´ë“¤ì¸ë‹¤.
+				// 4) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÅëÂ°·Î ÀĞ¾îµéÀÎ´Ù.
 				this->_copy_buffer<char>(offset, buffer_base<char>{ static_cast<size_type>(size_data) * sizeof(typename T::value_type), reinterpret_cast<char*>(&_dest.front()) });
 
-				// 5) Offsetì„ ì—…ë°ì´íŠ¸í•œë‹¤.
+				// 5) OffsetÀ» ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 				_offset = offset + size_data * sizeof(typename T::value_type);
 			}
 
@@ -1957,19 +1957,19 @@ public:
 			template <class T>
 	constexpr T&				_back_general(int64_t& _offset) const
 			{
-				// check) Pointerí˜•ì´ë©´ ì•ˆë€ë‹¤.
+				// check) PointerÇüÀÌ¸é ¾È‰Â´Ù.
 				static_assert(!std::is_pointer<T>::value, "must not be Pointer Type!!");
 
 				// check) upper bound
 				_CGD_BUFFER_BOUND_CHECK(_offset + sizeof(T) <= this->size_);
 
-				// 1) [ì›ë³¸_ë²„í¼_ë_í¬ì¸í„°]+[_offset]ì„ ì–»ëŠ”ë‹¤.
+				// 1) [¿øº»_¹öÆÛ_³¡_Æ÷ÀÎÅÍ]+[_offset]À» ¾ò´Â´Ù.
 				auto p = reinterpret_cast<T*>(this->data_ + this->size_ + _offset);
 
-				// 2) Offsetì„ Sizeof(T)ì¦ê°€ì‹œí‚¨ë‹¤.
+				// 2) OffsetÀ» Sizeof(T)Áõ°¡½ÃÅ²´Ù.
 				_offset += static_cast<int64_t>(sizeof(T));
 
-				// return) [ì›ë³¸_ë²„í¼_ë_í¬ì¸í„°]+[_offset]ê°’ì„ ë¦¬í„´í•œë‹¤.
+				// return) [¿øº»_¹öÆÛ_³¡_Æ÷ÀÎÅÍ]+[_offset]°ªÀ» ¸®ÅÏÇÑ´Ù.
 				return *p;
 			}
 
@@ -1979,7 +1979,7 @@ public:
 				// check) upper bound
 				_CGD_BUFFER_BOUND_CHECK(_offset <= static_cast<int64_t>(this->size_));
 
-				// return) _offset ì´ë™í•œ ë²„í¼ ìƒì„±í›„ ë¦¬í„´(RVO)
+				// return) _offset ÀÌµ¿ÇÑ ¹öÆÛ »ı¼ºÈÄ ¸®ÅÏ(RVO)
 				return self_t(this->data_ + _offset, static_cast<size_type>((_offset < static_cast<int64_t>(this->size_)) ? this->size_ - _offset : 0));
 			}
 	constexpr self_t			_end(int64_t _offset = 0) const
@@ -1987,7 +1987,7 @@ public:
 				// check) upper bound
 				_CGD_BUFFER_BOUND_CHECK(_offset <= static_cast<int64_t>(this->size_));
 
-				// return) [ì›ë³¸_ë²„í¼_ë_í¬ì¸í„°]+[_offset]í•œ ê³³ì„ ê¸°ì¤€ìœ¼ë¡œ ë²„í¼ë¥¼ ë§Œë“ ë‹¤.
+				// return) [¿øº»_¹öÆÛ_³¡_Æ÷ÀÎÅÍ]+[_offset]ÇÑ °÷À» ±âÁØÀ¸·Î ¹öÆÛ¸¦ ¸¸µç´Ù.
 				return self_t(this->data_ + this->size_ + _offset, static_cast<size_type>((_offset <= 0ll) ? (-_offset) : 0ll));
 			}
 
@@ -1995,53 +1995,53 @@ public:
 			template <class T>
 	constexpr COUNT_T			_get_front_string_length()
 			{
-				// check) [ì›ë³¸_ë²„í¼_ê¸¸ì´]ê°€ ìµœì†Œí•œ sizeof(unit32_t)ë³´ë‹¤ëŠ” ê¸¸ì–´ì•¼ í•œë‹¤.
+				// check) [¿øº»_¹öÆÛ_±æÀÌ]°¡ ÃÖ¼ÒÇÑ sizeof(unit32_t)º¸´Ù´Â ±æ¾î¾ß ÇÑ´Ù.
 				if (sizeof(COUNT_T) > this->size_)
 					throw std::length_error("_buffer_view is too short [0]");
 
-				// 1) [ë¬¸ìì—´_ê¸¸ì´]ë¥¼ ì–»ì–´ë‚¸ë‹¤.(ì œì¼ ì²˜ìŒ 4Byteê°€ ë¬¸ìì—´ì˜ ê¸¸ì´ë‹¤.)
+				// 1) [¹®ÀÚ¿­_±æÀÌ]¸¦ ¾ò¾î³½´Ù.(Á¦ÀÏ Ã³À½ 4Byte°¡ ¹®ÀÚ¿­ÀÇ ±æÀÌ´Ù.)
 				auto length_string = *reinterpret_cast<const COUNT_T*>(this->data_);
 
-				// check) lengthê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+				// check) length°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 				if (length_string == COUNT_T(-1)) return COUNT_T(-1);
 
-				// 2) Stringì˜ í¬ê¸°ë¥¼ êµ¬í•œë‹¤.
+				// 2) StringÀÇ Å©±â¸¦ ±¸ÇÑ´Ù.
 				auto size_string = length_string * sizeof(T);
 
-				// check) [ë¬¸ìì—´_ê¸¸ì´]ê°€ ìµœì†Œ ë¬¸ìì—´ì˜ ê¸¸ì´(NULLë¬¸ì)ì˜ í¬ê¸° ì‘ìœ¼ë©´ ì˜¤ë¥˜ë‹¤!
+				// check) [¹®ÀÚ¿­_±æÀÌ]°¡ ÃÖ¼Ò ¹®ÀÚ¿­ÀÇ ±æÀÌ(NULL¹®ÀÚ)ÀÇ Å©±â ÀÛÀ¸¸é ¿À·ù´Ù!
 				if (size_string < sizeof(T))
 					throw std::length_error("string is too short!! [1]");
 
-				// 3) [ë°ì´í„°_í¬ê¸°]ë¥¼ ê³„ì‚°í•œë‹¤.(COUNT_T[ë¬¸ìì—´_ê¸¸ì´]+length(String))
+				// 3) [µ¥ÀÌÅÍ_Å©±â]¸¦ °è»êÇÑ´Ù.(COUNT_T[¹®ÀÚ¿­_±æÀÌ]+length(String))
 				auto size_data = sizeof(COUNT_T) + size_string;
 
 				// check) upper bound
 				_CGD_BUFFER_BOUND_CHECK(size_data <= this->size_);
 
-				// check) [ë°ì´í„°_í¬ê¸°]ê°€ [ë‚¨ì€_ì›ë³¸_ë²„í¼_ê¸¸ì´](size_)ë³´ë‹¤ ì‘ì€ì§€ ê²€ì‚¬í•œë‹¤.
+				// check) [µ¥ÀÌÅÍ_Å©±â]°¡ [³²Àº_¿øº»_¹öÆÛ_±æÀÌ](size_)º¸´Ù ÀÛÀºÁö °Ë»çÇÑ´Ù.
 				if (size_data > this->size_)
 					throw std::length_error("string is too short!! [2]");
 
-				// check) ë¬¸ìì—´ì˜ ì œì¼ ëì´ NULLì¸ì§€ í™•ì¸í•œë‹¤.
+				// check) ¹®ÀÚ¿­ÀÇ Á¦ÀÏ ³¡ÀÌ NULLÀÎÁö È®ÀÎÇÑ´Ù.
 				if (*reinterpret_cast<const T*>(this->data_ + size_data - sizeof(T)) != 0)
 					throw std::length_error("it's invalid string! [3]");
 
-				// return) [ë¬¸ìì—´_ì‹œì‘_í¬ì¸í„°]ì„ ë¦¬í„´í•œë‹¤.
+				// return) [¹®ÀÚ¿­_½ÃÀÛ_Æ÷ÀÎÅÍ]À» ¸®ÅÏÇÑ´Ù.
 				return length_string;
 			}
 			template <class T>
 			void				_copy_buffer(int64_t _offset, buffer_base<T> _dest) const
 			{
-				// check) _dest.data_ì´ nullptrì´ë©´ ì•ˆëœë‹¤.
+				// check) _dest.data_ÀÌ nullptrÀÌ¸é ¾ÈµÈ´Ù.
 				CGDK_ASSERT(_dest.data_ != nullptr, throw std::invalid_argument("_dest.data_ is nullptr [0]"));
 
-				// check) _dest.size_ê°€ 0ì´í•˜ë©´ ì•ˆëœë‹¤.
+				// check) _dest.size_°¡ 0ÀÌÇÏ¸é ¾ÈµÈ´Ù.
 				CGDK_ASSERT(_dest.size_ >= 0, throw std::invalid_argument("_dest.size_ is invalid [1]"));
 
 				// check) upper bound
 				_CGD_BUFFER_BOUND_CHECK((_offset + _dest.size_) <= this->size_);
 
-				// 1) ë³µì‚¬í•œë‹¤.
+				// 1) º¹»çÇÑ´Ù.
 				memcpy(_dest.data_, this->data_ + _offset, _dest.size_);
 			}
 };

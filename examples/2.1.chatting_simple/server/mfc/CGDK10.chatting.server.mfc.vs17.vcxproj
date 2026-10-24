@@ -61,7 +61,8 @@
     <IntDir>..\..\output\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
-    <VcpkgEnableManifest>true</VcpkgEnableManifest>
+    <VcpkgEnableManifest>false</VcpkgEnableManifest>
+    <VcpkgEnabled>false</VcpkgEnabled>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -138,7 +139,6 @@ Taskkill /IM "$(TargetName)$(TargetExt)" /FI "STATUS eq RUNNING" /F</Command>
   <ItemGroup>
     <ClInclude Include="channel_setting_dlg.h" />
     <ClInclude Include="CGDK10.chatting.server.mfc.h" />
-    <ClInclude Include="CGDK10.chatting.server_definition.h" />
     <ClInclude Include="CGDK10.chatting.server.mfc.dlg.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />

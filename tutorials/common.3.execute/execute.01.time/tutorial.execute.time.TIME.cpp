@@ -1,9 +1,9 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
 //*                                                                           *
-//*                     tutorials common - object_pointer                     *
+//*                         tutorials execute - time                          *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -33,56 +33,56 @@ using namespace CGDK;
 //
 // tutorial common - TIME
 //
-//    - ì‹œê°„ì„ ë…„/ë‹¬/ì‹œ/ë¶„/ì´ˆ ë‹¨ìœ„ë¡œ êµ¬ë¶„ë˜ì–´ ì €ìž¥ë˜ë¯€ë¡œ ë°”ë¡œ ì´ ê°’ë“¤ì„
-//      ì¶œë ¥ê°€ëŠ¥í•˜ë‹¤.
-//    - tickì— ë¹„í•´ í¬ê¸°ê°€ í¬ë©° ì²˜ë¦¬ ì†ë„ê°€ ë§Žì´ ë–¨ì–´ì§„ë‹¤.
-//    - í° ë‹¨ìœ„ì˜ ì‹œê°„ì„ ì²˜ë¦¬í•  ë•Œ ì£¼ë£Œ ì‚¬ìš©ëœë‹¤.
-//    - TIMEì€ local Timeê³¼ utc time(GMTì‹œê°„)ìœ¼ë¡œ êµ¬ë¶„ëœë‹¤.
+//    - ½Ã°£À» ³â/´Þ/½Ã/ºÐ/ÃÊ ´ÜÀ§·Î ±¸ºÐµÇ¾î ÀúÀåµÇ¹Ç·Î ¹Ù·Î ÀÌ °ªµéÀ»
+//      Ãâ·Â°¡´ÉÇÏ´Ù.
+//    - tick¿¡ ºñÇØ Å©±â°¡ Å©¸ç Ã³¸® ¼Óµµ°¡ ¸¹ÀÌ ¶³¾îÁø´Ù.
+//    - Å« ´ÜÀ§ÀÇ ½Ã°£À» Ã³¸®ÇÒ ¶§ ÁÖ·á »ç¿ëµÈ´Ù.
+//    - TIMEÀº local Time°ú utc time(GMT½Ã°£)À¸·Î ±¸ºÐµÈ´Ù.
 //-----------------------------------------------------------------------------
 void tutorial_TIME()
 {
-	// 1) í˜„ìž¬ì˜ utc(GMT) ì‹œê°„ì„ ì–»ëŠ”ë‹¤.
+	// 1) ÇöÀçÀÇ utc(GMT) ½Ã°£À» ¾ò´Â´Ù.
 	chrono::time::utc::time_point time_utc_now = chrono::time::utc::now();
 
-	// ì¶œë ¥) ì‹œê°„ì„ ì¶œë ¥í•œë‹¤.
+	// Ãâ·Â) ½Ã°£À» Ãâ·ÂÇÑ´Ù.
 	std::cout <<"1) chrono::time::utc::now()"sv << std::endl;
 
-	// 2) ë…„ì›”ì¼ì‹œë¶„ì´ˆë¡œ ë³€í™˜í•˜ë ¤ë©´ to_data_timeí•¨ìˆ˜ë¥¼ í˜¸ì¶œí•´ì¤˜ì•¼ í•œë‹¤.
+	// 2) ³â¿ùÀÏ½ÃºÐÃÊ·Î º¯È¯ÇÏ·Á¸é to_data_timeÇÔ¼ö¸¦ È£ÃâÇØÁà¾ß ÇÑ´Ù.
 	{
 		auto temp = chrono::to_date_time(time_utc_now);
 		std::cout << temp.t_year << '-' << temp.t_month << '-' << temp.t_day << ' ' << temp.t_hour << ':' << temp.t_minute << ':' << temp.t_second << '.' << temp.t_fraction << '\n';
 	}
 
-	// 3) durationì„ ì„¤ì •í•œë‹¤
+	// 3) durationÀ» ¼³Á¤ÇÑ´Ù
 	chrono::time::duration time_duration = chrono::days(20) + chrono::hours(10) + chrono::seconds(11);
 
-	// 4) í˜„ìž¬ utc(GMT)ì‹œê°„ì—ì„œ 20ì¼ 10ì‹œê°„ 11ì´ˆ ì´í›„ì˜ ì‹œê°„ì„ êµ¬í•œë‹¤.
+	// 4) ÇöÀç utc(GMT)½Ã°£¿¡¼­ 20ÀÏ 10½Ã°£ 11ÃÊ ÀÌÈÄÀÇ ½Ã°£À» ±¸ÇÑ´Ù.
 	chrono::time::utc::time_point time_utc_new = time_utc_now + time_duration;
 
-	// ì¶œë ¥) ì‹œê°„ì„ ì¶œë ¥í•œë‹¤.
+	// Ãâ·Â) ½Ã°£À» Ãâ·ÂÇÑ´Ù.
 	std::cout <<"3) chrono::time::utc::now()+(20d 10h 11s)"sv << std::endl;
-	std::cout << to_string<char>(time_utc_new) << std::endl;
+	std::cout << to_string(time_utc_new) << std::endl;
 	std::cout << std::endl;
 
-	// 5) local ì‹œê°„ì„ êµ¬í•œë‹¤.
+	// 5) local ½Ã°£À» ±¸ÇÑ´Ù.
 	chrono::time::local::time_point	time_local_now = chrono::time::local::now();
 
-	// ì¶œë ¥) ì‹œê°„ì„ ì¶œë ¥í•œë‹¤.
+	// Ãâ·Â) ½Ã°£À» Ãâ·ÂÇÑ´Ù.
 	std::cout <<"5) chrono::time::local::now()"sv <<std::endl;
-	std::cout << to_string<char>(time_local_now) << std::endl;
+	std::cout << to_string(time_local_now) << std::endl;
 
-	// 6) í˜„ìž¬ localì‹œê°„ì—ì„œ 20ì¼ 10ì‹œê°„, 11ì´ˆ ì´í›„ì˜ ì‹œê°„ì„ êµ¬í•œë‹¤.
+	// 6) ÇöÀç local½Ã°£¿¡¼­ 20ÀÏ 10½Ã°£, 11ÃÊ ÀÌÈÄÀÇ ½Ã°£À» ±¸ÇÑ´Ù.
 	chrono::time::local::time_point	time_local_new = time_local_now+time_duration;
 
-	// ì¶œë ¥) ì‹œê°„ì„ ì¶œë ¥í•œë‹¤.
+	// Ãâ·Â) ½Ã°£À» Ãâ·ÂÇÑ´Ù.
 	std::cout <<"6) chrono::time::local::now()+(20d 10h 11s)"sv <<std::endl;
-	std::cout << to_string<char>(time_local_new) << std::endl;
+	std::cout << to_string(time_local_new) << std::endl;
 	std::cout << std::endl;
 
-	// 7) utc ì‹œê°„ì„ local ì‹œê°„ì— ëŒ€ìž…í•˜ë©´ ìžë™ ë³€í™˜ëœë‹¤.
+	// 7) utc ½Ã°£À» local ½Ã°£¿¡ ´ëÀÔÇÏ¸é ÀÚµ¿ º¯È¯µÈ´Ù.
 	chrono::time::local::time_point	time_local_temp = time_utc_now;
 
-	// ì¶œë ¥) ì‹œê°„ì„ ì¶œë ¥í•œë‹¤.
+	// Ãâ·Â) ½Ã°£À» Ãâ·ÂÇÑ´Ù.
 	std::cout <<"7) chrono::time::utc::time_point to chrono::local::time_point"sv <<std::endl;
-	std::cout << to_string<char>(time_local_temp) << std::endl;
+	std::cout << to_string(time_local_temp) << std::endl;
 }

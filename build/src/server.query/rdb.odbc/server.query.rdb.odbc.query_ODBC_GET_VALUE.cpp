@@ -34,20 +34,28 @@ shared_buffer CGDK::_ODBC_get_binary_data(SQLHSTMT _handle_stmt, SQLUSMALLINT _o
 	}
 	
 	// check) 
-	RETURN_IF(indicator <= 0, shared_buffer());
+	if (indicator <= 0)
+	{
+		buf_result.clear();
+		return buf_result;
+	}
 
 	// 3) buffer overflow? -> re-alloc buffer and retry
 	if (indicator > INITIAL_BUFFER_SIZE)
 	{
 		shared_buffer buf_new = alloc_shared_buffer(indicator);
 		buf_new.append(INITIAL_BUFFER_SIZE - 1, buf_result.data());
-		buf_result = buf_new;
+		buf_result = std::move(buf_new);
 
 		// - SQLGetData
 		result = SQLGetData(_handle_stmt, static_cast<SQLUSMALLINT>(_ordinal), _target_type, buf_result.get_back_ptr<SQLPOINTER>(), indicator - INITIAL_BUFFER_SIZE + 2, &indicator);
 
 		// check)  failed?
-		RETURN_IF(!SQL_SUCCEEDED(result) || indicator <= 0, shared_buffer());
+		if (!SQL_SUCCEEDED(result) || indicator <= 0)
+		{
+			buf_result.clear();
+			return buf_result;
+		}
 	}
 
 	// 4) set size

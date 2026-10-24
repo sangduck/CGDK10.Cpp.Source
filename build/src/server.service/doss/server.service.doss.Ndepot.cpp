@@ -8,10 +8,6 @@ doss::Ndepot::Ndepot()
 {
 }
 
-doss::Ndepot::Ndepot(const std::string_view _name) : doss::Idepot(_name)
-{
-}
-
 doss::Ndepot::~Ndepot()
 {
 }
@@ -27,52 +23,56 @@ void doss::Ndepot::on_initializing(context& /*_context*/)
 
 void doss::Ndepot::on_initialize(context& _context)
 {
-	// 1) create object
-	auto pgroup_socket_immigration = make_own<Idepot::group_immigration>("groupSocketImmigration");
-	auto pacceptor_remository = make_own<net::acceptor<depot::socket>>("acceptor");
+	// 1) create group_socket_immigration
+	auto pgroup_socket_immigration = make_own<Idepot::group_immigration>();
+	pgroup_socket_immigration->name("group_socket_immigration"s);
+
+	// 2) create acceptor
+	auto pacceptor_repository = make_own<net::acceptor<depot::socket>>();
+	pacceptor_repository->name("acceptor"s);
 
 	try
 	{
-		// 2) initialize group socket immigration
+		// 3) initialize group socket immigration
 		pgroup_socket_immigration->initialize(_context);
 		pgroup_socket_immigration->set_next_group(this);
 
-		// 3) initialize acceptor
-		pacceptor_remository->initialize(_context);
-		pacceptor_remository->set_start_object(pgroup_socket_immigration);
+		// 4) initialize acceptor
+		pacceptor_repository->initialize(_context);
+		pacceptor_repository->set_start_object(pgroup_socket_immigration);
 	}
 	catch(...)
 	{
 		pgroup_socket_immigration->set_next_group(nullptr);
-		pacceptor_remository->set_start_object(nullptr);
+		pacceptor_repository->set_start_object(nullptr);
 
 		// reraise) 
 		throw;
 	}
 
-	// 4) set objects
-	m_pgroup_socket_immigration	 = std::move(pgroup_socket_immigration);
-	m_pacceptor_remository = std::move(pacceptor_remository);
+	// 5) set objects
+	this->m_pgroup_socket_immigration = std::move(pgroup_socket_immigration);
+	this->m_pacceptor_repository = std::move(pacceptor_repository);
 }
 
 void doss::Ndepot::on_destroying()
 {
 	// 1) destroy acceptor
-	m_pacceptor_remository->set_start_object(nullptr);
-	m_pacceptor_remository.destroy();
+	this->m_pacceptor_repository->set_start_object(nullptr);
+	this->m_pacceptor_repository.destroy();
 
 	// 2) destroy group socket immigration
-	m_pgroup_socket_immigration->set_next_group(nullptr);
-	m_pgroup_socket_immigration.destroy();
+	this->m_pgroup_socket_immigration->set_next_group(nullptr);
+	this->m_pgroup_socket_immigration.destroy();
 
 	// 3) ...
-	checkout_all();
+	this->checkout_all();
 }
 
 void doss::Ndepot::on_destroy()
 {
 	// 1) 
-	m_id_repository.reset();
+	this->m_id_repository.reset();
 }
 
 // 2) start/stop
@@ -83,7 +83,7 @@ void doss::Ndepot::on_starting(context& /*_context*/)
 void doss::Ndepot::on_start(context& _context)
 {
 	// 1) Enter를 Enable한다.
-	enable_member_enter();
+	this->enable_member_enter();
 
 	// 2) port 값이 없으면 기본 값을 설정한다.
 	if (auto& context_find = _context["acceptor"sv]["local endpoint"sv]["port"sv]; context_find.is_invalid() || ((uint16_t)context_find) == 0)
@@ -92,38 +92,38 @@ void doss::Ndepot::on_start(context& _context)
 	}
 
 	// 3) group Socket Immigration을 시작한다.
-	m_pgroup_socket_immigration->start(_context);
+	this->m_pgroup_socket_immigration->start(_context);
 
 	// 4) acceptor Repository를 시작한다.
-	m_pacceptor_remository->start(_context);
+	this->m_pacceptor_repository->start(_context);
 }
 
 void doss::Ndepot::on_stopping()
 {
 	// 1) acceptor Repository를 종료한다.
-	m_pacceptor_remository->stop();
+	this->m_pacceptor_repository->stop();
 
 	// 2) group Socket Immigration을 종료한다.
-	m_pgroup_socket_immigration->stop();
+	this->m_pgroup_socket_immigration->stop();
 
 	// 3) Enter를 먼저 Disable한다.
-	disable_member_enter();
+	this->disable_member_enter();
 }
 
 void doss::Ndepot::on_stop()
 {
 }
 
-result_code doss::Ndepot::on_member_entering(member_t* /*_pmember*/, sMESSAGE& /*_context*/)
+result_code doss::Ndepot::on_member_entering(depot::socket* /*_pmember*/, sMESSAGE& /*_context*/)
 {
 	// return) 
 	return eRESULT::SUCCESS;
 }
 
-void doss::Ndepot::on_member_entered(member_t* _pmember, sMESSAGE& _context)
+void doss::Ndepot::on_member_entered(depot::socket* _pmember, sMESSAGE& _context)
 {
 	// check)
-	LOG_INFO << " > doss DEPOT_REMOTE['"sv << this->name() << "']: remote depot entered ("sv << _pmember->remote_endpoint().address().to_string<char>() << ")"sv;
+	LOG_INFO << " > doss DEPOT_REMOTE['"sv << this->name() << "']: remote depot entered ("sv << _pmember->remote_endpoint().address().to_string() << ")"sv;
 
 	// 1) 
 	_pmember->register_messageable(this);
@@ -146,7 +146,7 @@ void doss::Ndepot::on_member_entered(member_t* _pmember, sMESSAGE& _context)
 		auto psocket_exist = process_find_member(rid_remote, _pmember);
 
 		// - Member 중에 있으면 기존 Member를 이어받고 기존의 접속에게는 접속해제를 요구한다.
-		//    - 이런 경우는 일반적으로 Ghost 접속일 경우라고 할수 있다.
+		//    - 이런 경우는 일반적으로 Ghost 접속일 경우라고 할 수 있다.
 		if(psocket_exist.exist())
 		{
 			// - set remote_repository_id
@@ -206,7 +206,7 @@ void doss::Ndepot::on_member_entered(member_t* _pmember, sMESSAGE& _context)
 		// - closesocket
 		_pmember->closesocket();
 
-		// rturn) 
+		// return) 
 		return;
 	}
 
@@ -215,24 +215,24 @@ void doss::Ndepot::on_member_entered(member_t* _pmember, sMESSAGE& _context)
 	vec_id_repository.push_back(this->m_id_repository);
 
 	// 7) 결과 Recover 정보를 전송한다.
-	_pmember->send(message_SERVER_DOSS_RESPONSE_CERTIFY(rid_remote, vec_id_repository, _pmember->m_receive_sequence));
+	_pmember->send(message_SERVER_DOSS_RESPONSE_CERTIFY(rid_remote, vec_id_repository, _pmember->m_receive_sequence.load()));
 
 }
 
-uintptr_t doss::Ndepot::on_member_leaving(member_t* _pmember)
+uintptr_t doss::Ndepot::on_member_leaving(depot::socket* _pmember, uintptr_t /*_param*/)
 {
 	// 1) _pmember의 this를 unregister_messageable한다.
 	_pmember->unregister_messageable(this);
 
 	//// 2) 추가한다.
-	//scoped_lock(m_map_stored)
+	//SCOPED_LOCK(m_map_stored)
 	//{
 	//	if(_pmember->m_rid_remote.exist() && !_pmember->m_list_entity_checkined.empty())
 	//	{
 	//		// - 추가한다.
 	//		auto result = m_map_stored.insert(std::make_pair(_pmember->m_rid_remote, circular_list<sCHECKIN_ID>()));
 
-	//		// check) 추가에 실패해서는 절다 안됀다!
+	//		// check) 추가에 실패해서는 절다 안 된다!
 	//		CGASSERT_ERROR(result.second == true);
 
 	//		// - 데이터 처리
@@ -241,13 +241,13 @@ uintptr_t doss::Ndepot::on_member_leaving(member_t* _pmember)
 	//}
 
 	// check)
-	LOG_INFO << " < doss DEPOT_REMOTE['"sv << this->name() << "']: remote depot leaved ("sv << _pmember->remote_endpoint().address().to_string<char>() << ")"sv;
+	LOG_INFO << " < doss DEPOT_REMOTE['"sv << this->name() << "']: remote depot leaved ("sv << _pmember->remote_endpoint().address().to_string() << ")"sv;
 
 	// return) 
-	return	0;
+	return 0;
 }
 
-void doss::Ndepot::on_member_leaved(member_t* /*_pmember*/, uintptr_t /*_result*/)
+void doss::Ndepot::on_member_leaved(depot::socket* /*_pmember*/, uintptr_t /*_result*/)
 {
 }
 
@@ -287,8 +287,9 @@ result_code doss::Ndepot::on_message_SERVER_DOSS_COMMAND_REQUEST(sMESSAGE_NETWOR
 
 	// 2) ...
 	auto recv_seq = buf_temp.extract<uint64_t>();
-	auto option = buf_temp.extract<uint64_t>();
+	//    - same order as message_SERVER_DOSS_COMMAND_REQUEST() : type -> option
 	auto type = buf_temp.extract<eTRANSACTION_TYPE>();
+	auto option = buf_temp.extract<uint64_t>();
 	auto cid = buf_temp.extract<sCHECKIN_ID>();
 	auto rid = buf_temp.extract<sREQUEST_ID>();
 
@@ -318,7 +319,7 @@ result_code doss::Ndepot::on_message_SERVER_DOSS_COMMAND_REQUEST(sMESSAGE_NETWOR
 		ptransactable->m_rid_source = rid;
 		ptransactable->m_rid = sREQUEST_ID(psocket->get_session_id(), 0);
 		ptransactable->m_option = option;
-		ptransactable->m_buf_request = buf_temp;
+		ptransactable->m_buf_request = buf_request;
 		ptransactable->m_prepository = prepository;
 		ptransactable->m_pentity = pentity;
 		ptransactable->m_psession = this;
@@ -451,7 +452,7 @@ void doss::Ndepot::process_entity_transaction_complete(doss::Itransactable* _ptr
 
 void doss::Ndepot::process_entity_set(Itransactable* _ptransactable) // const sCHECKIN_ID& /*_cid*/, Ientity* /*_pentity*/)
 {
-	scoped_lock(m_lockable_map_cid)
+	SCOPED_LOCK(m_lockable_map_cid)
 	{
 		m_map_cid.insert({ _ptransactable->m_cid, _ptransactable->m_rid.session_id()});
 	}
@@ -469,7 +470,7 @@ bool doss::Ndepot::process_entity_reset(Ientity* /*_pentity*/, const sCHECKIN_ID
 	sSESSION_ID id_session;
 
 	// 1) get session_id
-	scoped_lock(m_lockable_map_cid)
+	SCOPED_LOCK(m_lockable_map_cid)
 	{
 		// - get cid
 		auto iter_find = m_map_cid.find(_cid);
@@ -491,7 +492,7 @@ bool doss::Ndepot::process_entity_reset(Ientity* /*_pentity*/, const sCHECKIN_ID
 	RETURN_IF(psocket.empty(), false);
 
 	// 3) notify
-	psocket->send_restoreable_control_resquest(eTRANSACTION_TYPE::CHECKOUT, _cid, sREQUEST_ID(), eRESULT::SUCCESS);
+	psocket->send_restoreable_control_request(eTRANSACTION_TYPE::CHECKOUT, _cid, sREQUEST_ID(), eRESULT::SUCCESS);
 
 	// return) 
 	return true;
@@ -502,7 +503,7 @@ object_ptr<doss::depot::socket> doss::Ndepot::process_find_member(const sSESSION
 	// declare) 
 	object_ptr<doss::depot::socket> psocket_depot;
 
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
 		for(auto& iter: this->m_container_member)
 		{
@@ -519,12 +520,12 @@ object_ptr<doss::depot::socket> doss::Ndepot::process_find_member(const sSESSION
 	return psocket_depot;
 }
 
-object_ptr<doss::depot::socket> doss::Ndepot::process_find_member(const sREPOSITORY_ID& _repository_id, member_t* _pmember_self) const noexcept
+object_ptr<doss::depot::socket> doss::Ndepot::process_find_member(const sREPOSITORY_ID& _repository_id, depot::socket* _pmember_self) const noexcept
 {
 	// declare)
-	object_ptr<member_t> psocket_exist;
+	object_ptr<depot::socket> psocket_exist;
 
-	scoped_lock(m_lockable_group)
+	SCOPED_LOCK(m_lockable_group)
 	{
 		for (auto iter = begin(); iter != end(); ++iter)
 		{

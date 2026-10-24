@@ -1,31 +1,31 @@
-ï»¿
-// channel_server_dlg.h: í—¤ë” íŒŒì¼
+
+// channel_server_dlg.h: Çì´õ ÆÄÀÏ
 //
 
 #pragma once
 
 
-// channel_server_dlg ëŒ€í™” ìƒì
+// channel_server_dlg ´ëÈ­ »óÀÚ
 class channel_server_dlg : public CDialogEx
 {
-// ìƒì„±ì…ë‹ˆë‹¤.
+// »ı¼ºÀÔ´Ï´Ù.
 public:
-	channel_server_dlg(CWnd* pParent = nullptr);	// í‘œì¤€ ìƒì„±ìì…ë‹ˆë‹¤.
+	channel_server_dlg(CWnd* pParent = nullptr);	// Ç¥ÁØ »ı¼ºÀÚÀÔ´Ï´Ù.
 
-// ëŒ€í™” ìƒì ë°ì´í„°ì…ë‹ˆë‹¤.
+// ´ëÈ­ »óÀÚ µ¥ÀÌÅÍÀÔ´Ï´Ù.
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_CHANNEL_SERVERMFC_DIALOG };
 #endif
 
 	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV ì§€ì›ì…ë‹ˆë‹¤.
+	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV Áö¿øÀÔ´Ï´Ù.
 
 
-// êµ¬í˜„ì…ë‹ˆë‹¤.
+// ±¸ÇöÀÔ´Ï´Ù.
 protected:
 	HICON m_hIcon;
 
-	// ìƒì„±ëœ ë©”ì‹œì§€ ë§µ í•¨ìˆ˜
+	// »ı¼ºµÈ ¸Ş½ÃÁö ¸Ê ÇÔ¼ö
 	virtual BOOL OnInitDialog();
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();

@@ -20,7 +20,7 @@ FILE_HANDLE api::file::open(std::wstring_view _filename, eFILE_OPERATION _operat
 	// check)
 	CGASSERT_ERROR(_filename.empty()==false);
 
-	// check) _filename이 nullptr이면 안됀다.
+	// check) _filename이 nullptr이면 안 된다.
 	RETURN_IF(_filename.empty(), INVALID_FILE_HANDLE);
 
 	// Declare) 
@@ -81,7 +81,7 @@ FILE_HANDLE api::file::open(std::wstring_view _filename, eFILE_OPERATION _operat
 			wchar_t	temp_string[MAX_STRING_LENGTH];
 
 			// - String을 만든다.
-			__sprintf(temp_string, L"%hs/%s", iter.c_str(), _filename);
+			std::snprintf(temp_string, std::size(temp_string), std::string_view(L"%hs/%s").data(), iter.c_str(), _filename);
 
 			// - 읽어들인다.
 			hFile	 = CreateFile2(temp_string, dwDesiredAccess, dwShareMode, dwCreationDisposition, nullptr);
@@ -97,7 +97,7 @@ FILE_HANDLE api::file::open(std::wstring_view _filename, eFILE_OPERATION _operat
 
 void api::file::close(FILE_HANDLE _handle_file)
 {
-	// check) FileHandle이 INVALID_FILE_HANDLE이면 안됀다.
+	// check) FileHandle이 INVALID_FILE_HANDLE이면 안 된다.
 	RETURN_IF(_handle_file==INVALID_FILE_HANDLE);
 
 	// 1) close한다.
@@ -209,7 +209,7 @@ size_t api::file::get_length(FILE_HANDLE _handle_file)
 //	// check)
 //	CGASSERT_ERROR(_filename!=nullptr);
 //
-//	// check) _filename이 nullptr이면 안됀다.
+//	// check) _filename이 nullptr이면 안 된다.
 //	RETURN_IF(_filename==nullptr, INVALID_FILE_HANDLE);
 //
 //	// Declare) 
@@ -258,7 +258,7 @@ size_t api::file::get_length(FILE_HANDLE _handle_file)
 //				// Declare) 
 //				char	temp_string[MAX_STRING_LENGTH];
 //
-//				__sprintf(temp_string, "%ls/%s", iter.c_str(), _filename);
+//				std::snprintf(temp_string, std::size(temp_string), std::string_view("%ls/%s").data(), iter.c_str(), _filename);
 //
 //				// - 읽어들인다.
 //				result	 = fopen_s(&hFile, temp_string, strMode);

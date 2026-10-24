@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "framework.h"
 #include "CGDK10.tcp_relay_echo_server.mfc.h"
 #include "CGDK10.tcp_relay_echo_server_dlg.h"
@@ -36,7 +36,7 @@ BOOL Ctcp_relay_echo_serve_app::InitInstance()
 
 	CMFCVisualManager::SetDefaultManager(RUNTIME_CLASS(CMFCVisualManagerWindows));
 
-	SetRegistryKey(_T("ë¡œì»¬ ì• í”Œë¦¬ì¼€ì´ì…˜ ë§ˆë²•ì‚¬ì—ì„œ ìƒì„±ëœ ì• í”Œë¦¬ì¼€ì´ì…˜"));
+	SetRegistryKey(_T("·ÎÄÃ ¾ÖÇÃ¸®ÄÉÀÌ¼Ç ¸¶¹ı»ç¿¡¼­ »ı¼ºµÈ ¾ÖÇÃ¸®ÄÉÀÌ¼Ç"));
 
 	Ctcp_relay_echo_server_dlg dlg;
 	m_pMainWnd = &dlg;

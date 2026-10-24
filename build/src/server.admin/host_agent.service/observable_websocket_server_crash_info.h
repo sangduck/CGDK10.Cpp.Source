@@ -28,7 +28,7 @@ class observable_websocket_peer_crash_info :
 	public						schedulable::Nexecutable
 {
 public:
-	explicit observable_websocket_peer_crash_info(const std::string_view _name);
+			observable_websocket_peer_crash_info();
 	virtual ~observable_websocket_peer_crash_info();
 
 private:
@@ -44,5 +44,5 @@ private:
 			shared_buffer		make_webmessage_crash_info_list_add();
 			shared_buffer		make_webmessage_crash_info_list_update();
 public:
-			server_admin::instance_Iservice* m_pservice_entity = nullptr;
+			server_system::instance_service* m_pservice_entity = nullptr;
 };

@@ -1,9 +1,60 @@
-ï»¿// channel_manager_server.console.cpp : ì´ íŒŒì¼ì—ëŠ” 'main' í•¨ìˆ˜ê°€ í¬í•¨ë©ë‹ˆë‹¤. ê±°ê¸°ì„œ í”„ë¡œê·¸ë¨ ì‹¤í–‰ì´ ì‹œì‘ë˜ê³  ì¢…ë£Œë©ë‹ˆë‹¤.
-//
+#include "pch.h"
 
-#include <iostream>
 
-int main()
+int main(int /*argc*/, char* /*argv*/[])
 {
-    std::cout << "Hello World!\n";
+	// 1) [ÄÜ¼Ö ·Î°Å] °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
+	auto plogger_console = make_own<logger_console>();
+
+	// 2) [ÄÜ¼Ö ·Î°Å] °´Ã¼¸¦ ÃÊ±âÈ­ÇÑ´Ù.
+	plogger_console->initialize();
+
+	// 3) [ÄÜ¼Ö ·Î°Å] °´Ã¼¸¦ µî·ÏÇÑ´Ù.
+	service::get_logger()->register_log_targetable(plogger_console);
+
+	try
+	{
+		// 4) [¼­ºñ½º] °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
+		g_pservice = make_own<service>();
+
+		// declare)
+		context context_start;
+
+		// 5) [¼³Á¤ ÆÄÀÏ] ÀĞ±â
+		context_start.from_json(api::file::read_file(CONFIGURE_FILE));
+
+		// 6) [¼­ºñ½º] 'ÃÊ±âÈ­'ÇÑ´Ù.
+		g_pservice->initialize(context_start);
+
+		// ÀÓ½Ã) [¼­ºñ½º] '½ÃÀÛ'Àº ¿äÃ»Àº [ÄÁÆ®·Ñ ¼­¹ö]¿¡¼­ ½ÃÀÛ ¸Ş½ÃÁö¸¦ ¹Ş¾ÒÀ» ¶§ ÇÒ ¼ö ÀÖ´Ù.
+		g_pservice->start(context_start);
+
+		// 7) Á¾·á µÉ¶§±îÁö ´ë±âÇÑ´Ù. (1ÃÊ ´ÜÀ§·Î ctrl-XÅ°ÀÇ ÀÔ·ÂÀ» È®ÀÎÇÑ´Ù.)
+		while (g_pservice->wait_destroy(1s) == false)
+		{
+			// check) ctrl-X¸¦ ÀÔ·ÂÇÏ¸é Á¾·áÇÑ´Ù.
+			if (_kbhit())
+			{
+				auto ch = _getch();
+
+				if (ch == 24)
+				{
+					break;
+				}
+				else if (ch == 'A' || ch == 'a')
+				{
+					factory::manager::print_statistics();
+				}
+			}
+		}
+	}
+	catch (...)
+	{
+	}
+
+	// 7) [¼­ºñ½º] °´Ã¼¸¦ Á¾·áÇÑ´Ù.
+	g_pservice.destroy();
+
+	// return) 
+	return 0;
 }

@@ -29,12 +29,12 @@ namespace CGDK
 //    3) UDP의 send/receive 버퍼 크기를 아래와 같이 설정하고 얻을 수 있다.
 //    4) ConnectReset의 통보 여부 설정.
 //       - UDP의 경우 ConnectReset이 중요하다. send_to로 전송했을 때 특정 
-//         Address에 전달할수 없는 상황일 때 send_to의 결과로 통보해주는 것이 
+//         Address에 전달할 수 없는 상황일 때 send_to의 결과로 통보해주는 것이 
 //         아니라 receive에서 CONNECT_RESET Error를 발생시킨다. 
 //       - 이 CONNECT_RESET의 경우 UDP에서는 실질적으로 Error가 아니지만
-//         중요한 정보가 될수 있다.
+//         중요한 정보가 될 수 있다.
 //         따라서 이 CONNECT_RESET 신호를 받을 것인지 받지 않을 것인지를
-//         설정할수 있다.
+//         설정할 수 있다.
 //       - 일반적인 UDP 소켓으로의 사용일 경우 이 옵션은 꺼주지만
 //         reliable UDP의 경우 이 옵션이 필요하다.
 //
@@ -67,7 +67,7 @@ protected:
 public:
 	// 1) start
 			result_code			start() { return this->object::Nstartable::start(); }
-			result_code			start(const START_PARAMETER& _parameter) { context temp{ buffer_view((char*)&_parameter, sizeof(START_PARAMETER)) };  return this->start(temp); }
+			result_code			start(const START_PARAMETER& _parameter) { context temp; temp = buffer_view((char*)&_parameter, sizeof(START_PARAMETER));  return this->start(temp); }
 			result_code			start(const context& _context ) { return this->object::Nstartable::start(_context); }
 	virtual	result_code			start(context& _context) override { return this->object::Nstartable::start(_context); }
 
@@ -86,7 +86,7 @@ public:
 
 protected:
 	// 6) socket을 reset하거나 closesocket할 때의 과정을 정의한 함수.
-	//    (필요할 경우 재정의할수 있다.)
+	//    (필요할 경우 재정의할 수 있다.)
 	virtual	void				process_create_socket(ADDRESS_FAMILY _address_family = AF_INET) override;
 	virtual void				process_dispose_socket() noexcept override;
 	virtual	bool				process_close_socket(uint64_t _disconnect_reason = DISCONNECT_REASON_NONE) noexcept override;

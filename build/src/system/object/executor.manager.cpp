@@ -1,18 +1,17 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 
 using namespace CGDK;
 
 #ifdef NDEBUG
-	#define	DEFAULT_ENABLE_SEH	true
+	#define	DEFAULT_ENABLE_EXCEPTION_HANDLING	true
 #else
-	#define	DEFAULT_ENABLE_SEH	false
+	#define	DEFAULT_ENABLE_EXCEPTION_HANDLING	false
 #endif 
 
 
-executor::manager::manager() noexcept :
-		object::Nnameable("executor manager"sv),
-		m_executor_serial(0)
+executor::manager::manager() noexcept
 {
+	this->name("executor manager"sv);
 }
 
 executor::manager::~manager() noexcept
@@ -21,12 +20,14 @@ executor::manager::~manager() noexcept
 
 void executor::manager::initialize_instance()
 {
-	scoped_lock(m_s_lockable_create)
-	{
-		RETURN_IF(m_s_pinstance.exist());
+	// lock)
+	std::lock_guard<std::mutex> lock(m_s_lockable_create);
+
+	// check)
+	if(m_s_pinstance.exist())
+		return;
 		
-		m_s_pinstance = _make_own_raw<executor::manager>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL);
-	}
+	m_s_pinstance.exchange_release(_make_own_raw<executor::manager>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL));
 }
 
 void executor::manager::set_instance(own_ptr<manager>&& _pinstance) noexcept
@@ -34,13 +35,15 @@ void executor::manager::set_instance(own_ptr<manager>&& _pinstance) noexcept
 	// declare)
 	own_ptr<manager> pinstance_pre;
 
-	scoped_lock(m_s_lockable_create)
 	{
+		// lock)
+		std::lock_guard<std::mutex> lock(m_s_lockable_create);
+
 		// 1) move old instance
 		pinstance_pre = std::move(m_s_pinstance);
 
 		// 2) set new instance
-		m_s_pinstance = std::move(_pinstance);
+		m_s_pinstance.exchange_release(std::move(_pinstance));
 	}
 
 	// 3) reset old instance
@@ -52,8 +55,10 @@ void executor::manager::reset_instance() noexcept
 	// declare)
 	own_ptr<manager> pinstance;
 
-	scoped_lock(m_s_lockable_create)
 	{
+		// lock)
+		std::lock_guard<std::mutex> lock(m_s_lockable_create);
+
 		// 1) move instance
 		pinstance = std::move(m_s_pinstance);
 	}
@@ -73,17 +78,17 @@ void executor::manager::print_statistics(bool _using_only) noexcept
 		auto buf_output = alloc_shared_buffer((static_cast<size_t>(pinstance->size()) + 4) * 256);
 
 		buf_output.append_text("\x1b[37m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
-		buf_output.append_text("\x1b[37m" "{:30s} {:8s}{:>5s}{:>9s}{:>13s}{:>13s}\n" "\x1b[0m",
+		buf_output.append_text(std::format("\x1b[37m" "{:30s} {:8s}{:>5s}{:>9s}{:>13s}{:>13s}\n" "\x1b[0m",
 			"name",
 			"type",
 			"id",
 			"thread",
 			"executed",
-			"pended"
+			"pended")
 		);
 		buf_output.append_text("\x1b[90m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
 
-		scoped_shared_lock(pinstance->m_lockable_list_executor)
+		SCOPED_SHARED_LOCK(pinstance->m_lockable_list_executor)
 		{
 			for (auto& iter : pinstance->m_list_executor)
 			{
@@ -105,14 +110,14 @@ void executor::manager::print_statistics(bool _using_only) noexcept
 					// "1. name" "2. type"
 					if (alloc_execute != 0)
 					{
-						buf_output.append_text("\x1b[92m" "{:30s} {:8s}" "\x1b[0m"sv, executor_name, to_string<char>(statistics.type));
+						buf_output.append_text(std::format("\x1b[92m" "{:30s} {:8s}" "\x1b[0m"sv, executor_name, to_string(statistics.type)));
 					}
 					else
 					{
 						if (_using_only == true)
 							continue;
 
-						buf_output.append_text("\x1b[32m" "{:30s} {:8s}" "\x1b[0m"sv, executor_name, to_string<char>(statistics.type));
+						buf_output.append_text(std::format("\x1b[32m" "{:30s} {:8s}" "\x1b[0m"sv, executor_name, to_string(statistics.type)));
 					}
 
 					// - "3. id"
@@ -121,7 +126,7 @@ void executor::manager::print_statistics(bool _using_only) noexcept
 
 						if (count != 0)
 						{
-							buf_output.append_text(" {:>4}"sv, count);
+							buf_output.append_text(std::format(" {:>4}"sv, count));
 						}
 						else
 						{
@@ -133,7 +138,7 @@ void executor::manager::print_statistics(bool _using_only) noexcept
 					{
 						if (statistics.now.thread_count != 0)
 						{
-							buf_output.append_text(" {:>8}"sv, statistics.now.thread_count);
+							buf_output.append_text(std::format(" {:>8}", statistics.now.thread_count.load()));
 						}
 						else
 						{
@@ -147,84 +152,7 @@ void executor::manager::print_statistics(bool _using_only) noexcept
 
 						if (count != 0)
 						{
-							buf_output.append_text(" {:>9}"sv, count);
-						}
-						else
-						{
-							buf_output.append_text("\x1b[90m" "         0" "\x1b[0m"sv);
-						}
-					}
-
-					// - "6. pended"
-					{
-						auto* pqueue = dynamic_cast<executor::Iqueue*>(iter);
-
-						if (pqueue != nullptr)
-						{
-							auto count = pqueue->pended_count();
-
-							if (count != 0)
-							{
-								buf_output.append_text(" {:>12}"sv, count);
-							}
-							else
-							{
-								buf_output.append_text("\x1b[90m" "            0" "\x1b[0m"sv);
-							}
-						}
-					}
-
-					// - new line~
-					buf_output.append_text("\n"sv);
-				}
-				else
-				{
-					// "1. name" "2. type"
-					if (alloc_execute != 0)
-					{
-						buf_output.append_text("\x1b[37m" "{:30s} {:8s}" "\x1b[0m"sv, executor_name, to_string<char>(statistics.type));
-					}
-					else
-					{
-						if (_using_only == true)
-							continue;
-
-						buf_output.append_text("\x1b[90m" "{:30s} {:8s}" "\x1b[0m"sv, executor_name, to_string<char>(statistics.type));
-					}
-
-					// - "3. id"
-					{
-						auto count = statistics.id;
-
-						if (count != 0)
-						{
-							buf_output.append_text(" {:>4}"sv, count);
-						}
-						else
-						{
-							buf_output.append_text("\x1b[90m" "    0" "\x1b[0m"sv);
-						}
-					}
-
-					// - "4. thread_count"
-					{
-						if (statistics.now.thread_count != 0)
-						{
-							buf_output.append_text(" {:>8}"sv, statistics.now.thread_count);
-						}
-						else
-						{
-							buf_output.append_text("\x1b[90m" "        0" "\x1b[0m"sv);
-						}
-					}
-
-					// - "5. executed"
-					{
-						auto count = statistics.now.count_execute.load();
-
-						if (count != 0)
-						{
-							buf_output.append_text(" {:>12}"sv, count);
+							buf_output.append_text(CGDK::stream_width(count, 10));
 						}
 						else
 						{
@@ -242,7 +170,84 @@ void executor::manager::print_statistics(bool _using_only) noexcept
 
 							if (count != 0)
 							{
-								buf_output.append_text(" {:>12}"sv, count);
+								buf_output.append_text(CGDK::stream_width(count, 13));
+							}
+							else
+							{
+								buf_output.append_text("\x1b[90m" "            0" "\x1b[0m"sv);
+							}
+						}
+					}
+
+					// - new line~
+					buf_output.append_text("\n"sv);
+				}
+				else
+				{
+					// "1. name" "2. type"
+					if (alloc_execute != 0)
+					{
+						buf_output.append_text(std::format("\x1b[37m" "{:30s} {:8s}" "\x1b[0m"sv, executor_name, to_string(statistics.type)));
+					}
+					else
+					{
+						if (_using_only == true)
+							continue;
+
+						buf_output.append_text(std::format("\x1b[90m" "{:30s} {:8s}" "\x1b[0m"sv, executor_name, to_string(statistics.type)));
+					}
+
+					// - "3. id"
+					{
+						auto count = statistics.id;
+
+						if (count != 0)
+						{
+							buf_output.append_text(std::format(" {:>4}"sv, count));
+						}
+						else
+						{
+							buf_output.append_text("\x1b[90m" "    0" "\x1b[0m"sv);
+						}
+					}
+
+					// - "4. thread_count"
+					{
+						if (statistics.now.thread_count != 0)
+						{
+							buf_output.append_text(CGDK::stream_width(statistics.now.thread_count.load(), 9));
+						}
+						else
+						{
+							buf_output.append_text("\x1b[90m" "        0" "\x1b[0m"sv);
+						}
+					}
+
+					// - "5. executed"
+					{
+						auto count = statistics.now.count_execute.load();
+
+						if (count != 0)
+						{
+							buf_output.append_text(CGDK::stream_width(count, 13));
+						}
+						else
+						{
+							buf_output.append_text("\x1b[90m" "            0" "\x1b[0m"sv);
+						}
+					}
+
+					// - "6. pended"
+					{
+						auto* pqueue = dynamic_cast<executor::Iqueue*>(iter);
+
+						if (pqueue != nullptr)
+						{
+							auto count = pqueue->pended_count();
+
+							if (count != 0)
+							{
+								buf_output.append_text(CGDK::stream_width(count, 13));
 							}
 							else
 							{
@@ -258,7 +263,7 @@ void executor::manager::print_statistics(bool _using_only) noexcept
 		}
 		buf_output.append_text("\x1b[37m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
 
-		// 3) ìµœì¢… ì¶œë ¥
+		// 3) ÃÖÁ¾ Ãâ·Â
 #if defined(_WIN32)
 		DWORD number_written = 0;
 		WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), buf_output.data(), buf_output.size<DWORD>(), &number_written, nullptr);
@@ -278,22 +283,23 @@ result_code executor::manager::destroy() noexcept
 
 bool executor::manager::process_register_executor(Iexecutor* _pexecutor)
 {
-	scoped_unique_lock(this->m_lockable_list_executor)
+	SCOPED_UNIQUE_LOCK(this->m_lockable_list_executor)
 	{
-		// 1) ì´ë¯¸ ë“±ë¡ë˜ì–´ ì´ëŠ”ì§€ í™•ì¸í•œë‹¤.
+		// 1) ÀÌ¹Ì µî·ÏµÇ¾î ÀÌ´ÂÁö È®ÀÎÇÑ´Ù.
 		auto iter_thread = std::find(this->m_list_executor.begin(), this->m_list_executor.end(), _pexecutor);
 
-		// check) ì´ë¯¸ ë“±ë¡ë˜ì–´ ìžˆìœ¼ë©´ ëë‚¸ë‹¤.
-		RETURN_IF(iter_thread != this->m_list_executor.end(), false);
+		// check) ÀÌ¹Ì µî·ÏµÇ¾î ÀÖÀ¸¸é ³¡³½´Ù.
+		if(iter_thread != this->m_list_executor.end())
+			return false;
 
 		// 2) set executor id
 		_pexecutor->m_statistics.id = m_executor_serial++;
 
-		// 3) Threadë¥¼ Listì— ì¶”ê°€ëœë‹¤.
+		// 3) Thread¸¦ List¿¡ Ãß°¡µÈ´Ù.
 		this->m_list_executor.push_back(_pexecutor);
 	}
 
-	// 3) viewì— í†µë³´í•œë‹¤.
+	// 3) view¿¡ Åëº¸ÇÑ´Ù.
 	this->transmit_message(sMESSAGE_NOTIFY(eMESSAGE::EXECUTOR_REGISTER, 0, reinterpret_cast<uintptr_t>(_pexecutor)));
 
 	// return) 
@@ -302,19 +308,20 @@ bool executor::manager::process_register_executor(Iexecutor* _pexecutor)
 
 bool executor::manager::process_unregister_executor(Iexecutor* _pexecutor) noexcept
 {
-	scoped_unique_lock(this->m_lockable_list_executor)
+	SCOPED_UNIQUE_LOCK(this->m_lockable_list_executor)
 	{ 
-		// 1) Threadë¥¼ Listì—ì„œ ì°¾ëŠ”ë‹¤.
+		// 1) Thread¸¦ List¿¡¼­ Ã£´Â´Ù.
 		auto iter_thread = std::find(this->m_list_executor.begin(), this->m_list_executor.end(), _pexecutor);
 
-		// check) ì°¾ì§€ ëª»í–ˆìœ¼ë©´ ê·¸ëƒ¥ ëë‚¸ë‹¤.
-		RETURN_IF(iter_thread == this->m_list_executor.end(), false);
+		// check) Ã£Áö ¸øÇßÀ¸¸é ±×³É ³¡³½´Ù.
+		if(iter_thread == this->m_list_executor.end())
+			return false;
 
-		// 2) Threadë¥¼ ì§€ìš´ë‹¤.
+		// 2) Thread¸¦ Áö¿î´Ù.
 		this->m_list_executor.erase(iter_thread);
 	}
 
-	// 3) viewì— í†µë³´í•œë‹¤.
+	// 3) view¿¡ Åëº¸ÇÑ´Ù.
 	this->transmit_message(sMESSAGE_NOTIFY(eMESSAGE::EXECUTOR_UNREGISTER, 0, reinterpret_cast<uintptr_t>(_pexecutor)));
 
 	// return) 

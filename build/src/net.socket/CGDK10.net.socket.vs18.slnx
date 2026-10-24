@@ -1,0 +1,52 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Debug.NDI" />
+    <BuildType Name="Release" />
+    <BuildType Name="Release.NDI" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="socket\CGDK10.net.socket.shared.vcxitems" Id="0e6debe3-f24f-4935-9f55-adf9f7d26e07" />
+  <Folder Name="/dependencies/">
+    <Project Path="..\system\object\CGDK10.system.object.vs18.vcxproj" Id="8e08592b-8d9c-4dd9-91cc-a018560da8ce" />
+    <Project Path="..\system\util.crypt\CGDK10.system.util.crypt.vs18.vcxproj" Id="708fa86b-0f99-473d-bd10-bd51819328dc" />
+    <Project Path="..\system\mfc_controls\CGDK10.system.mfc_controls.vs18.vcxproj" Id="3810221c-d6ce-4efd-a05f-97fb15d8ce61" />
+  </Folder>
+  <Folder Name="/windows/" Id="07b53414-22e6-464d-8ba1-2a198618d0d5">
+    <Project Path="socket\CGDK10.net.socket.vs18.vcxproj" Id="9c12a1d3-598e-4b1a-b7c7-67c838d14b14">
+      <BuildDependency Project="..\system\object\CGDK10.system.object.vs18.vcxproj" />
+    </Project>
+    <Project Path="socket.http\CGDK10.net.socket.http.vs18.vcxproj" Id="7def9f6a-99b1-4971-ad9b-1b716abbeca0" />
+    <Project Path="socket.kafka\CGDK10.net.socket.kafka.vs18.vcxproj" Id="dc702373-6aa8-4ee9-ae24-6a837b15e8fc" />
+    <Project Path="socket.mail\CGDK10.net.socket.mail.vs18.vcxproj" Id="882f894a-4166-444a-a5ce-a0e5e7d14a5d" />
+    <Project Path="mfc_controls/CGDK10.net.socket.mfc_controls.vs18.vcxproj" Id="fd1c1343-18cc-4e0f-a817-724509415453" />
+    <Project Path="socket.crypt\CGDK10.net.socket.crypt.vs18.vcxproj" Id="38f4b200-0c3b-47bd-998f-fb6d1de9f39f">
+      <BuildDependency Project="..\system\util.crypt\CGDK10.system.util.crypt.vs18.vcxproj" />
+    </Project>
+  </Folder>
+  <Folder Name="/windows/unit_test/" Id="4d6f2a81-3b5c-4e7d-8f9a-1c2b3d4e5f60">
+    <Project Path="unit_test\unit_test.net_socket.http\unit_test.net_socket.http.vs18.vcxproj" Id="8e3a1f52-6c4b-4d7e-9a1f-3b5c7d9e2f41">
+      <BuildType Solution="Debug.NDI|*" Project="Debug" />
+      <BuildType Solution="Release.NDI|*" Project="Release" />
+      <Build Solution="Debug.NDI|*" Project="false" />
+      <Build Solution="Release.NDI|*" Project="false" />
+      <BuildDependency Project="socket\CGDK10.net.socket.vs18.vcxproj" />
+      <BuildDependency Project="socket.http\CGDK10.net.socket.http.vs18.vcxproj" />
+      <BuildDependency Project="socket.crypt\CGDK10.net.socket.crypt.vs18.vcxproj" />
+    </Project>
+    <Project Path="unit_test\unit_test.net_socket.kafka\unit_test.net_socket.kafka.vs18.vcxproj" Id="a7c2d9e4-5b1f-4c3a-8e6d-2f9b4a1c7d53">
+      <BuildType Solution="Debug.NDI|*" Project="Debug" />
+      <BuildType Solution="Release.NDI|*" Project="Release" />
+      <Build Solution="Debug.NDI|*" Project="false" />
+      <Build Solution="Release.NDI|*" Project="false" />
+      <BuildDependency Project="socket\CGDK10.net.socket.vs18.vcxproj" />
+      <BuildDependency Project="socket.kafka\CGDK10.net.socket.kafka.vs18.vcxproj" />
+    </Project>
+  </Folder>
+  <Project Path="mfc_controls\CGDK10.net.socket.mfc_controls.shared.vcxitems" Id="5351b858-cb59-483f-b329-67d47f9a7d44" />
+  <Project Path="socket.http\CGDK10.net.socket.http.shared.vcxitems" Id="79a9e477-6827-4ea9-8834-b4146ee4485f" />
+  <Project Path="socket.kafka\CGDK10.net.socket.kafka.shared.vcxitems" Id="6a5eb3a8-44b9-4485-8766-fd3f97b29e93" />
+  <Project Path="socket.mail\CGDK10.net.socket.mail.shared.vcxitems" Id="606bbf71-8448-4357-badb-b28f3f220769" />
+  <Project Path="..\common\cgdk_info.shared.vcxitems" Id="f2b5df8c-26a7-4f26-bd80-933bb4870b0a" />
+  <Project Path="socket.crypt\CGDK10.net.socket.crypt.shared.vcxitems" Id="94f89245-a64d-4993-b093-e95db24788a8" />
+</Solution>

@@ -31,7 +31,7 @@ class doss::Idepot::restore :
 	virtual public				Ireferenceable
 {
 public:
-			uint64_t			m_index_sended;
+			uint64_t			m_index_sent;
 			uint64_t			m_index_completed;
 };
 

@@ -33,7 +33,6 @@ class doss::repository::rdb :
 {
 public:
 			rdb();
-			rdb(const std::string_view _name);
 	virtual	~rdb() noexcept;
 
 protected:

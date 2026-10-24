@@ -81,5 +81,6 @@
     <None Include="asio\readme.md">
       <Filter>asio</Filter>
     </None>
+    <None Include="vcpkg.json" />
   </ItemGroup>
 </Project>

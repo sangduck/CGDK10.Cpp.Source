@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <cmath>
+
 namespace CGDK
 {
 //-----------------------------------------------------------------------------
@@ -61,8 +63,8 @@ public:
 				void			from_string			(const wchar_t* _string);
 				void			from_string			(const std::string& _string);
 				void			from_string			(const std::wstring& _string);
-				void			from_float			(const float& _value) noexcept	{ float i, f; f=modf(_value, &i); value = static_cast<int64_t>(i); fraction = static_cast<int64_t>(f);}
-				void			from_double			(const double& _value) noexcept	{ double i, f; f=modf(_value, &i); value = static_cast<int64_t>(i); fraction = static_cast<int64_t>(f);}
+				void			from_float			(const float& _value) noexcept	{ float i, f; f=std::modf(_value, &i); value = static_cast<int64_t>(i); fraction = static_cast<int64_t>(f * _FRACTION_MAX);}
+				void			from_double			(const double& _value) noexcept	{ double i, f; f=std::modf(_value, &i); value = static_cast<int64_t>(i); fraction = static_cast<int64_t>(f * _FRACTION_MAX);}
 
 	static		float			get_change_ratio	(const NUMERIC& _now, const NUMERIC& _origin) noexcept;
 
@@ -82,30 +84,30 @@ public:
 	[[nodiscard]] NUMERIC		operator - (const NUMERIC& _rhs) const noexcept		{ return _operate_substract(*this, _rhs);}
 	[[nodiscard]] NUMERIC		operator * (const NUMERIC& _rhs) const noexcept		{ return _operate_multiply(*this, _rhs);}
 	[[nodiscard]] NUMERIC		operator / (const NUMERIC& _rhs) const				{ return _operate_divide(*this, _rhs);}
-	[[nodiscard]] NUMERIC		operator % (const NUMERIC& _rhs) const				{ return _operate_modurate(*this, _rhs);}
+	[[nodiscard]] NUMERIC		operator % (const NUMERIC& _rhs) const				{ return _operate_modulo(*this, _rhs);}
 				NUMERIC&		operator +=(const NUMERIC& _rhs) noexcept			{ *this= _operate_additive(*this, _rhs); return *this;}
 				NUMERIC&		operator -=(const NUMERIC& _rhs) noexcept			{ *this= _operate_substract(*this, _rhs); return *this;}
 				NUMERIC&		operator *=(const NUMERIC& _rhs) noexcept			{ *this= _operate_multiply(*this, _rhs); return *this;}
 				NUMERIC&		operator /=(const NUMERIC& _rhs)					{ *this= _operate_divide(*this, _rhs); return *this;}
-				NUMERIC&		operator %=(const NUMERIC& _rhs)					{ *this= _operate_modurate(*this, _rhs); return *this;}
+				NUMERIC&		operator %=(const NUMERIC& _rhs)					{ *this= _operate_modulo(*this, _rhs); return *this;}
 
 	[[nodiscard]] NUMERIC		operator  +() const noexcept						{ return NUMERIC(value, fraction);}
 	[[nodiscard]] NUMERIC		operator  -() const noexcept						{ return NUMERIC(-value, -fraction);}
 
 	[[nodiscard]] 				operator bool() const noexcept						{ return value != 0 || fraction != 0;}
 	[[nodiscard]] 				operator float() const noexcept						{ return (float)value + (float)fraction * (1.0f / _FRACTION_MAX);}
-	[[nodiscard]] 				operator double() const noexcept					{ return (double)value + (double)fraction * (1.0f / _FRACTION_MAX);}
+	[[nodiscard]] 				operator double() const noexcept					{ return (double)value + (double)fraction * (1.0 / _FRACTION_MAX);}
 
 		static	NUMERIC			_operate_additive	(const NUMERIC& _lhs, const NUMERIC& _rhs) noexcept;
 		static	NUMERIC			_operate_substract	(const NUMERIC& _lhs, const NUMERIC& _rhs) noexcept;
 		static	NUMERIC			_operate_multiply	(const NUMERIC& _lhs, const NUMERIC& _rhs) noexcept;
 		static	NUMERIC			_operate_divide		(const NUMERIC& _lhs, const NUMERIC& _rhs);
-		static	NUMERIC			_operate_modurate	(const NUMERIC& _lhs, const NUMERIC& _rhs) noexcept;
+		static	NUMERIC			_operate_modulo	(const NUMERIC& _lhs, const NUMERIC& _rhs) noexcept;
 		static	NUMERIC			_operate_additive	(const NUMERIC& _lhs, int64_t _rhs) noexcept;
 		static	NUMERIC			_operate_substract	(const NUMERIC& _lhs, int64_t _rhs) noexcept;
 		static	NUMERIC			_operate_multiply	(const NUMERIC& _lhs, int64_t _rhs) noexcept;
 		static	NUMERIC			_operate_divide		(const NUMERIC& _lhs, int64_t _rhs) noexcept;
-		static	NUMERIC			_operate_modurate	(const NUMERIC& _lhs, int64_t _rhs) noexcept;
+		static	NUMERIC			_operate_modulo	(const NUMERIC& _lhs, int64_t _rhs) noexcept;
 		static	void			_operate_normalize	(NUMERIC& _InOut) noexcept;
 };
 

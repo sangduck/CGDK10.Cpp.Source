@@ -22,11 +22,11 @@ namespace CGDK
 {
 // ----------------------------------------------------------------------------
 //
-// 1. Defintions
+// 1. Definitions
 //
 // ----------------------------------------------------------------------------
 // 1) 최대 로그 문자열 길이 (주의! 수정하면 안된다!)
-#define	MAX_TRACE_STRING_LENGTH	2048
+#define	MAX_TRACE_STRING_LENGTH	8192
 
 
 //-----------------------------------------------------------------------------
@@ -96,19 +96,19 @@ const size_t MAX_LOG_TYPE = static_cast<size_t>(log_type_t::max_) + 1;
 //-----------------------------------------------------------------------------
 struct log_level_t
 {
-	int value;
+	int value{ 0 };
 
-	[[nodiscard]] static constexpr log_level_t min_() noexcept { return log_level_t{ INT_MIN }; };
-	[[nodiscard]] static constexpr log_level_t max_() noexcept { return log_level_t{ INT_MAX }; };
-	[[nodiscard]] static constexpr log_level_t default_() noexcept { return log_level_t{ 0 }; };
+	[[nodiscard]] static constexpr log_level_t min_() noexcept { return log_level_t{ INT_MIN }; }
+	[[nodiscard]] static constexpr log_level_t max_() noexcept { return log_level_t{ INT_MAX }; }
+	[[nodiscard]] static constexpr log_level_t default_() noexcept { return log_level_t{}; }
 
-	[[nodiscard]] static constexpr log_level_t lowest() noexcept { return min_(); };
-	[[nodiscard]] static constexpr log_level_t lower() noexcept { return log_level_t{ -256 }; };
-	[[nodiscard]] static constexpr log_level_t normal() noexcept { return default_(); };
-	[[nodiscard]] static constexpr log_level_t higher() noexcept { return log_level_t{ 256 }; };
-	[[nodiscard]] static constexpr log_level_t highest() noexcept { return max_(); };
+	[[nodiscard]] static constexpr log_level_t lowest() noexcept { return min_(); }
+	[[nodiscard]] static constexpr log_level_t lower() noexcept { return log_level_t{ -256 }; }
+	[[nodiscard]] static constexpr log_level_t normal() noexcept { return default_(); }
+	[[nodiscard]] static constexpr log_level_t higher() noexcept { return log_level_t{ 256 }; }
+	[[nodiscard]] static constexpr log_level_t highest() noexcept { return max_(); }
 
-	[[nodiscard]] static constexpr log_level_t important() noexcept { return higher(); };
+	[[nodiscard]] static constexpr log_level_t important() noexcept { return higher(); }
 
 	[[nodiscard]] operator int() const noexcept { return value; }
 };
@@ -133,11 +133,11 @@ struct log_level_t
 //-----------------------------------------------------------------------------
 struct log_attribute_t
 {
-	uint64_t value;
+	uint64_t value{ 0 };
 
-	[[nodiscard]] static constexpr log_attribute_t min_() noexcept { return log_attribute_t{ 0 }; };
-	[[nodiscard]] static constexpr log_attribute_t max_() noexcept { return log_attribute_t{ UINT64_MAX }; };
-	[[nodiscard]] static constexpr log_attribute_t default_() noexcept { return log_attribute_t{ 0 }; };
+	[[nodiscard]] static constexpr log_attribute_t min_() noexcept { return log_attribute_t{ 0 }; }
+	[[nodiscard]] static constexpr log_attribute_t max_() noexcept { return log_attribute_t{ UINT64_MAX }; }
+	[[nodiscard]] static constexpr log_attribute_t default_() noexcept { return log_attribute_t{}; }
 };
 [[nodiscard]] constexpr bool operator == (log_attribute_t _lhs, log_attribute_t _rhs) noexcept { return _lhs.value == _rhs.value; }
 [[nodiscard]] constexpr bool operator != (log_attribute_t _lhs, log_attribute_t _rhs) noexcept { return !(_lhs == _rhs); }
@@ -160,11 +160,11 @@ struct log_attribute_t
 //-----------------------------------------------------------------------------
 struct log_origin_t
 {
-	uint64_t value;
+	uint64_t value{ 0 };
 
-	[[nodiscard]] static constexpr log_origin_t min_() noexcept { return log_origin_t{ 0 }; };
-	[[nodiscard]] static constexpr log_origin_t max_() noexcept { return log_origin_t{ UINT64_MAX }; };
-	[[nodiscard]] static constexpr log_origin_t default_() noexcept { return log_origin_t{ 0 }; };
+	[[nodiscard]] static constexpr log_origin_t min_() noexcept { return log_origin_t{ 0 }; }
+	[[nodiscard]] static constexpr log_origin_t max_() noexcept { return log_origin_t{ UINT64_MAX }; }
+	[[nodiscard]] static constexpr log_origin_t default_() noexcept { return log_origin_t{}; }
 };
 [[nodiscard]] constexpr bool operator == (log_origin_t _lhs, log_origin_t _rhs) noexcept { return _lhs.value == _rhs.value; }
 [[nodiscard]] constexpr bool operator != (log_origin_t _lhs, log_origin_t _rhs) noexcept { return !(_lhs == _rhs); }
@@ -187,11 +187,11 @@ struct log_origin_t
 //-----------------------------------------------------------------------------
 struct log_source_t
 {
-	uint64_t value;
+	uint64_t value{ 0 };
 
-	[[nodiscard]] static constexpr log_source_t min_() noexcept { return log_source_t{ 0 }; };
-	[[nodiscard]] static constexpr log_source_t max_() noexcept { return log_source_t{ UINT64_MAX }; };
-	[[nodiscard]] static constexpr log_source_t default_() noexcept { return log_source_t{ 0 }; };
+	[[nodiscard]] static constexpr log_source_t min_() noexcept { return log_source_t{ 0 }; }
+	[[nodiscard]] static constexpr log_source_t max_() noexcept { return log_source_t{ UINT64_MAX }; }
+	[[nodiscard]] static constexpr log_source_t default_() noexcept { return log_source_t{}; }
 };
 [[nodiscard]] constexpr bool operator == (log_source_t _lhs, log_source_t _rhs) noexcept { return _lhs.value == _rhs.value; }
 [[nodiscard]] constexpr bool operator != (log_source_t _lhs, log_source_t _rhs) noexcept { return !(_lhs == _rhs); }
@@ -214,11 +214,11 @@ struct log_source_t
 //-----------------------------------------------------------------------------
 struct log_destination_t
 {
-	uint64_t value;
+	uint64_t value{ 0 };
 
-	[[nodiscard]] static constexpr log_destination_t min_() noexcept { return log_destination_t{ 0 }; };
-	[[nodiscard]] static constexpr log_destination_t max_() noexcept { return log_destination_t{ UINT64_MAX }; };
-	[[nodiscard]] static constexpr log_destination_t default_() noexcept { return log_destination_t{ 0 }; };
+	[[nodiscard]] static constexpr log_destination_t min_() noexcept { return log_destination_t{ 0 }; }
+	[[nodiscard]] static constexpr log_destination_t max_() noexcept { return log_destination_t{ UINT64_MAX }; }
+	[[nodiscard]] static constexpr log_destination_t default_() noexcept { return log_destination_t{}; }
 };
 [[nodiscard]] constexpr bool operator == (log_destination_t _lhs, log_destination_t _rhs) noexcept { return _lhs.value == _rhs.value; }
 [[nodiscard]] constexpr bool operator != (log_destination_t _lhs, log_destination_t _rhs) noexcept { return !(_lhs == _rhs); }
@@ -229,6 +229,4 @@ struct log_destination_t
 
 }
 
-template <class T>	[[nodiscard]] std::basic_string_view<T>	to_string(CGDK::log_type_t _log_type) noexcept;
-template <>			[[nodiscard]] std::string_view			to_string<char>(CGDK::log_type_t _log_type) noexcept;
-template <>			[[nodiscard]] std::wstring_view			to_string<wchar_t>(CGDK::log_type_t _log_type) noexcept;
+[[nodiscard]] std::string_view to_string(CGDK::log_type_t _log_type) noexcept;

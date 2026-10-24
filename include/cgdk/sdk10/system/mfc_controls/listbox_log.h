@@ -65,6 +65,11 @@ public:
 			bool				UpdateString	(int _index, std::basic_string_view<TCHAR> _str_head, std::basic_string_view<TCHAR> _message, COLORREF _color_text, BOOL _is_bold);
 			void				DeleteItemAfter	(int _index);
 
+			// - 선택한 줄(선택이 없으면 전체)을 "[time] message" 텍스트로 클립보드에 복사한다. (Ctrl+C)
+			bool				CopyToClipboard	(bool _selected_only = true);
+			// - 전체 선택 (Ctrl+A, 다중 선택 listbox 일 때만)
+			void				SelectAll		();
+
 // MFC) Virtual Functions
 protected:
 	virtual BOOL				PreCreateWindow(CREATESTRUCT& cs);
@@ -75,6 +80,8 @@ protected:
 // MFC) Windows Message
 protected:
 	DECLARE_MESSAGE_MAP()
+	afx_msg void				OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+	afx_msg LRESULT				OnCopyMessage(WPARAM _wParam, LPARAM _lParam);	// WM_COPY
 };
 
 

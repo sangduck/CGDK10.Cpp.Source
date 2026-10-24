@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -7,22 +7,22 @@
 
 using namespace CGDK;
 
-// 1) socket í´ë˜ìŠ¤ë¥¼ ì •ì˜í•œë‹¤.
+// 1) socket Å¬·¡½º¸¦ Á¤ÀÇÇÑ´Ù.
 class socket_tcp_client : public net::socket::tcp_client<>
 {
-	// (v) ì ‘ì† ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_connect() override
 	{
 		std::cout << " @ connected"sv << '\n';
 	}
 
-	// (v) ì ‘ì† ì‹¤íŒ¨ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½ÇÆĞ ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_fail_connect(uint64_t /*_disconnect_reason*/) override
 	{
 		std::cout << " @ fail to connecting"sv << '\n';
 	}
 
-	// (v) ì ‘ì† ì¢…ë£Œ ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó Á¾·á ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_disconnect(uint64_t) override
 	{
 		std::cout << " @ disconnected"sv << '\n';
@@ -42,61 +42,61 @@ int main()
 
 	//-----------------------------------------------------------------------------
 	//
-	// 1. net::conntector<T>ë€...
+	// 1. net::conntector<T>¶õ...
 	//
-	//  ëŒ€ê·œëª¨ ì ‘ì†ì„ í•´ì•¼í•  ê²½ìš° ì‚¬ìš©í•˜ëŠ” ê°ì²´ì´ë‹¤.
-	//  connector ê°ì²´ë¥¼ ìƒì„±í›„ request_connectë¥¼ í˜¸ì¶œí•˜ë©´ ë‚´ë¶€ì ìœ¼ë¡œ ìƒˆë¡œìš´ socket
-	//  ê°ì²´ë¥¼ ìƒì„±í›„ ì ‘ì†ì„ ì‹œë„í•œë‹¤.
-	//  connector ê°ì²´ëŠ” ìì‹ ì´ ìƒì„±í•œ socket ê°ì²´ë¥¼ ê´€ë¦¬í•˜ê³  ê´€ë ¨ í†µê³„ ì •ë³´ë¥¼ ì‘ì„±
-	//  í•œë‹¤.
+	//  ´ë±Ô¸ğ Á¢¼ÓÀ» ÇØ¾ßÇÒ °æ¿ì »ç¿ëÇÏ´Â °´Ã¼ÀÌ´Ù.
+	//  connector °´Ã¼¸¦ »ı¼º ÈÄ request_connect¸¦ È£ÃâÇÏ¸é ³»ºÎÀûÀ¸·Î »õ·Î¿î socket
+	//  °´Ã¼¸¦ »ı¼º ÈÄ Á¢¼ÓÀ» ½ÃµµÇÑ´Ù.
+	//  connector °´Ã¼´Â ÀÚ½ÅÀÌ »ı¼ºÇÑ socket °´Ã¼¸¦ °ü¸®ÇÏ°í °ü·Ã Åë°è Á¤º¸¸¦ ÀÛ¼º
+	//  ÇÑ´Ù.
 	//  
 	//
-	//  ê¸°ë³¸ì ì¸ ì‚¬ìš© ë²•ì€..
+	//  ±âº»ÀûÀÎ »ç¿ë ¹ıÀº..
 	// 
-	// 	   1) connectorê°ì²´ì— í…œí”Œë¦¿ íŒŒë¼ë¯¸í„°ë¡œ socket classë¥¼ ì¸ìë¡œ ë„£ì–´ ìƒì„±í•œë‹¤.
-	// 	      ì´ socket classëŠ” ì ‘ì† ì‹œë„ì‹œ ìƒì„±ë˜ëŠ” socket ê°ì²´ì˜ íƒ€ì…ë‹ˆë‹¤.
+	// 	   1) connector°´Ã¼¿¡ ÅÛÇÃ¸´ ÆÄ¶ó¹ÌÅÍ·Î socket class¸¦ ÀÎÀÚ·Î ³Ö¾î »ı¼ºÇÑ´Ù.
+	// 	      ÀÌ socket class´Â Á¢¼Ó ½Ãµµ½Ã »ı¼ºµÇ´Â socket °´Ã¼ÀÇ Å¸ÀÔ´Ï´Ù.
 	//
-	// 	   2) connectorë¥¼ start()í•œë‹¤. 
-	// 	      - start()í•œ ì´í›„ë¶€í„° connector ê°ì²´ë¥¼ ì‚¬ìš©í•  ìˆ˜ ìˆë‹¤.
+	// 	   2) connector¸¦ start()ÇÑ´Ù. 
+	// 	      - start()ÇÑ ÀÌÈÄºÎÅÍ connector °´Ã¼¸¦ »ç¿ëÇÒ ¼ö ÀÖ´Ù.
 	// 
-	// 	   3) connectorì˜ request_connect()í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì ‘ì†ì„ ì‹œë„í•œë‹¤.
-	//        - ë¦¬í„´ê°’ìœ¼ë¡œ ì ‘ì†ì‹œë„í•˜í•œ socket ê°ì²´ê°€ ëŒì•„ì˜¨ë‹¤.
+	// 	   3) connectorÀÇ request_connect()ÇÔ¼ö¸¦ »ç¿ëÇØ Á¢¼ÓÀ» ½ÃµµÇÑ´Ù.
+	//        - ¸®ÅÏ°ªÀ¸·Î Á¢¼Ó½ÃµµÇÏÇÑ socket °´Ã¼°¡ µ¹¾Æ¿Â´Ù.
 	// 
-	// 	   4) connectorë¥¼ íŒŒê´´í•œë‹¤.
-	// 	      - connectorê°€ íŒŒê´´ë  ë•Œ ëª¨ë“  socket ê°ì²´ì˜ ì ‘ì† ì¢…ë£Œê°€ í˜¸ì¶œë˜ê³ 
-	// 	        ëª¨ë“  socket ê°ì²´ì˜ í• ë‹¹í•´ì œê°€ ëœí›„ ì¢…ë£Œëœë‹¤.
+	// 	   4) connector¸¦ ÆÄ±«ÇÑ´Ù.
+	// 	      - connector°¡ ÆÄ±«µÉ ¶§ ¸ğµç socket °´Ã¼ÀÇ Á¢¼Ó Á¾·á°¡ È£ÃâµÇ°í
+	// 	        ¸ğµç socket °´Ã¼ÀÇ ÇÒ´çÇØÁ¦°¡ µÈÈÄ Á¾·áµÈ´Ù.
 	//
 	//-----------------------------------------------------------------------------
 	{
-		// 1) ì ‘ì†ì„ ì‹œë„í•  'socket_tcp_client' ì†Œì¼“ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 1) Á¢¼ÓÀ» ½ÃµµÇÒ 'socket_tcp_client' ¼ÒÄÏ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pconnector = make_own<net::connector<socket_tcp_client>>();
 
-		// 2) connectorë¥¼ ì‹œì‘í•œë‹¤.
+		// 2) connector¸¦ ½ÃÀÛÇÑ´Ù.
 		pconnector->start();
 
-		// 3) 100ê°œì˜ socketì„ ì ‘ì†í•œë‹¤.
+		// 3) 100°³ÀÇ socketÀ» Á¢¼ÓÇÑ´Ù.
 		for (int i = 0; i < 100; ++i)
 		{
-			// - connectorì— ì ‘ì†ì„ ìš”ì²­í•œë‹¤.
+			// - connector¿¡ Á¢¼ÓÀ» ¿äÃ»ÇÑ´Ù.
 			pconnector->request_connect({ net::ip::address_v4::loopback(), 20000 });
 		}
 
-		// 3) connectorì˜ ëª¨ë“  socketì„ ë‹«ëŠ”ë‹¤.
+		// 3) connectorÀÇ ¸ğµç socketÀ» ´İ´Â´Ù.
 		pconnector->close_connectable_all();
 
-		// 4) connectorë¥¼ íŒŒê´´í•œë‹¤.
+		// 4) connector¸¦ ÆÄ±«ÇÑ´Ù.
 		pconnector->destroy();
 	}
 	//-----------------------------------------------------------------------------
 	//
-	// 2. contextë¥¼ ì‚¬ìš©í•œ ì´ˆê¸°í™”.
+	// 2. context¸¦ »ç¿ëÇÑ ÃÊ±âÈ­.
 	// 
-	//  connector ê°ì²´ì˜ start()ì‹œ ì ‘ì†í•  ì£¼ì†Œë¥¼ ë¦¬ìŠ¤íŠ¸ë¡œ ì „ë‹¬í•˜ë©´ start()ì‹œ
-	// 	ë°”ë¡œ ì ‘ì†ì„ ì‹£ë„í•˜ë„ë¡ í• ìˆ˜ ìˆë‹¤.
-	// 	start()ì‹œ ì „ë‹¬í•  JSONì— "connection_list" í•­ëª©ì— ì ‘ì†í•  ëŒ€ìƒ ì´ë¦„ê³¼ ê·¸ ì£¼ì†Œë¥¼ ë‚˜ì—´í•˜ë©´ 
-	// 	start()ì‹œ ì ‘ì† ì‹œë„ ëœë‹¤.
+	//  connector °´Ã¼ÀÇ start()½Ã Á¢¼ÓÇÒ ÁÖ¼Ò¸¦ ¸®½ºÆ®·Î Àü´ŞÇÏ¸é start()½Ã
+	// 	¹Ù·Î Á¢¼ÓÀ» ½ÆµµÇÏµµ·Ï ÇÒ ¼ö ÀÖ´Ù.
+	// 	start()½Ã Àü´ŞÇÒ JSON¿¡ "connection_list" Ç×¸ñ¿¡ Á¢¼ÓÇÒ ´ë»ó ÀÌ¸§°ú ±× ÁÖ¼Ò¸¦ ³ª¿­ÇÏ¸é 
+	// 	start()½Ã Á¢¼Ó ½Ãµµ µÈ´Ù.
 	//
-	// 	<<< "setting.json" íŒŒì¼ >>>
+	// 	<<< "setting.json" ÆÄÀÏ >>>
 	// 
 	//	{
 	//	  "connection_list": {
@@ -124,28 +124,31 @@ int main()
 	//
 	//-----------------------------------------------------------------------------
 	{
-		// 1) ì ‘ì†ì„ ì‹œë„í•  'socket_tcp_client' ì†Œì¼“ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 1) Á¢¼ÓÀ» ½ÃµµÇÒ 'socket_tcp_client' ¼ÒÄÏ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pconnector = make_own<net::connector<socket_tcp_client>>();
 
-		// 2) contextì— ì ‘ì† ë¦¬ìŠ¤íŠ¸ë¥¼ ì „ë‹¬í•˜ì—¬ ì ‘ì†í•œë‹¤.
-		context context_connector("setting.json"sv);
+		// declare) 
+		context context_connector;
 
-		// 3) connectorë¥¼ ì‹œì‘í•œë‹¤.
+		// 2) context¿¡ Á¢¼Ó ¸®½ºÆ®¸¦ Àü´ŞÇÏ¿© Á¢¼ÓÇÑ´Ù.
+		context_connector.from_json(api::file::read_file("setting.json"sv));
+
+		// 3) connector¸¦ ½ÃÀÛÇÑ´Ù.
 		pconnector->start(context_connector);
 
-		// ... í•„ìš”í•œ ì²˜ë¦¬ë¥¼ í•œë‹¤.
+		// ... ÇÊ¿äÇÑ Ã³¸®¸¦ ÇÑ´Ù.
 
-		// 4) ì¢…ë£Œ
+		// 4) Á¾·á
 		pconnector->destroy();
 	}
 
 
-	// 5) ì•„ë¬´ ì…ë ¥ì„ ê¸°ë‹¤ë¦°ë‹¤.
+	// 5) ¾Æ¹« ÀÔ·ÂÀ» ±â´Ù¸°´Ù.
 	_getch();
 
 	// trace) 
 	std::cout << "stop server [tut.socket.ex07.tcp_connector]..."sv << '\n';
 
-	// end) ì¢…ë£Œ
+	// end) Á¾·á
 	return 0;
 }

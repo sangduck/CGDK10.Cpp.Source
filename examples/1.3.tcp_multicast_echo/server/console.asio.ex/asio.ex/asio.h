@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
@@ -21,9 +21,7 @@
 	#include <SDKDDKVer.h>
 #endif
 
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/buffer.hpp>
+#include <boost/asio.hpp>
 #include <set>
 #include <list>
 #include <memory>
@@ -43,7 +41,7 @@ namespace asio
 	class Nstatistics;
 	class Nconnective;
 	class Nacceptor;
-	class Nconnector;
+	class Nconnector;	
 	class Nconnect_requestable;
 	class Nsocket_tcp;
 	class Nsocket_tcp_gather;

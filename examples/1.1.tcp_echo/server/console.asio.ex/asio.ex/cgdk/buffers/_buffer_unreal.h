@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                              CGDK::buffer_view                            *
 //*                      Ver 2.0pre / Release 2015.01.05                      *
@@ -139,40 +139,13 @@ namespace CGDK
 {
 
 
-template<class B, class S, class T>
-_buffer_view<typename B::element_t> _ue4_prepend_FStringView(S& _s, const TStringViewImpl<T>& _object)
-{
-	using RET_T = _buffer_view<typename B::element_t>;
-
-	// 1) ...
-	auto buf_old = _s.data();
-
-	// 2) Stringê¸¸ì´ë¥¼ êµ¬í•œë‹¤.(NULLê¸¸ì´ê¹Œì§€ í¬í•¨í•˜ë¯€ë¡œ +1í•œë‹¤.)
-	auto length_string = _object.Len();
-	auto size_string = length_string * sizeof(T);
-
-	// check) lower bound
-	_CGD_BUFFER_BOUND_CHECK((_s.data() - size_string - sizeof(COUNT_T)) >= _s.get_lower_bound());
-
-	// 3) NULLìœ¼ë¥´ ì œì¼ ë¨¼ì € ë„£ëŠ”ë‹¤.
-	_s._prepend_general<T>(0);
-
-	// 4) [ë¬¸ìì—´]ì„ [ë¬¸ìì—´_ê¸¸ì´]ë§Œí¼ ë³µì‚¬í•œë‹¤.
-	_s._prepend_bytes(size_string, _object.GetData());
-
-	// 5) [ë¬¸ìì—´_ê¸¸ì´]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	_s._prepend_general<COUNT_T>(static_cast<COUNT_T>(length_string + 1));
-
-	// return) Stringì˜ ì œì¼ ì²˜ìŒ ìœ„ì¹˜ë¥¼ ë¦¬í„´í•¨!!
-	return base_t(_s.data(), buf_old - _s.data());
-}
 
 template<class B, class S, class T>
 _buffer_view<typename B::element_t> _ue4_append_FStringView(S& _s, const TStringViewImpl<T>& _object)
 {
 	using RET_T = _buffer_view<typename B::element_t>;
 
-	// 1) [ëª©í‘œ_í¬ì¸í„°]ë¥¼ êµ¬í•œë‹¤.
+	// 1) [¸ñÇ¥_Æ÷ÀÎÅÍ]¸¦ ±¸ÇÑ´Ù.
 	auto buf_dest = _s.data() + _s.size();
 
 	// 2) get values
@@ -186,7 +159,7 @@ _buffer_view<typename B::element_t> _ue4_append_FStringView(S& _s, const TString
 	// declare) 
 	auto buf_now = buf_dest;
 
-	// 3) [ë¬¸ìì—´_ê¸¸ì´]ë¥¼ ì €ì¥í•œë‹¤. (NULLí¬í•¨)
+	// 3) [¹®ÀÚ¿­_±æÀÌ]¸¦ ÀúÀåÇÑ´Ù. (NULLÆ÷ÇÔ)
 	*reinterpret_cast<COUNT_T*>(buf_now) = static_cast<COUNT_T>(length_string + 1);
 	buf_now += sizeof(COUNT_T);
 
@@ -197,10 +170,10 @@ _buffer_view<typename B::element_t> _ue4_append_FStringView(S& _s, const TString
 		buf_now += bytes_copy;
 	}
 
-	// 5) NULLì„ ì¶”ê°€í•œë‹¤.
+	// 5) NULLÀ» Ãß°¡ÇÑ´Ù.
 	*reinterpret_cast<T*>(buf_now) = 0;
 
-	// 6) [ë²„í¼_ê¸¸ì´]ë¥¼ ì—…ë°ì´íŠ¸í•œë‹¤.
+	// 6) [¹öÆÛ_±æÀÌ]¸¦ ¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 	_s.add_size(added_length);
 
 	// return)
@@ -210,26 +183,26 @@ _buffer_view<typename B::element_t> _ue4_append_FStringView(S& _s, const TString
 template<class T, class S>
 inline T _ue4_extract_FStringView(S& _s)
 {
-	// 1) [ë°ì´í„°_í¬ê¸°]ë¥¼ ì–»ì–´ì˜¨ë‹¤.(COUNT_T[ë¬¸ìì—´_ê¸¸ì´]+length(String))
+	// 1) [µ¥ÀÌÅÍ_Å©±â]¸¦ ¾ò¾î¿Â´Ù.(COUNT_T[¹®ÀÚ¿­_±æÀÌ]+length(String))
 	COUNT_T	str_length = _s._get_front_string_length<typename T::ElementType>();
 
-	// check) lengthê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ ê·¸ëƒ¥ ë¦¬í„´í•œë‹¤.
+	// check) length°¡ 0º¸´Ù ÀÛÀ¸¸é ±×³É ¸®ÅÏÇÑ´Ù.
 	if (str_length == COUNT_T(-1))
 	{
 		_s += offset(sizeof(COUNT_T));
 		return T();
 	}
 
-	// 2) ë¬¸ìì—´ì˜ ì œì¼ ì• í¬ì¸í„°ë¥¼ ì–»ì–´ë‘”ë‹¤.
+	// 2) ¹®ÀÚ¿­ÀÇ Á¦ÀÏ ¾Õ Æ÷ÀÎÅÍ¸¦ ¾ò¾îµĞ´Ù.
 	auto str_string = _s.data<typename T::ElementType>(sizeof(COUNT_T));
 
-	// 2) sizeOfData êµ¬í•˜ê¸°
+	// 2) sizeOfData ±¸ÇÏ±â
 	auto size_data = static_cast<COUNT_T>(str_length * sizeof(typename T::ElementType) + sizeof(COUNT_T));
 
-	// 3) [ì›ë³¸_ë²„í¼_í¬ì¸í„°]ì™€ [ì›ë³¸_ë²„í¼_ê¸¸ì´]ë¥¼ [ë°ì´í„°_í¬ê¸°]ë§Œí¼ ì´ë™ì‹œí‚¨ë‹¤. 
+	// 3) [¿øº»_¹öÆÛ_Æ÷ÀÎÅÍ]¿Í [¿øº»_¹öÆÛ_±æÀÌ]¸¦ [µ¥ÀÌÅÍ_Å©±â]¸¸Å­ ÀÌµ¿½ÃÅ²´Ù. 
 	_s += offset(size_data);
 
-	// return) [ë¬¸ìì—´_ì‹œì‘_í¬ì¸í„°]ì„ ë¦¬í„´í•œë‹¤.
+	// return) [¹®ÀÚ¿­_½ÃÀÛ_Æ÷ÀÎÅÍ]À» ¸®ÅÏÇÑ´Ù.
 	return T(str_string, static_cast<int32>(str_length) - 1);
 }
 inline size_t _ue4_size_of_FStringView(const FStringView& _object)
@@ -240,11 +213,6 @@ inline size_t _ue4_size_of_FStringView(const FStringView& _object)
 //-----------------------------------------------------------------------------
 // 1) ue4 - FString
 //-----------------------------------------------------------------------------
-template<class B, class T> class serializer_prepend<B, T, std::enable_if_t<is_ue4_FString_v<T>>>
-							{	public: using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const FString& _data) { return _ue4_prepend_FStringView<B>(_s, _data);}
-								template<class S> constexpr static type _do_prepend(S& _s, FString&& _data) { return _ue4_prepend_FStringView<B>(_s, _data);}
-							};
 template<class B, class T> class serializer_append<B, T, std::enable_if_t<is_ue4_FString_v<T>>>
 							{	public: using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const FString& _data)	{ return _ue4_append_FStringView<B, S, TCHAR>(_s, _data);}
@@ -268,11 +236,6 @@ template<class T>		    class serializer_size_of<T, std::enable_if_t<is_ue4_FStri
 //-----------------------------------------------------------------------------
 // 2) ue4 - FStringView
 //-----------------------------------------------------------------------------
-template<class B, class T> class serializer_prepend<B, T, std::enable_if_t<is_ue4_FStringView_v<T>>>
-							{	public: using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const FStringView& _data) { return _ue4_prepend_FStringView<B>(_s, _data);}
-								template<class S> constexpr static type _do_prepend(S& _s, FStringView&& _data) { return _ue4_prepend_FStringView<B>(_s, _data);}
-							};
 template<class B, class T> class serializer_append<B, T, std::enable_if_t<is_ue4_FStringView_v<T>>>
 							{	public: using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const FStringView& _data) { return _ue4_append_FStringView<B>(_s, _data);}
@@ -298,48 +261,6 @@ template<class T>		    class serializer_size_of<T, std::enable_if_t<is_ue4_FStri
 //-----------------------------------------------------------------------------
 // 3) ue4 - TArray
 //-----------------------------------------------------------------------------
-template<class S, class TELEMENT>
-constexpr std::enable_if_t<is_memcopy_able<TELEMENT>::value, _buffer_view<typename S::element_t>>
-_ue4_prepend_TArray(S& _s, const TArray<TELEMENT>& _object)
-{
-	using RET_T = _buffer_view<typename S::element_t>;
-
-	// check) _countê°€ 0ì´í•˜ë©´ ì•ˆëœë‹¤.
-	CGDK_ASSERT(_count >= 0, throw std::invalid_argument("_count is invalid [0]"));
-
-	// 1)
-	auto buf_old = _object.data();
-
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ë°ì´í„°ë“¤ì„ í†µì±„ë¡œ ë³µì‚¬í•œë‹¤.
-	_prepend_bytes(sizeof(T) * _count, _data);
-
-	// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	_prepend<COUNT_T>(static_cast<COUNT_T>(_count));
-
-	// return) 
-	return RET_T(_object.data(), buf_old - _object.data());
-}
-template <class S, class TELEMENT>
-constexpr std::enable_if_t<!is_memcopy_able<TELEMENT>::value, _buffer_view<typename S::element_t>>
-_ue4_prepend_TArray(S& _s, const TArray<TELEMENT>& _object)
-{
-	using RET_T = _buffer_view<typename S::element_t>;
-
-	// 1)
-	auto buf_old = _object.data();
-
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ë°ì´í„°ë“¤ì„ ì¶”ê°€í•œë‹¤.
-	for (int i = static_cast<int>(_count - 1); i >= 0; --i)
-	{
-		_prepend<T>(_data[i]);
-	}
-
-	// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	_prepend<COUNT_T>(static_cast<COUNT_T>(_count));
-
-	// return) 
-	return RET_T(_object.data(), buf_old - _object.data());
-}
 template <class S, class TELEMENT>
 constexpr std::enable_if_t<!is_memcopy_able<TELEMENT>::value, _buffer_view<typename S::element_t>>
 _ue4_append_TArray(S& _s, const TArray<TELEMENT>& _object)
@@ -349,13 +270,13 @@ _ue4_append_TArray(S& _s, const TArray<TELEMENT>& _object)
 	// check) upper bound
 	_CGD_BUFFER_BOUND_CHECK((_object.data() + size_ + sizeof(T) * _count) <= get_upper_bound());
 
-	// 1) [ì›ë³¸_ë²„í¼_í¬ì¸í„°]ë¥¼ ì €ì¥í•´ ë†“ëŠ”ë‹¤.
+	// 1) [¿øº»_¹öÆÛ_Æ÷ÀÎÅÍ]¸¦ ÀúÀåÇØ ³õ´Â´Ù.
 	auto len_old = size_;
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ½á³Ö´Â´Ù.
 	_append_general<COUNT_T>(static_cast<COUNT_T>(_count));
 
-	// 3) [ë°ì´í„°]ë“¤ì„ ì¶”ê°€í•œë‹¤.
+	// 3) [µ¥ÀÌÅÍ]µéÀ» Ãß°¡ÇÑ´Ù.
 	for (std::size_t i = 0; i < _count; ++i)
 	{
 		_append<T>(_data[i]);
@@ -373,10 +294,10 @@ _ue4_append_TArray(S& _s, const TArray<TELEMENT>& _object)
 	// 1) get count
 	auto count = _object.Num();
 
-	// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
+	// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ½á³Ö´Â´Ù.
 	_s._append_general<COUNT_T>(static_cast<COUNT_T>(count));
 
-	// 2) [ë°ì´í„°]ë“¤ì„ í†µì±„ë¡œ ë³µì‚¬í•œë‹¤.
+	// 2) [µ¥ÀÌÅÍ]µéÀ» ÅëÃ¤·Î º¹»çÇÑ´Ù.
 	return _s._append_bytes(count * sizeof(TELEMENT), _object.GetData());
 }
 
@@ -387,10 +308,10 @@ _ue4_extract_TArray(S& _s)
 	// declare) 
 	T result{};
 
-	// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+	// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 	auto size_data = _s._extract<COUNT_T>();
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ë“¤ì¸ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾îµéÀÎ´Ù.
 	if (size_data != COUNT_T(-1))
 	{
 		for (size_type i = 0; i < size_data; ++i)
@@ -410,7 +331,7 @@ _ue4_extract_TArray(S& _s)
 	// declare) 
 	T result{};
 
-	// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+	// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 	auto size_data = _s._extract<COUNT_T>();
 
 	// 2) reserve
@@ -441,12 +362,6 @@ size_t _ue4_size_of_TArray(const T& _object)
 }
 
 template<class B, class T>
-							class serializer_prepend<B, T, std::enable_if_t<is_ue4_TArray_v<T>>>
-							{	public: using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _ue4_prepend_TArray<S, typename T::ElementType>(_s, _data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _ue4_prepend_TArray<S, typename T::ElementType>(_s, _data);}
-							};
-template<class B, class T>
 							class serializer_append<B, T, std::enable_if_t<is_ue4_TArray_v<T>>>
 							{	public: using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _ue4_append_TArray<S, typename T::ElementType>(_s, _data);}
@@ -475,48 +390,6 @@ template<class T>
 //-----------------------------------------------------------------------------
 // 4) ue4 - TStaticArray (TStaticArray, TShaderResourceParameterArray)
 //-----------------------------------------------------------------------------
-template<class S, class A1, uint32 A2, uint32 A3>
-constexpr std::enable_if_t<is_memcopy_able<A1>::value, _buffer_view<typename S::element_t>>
-_ue4_prepend_TStaticArray(S& _s, const TStaticArray<A1, A2, A3>& _object)
-{
-	using RET_T = _buffer_view<typename S::element_t>;
-
-	// check) _countê°€ 0ì´í•˜ë©´ ì•ˆëœë‹¤.
-	CGDK_ASSERT(_count >= 0, throw std::invalid_argument("_count is invalid [0]"));
-
-	// 1)
-	auto buf_old = _object.data();
-
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ë°ì´í„°ë“¤ì„ í†µì±„ë¡œ ë³µì‚¬í•œë‹¤.
-	_prepend_bytes(sizeof(T) * _count, _data);
-
-	// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	_prepend<COUNT_T>(static_cast<COUNT_T>(_count));
-
-	// return) 
-	return RET_T(_object.data(), buf_old - _object.data());
-}
-template <class S, class A1, uint32 A2, uint32 A3>
-constexpr std::enable_if_t<!is_memcopy_able<A1>::value, _buffer_view<typename S::element_t>>
-_ue4_prepend_TStaticArray(S& _s, const TStaticArray<A1, A2, A3>& _object)
-{
-	using RET_T = _buffer_view<typename S::element_t>;
-
-	// 1)
-	auto buf_old = _object.data();
-
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ë°ì´í„°ë“¤ì„ ì¶”ê°€í•œë‹¤.
-	for (int i = static_cast<int>(_count - 1); i >= 0; --i)
-	{
-		_prepend<T>(_data[i]);
-	}
-
-	// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	_prepend<COUNT_T>(static_cast<COUNT_T>(_count));
-
-	// return) 
-	return RET_T(_object.data(), buf_old - _object.data());
-}
 template <class S, class A1, uint32 A2, uint32 A3>
 constexpr std::enable_if_t<!is_memcopy_able<A1>::value, _buffer_view<typename S::element_t>>
 _ue4_append_TStaticArray(S& _s, const TStaticArray<A1, A2, A3>& _object)
@@ -526,13 +399,13 @@ _ue4_append_TStaticArray(S& _s, const TStaticArray<A1, A2, A3>& _object)
 	// check) upper bound
 	_CGD_BUFFER_BOUND_CHECK((_object.data() + size_ + sizeof(T) * _count) <= get_upper_bound());
 
-	// 1) [ì›ë³¸_ë²„í¼_í¬ì¸í„°]ë¥¼ ì €ì¥í•´ ë†“ëŠ”ë‹¤.
+	// 1) [¿øº»_¹öÆÛ_Æ÷ÀÎÅÍ]¸¦ ÀúÀåÇØ ³õ´Â´Ù.
 	auto len_old = size_;
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ½á³Ö´Â´Ù.
 	_append_general<COUNT_T>(static_cast<COUNT_T>(_count));
 
-	// 3) [ë°ì´í„°]ë“¤ì„ ì¶”ê°€í•œë‹¤.
+	// 3) [µ¥ÀÌÅÍ]µéÀ» Ãß°¡ÇÑ´Ù.
 	for (std::size_t i = 0; i < _count; ++i)
 	{
 		_append<T>(_data[i]);
@@ -550,10 +423,10 @@ _ue4_append_TStaticArray(S& _s, const TStaticArray<A1, A2, A3>& _object)
 	// 1) get count
 	auto count = _object.Num();
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ½á³Ö´Â´Ù.
 	_s._append_general<COUNT_T>(static_cast<COUNT_T>(count));
 
-	// 3) [ë°ì´í„°]ë“¤ì„ í†µì±„ë¡œ ë³µì‚¬í•œë‹¤.
+	// 3) [µ¥ÀÌÅÍ]µéÀ» ÅëÃ¤·Î º¹»çÇÑ´Ù.
 	return _s._append_bytes(count * sizeof(A1), _object.GetData());
 }
 
@@ -564,14 +437,14 @@ _ue4_extract_TStaticArray(S& _s)
 	// declare) 
 	T result{};
 
-	// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+	// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 	auto size_data = _s._extract<COUNT_T>();
 
-	// check) [ë°ì´í„°_ê°¯ìˆ˜]ê°€ ë°°ì—´ì˜ ìˆ˜ë³´ë‹¤ ì»¤ì„œëŠ” ì•ˆë€ë‹¤.
+	// check) [µ¥ÀÌÅÍ_°¹¼ö]°¡ ¹è¿­ÀÇ ¼öº¸´Ù Ä¿¼­´Â ¾È‰Â´Ù.
 	if (size_data > A2)
 		throw std::length_error("overflow array size");
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ë“¤ì¸ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾îµéÀÎ´Ù.
 	if (size_data != COUNT_T(-1))
 	{
 		for (size_type i = 0; i < size_data; ++i)
@@ -591,10 +464,10 @@ _ue4_extract_TStaticArray(S& _s)
 	// declare) 
 	T result{};
 
-	// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+	// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 	auto size_data = _s._extract<COUNT_T>();
 
-	// check) [ë°ì´í„°_ê°¯ìˆ˜]ê°€ ë°°ì—´ì˜ ìˆ˜ë³´ë‹¤ ì»¤ì„œëŠ” ì•ˆë€ë‹¤.
+	// check) [µ¥ÀÌÅÍ_°¹¼ö]°¡ ¹è¿­ÀÇ ¼öº¸´Ù Ä¿¼­´Â ¾È‰Â´Ù.
 	if (size_data > A2)
 		throw std::length_error("overflow array size");
 
@@ -611,12 +484,6 @@ _ue4_extract_TStaticArray(S& _s)
 	return result;
 }
 
-template<class B, class A1, uint32 A2, uint32 A3> class serializer_prepend<B, TStaticArray<A1, A2, A3>>
-							{	public:
-								using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const TStaticArray<A1, A2, A3>& _data) { return _ue4_prepend_TStaticArray<S, A1, A2, A3>(_s, _data);}
-								template<class S> constexpr static type _do_prepend(S& _s, TStaticArray<A1, A2, A3>&& _data) { return _ue4_prepend_TStaticArray<S, A1, A2, A3>(_s, _data);}
-							};
 template<class B, class A1, uint32 A2, uint32 A3> class serializer_append<B, TStaticArray<A1, A2, A3>>
 							{	public:
 								using type = _buffer_view<typename B::element_t>;
@@ -643,11 +510,6 @@ template<class A1, uint32 A2, uint32 A3> class serializer_size_of<TStaticArray<A
 //-----------------------------------------------------------------------------
 // 5) ue4 - TArray (TSparseArray)
 //-----------------------------------------------------------------------------
-template<class B, class T> class serializer_prepend<B, T, std::enable_if_t<is_ue4_TSparseArray_v<T>>>
-							{	public: using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _ue4_prepend_TArray<S, typename T::ElementType>(_s, _data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _ue4_prepend_TArray<S, typename T::ElementType>(_s, _data);}
-							};
 template<class B, class T> class serializer_append<B, T, std::enable_if_t<is_ue4_TSparseArray_v<T>>>
 							{	public: using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _ue4_append_TArray<S, typename T::ElementType>(_s, _data);}
@@ -673,26 +535,6 @@ template<class T>		    class serializer_size_of<T, std::enable_if_t<is_ue4_TSpar
 //-----------------------------------------------------------------------------
 // 6) ue4 - TList (singly linked list - TList)
 //-----------------------------------------------------------------------------
-template<class S, class T>
-_buffer_view<typename S::element_t> _ue4_prepend_TList(S& _s, const T& _object)
-{
-	using RET_T = _buffer_view<typename S::element_t>;
-
-	// 1)
-	auto buf_old = _object.data();
-
-	// 2) [ë°ì´í„°]ë“¤ì„ ì¶”ê°€í•œë‹¤.
-	for (auto& iter : _object)
-	{
-		_append<T::ElementType>(iter);
-	}
-
-	// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	_prepend<COUNT_T>(static_cast<COUNT_T>(_count));
-
-	// return) 
-	return RET_T(_object.data(), buf_old - _object.data());
-}
 
 template<class S, class T>
 _buffer_view<typename S::element_t> _ue4_append_TList(S& _s, const T& _object)
@@ -702,13 +544,13 @@ _buffer_view<typename S::element_t> _ue4_append_TList(S& _s, const T& _object)
 	// check) upper bound
 	_CGD_BUFFER_BOUND_CHECK((_object.data() + size_ + sizeof(T) * _count) <= get_upper_bound());
 
-	// 1) [ì›ë³¸_ë²„í¼_í¬ì¸í„°]ë¥¼ ì €ì¥í•´ ë†“ëŠ”ë‹¤.
+	// 1) [¿øº»_¹öÆÛ_Æ÷ÀÎÅÍ]¸¦ ÀúÀåÇØ ³õ´Â´Ù.
 	auto len_old = size_;
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ½á³Ö´Â´Ù.
 	_append_general<COUNT_T>(static_cast<COUNT_T>(_count));
 
-	// 3) [ë°ì´í„°]ë“¤ì„ ì¶”ê°€í•œë‹¤.
+	// 3) [µ¥ÀÌÅÍ]µéÀ» Ãß°¡ÇÑ´Ù.
 	for (auto& iter : _object)
 	{
 		_append<T::ElementType>(iter);
@@ -724,10 +566,10 @@ T _ue4_extract_TList(S& _s)
 	// declare) 
 	T result{};
 
-	// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+	// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 	auto size_data = _s._extract<COUNT_T>();
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ë“¤ì¸ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾îµéÀÎ´Ù.
 	if (size_data != COUNT_T(-1))
 	{
 		for (size_type i = 0; i < size_data; ++i)
@@ -740,11 +582,6 @@ T _ue4_extract_TList(S& _s)
 	return result;
 }
 
-template<class B, class T> class serializer_prepend<B, T, std::enable_if_t<is_ue4_TList_v<T>>>
-							{	public: using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _ue4_prepend_TList<S, typename T::ElementType>(_s, _data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _ue4_prepend_TList<S, typename T::ElementType>(_s, _data);}
-							};
 template<class B, class T> class serializer_append<B, T, std::enable_if_t<is_ue4_TList_v<T>>>
 							{	public: using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _ue4_append_TList<S, typename T::ElementType>(_s, _data);}
@@ -770,26 +607,6 @@ template<class T>		    class serializer_size_of<T, std::enable_if_t<is_ue4_TList
 //-----------------------------------------------------------------------------
 // 7) ue4 - TLinkedListBase (doubly linked list - TLinkedList, TIntrusiveLinkedList, TLinkedList)
 //-----------------------------------------------------------------------------
-template<class S, class T>
-_buffer_view<typename S::element_t> _ue4_prepend_TLinkedListBase(S& _s, const T& _object)
-{
-	using RET_T = _buffer_view<typename S::element_t>;
-
-	// 1)
-	auto buf_old = _object.data();
-
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ë°ì´í„°ë“¤ì„ ì¶”ê°€í•œë‹¤.
-	for (int i = static_cast<int>(_count - 1); i >= 0; --i)
-	{
-		_prepend<T>(_data[i]);
-	}
-
-	// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	_prepend<COUNT_T>(static_cast<COUNT_T>(_count));
-
-	// return) 
-	return RET_T(_object.data(), buf_old - _object.data());
-}
 
 template<class S, class T>
 _buffer_view<typename S::element_t> _ue4_append_TLinkedListBase(S& _s, const T& _object)
@@ -799,13 +616,13 @@ _buffer_view<typename S::element_t> _ue4_append_TLinkedListBase(S& _s, const T& 
 	// check) upper bound
 	_CGD_BUFFER_BOUND_CHECK((_object.data() + size_ + sizeof(T) * _count) <= get_upper_bound());
 
-	// 1) [ì›ë³¸_ë²„í¼_í¬ì¸í„°]ë¥¼ ì €ì¥í•´ ë†“ëŠ”ë‹¤.
+	// 1) [¿øº»_¹öÆÛ_Æ÷ÀÎÅÍ]¸¦ ÀúÀåÇØ ³õ´Â´Ù.
 	auto len_old = size_;
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ½á³Ö´Â´Ù.
 	_append_general<COUNT_T>(static_cast<COUNT_T>(_count));
 
-	// 3) [ë°ì´í„°]ë“¤ì„ ì¶”ê°€í•œë‹¤.
+	// 3) [µ¥ÀÌÅÍ]µéÀ» Ãß°¡ÇÑ´Ù.
 	for (std::size_t i = 0; i < _count; ++i)
 	{
 		_append<T>(_data[i]);
@@ -823,10 +640,10 @@ T _ue4_extract_TLinkedListBase(S& _s)
 	// declare) 
 	T result{};
 
-	// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+	// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 	auto size_data = _s._extract<COUNT_T>();
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ë“¤ì¸ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾îµéÀÎ´Ù.
 	if (size_data != COUNT_T(-1))
 	{
 		// - first 
@@ -843,11 +660,6 @@ T _ue4_extract_TLinkedListBase(S& _s)
 	return result;
 }
 
-template<class B, class T> class serializer_prepend<B, T, std::enable_if_t<is_ue4_TLinkedListBase_v<T>>>
-							{	public: using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _ue4_prepend_TLinkedListBase<S, typename T::ElementType>(_s, _data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _ue4_prepend_TLinkedListBase<S, typename T::ElementType>(_s, _data);}
-							};
 template<class B, class T> class serializer_append<B, T, std::enable_if_t<is_ue4_TLinkedListBase_v<T>>>
 							{	public: using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _ue4_append_TLinkedListBase<S, typename T::ElementType>(_s, _data);}
@@ -873,26 +685,6 @@ template<class T>		    class serializer_size_of<T, std::enable_if_t<is_ue4_TLink
 //-----------------------------------------------------------------------------
 // 8) ue4 - TSet (set - TSet, 	FTouchKeySet)
 //-----------------------------------------------------------------------------
-template<class S, class T>
-_buffer_view<typename S::element_t> _ue4_prepend_TSet(S& _s, const T& _object)
-{
-	using RET_T = _buffer_view<typename S::element_t>;
-
-	// 1)
-	auto buf_old = _object.data();
-
-	//// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ë°ì´í„°ë“¤ì„ ì¶”ê°€í•œë‹¤.
-	//for (int i = static_cast<int>(_count - 1); i >= 0; --i)
-	//{
-	//	_prepend<T>(_data[i]);
-	//}
-
-	//// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	//_prepend<COUNT_T>(static_cast<COUNT_T>(_count));
-
-	// return) 
-	return RET_T(_object.data(), buf_old - _object.data());
-}
 
 template<class S, class T>
 _buffer_view<typename S::element_t> _ue4_append_TSet(S& _s, const T& _object)
@@ -902,13 +694,13 @@ _buffer_view<typename S::element_t> _ue4_append_TSet(S& _s, const T& _object)
 	// check) upper bound
 	_CGD_BUFFER_BOUND_CHECK((_object.data() + size_ + sizeof(T) * _count) <= get_upper_bound());
 
-	// 1) [ì›ë³¸_ë²„í¼_í¬ì¸í„°]ë¥¼ ì €ì¥í•´ ë†“ëŠ”ë‹¤.
+	// 1) [¿øº»_¹öÆÛ_Æ÷ÀÎÅÍ]¸¦ ÀúÀåÇØ ³õ´Â´Ù.
 	auto len_old = size_;
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ½á³Ö´Â´Ù.
 	_append_general<COUNT_T>(static_cast<COUNT_T>(_count));
 
-	// 3) [ë°ì´í„°]ë“¤ì„ ì¶”ê°€í•œë‹¤.
+	// 3) [µ¥ÀÌÅÍ]µéÀ» Ãß°¡ÇÑ´Ù.
 	for (auto& iter : _object)
 	{
 		_append(iter);
@@ -926,10 +718,10 @@ T _ue4_extract_TSet(S& _s)
 	// declare) 
 	T result{};
 
-	// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+	// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 	auto size_data = _s._extract<COUNT_T>();
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ë“¤ì¸ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾îµéÀÎ´Ù.
 	if (size_data != COUNT_T(-1))
 	{
 		// - first 
@@ -948,11 +740,6 @@ T _ue4_extract_TSet(S& _s)
 
 
 
-template<class B, class T> class serializer_prepend<B, T, std::enable_if_t<is_ue4_TSet_v<T>>>
-							{	public: using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _ue4_prepend_TSet<S, typename T::ElementType>(_s, _data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _ue4_prepend_TSet<S, typename T::ElementType>(_s, _data);}
-							};
 template<class B, class T> class serializer_append<B, T, std::enable_if_t<is_ue4_TSet_v<T>>>
 							{	public: using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _ue4_append_TSet<S, typename T::ElementType>(_s, _data);}
@@ -978,40 +765,19 @@ template<class T>		    class serializer_size_of<T, std::enable_if_t<is_ue4_TSet_
 //-----------------------------------------------------------------------------
 // 9) ue4 - TMapBase (map - TSortableMapBase, TMap, TMultiMap)
 //-----------------------------------------------------------------------------
-template<class S, class T>
-_buffer_view<typename S::element_t> _ue4_prepend_TMap(S& _s, const T& _object)
-{
-	using RET_T = _buffer_view<typename S::element_t>;
-
-	// 1)
-	auto buf_old = _object.data();
-
-	//// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ë°ì´í„°ë“¤ì„ ì¶”ê°€í•œë‹¤.
-	//for (auto& iter : _object)
-	//{
-	//	_prepend<T>(iter.Value);
-	//	_prepend<T>(iter.Key);
-	//}
-
-	//// 3) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
-	//_prepend<COUNT_T>(static_cast<COUNT_T>(_object.Len()));
-
-	// return) 
-	return RET_T(_s.data(), buf_old - _s.data());
-}
 
 template<class S, class T>
 _buffer_view<typename S::element_t> _ue4_append_TMap(S& _s, const T& _object)
 {
 	using RET_T = _buffer_view<typename S::element_t>;
 
-	// 1) [ì›ë³¸_ë²„í¼_í¬ì¸í„°]ë¥¼ ì €ì¥í•´ ë†“ëŠ”ë‹¤.
+	// 1) [¿øº»_¹öÆÛ_Æ÷ÀÎÅÍ]¸¦ ÀúÀåÇØ ³õ´Â´Ù.
 	auto len_old = _s.size();
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì¨ë„£ëŠ”ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ½á³Ö´Â´Ù.
 	_s._append_general<COUNT_T>(static_cast<COUNT_T>(_object.Num()));
 
-	// 3) [ë°ì´í„°]ë“¤ì„ ì¶”ê°€í•œë‹¤.
+	// 3) [µ¥ÀÌÅÍ]µéÀ» Ãß°¡ÇÑ´Ù.
 	for (auto& iter: _object)
 	{
 		_s._append(iter.Key);
@@ -1028,10 +794,10 @@ T _ue4_extract_TMap(S& _s)
 	// declare) 
 	T result{};
 
-	// 1) [ë°ì´í„°_ê°¯ìˆ˜]ë¥¼ ì–»ì–´ë‚¸ë‹¤.
+	// 1) [µ¥ÀÌÅÍ_°¹¼ö]¸¦ ¾ò¾î³½´Ù.
 	auto size_data = _s._extract<COUNT_T>();
 
-	// 2) [ë°ì´í„°_ê°¯ìˆ˜]ë§Œí¼ ì½ì–´ë“¤ì¸ë‹¤.
+	// 2) [µ¥ÀÌÅÍ_°¹¼ö]¸¸Å­ ÀĞ¾îµéÀÎ´Ù.
 	if (size_data != COUNT_T(-1))
 	{
 		// - reserve
@@ -1065,11 +831,6 @@ size_t _ue4_size_of_TMap(const T& _object)
 	return size;
 }
 
-template<class B, class T> class serializer_prepend<B, T, std::enable_if_t<is_ue4_TMapBase_v<T>>>
-							{	public: using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _ue4_prepend_TMap<S, T>(_s, _data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _ue4_prepend_TMap<S, T>(_s, _data);}
-							};
 template<class B, class T> class serializer_append<B, T, std::enable_if_t<is_ue4_TMapBase_v<T>>>
 							{	public: using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _ue4_append_TMap<S, T>(_s, _data);}
@@ -1095,11 +856,6 @@ template<class T>		    class serializer_size_of<T, std::enable_if_t<is_ue4_TMapB
 //-----------------------------------------------------------------------------
 // 10) ue4 - TSortedMap (sorted map - TSortedMap, FAssetDataTagMap)
 //-----------------------------------------------------------------------------
-template<class B, class T> class serializer_prepend<B, T, std::enable_if_t<is_ue4_TSortedMap_v<T>>>
-							{	public: using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_prepend(S& _s, const T& _data) { return _ue4_prepend_TMap<S, T>(_s, _data);}
-								template<class S> constexpr static type _do_prepend(S& _s, T&& _data) { return _ue4_prepend_TMap<S, T>(_s, _data);}
-							};
 template<class B, class T> class serializer_append<B, T, std::enable_if_t<is_ue4_TSortedMap_v<T>>>
 							{	public: using type = _buffer_view<typename B::element_t>;
 								template<class S> constexpr static type _do_append(S& _s, const T& _data) { return _ue4_append_TMap<S, T>(_s, _data);}

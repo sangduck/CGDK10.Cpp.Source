@@ -74,8 +74,8 @@ public:
 
 private:
 			object_ptr<member_t> m_pmember;
-			Igroup<member_t>*	m_pgroup;
-			group_member_id_t	m_member_serial;
+			Igroup<member_t>*	m_pgroup {nullptr};
+			group_member_id_t	m_member_serial {};
 };
 
 
@@ -97,7 +97,7 @@ public:
 			MEMBER_SET_ARRAY() noexcept : MEMBER_SET<_TMEMBER>(), m_member_data() {}
 			MEMBER_SET_ARRAY(Igroup<_TMEMBER>* _pgroup) noexcept : MEMBER_SET<_TMEMBER>(_pgroup), m_member_data() {}
 public:
-			member_data_t		m_member_data;
+			member_data_t		m_member_data {};
 
 public:
 			MEMBER_SET_ARRAY&	operator=(_TMEMBER* _rhs) noexcept { this->member(_rhs); return *this;}
@@ -120,10 +120,10 @@ public:
 public:
 			MEMBER_SET_LIST() noexcept : MEMBER_SET<_TMEMBER>(), m_member_data() {}
 			MEMBER_SET_LIST(Igroup<_TMEMBER>* _pgroup) noexcept : MEMBER_SET<_TMEMBER>(_pgroup), m_member_data() {}
-public:
-			member_data_t		m_member_data;
-public:
-	typename circular_list<MEMBER_SET_LIST<_TMEMBER, _TMEMBER_DATA>>::const_iterator	iter;
+
+			member_data_t		m_member_data {};
+
+	typename circular_list<MEMBER_SET_LIST<_TMEMBER, _TMEMBER_DATA>>::const_iterator iter {};
 
 			MEMBER_SET_LIST&	operator=(_TMEMBER* _rhs) noexcept { this->MEMBER_SET<_TMEMBER>::m_pmember=_rhs; return *this;}
 };
@@ -145,14 +145,10 @@ public:
 public:
 			MEMBER_SET_MAP() noexcept : MEMBER_SET<_TMEMBER>(), m_member_data() {}
 			MEMBER_SET_MAP(Igroup<_TMEMBER>* _pgroup) noexcept : MEMBER_SET<_TMEMBER>(_pgroup), m_member_data() {}
-public:
-			member_data_t		m_member_data;
-public:
-#if defined(_MSC_VER)
-	typename std::map<_TKEY, MEMBER_SET_MAP<_TMEMBER, _TKEY, _TPARAM, _TMEMBER_DATA>>::const_iterator	iter;
-#else
-			_TKEY				key;
-#endif
+
+			member_data_t		m_member_data {};
+
+	typename std::map<_TKEY, MEMBER_SET_MAP<_TMEMBER, _TKEY, _TPARAM, _TMEMBER_DATA>>::const_iterator iter{};
 
 			MEMBER_SET_MAP&		operator=(_TMEMBER* _rhs) noexcept { this->MEMBER_SET<_TMEMBER>::m_pmember=_rhs; return *this;}
 };

@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 #include "cgdk/sdk10/server.group.h"
 #include "../../define_message.h"
 
@@ -24,16 +24,16 @@ public:
 };
 
 class group_simple : 
-	public group::list_sender<socket_tcp>	// @) Listí˜• groupì„ ë§Œë“ ë‹¤.
+	public group::list_sender<socket_tcp>	// @) ListÇü groupÀ» ¸¸µç´Ù.
 {
 protected:
-	// @) groupì— ìƒˆë¡œìš´ ë©¤ë²„ê°€ ì…ì¥í–ˆì„ ë•Œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜.
+	// @) group¿¡ »õ·Î¿î ¸â¹ö°¡ ÀÔÀåÇßÀ» ¶§ È£ÃâµÇ´Â ÇÔ¼ö.
 	virtual	void	on_member_entered(socket_tcp* _pmember, sMESSAGE& /*param*/) override
 	{
 		// trace) 
 		std::cout << "on_member_entered>> member entered (id:"sv << _pmember->m_member_serial << ")\n"sv;
 
-		// - ëª¨ë“  group ë©¤ë²„ì— Message ì „ì†¡
+		// - ¸ğµç group ¸â¹ö¿¡ Message Àü¼Û
 		send(alloc_shared_buffer(256) 
 			<< uint32_t()
 			<< uint32_t(eMESSAGE_TYPE::ENTER_MEMBER)
@@ -42,10 +42,10 @@ protected:
 			<< SET_LENGTH());
 	}
 
-	// @) groupì—ì„œ ë©¤ë²„ê°€ ë‚˜ê°ˆ ë•Œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜.
+	// @) group¿¡¼­ ¸â¹ö°¡ ³ª°¥ ¶§ È£ÃâµÇ´Â ÇÔ¼ö.
 	virtual	uintptr_t on_member_leaving(socket_tcp* _pmember, uintptr_t /*_param*/) override
 	{
-		// ëª¨ë“  group ë©¤ë²„ì— Message ì „ì†¡
+		// ¸ğµç group ¸â¹ö¿¡ Message Àü¼Û
 		send(alloc_shared_buffer(12)
 			<< uint32_t(12)
 			<< uint32_t(eMESSAGE_TYPE::LEAVE_MEMBER)
@@ -63,13 +63,13 @@ std::atomic<int> g_member_serial{ 0 };
 
 void socket_tcp::on_connect()
 {
-	// 1) ì ‘ì†í•˜ë©´ ë¨¼ì € Member Serialì„ ì¨ë„£ëŠ”ë‹¤.
+	// 1) Á¢¼ÓÇÏ¸é ¸ÕÀú Member SerialÀ» ½á³Ö´Â´Ù.
 	m_member_serial = g_member_serial++;
 
 	// trace) 
 	std::cout << "on_connect>> connected id:"sv << m_member_serial << '\n';
 
-	// 2) groupì— Enterì‹œí‚¨ë‹¤.
+	// 2) group¿¡ Enter½ÃÅ²´Ù.
 	g_pgroup->enter(this);
 }
 
@@ -78,13 +78,13 @@ void socket_tcp::on_disconnect(uint64_t /*_disconnect_reason*/)
 	// trace) 
 	std::cout << "on_disconnect>> disconnected id:"sv << m_member_serial << '\n';
 
-	// 1) ì ‘ì†ì´ ì¢…ë£Œë˜ë©´ groupì—ì„œ ë‚˜ê°„ë‹¤.
+	// 1) Á¢¼ÓÀÌ Á¾·áµÇ¸é group¿¡¼­ ³ª°£´Ù.
 	leave_group();
 }
 
 result_code socket_tcp::on_message(sMESSAGE_NETWORK& _msg)
 {
-	// 1) group ì „ì²´ì—ê²Œ ë©”ì‹œì§€ë¥¼ echo ì „ì†¡í•œë‹¤.
+	// 1) group ÀüÃ¼¿¡°Ô ¸Ş½ÃÁö¸¦ echo Àü¼ÛÇÑ´Ù.
 	g_pgroup->send(_msg.buf_message);
 
 	// return) 
@@ -96,22 +96,22 @@ int main(int /*argc*/, char* /*argv*/[])
 	// trace) 
 	std::cout << "CGCII tutorial.group.server 01..."sv << '\n';
 
-	// 1) group ê°ì²´ë¥¼ ìƒì„±í•œë‹¤ / create group object
+	// 1) group °´Ã¼¸¦ »ı¼ºÇÑ´Ù / create group object
 	g_pgroup = make_own<group_simple>();
 
-	// 2) groupì— ì…ì¥ ê°€ëŠ¥í•˜ê²Œ ì„¤ì •í•œë‹¤ / enable entering of group object
+	// 2) group¿¡ ÀÔÀå °¡´ÉÇÏ°Ô ¼³Á¤ÇÑ´Ù / enable entering of group object
 	g_pgroup->enable_member_enter();
 
-	// 3) Acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤ / create acceptor object
+	// 3) Acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù / create acceptor object
 	auto pacceptor = make_own<net::acceptor<socket_tcp>>();
 
-	// 4) 20000ë²ˆ í¬íŠ¸ì— Listenì„ ì‹œì‘í•œë‹¤ / start listening on 20000 port
+	// 4) 20000¹ø Æ÷Æ®¿¡ ListenÀ» ½ÃÀÛÇÑ´Ù / start listening on 20000 port
 	pacceptor->start({{ net::ip::tcp::v6(), 20000 }});
 
-	// 5) ESCë¥¼ ëˆŒëŸ¬ ì¢…ë£Œí•˜ê¸°ë¥¼ ê¸°ë‹¤ë¦°ë‹¤. / wait for exit pressing ESC key
+	// 5) ESC¸¦ ´­·¯ Á¾·áÇÏ±â¸¦ ±â´Ù¸°´Ù. / wait for exit pressing ESC key
 	while(_getch() != 27);
 
-	// 6) Acceptorë¥¼ ë‹«ëŠ”ë‹¤ / close acceptor
+	// 6) Acceptor¸¦ ´İ´Â´Ù / close acceptor
 	pacceptor->stop();
 
 	return 0;

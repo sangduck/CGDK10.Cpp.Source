@@ -58,7 +58,7 @@ namespace CGDK
 		// check)
 		RETURN_IF(_ptransmitter == nullptr, 0);
 
-		// 1) transmite message
+		// 1) transmit message
 		return _ptransmitter->transmit_message(_msg);
 	}
 
@@ -67,7 +67,7 @@ namespace CGDK
 		// check)
 		RETURN_IF(_ptransmitter == nullptr, 0);
 
-		// 1) transmite message
+		// 1) transmit message
 		return _ptransmitter->transmit_message(std::move(_msg));
 	}
 }

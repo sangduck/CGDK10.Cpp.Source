@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -40,22 +40,22 @@ int main()
 {
 	// ------------------------------------------------------------------
 	//
-	// 1. Ibuffer_serializableì„ ì‚¬ìš©í•œ ì§ë ¬í™”
+	// 1. Ibuffer_serializableÀ» »ç¿ëÇÑ Á÷·ÄÈ­
 	//
-	//    Ibuffer_serializableì„ ìƒì†ë°›ì•„ ì§ë ¬í™”ë¥¼ ì§ì ‘ ì •ì˜í•  ìˆ˜ ìˆë‹¤.
-	//    Ibuffer_serializableì„ ìƒì†ë°›ì€ í›„ ë‹¤ìŒ 3ê°œì˜ virtual í•¨ìˆ˜ë¥¼ ì •ì˜í•œë‹¤.
+	//    Ibuffer_serializableÀ» »ó¼Ó¹Ş¾Æ Á÷·ÄÈ­¸¦ Á÷Á¢ Á¤ÀÇÇÒ ¼ö ÀÖ´Ù.
+	//    Ibuffer_serializableÀ» »ó¼Ó¹ŞÀº ÈÄ ´ÙÀ½ 3°³ÀÇ virtual ÇÔ¼ö¸¦ Á¤ÀÇÇÑ´Ù.
 	//    
 	//    (v) process_serialize_in
-	//        - extractí•  ë•Œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜ë¡œ ì „ë‹¬ë˜ì–´ì˜¤ëŠ” _bufferë¡œë¶€í„° ê°’ì„ 
-	//          ì½ì–´ë‚´ì–´ ê°’ì„ ì €ì¥í•˜ë„ë¡ í•œë‹¤.
+	//        - extractÇÒ ¶§ È£ÃâµÇ´Â ÇÔ¼ö·Î Àü´ŞµÇ¾î¿À´Â _buffer·ÎºÎÅÍ °ªÀ» 
+	//          ÀĞ¾î³»¾î °ªÀ» ÀúÀåÇÏµµ·Ï ÇÑ´Ù.
 	//
 	//    (v) process_serialize_out
-	//        - appendë¥¼ í•  ë•Œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜ë¡œ ì „ë‹¬ëœ _bufferì— ë°ì´í„°ë¥¼ ì¨ë„£
-	//          ê²ƒì„ ì •ì˜í•œë‹¤.
+	//        - append¸¦ ÇÒ ¶§ È£ÃâµÇ´Â ÇÔ¼ö·Î Àü´ŞµÈ _buffer¿¡ µ¥ÀÌÅÍ¸¦ ½á³Ö
+	//          °ÍÀ» Á¤ÀÇÇÑ´Ù.
 	//
 	//    (v) process_serialize_in
-	//        - get_size_of()ê°€ í˜¸ì¶œë˜ì—ˆì„ ë•Œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜ë¡œ appendì‹œ í•„ìš”í•œ
-	//          í¬ê¸°ë¥¼ ë¦¬í„´í•œë‹¤.
+	//        - get_size_of()°¡ È£ÃâµÇ¾úÀ» ¶§ È£ÃâµÇ´Â ÇÔ¼ö·Î append½Ã ÇÊ¿äÇÑ
+	//          Å©±â¸¦ ¸®ÅÏÇÑ´Ù.
 	// 
 	// ------------------------------------------------------------------
 	{
@@ -80,9 +80,9 @@ int main()
 			//buffer b;
 			//buffer_view c;
 
-			//b = a; // ê°€ëŠ¥
-			//c = a; // ê°€ëŠ¥
-			//c = b; // ê°€ëŠ¥
+			//b = a; // °¡´É
+			//c = a; // °¡´É
+			//c = b; // °¡´É
 		}
 
 		struct foo : public Ibuffer_serializable
@@ -126,7 +126,7 @@ int main()
 			}
 		};
 
-		// - DATAí˜• ë³€ìˆ˜ s1
+		// - DATAÇü º¯¼ö s1
 		foo s1;
 		s1.a = 1;
 		s1.b = eMESSAGE_TYPE::A;
@@ -134,25 +134,25 @@ int main()
 		s1.d = 0;
 		s1.e = std::vector{ 10,20,30 };
 
-		// *1) get_size_of<T>(...)ì§ë ¬í™”ì‹œì˜ ë°ì´í„° í¬ê¸°ë¥¼ ì–»ì„ ìˆ˜ ìˆë‹¤.
+		// *1) get_size_of<T>(...)Á÷·ÄÈ­½ÃÀÇ µ¥ÀÌÅÍ Å©±â¸¦ ¾òÀ» ¼ö ÀÖ´Ù.
 		const auto size = get_size_of(s1);
 
-		// - s1ì˜ ì§ë ¬í™”ì‹œ í¬ê¸°ë¥¼ ì¶œë ¥í•œë‹¤.
+		// - s1ÀÇ Á÷·ÄÈ­½Ã Å©±â¸¦ Ãâ·ÂÇÑ´Ù.
 		std::cout << "size_of s1 is "sv << size << " bytes\n"sv;
 
-		// - sizeë§Œí¼ì˜ ë²„í¼ë¥¼ í• ë‹¹ë°›ëŠ”ë‹¤.
+		// - size¸¸Å­ÀÇ ¹öÆÛ¸¦ ÇÒ´ç¹Ş´Â´Ù.
 		auto bar = alloc_shared_buffer(size);
 
-		// *2) bufì— DATAí˜• ë³€ìˆ˜ s1ì„ appendí•œë‹¤.
+		// *2) buf¿¡ DATAÇü º¯¼ö s1À» appendÇÑ´Ù.
 		bar.append(s1);
 
-		// - barì˜ size_ê°’ì„ ì¶œë ¥í•œë‹¤. 
+		// - barÀÇ size_°ªÀ» Ãâ·ÂÇÑ´Ù. 
 		std::cout << "foo.size_ "sv << bar.size() << " bytes\n"sv;
 
-		// *3) fooí˜•ì„ extractí•´ì„œ ì½ì–´ë‚¸ë‹¤.
+		// *3) fooÇüÀ» extractÇØ¼­ ÀĞ¾î³½´Ù.
 		auto v1 = bar.extract<foo>();
 
-		// - fooë¥¼ ì¶œë ¥í•œë‹¤.
+		// - foo¸¦ Ãâ·ÂÇÑ´Ù.
 		std::cout << "a: "sv << v1.a << '\n';
 		std::cout << "b: "sv << static_cast<int32_t>(v1.b) << '\n';
 		std::cout << "c: "sv << v1.c << '\n';
@@ -165,17 +165,17 @@ int main()
 
 
 	// ------------------------------------------------------------------
-	// 2. DEFINE_BUFFER_SERIALIZEì„ ì‚¬ìš©í•œ hetrogenous append/extract (1)
+	// 2. DEFINE_BUFFER_SERIALIZEÀ» »ç¿ëÇÑ hetrogenous append/extract (1)
 	//
-	//    Ibuffer_serializable ê´€ë ¨ í•¨ìˆ˜ë¥¼ 'DEFINE_BUFFER_SERIALIZE'ë¥¼ ì‚¬ìš©í•´
-	//    ê°„ë‹¨íˆ ì •ì˜í•  ìˆ˜ ìˆë‹¤.
+	//    Ibuffer_serializable °ü·Ã ÇÔ¼ö¸¦ 'DEFINE_BUFFER_SERIALIZE'¸¦ »ç¿ëÇØ
+	//    °£´ÜÈ÷ Á¤ÀÇÇÒ ¼ö ÀÖ´Ù.
 	//
-	//    get_size_of<T>(...) í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì§ë ¬í™” í¬ê¸°ë¥¼ ì–»ì„ ìˆ˜ ìˆë‹¤.
+	//    get_size_of<T>(...) ÇÔ¼ö¸¦ »ç¿ëÇØ Á÷·ÄÈ­ Å©±â¸¦ ¾òÀ» ¼ö ÀÖ´Ù.
 	//
 	// ------------------------------------------------------------------
 
-	// Ibuffer_serialzableì„ ì •ì˜í•œë‹¤!
-	// - DEFINE_BUFFER_SERIALIZEë¥¼ ì‚¬ìš©í•˜ë©´ ì†ì‰½ê²Œ ì •ì˜ê°€ ê°€ëŠ¥í•˜ë‹¤.
+	// Ibuffer_serialzableÀ» Á¤ÀÇÇÑ´Ù!
+	// - DEFINE_BUFFER_SERIALIZE¸¦ »ç¿ëÇÏ¸é ¼Õ½±°Ô Á¤ÀÇ°¡ °¡´ÉÇÏ´Ù.
 	struct foo : public Ibuffer_serializable
 	{
 	public:
@@ -185,11 +185,11 @@ int main()
 		short				d = 0;
 		std::vector<int>	e;
 
-		DEFINE_BUFFER_SERIALIZE(a,b,c,e); // (!) ì´ê±°!!
+		DEFINE_BUFFER_SERIALIZE(a,b,c,e); // (!) ÀÌ°Å!!
 	};
 
 	{
-		// - DATAí˜• ë³€ìˆ˜ s1
+		// - DATAÇü º¯¼ö s1
 		foo s1;
 		s1.a = 1;
 		s1.b = eMESSAGE_TYPE::A;
@@ -197,25 +197,25 @@ int main()
 		s1.d = 0;
 		s1.e = std::vector{ 10,20,30 };
 
-		// *1) get_size_of<T>(...)ì§ë ¬í™”ì‹œì˜ ë°ì´í„° í¬ê¸°ë¥¼ ì–»ì„ ìˆ˜ ìˆë‹¤.
+		// *1) get_size_of<T>(...)Á÷·ÄÈ­½ÃÀÇ µ¥ÀÌÅÍ Å©±â¸¦ ¾òÀ» ¼ö ÀÖ´Ù.
 		const auto size = get_size_of(s1);
 
-		// - s1ì˜ ì§ë ¬í™”ì‹œ í¬ê¸°ë¥¼ ì¶œë ¥í•œë‹¤.
+		// - s1ÀÇ Á÷·ÄÈ­½Ã Å©±â¸¦ Ãâ·ÂÇÑ´Ù.
 		std::cout << "size_of s1 is "sv << size << " bytes\n"sv;
 
-		// - sizeë§Œí¼ì˜ ë²„í¼ë¥¼ í• ë‹¹ë°›ëŠ”ë‹¤.
+		// - size¸¸Å­ÀÇ ¹öÆÛ¸¦ ÇÒ´ç¹Ş´Â´Ù.
 		auto bar = alloc_shared_buffer(size);
 
-		// *2) bufì— DATAí˜• ë³€ìˆ˜ s1ì„ appendí•œë‹¤.
+		// *2) buf¿¡ DATAÇü º¯¼ö s1À» appendÇÑ´Ù.
 		bar.append(s1);
 
-		// - barì˜ size_ê°’ì„ ì¶œë ¥í•œë‹¤. 
+		// - barÀÇ size_°ªÀ» Ãâ·ÂÇÑ´Ù. 
 		std::cout << "foo.size_ "sv << bar.size() << '\n';
 
-		// *3) fooí˜•ì„ extractí•´ì„œ ì½ì–´ë‚¸ë‹¤.
+		// *3) fooÇüÀ» extractÇØ¼­ ÀĞ¾î³½´Ù.
 		auto v1 = bar.extract<foo>();
 
-		// - fooë¥¼ ì¶œë ¥í•œë‹¤.
+		// - foo¸¦ Ãâ·ÂÇÑ´Ù.
 		std::cout << "a: "sv << v1.a << '\n';
 		std::cout << "b: "sv << static_cast<int32_t>(v1.b) << '\n';
 		std::cout << "c: "sv << v1.c << '\n';

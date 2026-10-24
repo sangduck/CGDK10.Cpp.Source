@@ -5,5 +5,5 @@ using namespace CGDK;
 
 bool sMESSAGE_REDIS_RESPONSE::is_success() const noexcept
 {
-	return pquery.exist() && pquery->m_result.type != eRESP_DATA_TYPE::ERROR_;
+	return pquery.exist() && pquery->result().type != eRESP_DATA_TYPE::ERROR_;
 }

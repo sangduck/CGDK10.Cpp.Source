@@ -19,18 +19,21 @@
 #-----------------------------------------------------------------------------
 # setting
 #-----------------------------------------------------------------------------
-# 1) project name
+# 1) build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY( VERSION 3.20 )
+
+# 2) project name
 PROJECT ( "CGDK10.system" )
 
-# 2) project version
+# 3) project version
 SET ( PROJECT_VERSION_MAJOR 10 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 
-# 3) build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
+# 4) common build rules
+INCLUDE ( ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/cgdk.cmake )
 
 
 #-----------------------------------------------------------------------------
@@ -42,14 +45,13 @@ ADD_SUBDIRECTORY (./object)
 # 2) util.crypt
 ADD_SUBDIRECTORY (./util.crypt)
 
-# 3) uint.test
-#ADD_SUBDIRECTORY (./unit_test.log)
-#ADD_SUBDIRECTORY (./unit_test.object.buffer)
-#ADD_SUBDIRECTORY (./unit_test.object.context)
-#ADD_SUBDIRECTORY (./unit_test.object.ptr)
-#ADD_SUBDIRECTORY (./unit_test.object.state)
-#ADD_SUBDIRECTORY (./unit_test.object.execute)
-#ADD_SUBDIRECTORY (./unit_test.object.bench.lock)
-#ADD_SUBDIRECTORY (./unit_test.object.bench.mem_pool)
-#ADD_SUBDIRECTORY (./unit_test.object.bench.mem_tcmalloc)
-#ADD_SUBDIRECTORY (./unit_test.object.bench.object_pool)
+# 3) unit test (only when GoogleTest is found)
+ADD_SUBDIRECTORY (./unit_test)
+
+# windows only
+IF (WIN32)
+	ADD_SUBDIRECTORY (./mfc_controls)
+ENDIF ()
+
+# Build alias for convenience
+CGDK_ADD_ALIAS ( system CGDK10.system.object CGDK10.system.util.crypt CGDK10.system.mfc_controls )

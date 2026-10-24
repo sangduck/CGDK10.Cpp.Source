@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -39,10 +39,10 @@ using namespace CGDK;
 // 
 //
 //-----------------------------------------------------------------------------
-// ì„¤ëª…) CGDK::Nobject_startableì€ CGDK::Nobject_state + CGDK::Ninitializable + CGDK::Nstartableë¥¼ ìƒì†ë°›ì€ ê²ƒì´ë‹¤.
-//       ë”°ë¼ì„œ 3ê°œë¥¼ ìƒì†ë°›ì„ í•„ìš” ì—†ì´ í•˜ë‚˜ë¡œ ë~
+// ¼³¸í) CGDK::Nobject_startableÀº CGDK::Nobject_state + CGDK::Ninitializable + CGDK::Nstartable¸¦ »ó¼Ó¹ŞÀº °ÍÀÌ´Ù.
+//       µû¶ó¼­ 3°³¸¦ »ó¼Ó¹ŞÀ» ÇÊ¿ä ¾øÀÌ ÇÏ³ª·Î ³¡~
 class baz :
-	public object::Ninitializable_startable	// CGDK::object::Ninitializable_startableì€ CGDK::object::Nstate + CGDK::object::Ninitializable + CGDK::object::Nstartable
+	public object::Ninitializable_startable	// CGDK::object::Ninitializable_startableÀº CGDK::object::Nstate + CGDK::object::Ninitializable + CGDK::object::Nstartable
 {
 public:
 	virtual	void				on_initialize_request(context& /*_context*/){ std::cout << "on_initialize_request"sv << '\n'; }
@@ -64,15 +64,15 @@ public:
 
 void tutorial_object_interface_1_step_ex1_Nobject_startable()
 {
-	// - initializeì— ì „ë‹¬í•  contextë¥¼ ì„¤ì •í•œë‹¤.
+	// - initialize¿¡ Àü´ŞÇÒ context¸¦ ¼³Á¤ÇÑ´Ù.
 	context context_setting;
 	context_setting["param_1"sv] = 100;
 	context_setting["param_2"sv] = "hahaha"sv;
 
-	// - own_ptr<T>ë¥¼ ì‚¬ìš©í•´ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// - own_ptr<T>¸¦ »ç¿ëÇØ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto pobject = make_own<baz>();
 
-	// * startí•œë‹¤.
+	// * startÇÑ´Ù.
 	pobject->start(context_setting);
 
 

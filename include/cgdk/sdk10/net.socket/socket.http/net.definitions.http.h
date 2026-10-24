@@ -45,7 +45,7 @@ namespace eMESSAGE
 
 
 //-----------------------------------------------------------------------------
-// 3. http emum
+// 3. http enum
 //-----------------------------------------------------------------------------
 
 enum class eHTTP_PROTOCOL : uint32_t
@@ -55,7 +55,7 @@ enum class eHTTP_PROTOCOL : uint32_t
 	WEBSOCKET_			 = 2,
 	MAX_
 };
-template<class T> std::basic_string_view<T> to_string(eHTTP_PROTOCOL _protocol) noexcept;
+std::string_view to_string(eHTTP_PROTOCOL _protocol) noexcept;
 
 enum class eHTTP_SCHEME_TYPE : uint32_t
 {
@@ -74,7 +74,7 @@ enum class eHTTP_SCHEME_TYPE : uint32_t
 	WS_					 = 12,
 	WSS_				 = 13,
 };
-template<class T> std::basic_string_view<T> to_string(eHTTP_SCHEME_TYPE _scheme_type) noexcept;
+std::string_view to_string(eHTTP_SCHEME_TYPE _scheme_type) noexcept;
 
 enum class eHTTP_METHOD : uint32_t
 {
@@ -101,7 +101,7 @@ enum class eHTTP_METHOD : uint32_t
 
 	DEFAULT_			 = GET_
 };
-template<class T> std::basic_string_view<T> to_string(eHTTP_METHOD _http_method) noexcept;
+std::string_view to_string(eHTTP_METHOD _http_method) noexcept;
 
 enum class eHTTP_STATUS_CODE : uint32_t
 {
@@ -116,12 +116,12 @@ enum class eHTTP_STATUS_CODE : uint32_t
 	OK_										 = 200,	//			"OK"
 	CREATED_								 = 201,	//			"Created"
 	ACCEPTED_								 = 202,	//			"Accepted"
-	NON_AUTHORITATIVE_INFORMAMTION_			 = 203,	//			"Non-Authoritative Information"
+	NON_AUTHORITATIVE_INFORMATION_			 = 203,	//			"Non-Authoritative Information"
 	NO_CONTENT_								 = 204,	//			"No Content"
 	RESET_CONTENT_							 = 205,	//			"Reset Content"
 	PARTIAL_CONTENT_						 = 206,	//			"Partial Content"
 	MULTI_STATUS_							 = 207,	//			"Multi-Status"
-	ALEADY_REPORTED_						 = 208,	//			"Already Reported"
+	ALREADY_REPORTED_						 = 208,	//			"Already Reported"
 	THIS_IS_FINE_							 = 218,	// (Apache>	"This is fine"
 	IM_USED_								 = 226,	//			"IM Used"
 
@@ -145,7 +145,7 @@ enum class eHTTP_STATUS_CODE : uint32_t
 	REQUEST_TIMEOUT_						 = 408,	//			"Request Timeout"
 	CONFLICT_								 = 409,	//			"Conflict"
 	GONE_									 = 410,	//			"Gone"
-	LENGTH_REQURIED_						 = 411,	//			"Length Required"
+	LENGTH_REQUIRED_						 = 411,	//			"Length Required"
 	PRECONDITION_FAILED_					 = 412,	//			"Precondition Failed"
 	PAYLOAD_TOO_LARGE_						 = 413,	//			"Payload Too Large"
 	URI_TOO_LONG_							 = 414,	//			"URI Too Long"
@@ -189,19 +189,19 @@ enum class eHTTP_STATUS_CODE : uint32_t
 	LOOP_DETECTED_							 = 508,	//			"Loop Detected"
 	BANDWIDTH_LIMIT_EXCEEDED_				 = 509,	// (Apache)	"Bandwidth Limit Exceeded"
 	NOT_EXTENDED_							 = 510,	//			"Not Extended"
-	NETWORK_AUTHENTIICATION_REQUIRED_		 = 511,	//			"Network Authentication Required"
+	NETWORK_AUTHENTICATION_REQUIRED_		 = 511,	//			"Network Authentication Required"
 	UNKNOWN_ERROR_							 = 520, // (Cloudf)	"Unknown Error"
 	WEB_SERVER_IS_DOWN_						 = 521, // (Cloudf)	"Web Server id Down"
 	CONNECTION_TIMED_OUT_					 = 522, // (Cloudf)	"Connection Timed Out"
 	ORIGIN_IS_UNREACHABLE_					 = 523, // (Cloudf)	"Origin is Unreachable"
-	A_TIMEOUT_OCCURED_						 = 524, // (Cloudf)	"A Timeout Occured"
+	A_TIMEOUT_OCCURRED_						 = 524, // (Cloudf)	"A Timeout Occurred"
 	SSL_HAND_SHAKE_FAILED_					 = 525, // (Cloudf)	"SSL Handshake Failed"
 	INVALID_SSL_CERTIFICATE_				 = 526, // (Cloudf)	"Invalid SSL Certificate"
 	RAILGUN_ERROR_							 = 527, // (Cloudf)	"Railgun Error"
 	ORIGIN_DNS_ERROR_						 = 530, // (Cloudf)	"Origin DNS Error"
 	NETWORK_READ_TIMEOUT_ERROR_				 = 598, // (Inf..)	"Network read timeout error"
 };
-template<class T> std::basic_string_view<T> to_string(eHTTP_STATUS_CODE _http_status_code) noexcept;
+std::string_view to_string(eHTTP_STATUS_CODE _http_status_code) noexcept;
 template<> struct is_result_code_enum<CGDK::eHTTP_STATUS_CODE> : std::true_type {};
 
 

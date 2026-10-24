@@ -5,31 +5,37 @@ namespace CGDK
 
 executable::Nbatch::~Nbatch() noexcept
 {
+	// lock)
+	std::lock_guard cs(this->m_lockable_list_executable);
+
 	CGASSERT_ERROR(this->m_list_executable.empty());
 }
 
 size_t executable::Nbatch::executing_count() const noexcept
 {
-	scoped_lock(this->m_list_executable)
-	{
-		return this->m_list_executable.size();
-	}
+	// lock)
+	std::lock_guard cs(this->m_lockable_list_executable);
+
+	// return) return size of executable list
+	return this->m_list_executable.size();
 }
 
 void executable::Nbatch::queue_executable(object_ptr<Iexecutable>&& _pexecutable)
 {
-	scoped_lock(this->m_list_executable)
-	{
-		this->m_list_executable.push_back(std::move(_pexecutable));
-	}
+	// lock)
+	std::lock_guard cs(this->m_lockable_list_executable);
+
+	// 1) queue executable
+	this->m_list_executable.push_back(std::move(_pexecutable));
 }
 
 void executable::Nbatch::clear() noexcept
 {
-	scoped_lock(this->m_list_executable)
-	{
-		this->m_list_executable.clear();
-	}
+	// lock)
+	std::lock_guard cs(this->m_lockable_list_executable);
+
+	// 1) clear
+	this->m_list_executable.clear();
 }
 
 bool executable::Nbatch::request_execute(Iexecutor* _pexecutor)
@@ -37,13 +43,16 @@ bool executable::Nbatch::request_execute(Iexecutor* _pexecutor)
 	// declare) 
 	size_t iSize = 0;
 
-	// 1) 갯수를 얻어둔다.
-	scoped_lock(m_list_executable)
+	// 1) 개수를 얻어둔다.
 	{
+		// lock)
+		std::lock_guard cs(this->m_lockable_list_executable);
+
+		// - get size
 		iSize = m_list_executable.size();
 	}
 
-	// 2) Executable의 갯수만큼 executor를 실행시킨다.
+	// 2) Executable의 개수만큼 executor를 실행시킨다.
 	for(size_t i=0; i<iSize; ++i)
 	{
 		_pexecutor->post(this);
@@ -60,8 +69,10 @@ intptr_t executable::Nbatch::process_execute(intptr_t _return, size_t _option)
 
 	object_ptr<Iexecutable> pexecutable;
 
-	scoped_lock(this->m_list_executable)
 	{
+		// lock)
+		std::lock_guard cs(this->m_lockable_list_executable);
+
 		// 1) 하나를 줄인다.
 		pexecutable = this->m_list_executable.front();
 		this->m_list_executable.pop_front();
@@ -71,7 +82,8 @@ intptr_t executable::Nbatch::process_execute(intptr_t _return, size_t _option)
 	}
 
 	// check) 
-	RETURN_IF(pexecutable.empty(), intptr_t(1));
+	if(pexecutable.empty())
+		return intptr_t(1);
 
 	// 3) 실행한다.
 	pexecutable->process_execute(_return, _option);

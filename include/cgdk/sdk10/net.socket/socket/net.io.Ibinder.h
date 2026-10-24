@@ -39,7 +39,7 @@ namespace CGDK
 //-----------------------------------------------------------------------------
 class net::io::Ibinder : 
 	virtual	public				net::io::Isocket,
-	virtual public				Imessageable,
+	virtual public				CGDK::Imessageable,
 	virtual	public				object::Inameable
 {
 public:
@@ -56,7 +56,7 @@ public:
 	// 2) bind함수
 	virtual	bool				process_request_bind( const net::sockaddr& _address) PURE;
 
-	// 3) reset할때 호출하는 함수.(기본은 빈것...)
+	// 3) reset할 때 호출하는 함수.(기본은 빈 것...)
 	virtual	void				process_reset_binder() PURE;
 
 protected:
@@ -64,7 +64,7 @@ protected:
 			void				unregister_binder() noexcept;
 
 public:
-			lockable<>			m_lockable_manager_binder;
+	mutable	lock_object			m_lockable_manager_binder;
 			binder::manager*	m_pmanager_binder = nullptr;
 };
 

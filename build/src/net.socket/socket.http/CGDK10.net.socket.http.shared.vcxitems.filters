@@ -13,9 +13,6 @@
     <Filter Include="net.io\sender">
       <UniqueIdentifier>{febe0fac-b388-4949-8fd1-76d4564585e5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="net.io\connective">
-      <UniqueIdentifier>{28eb8bf6-517a-4d9e-8e3e-3ee40064593a}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connect_requestable.http.cpp">
@@ -42,15 +39,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)net.Ihttp_request.cpp">
       <Filter>net.io</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connective.acceptor_ssl.cpp">
-      <Filter>net.io\connective</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connect_requestable.tcp_reconnect_ssl.cpp">
-      <Filter>net.io\connect_requestable</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)net.io.connect_requestable.tcp_ssl.cpp">
-      <Filter>net.io\connect_requestable</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)MSG_HTTP.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)net.definitions.http.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)WEBSOCKET_MESSAGE.cpp" />
@@ -63,12 +51,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.definitions.http.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\WEBSOCKET_MESSAGE.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.connect_requestable.http.h">
-      <Filter>net.io\connect_requestable</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.connect_requestable.tcp_reconnect_ssl.h">
-      <Filter>net.io\connect_requestable</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.connect_requestable.tcp_ssl.h">
       <Filter>net.io\connect_requestable</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.Ihttp_request.h">
@@ -86,9 +68,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.sender.http.h">
       <Filter>net.io\sender</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.connective.acceptor_ssl.h">
-      <Filter>net.io\connective</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.io.Nhttp_client.h">
       <Filter>net.io</Filter>
     </ClInclude>
@@ -96,9 +75,6 @@
       <Filter>net.io</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.acceptor.http.h">
-      <Filter>templates</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.acceptor.secure.h">
       <Filter>templates</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\net.socket\socket.http\net.connector.http.h">

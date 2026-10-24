@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CGDK10.network.update.controls.MFC.vs16.cpp">
+    <ClCompile Include="CGDK10.network.update.controls.MFC.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="dllmain.cpp">
@@ -26,10 +26,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="CGDK10.network.update.controls.MFC.vs16.def">
+    <None Include="CGDK10.network.update.controls.MFC.def">
       <Filter>소스 파일</Filter>
     </None>
-    <None Include="res\CGDK10.network.update.controls.MFC.vs16.rc2">
+    <None Include="res\CGDK10.network.update.controls.MFC.rc2">
       <Filter>리소스 파일</Filter>
     </None>
   </ItemGroup>
@@ -48,7 +48,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="CGDK10.network.update.controls.MFC.vs16.rc">
+    <ResourceCompile Include="CGDK10.network.update.controls.MFC.rc">
       <Filter>리소스 파일</Filter>
     </ResourceCompile>
   </ItemGroup>

@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{82d66db1-0bd3-4fe2-84d2-dabe60985c00}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)account.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)account_manager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)area_entity_player.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)area_group.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)area_Ientity.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)area_manager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_user_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)include.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)service.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_user.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\definition.message.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\definitions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)account.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)account_manager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)area_entity_player.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)area_group.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)area_Ientity.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)area_manager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)game_mmo_field_server.definition.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_user_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Igroup_user.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)include.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)service.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_user.h" />
+  </ItemGroup>
+</Project>

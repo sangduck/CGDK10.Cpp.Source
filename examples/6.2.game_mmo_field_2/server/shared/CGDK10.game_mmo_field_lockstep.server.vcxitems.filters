@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)account.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)account_manager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)area_group.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)area_manager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_user_immigration.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)include.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)service.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)socket_user.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)area_entity_player.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)area_Ientity.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)account.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)account_manager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)area_group.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)area_manager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)game_mmo_field_lockstep_server.definition.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_user_immigration.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)include.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)service.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)socket_user.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)area_entity_player.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\definition.message.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\common\definitions.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)area_Ientity.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Igroup_user.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="common">
+      <UniqueIdentifier>{2e205964-0f5f-47bd-88da-d08b40ffcffd}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

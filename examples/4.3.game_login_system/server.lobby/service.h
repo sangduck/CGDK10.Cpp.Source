@@ -26,7 +26,7 @@ public:
 	virtual	~CService();
 
 // 2) Publics
-			void				UpdatePlayerCount();
+			void				update_player_count();
 
 // 3) Override functions
 private:

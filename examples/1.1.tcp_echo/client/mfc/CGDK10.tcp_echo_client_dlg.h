@@ -1,16 +1,16 @@
-ï»¿
-// tcp_echo_dlg.h: í—¤ë” íŒŒì¼
+
+// tcp_echo_dlg.h: Çì´õ ÆÄÀÏ
 //
 
 #pragma once
 
 
-// Ctcp_echo_client_dlg ëŒ€í™” ìƒì
+// Ctcp_echo_client_dlg ´ëÈ­ »óÀÚ
 class Ctcp_echo_client_dlg : public CDialogEx
 {
-// ìƒì„±ì…ë‹ˆë‹¤.
+// »ı¼ºÀÔ´Ï´Ù.
 public:
-	Ctcp_echo_client_dlg(CWnd* pParent = nullptr);	// í‘œì¤€ ìƒì„±ìì…ë‹ˆë‹¤.
+	Ctcp_echo_client_dlg(CWnd* pParent = nullptr);	// Ç¥ÁØ »ı¼ºÀÚÀÔ´Ï´Ù.
 
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_TCP_ECHOWINDOWSMFC_DIALOG };
@@ -69,7 +69,7 @@ public:
 			CDialog_thread_status		m_dlg_thread_status;
 			
 public:
-	// 5) ì¡°ì‘í•¨ìˆ˜.
+	// 5) Á¶ÀÛÇÔ¼ö.
 			void				ReadServerAddress();
 			afx_msg void OnBnClickedButtonClosesocketSingle();
 			afx_msg void OnBnClickedButtonClosesocketAll();

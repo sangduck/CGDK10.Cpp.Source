@@ -57,9 +57,7 @@ public:
 	[[nodiscard]] constexpr network_v6 canonical() const noexcept { return network_v6(network(), prefix_length_); }
 	[[nodiscard]] constexpr bool is_host() const noexcept { return prefix_length_ == 128; }
 	[[nodiscard]] constexpr bool is_subnet_of(const network_v6& other) const noexcept;
-	template<class Allocator = std::allocator<char>>
-	[[nodiscard]] std::basic_string<char, std::char_traits<char>, Allocator>
-								to_string(const Allocator& a = Allocator()) const;
+	[[nodiscard]] std::string  to_string() const;
 
 public:
 		  address_v6			address_;

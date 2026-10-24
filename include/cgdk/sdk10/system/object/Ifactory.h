@@ -37,7 +37,6 @@ public:
 			Ifactory() noexcept	{}
 	virtual	~Ifactory() noexcept {}
 
-// public) 
 public:
 	virtual	eFACTORY_TYPE		type() const noexcept { return this->m_statistics.type;}
 	virtual	int					id() const noexcept { return this->m_statistics.id;}
@@ -46,21 +45,20 @@ public:
 	virtual	size_t				shrink(size_t _amount) noexcept PURE;
 	virtual	void				sustain(eFACTORY_GC_LEVEL _level= eFACTORY_GC_LEVEL::NORMAL) PURE;
 
-	[[nodiscard]] virtual size_t object_size() const noexcept PURE;
-	[[nodiscard]] virtual size_t stacked_count() const noexcept PURE;
-	[[nodiscard]] virtual int64_t existing_limits() const noexcept PURE;
+	[[nodiscard]] virtual auto	object_size() const noexcept -> size_t PURE;
+	[[nodiscard]] virtual auto	stacked_count() const noexcept -> size_t PURE;
+	[[nodiscard]] virtual auto	existing_limits() const noexcept -> size_t PURE;
 	virtual	void				set_gc_type(eFACTORY_GC_TYPE _gc_type) noexcept PURE;
-	[[nodiscard]] eFACTORY_GC_TYPE gc_type() const noexcept { return this->m_statistics.gc_type; }
+	[[nodiscard]] auto			gc_type() const noexcept -> eFACTORY_GC_TYPE { return this->m_statistics.gc_type; }
 
 	virtual	void				close() noexcept PURE;
 
 	[[nodiscard]] const auto& 	statistics() const noexcept { return this->m_statistics; }
 
-// framework) 
 protected:
 	[[nodiscard]] virtual bool	process_is_this(std::string_view _compare) const noexcept override { return this->m_statistics.name == _compare; }
-	[[nodiscard]] virtual std::string_view process_get_name() const noexcept override { return this->m_statistics.name; }
-	virtual	void				process_set_name(std::string_view _name) override { this->m_statistics.name = _name; }
+	[[nodiscard]] virtual auto	process_get_name() const noexcept -> std::string override { return this->m_statistics.name; }
+	virtual	void				process_set_name(std::string_view _name) override;
 
 	virtual	void				process_tls_garbage_collection() {};
 
@@ -72,28 +70,27 @@ protected:
 
 protected:
 			statistics::factory	m_statistics;
-
 private:
-			lockable<object_ptr<factory::manager>> m_pmanager;
+			lock_object			m_lockable_pmanager;
+			object_ptr<factory::manager> m_pmanager;
 			friend class factory::manager;
 };
 
-template<class TOBJECT>
-inline Nreferenceable<TOBJECT>::Nreferenceable(CGNEW_DEBUG_INFO_PARAMETERS)
+template<class T>
+inline Nreferenceable<T>::Nreferenceable(CGNEW_DEBUG_INFO_PARAMETERS)
 {
-	// 1) get factory
-	this->m_pfactory_object = factory::object<TOBJECT>::instance(CGNEW_DEBUG_INFO_PARAMETERS_PASSING);
+	this->m_pfactory_object = factory::object<T>::instance(CGNEW_DEBUG_INFO_PARAMETERS_PASSING);
 	this->m_pfactory = m_pfactory_object.get();
 
-	// statistics)
 	this->m_pfactory_object->statistics_on_alloc_create();
 }
 
-template<class TOBJECT>
-inline Nreferenceable<TOBJECT>::~Nreferenceable() noexcept
+template<class T>
+inline Nreferenceable<T>::~Nreferenceable() noexcept
 {
 	// check) 
-	RETURN_IF(this->m_pfactory_object.empty());
+	if (this->m_pfactory_object.empty())
+		return;
 	
 	// statistics) 
 	this->m_pfactory_object->statistics_on_free_delete();
@@ -103,11 +100,13 @@ inline Nreferenceable<TOBJECT>::~Nreferenceable() noexcept
 	this->m_pfactory = nullptr;
 }
 
-inline void Ireferenceable::statistics_on_extra() noexcept
+inline void Ireferenceable::statistics_on_execute_elapsed_time(chrono::tick::duration _elapsed_time) noexcept
 {
-	RETURN_IF(this->m_pfactory == nullptr)
+	// check)
+	if (this->m_pfactory == nullptr)
+		return;
 
-	this->m_pfactory->statistics_on_extra();
+	this->m_pfactory->statistics_on_execute_elapsed_time(_elapsed_time);
 }
 
 

@@ -23,7 +23,7 @@
 //
 // 1. net::io::connective::Ntcp_reconnect이란!
 //    1) 자동 재접속 기능이 있는 connect_requestable이다.
-//    2) net::io::connect_requestable::Ntcp을 상속받아 접속 종료시 자동 재접속 기능을 추가
+//    2) net::io::connect_requestable::Ntcp을 상속받아 접속 종료 시 자동 재접속 기능을 추가
 //       한 것이다.
 //
 // 2. 핵심 함수들.
@@ -85,36 +85,27 @@
 //
 //-----------------------------------------------------------------------------
 class CGDK::net::io::connect_requestable::Ntcp_reconnect :
-// inherited classes) 
 	public						net::io::connect_requestable::Ntcp,
 	virtual public				net::io::Ireconnectable,
 	virtual public				net::io::Iconnectable_notify
 {
-// constructor/destructor)
 protected:
 			Ntcp_reconnect() noexcept;
-			Ntcp_reconnect(std::string_view _name);
 	virtual	~Ntcp_reconnect() noexcept;
 
-// framework)
 protected:
-	// 2) 재접속을 시도하기 전 호출되는 함수.
 	virtual	void				on_request_reconnect(net::io::Iconnective* /*_pconnective*/) {}
 
-// implementation) 
 protected:
-	// 3) request_connect
 	virtual	bool				process_request_connecting(const net::sockaddr& _address_peer) override;
 	virtual	void				process_complete_connecting(uintptr_t _result) override;
 	virtual	void				process_connective_connect(net::io::Iconnectable* _pconnectable, uintptr_t _result) override;
 	virtual	void				process_connective_disconnect(net::io::Iconnectable* _pconnectable) noexcept override;
 
-	// 4) start/stop
 	virtual result_code			process_start(context& _context) override;
 	virtual result_code			process_stop() noexcept override;
 
 public:
-	// 5) Reconnect를 수행하는 함수이다.
 			bool				process_wait_reconnect();
 			void				process_request_reconnect();
 			void				process_cancel_reconnector() noexcept;

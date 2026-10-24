@@ -24,19 +24,19 @@
 typedef class stServer_Info
 {
 public:
-	net::sockaddr	nServer_Address;
+	net::sockaddr	server_address;
 
 	uint32_t	nServer_Type;
 	uint32_t	nServer_No;
 
 	uint64_t	nServer_SessionKey;
 
-	uint32_t	nServer_Player_Count;
+	uint64_t	nServer_Player_Count;
 
 public:
 	stServer_Info()
 	{
-		nServer_Address.clear();
+		server_address.clear();
 		nServer_Type			 = 0;
 		nServer_No				 = 0;
 		nServer_SessionKey		 = 0;
@@ -48,24 +48,26 @@ public:
 struct ACCOUNT_ID
 {
 public:
-	bool		valid() const	{ return u64Account!=0;}
-	void		reset()			{ u64Account=0;}
+	bool		valid() const	{ return account_uid!=0;}
+	void		reset()			{ account_uid=0;}
 
 public:
-	uint64_t	u64Account;
+	uint64_t	account_uid{ 0 };
+	uint64_t	serial{ 0 };
+	uint64_t	key{ 0 };
 
 public:
-	ACCOUNT_ID() : u64Account(0) {}
-	ACCOUNT_ID(uint64_t _id) : u64Account(_id) {}
+	ACCOUNT_ID() : account_uid(0) {}
+	ACCOUNT_ID(uint64_t _id) : account_uid(_id) {}
 
-	bool				operator==(const ACCOUNT_ID& _rhs) const { return u64Account==_rhs.u64Account; }
-	bool				operator!=(const ACCOUNT_ID& _rhs) const { return u64Account!=_rhs.u64Account; }
-	bool				operator>=(const ACCOUNT_ID& _rhs) const { return u64Account>=_rhs.u64Account; }
-	bool				operator> (const ACCOUNT_ID& _rhs) const { return u64Account> _rhs.u64Account; }
-	bool				operator<=(const ACCOUNT_ID& _rhs) const { return u64Account<=_rhs.u64Account; }
-	bool				operator< (const ACCOUNT_ID& _rhs) const { return u64Account< _rhs.u64Account; }
+	bool				operator==(const ACCOUNT_ID& _rhs) const { return account_uid==_rhs.account_uid; }
+	bool				operator!=(const ACCOUNT_ID& _rhs) const { return account_uid!=_rhs.account_uid; }
+	bool				operator>=(const ACCOUNT_ID& _rhs) const { return account_uid>=_rhs.account_uid; }
+	bool				operator> (const ACCOUNT_ID& _rhs) const { return account_uid> _rhs.account_uid; }
+	bool				operator<=(const ACCOUNT_ID& _rhs) const { return account_uid<=_rhs.account_uid; }
+	bool				operator< (const ACCOUNT_ID& _rhs) const { return account_uid< _rhs.account_uid; }
 
-						operator uint64_t() const { return u64Account;}
+						operator uint64_t() const { return account_uid;}
 };
 
 namespace std
@@ -75,7 +77,7 @@ struct hash<ACCOUNT_ID>
 {
 	std::size_t operator()(const ACCOUNT_ID& _Key) const
 	{
-		return	static_cast<size_t>(static_cast<uint64_t>(_Key.u64Account));
+		return	static_cast<size_t>(static_cast<uint64_t>(_Key.account_uid));
 	}
 };
 }

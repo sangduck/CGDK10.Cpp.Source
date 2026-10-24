@@ -19,7 +19,7 @@ CDialog_connective_status::CDialog_connective_status(net::io::Iconnective* _pcon
 
 CDialog_connective_status::~CDialog_connective_status()
 {
-	scoped_lock(m_csConnective)
+	SCOPED_LOCK(m_csConnective)
 	{
 		CGASSERT_ERROR(m_pconnective.empty());
 	}
@@ -47,11 +47,11 @@ END_MESSAGE_MAP()
 
 
 // CDialog_connective_status message handlers
-int	CDialog_connective_status::m_s_iUpdateInverval = 2;
+int	CDialog_connective_status::m_s_iUpdateInterval = 2;
 
 BOOL CDialog_connective_status::CreateModaless(net::io::connective::manager* p_pmangerAcceptor, CWnd* p_pParent)
 {
-	scoped_lock(m_csConnective)
+	SCOPED_LOCK(m_csConnective)
 	{
 		m_pmangerConnective = p_pmangerAcceptor;
 	}
@@ -61,7 +61,7 @@ BOOL CDialog_connective_status::CreateModaless(net::io::connective::manager* p_p
 
 BOOL CDialog_connective_status::CreateModaless(net::io::Iconnective* _pconnective, CWnd* p_pParent)
 {
-	scoped_lock(m_csConnective)
+	SCOPED_LOCK(m_csConnective)
 	{
 		m_pconnective = _pconnective;
 	}
@@ -88,7 +88,7 @@ BOOL CDialog_connective_status::OnInitDialog()
 	//-----------------------------------------------------------------
 	// 1. ConnectiveManager의 설정
 	//-----------------------------------------------------------------
-	scoped_lock(m_csConnective)
+	SCOPED_LOCK(m_csConnective)
 	{
 		// 1) List를 설정한다.
 		if(m_pmangerConnective!=nullptr)
@@ -136,8 +136,8 @@ BOOL CDialog_connective_status::OnInitDialog()
 	// 3. start
 	//-----------------------------------------------------------------
 	// 3) Update Combo의 값을 설정하고 타이머를 설정한다.
-	m_comboUpdateInterval.SetCurSel(m_s_iUpdateInverval);
-	SetUpdateInterval(m_s_iUpdateInverval);
+	m_comboUpdateInterval.SetCurSel(m_s_iUpdateInterval);
+	SetUpdateInterval(m_s_iUpdateInterval);
 
 
 	// return) 
@@ -165,7 +165,7 @@ void CDialog_connective_status::OnBnClickedCancel()
 void CDialog_connective_status::SetConnective(net::io::Iconnective* _pconnective)
 {
 	// 1) 설정한다.
-	scoped_lock(m_csConnective)
+	SCOPED_LOCK(m_csConnective)
 	{
 		// 1) Connective를 설정한다.
 		m_pconnective = _pconnective;
@@ -190,7 +190,7 @@ void CDialog_connective_status::ResetConnectiveList()
 	m_ChildConnectableManager.clear_connectable_list();
 
 	// 2) Connective를 해제
-	scoped_lock(m_csConnective)
+	SCOPED_LOCK(m_csConnective)
 	{
 		m_pmangerConnective.reset();
 		m_pconnective.reset();
@@ -202,8 +202,8 @@ void CDialog_connective_status::ResetConnectiveList()
 		// 1) Connective를 얻는다.
 		net::io::Iconnective*	pconnective	 = (net::io::Iconnective*)m_comboConnective.GetItemDataPtr(i);
 
-		// check) Connective가 nullptr이면 안됀다
-		CGASSERT_ERROR(pconnective != nullptr);
+		// check) Connective가 nullptr이면 안 된다
+		CGASSERT_FATAL(pconnective != nullptr);
 
 		// 2) Connective를 Release한다.
 		pconnective->release();
@@ -217,7 +217,7 @@ void CDialog_connective_status::UpdateConnectiveStatus()
 	// declare) 
 	object_ptr<net::io::Iconnective> pconnective;
 
-	scoped_lock(m_csConnective)
+	SCOPED_LOCK(m_csConnective)
 	{
 		pconnective = m_pconnective;
 	}
@@ -243,7 +243,7 @@ void CDialog_connective_status::UpdateConnectiveStatus()
 				{
 					if(addr_socket.is_bind_any()==false)
 					{
-						SetDlgItemText(IDC_STATIC_ACCEPTOR_BIND_ADDRESS, addr_socket.to_string<TCHAR>().c_str());
+						SetDlgItemTextA(this->m_hWnd, IDC_STATIC_ACCEPTOR_BIND_ADDRESS, addr_socket.to_string().c_str());
 					}
 					else
 					{
@@ -317,7 +317,7 @@ void CDialog_connective_status::OnCbnSelchangeConnective()
 	object_ptr<net::io::Iconnective> pconnective;
 
 	// 2) 새로운 Acceptor를 얻는다.
-	scoped_lock(m_csConnective)
+	SCOPED_LOCK(m_csConnective)
 	{
 		pconnective	 = (net::io::Iconnective*)m_comboConnective.GetItemDataPtr(selected);
 	}
@@ -335,10 +335,10 @@ void CDialog_connective_status::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// - 상태를 Update한다.
@@ -351,10 +351,10 @@ void CDialog_connective_status::OnTimer(UINT_PTR nIDEvent)
 void CDialog_connective_status::SetUpdateInterval(int p_iInterval)
 {
 	// 1) 
-	m_s_iUpdateInverval = p_iInterval;
+	m_s_iUpdateInterval = p_iInterval;
 
 	// 2) 
-	switch(m_s_iUpdateInverval)
+	switch(m_s_iUpdateInterval)
 	{
 	// No Update
 	case	0:
@@ -466,13 +466,13 @@ void CDialog_connective_status::OnActivate(UINT nState, CWnd* pWndOther, BOOL bM
 	// 1. Connective를 새로 설정한다.
 	//-----------------------------------------------------------------
 	// 1) Connective를 List에 다시 추가한다.
-	scoped_lock(m_csConnective)
+	SCOPED_LOCK(m_csConnective)
 	{
 		SetConnective(m_pconnective);
 	}
 
 	// 2) Timer를 설정한다.
-	SetUpdateInterval(m_s_iUpdateInverval);
+	SetUpdateInterval(m_s_iUpdateInterval);
 
 
 	//-----------------------------------------------------------------

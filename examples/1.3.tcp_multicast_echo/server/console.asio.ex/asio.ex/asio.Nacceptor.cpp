@@ -1,4 +1,4 @@
-ï»¿#include "asio.h"
+#include "asio.h"
 
 
 asio::Nacceptor::Nacceptor()
@@ -13,7 +13,7 @@ asio::Nacceptor::~Nacceptor() noexcept
 void asio::Nacceptor::start(boost::asio::ip::tcp::endpoint _endpoint)
 {
 	//-----------------------------------------------------------------------------
-	//  ì„¤ëª…) acceptorë¥¼ ì‹œì‘í•œë‹¤.
+	//  ¼³¸í) acceptor¸¦ ½ÃÀÛÇÑ´Ù.
 	// 
 	//  
 	//  
@@ -29,7 +29,7 @@ void asio::Nacceptor::start(boost::asio::ip::tcp::endpoint _endpoint)
 
 	try
 	{
-		// 3) accept ëŒ€ê¸°í•  ìˆ˜ëŠ” threadì˜ ìˆ˜ë§Œí¼
+		// 3) accept ´ë±âÇÒ ¼ö´Â threadÀÇ ¼ö¸¸Å­
 		auto accept_count = std::thread::hardware_concurrency();
 
 		// 4) request accept
@@ -52,13 +52,13 @@ void asio::Nacceptor::start(boost::asio::ip::tcp::endpoint _endpoint)
 void asio::Nacceptor::close() noexcept
 {
 	//-----------------------------------------------------------------------------
-	//  ì„¤ëª…) acceptorë¥¼ ë°›ëŠ”ë‹¤.
+	//  ¼³¸í) acceptor¸¦ ¹Ş´Â´Ù.
 	// 
-	//  ë” ì´ìƒ acceptë¥¼ ë°›ì§€ ì•ŠìŒì€ ë¬¼ë¡  ì´ acceptorë¡œ ì ‘ì†í•œ ëª¨ë“  socketì„ ì ‘ì†
-	//  ì¢…ë£Œì²˜ë¦¬í•œë‹¤.
+	//  ´õ ÀÌ»ó accept¸¦ ¹ŞÁö ¾ÊÀ½Àº ¹°·Ğ ÀÌ acceptor·Î Á¢¼ÓÇÑ ¸ğµç socketÀ» Á¢¼Ó
+	//  Á¾·áÃ³¸®ÇÑ´Ù.
 	//-----------------------------------------------------------------------------
 
-	// 1) accept ë°›ì€ ëª¨ë“  connectalbe(socket)ì„ ë¨¼ì € ì ‘ì† ì¢…ë£Œ í•œë‹¤.
+	// 1) accept ¹ŞÀº ¸ğµç connectalbe(socket)À» ¸ÕÀú Á¢¼Ó Á¾·á ÇÑ´Ù.
 	this->destroy_connectable_all();
 
 	// declare) 
@@ -73,40 +73,40 @@ void asio::Nacceptor::close() noexcept
 		if (!this->m_accept_context)
 			return;
 
-		// - accept_contextë¥¼ ì˜®ê²¨ ë†“ëŠ”ë‹¤.
+		// - accept_context¸¦ ¿Å°Ü ³õ´Â´Ù.
 		accept_context = std::move(this->m_accept_context);
 	}
 
-	// 3) í•¸ë“¤ë“¤ì„ ëª¨ë‘ ë‹«ëŠ”ë‹¤.
+	// 3) ÇÚµéµéÀ» ¸ğµÎ ´İ´Â´Ù.
 	accept_context->close();
 
-	// ì„¤ëª…) handleë§Œ ë‹«ê²Œ ë˜ë©´ accept instanceë“¤ì€ ì‹¤íŒ¨ë¥¼ ë¦¬í„´í•˜ë©° ìŠ¤ìŠ¤ë¡œ ì œê±°ë  ê²ƒì´ë‹¤.
-	//       ë”°ë¼ì„œ m_iist_instanceëŠ” ë”°ë¡œ ì œê±°í•˜ì§€ ì•ŠëŠ”ë‹¤.
-	//       close() í›„ ì¦‰ì‹œ ê°ì²´ê°€ ì†Œë©¸ë˜ëŠ” ê²ƒì´ ì•„ë‹ˆë¼ accpet instanceë“¤ì´ ëª¨ë‘ ì¢…ë£Œë˜ì–´ì•¼ ì œê±°ëœë‹¤.
+	// ¼³¸í) handle¸¸ ´İ°Ô µÇ¸é accept instanceµéÀº ½ÇÆĞ¸¦ ¸®ÅÏÇÏ¸ç ½º½º·Î Á¦°ÅµÉ °ÍÀÌ´Ù.
+	//       µû¶ó¼­ m_iist_instance´Â µû·Î Á¦°ÅÇÏÁö ¾Ê´Â´Ù.
+	//       close() ÈÄ Áï½Ã °´Ã¼°¡ ¼Ò¸êµÇ´Â °ÍÀÌ ¾Æ´Ï¶ó accpet instanceµéÀÌ ¸ğµÎ Á¾·áµÇ¾î¾ß Á¦°ÅµÈ´Ù.
 }
 
 void asio::Nacceptor::process_request_accept()
 {
 	//-----------------------------------------------------------------------------
-	//  ì„¤ëª…) ìƒˆë¡œìš´ accept instanceë¥¼ ìƒì„±í•´ì„œ acceptë¥¼ ê±¸ì–´ ë†“ëŠ”ë‹¤.
+	//  ¼³¸í) »õ·Î¿î accept instance¸¦ »ı¼ºÇØ¼­ accept¸¦ °É¾î ³õ´Â´Ù.
 	// 
-	//  ìƒˆë¡œìš´ accept instanceë¥¼ ìƒì„±í•œ í›„ ë“±ë¡í•˜ê³  acceptë¥¼ ê±¸ì–´ë‘”ë‹¤.
-	//  ì—¬ëŸ¬ ê°œì˜ accept instanceë¥¼ ì‹¤í–‰í•  ìˆ˜ê°€ ìˆë‹¤.
-	//  ì¼ë°˜ì ìœ¼ë¡œëŠ” 1ê°œì˜ accept instanceë§Œë“œë¡œ ì¶©ë¶„í•˜ì§€ë§Œ ë¹ˆë²ˆí•œ ì ‘ì†ì„ ì²˜ë¦¬í•˜ê¸°
-	//  ìœ„í•´ ì—¬ëŸ¬ ê°œì˜ accpet instanceë¥¼ ê±¸ì–´ ë†“ì„ ìˆ˜ë„ ìˆë‹¤.
-	//  thread ìˆ˜ë§Œí¼ì˜ accept instance ì´ìƒì€ ëŒ€ë¶€ë¶„ì˜ ê²½ìš° ì˜ë¯¸ ì—†ë‹¤.
+	//  »õ·Î¿î accept instance¸¦ »ı¼ºÇÑ ÈÄ µî·ÏÇÏ°í accept¸¦ °É¾îµĞ´Ù.
+	//  ¿©·¯ °³ÀÇ accept instance¸¦ ½ÇÇàÇÒ ¼ö°¡ ÀÖ´Ù.
+	//  ÀÏ¹İÀûÀ¸·Î´Â 1°³ÀÇ accept instance¸¸µå·Î ÃæºĞÇÏÁö¸¸ ºó¹øÇÑ Á¢¼ÓÀ» Ã³¸®ÇÏ±â
+	//  À§ÇØ ¿©·¯ °³ÀÇ accpet instance¸¦ °É¾î ³õÀ» ¼öµµ ÀÖ´Ù.
+	//  thread ¼ö¸¸Å­ÀÇ accept instance ÀÌ»óÀº ´ëºÎºĞÀÇ °æ¿ì ÀÇ¹Ì ¾ø´Ù.
 	//-----------------------------------------------------------------------------
 
-	// 1) instanceë¥¼ ë§Œë“ ë‹¤.
+	// 1) instance¸¦ ¸¸µç´Ù.
 	auto pinstance_create = std::make_unique<instance>();
 
 	// declare) 
 	instance* pinstance = pinstance_create.get();
 
-	// 2) acceptorë¥¼ ë“±ë¡í•œë‹¤.
+	// 2) acceptor¸¦ µî·ÏÇÑ´Ù.
 	this->process_instance_register(std::move(pinstance_create));
 
-	// 3) accept ì‹œì‘
+	// 3) accept ½ÃÀÛ
 	try
 	{
 		pinstance->process_accept();
@@ -120,37 +120,37 @@ void asio::Nacceptor::process_request_accept()
 void asio::Nacceptor::process_instance_register(std::unique_ptr<instance>&& _instance)
 {
 	//-----------------------------------------------------------------------------
-	//  ì„¤ëª…) ìƒˆë¡œìš´ accept instanceë¥¼ ë“±ë¡í•œë‹¤.
+	//  ¼³¸í) »õ·Î¿î accept instance¸¦ µî·ÏÇÑ´Ù.
 	// 
-	//  ìƒˆë¡œìš´ accept instanceë¥¼ ë“±ë¡ì„ í•˜ê³  pacceptorì™€ accept_context ê°’ì„ ì„¤ì •
-	//  í•´ì¤€ë‹¤.
-	//  pacceotorë¥¼ ì„¤ì •í•´ ì£¼ëŠ” ê²ƒì€ ë‹¤ì¤‘ ì“°ë ˆë“œë¡œ ë™ì‘ì„ ëŒ€ë¹„í•œ ê²ƒì´ë‹¤.
-	//  Nacceotor ê°ì²´ê°€ ì†Œë©¸ë˜ì–´ ì˜¤ë¥˜ê°€ ë‚˜ëŠ” ê²ƒì„ ë°©ì§€í•˜ê¸° ìœ„í•´ holdë¥¼ í•´ì£¼ëŠ” ì˜ë¯¸
-	//  ê°€ ìˆë‹¤.
+	//  »õ·Î¿î accept instance¸¦ µî·ÏÀ» ÇÏ°í pacceptor¿Í accept_context °ªÀ» ¼³Á¤
+	//  ÇØÁØ´Ù.
+	//  pacceotor¸¦ ¼³Á¤ÇØ ÁÖ´Â °ÍÀº ´ÙÁß ½º·¹µå·Î µ¿ÀÛÀ» ´ëºñÇÑ °ÍÀÌ´Ù.
+	//  Nacceotor °´Ã¼°¡ ¼Ò¸êµÇ¾î ¿À·ù°¡ ³ª´Â °ÍÀ» ¹æÁöÇÏ±â À§ÇØ hold¸¦ ÇØÁÖ´Â ÀÇ¹Ì
+	//  °¡ ÀÖ´Ù.
 	//-----------------------------------------------------------------------------
 
 	// lock) 
 	std::lock_guard cs{this->m_lockable_acceptor};
 
-	// 1) acceptì„¤ì •
+	// 1) accept¼³Á¤
 	_instance->pacceptor = dynamic_pointer_cast<Nacceptor>(this->shared_from_this());
 	_instance->accept_context = this->m_accept_context;
 
-	// 2) instance listì— ë“±ë¡í•œë‹¤.
+	// 2) instance list¿¡ µî·ÏÇÑ´Ù.
 	this->m_list_instance.push_back(std::move(_instance));
 }
 
 void asio::Nacceptor::process_instance_unregister(instance* _instance) noexcept
 {
 	//-----------------------------------------------------------------------------
-	//  ì„¤ëª…) ìƒˆë¡œìš´ accept instanceë¥¼ ë“±ë¡ì„ í•´ì§€í•œë‹¤.
+	//  ¼³¸í) »õ·Î¿î accept instance¸¦ µî·ÏÀ» ÇØÁöÇÑ´Ù.
 	// 
-	//  í•´ë‹¹ accept instanceë¥¼ ì°¾ì•„ ë“±ë¡ í•´ì§€í•œë‹¤.
-	//  acceotorì˜ ì¢…ë£Œë¥¼ ìœ„í•´ close()ë¥¼ í•  ê²½ìš° accpetor instanceë“¤ì€ ì²˜ë¦¬ì— error
-	//  ê°€ ë°œìƒí•˜ë©° ìŠ¤ìŠ¤ë¡œ ë“±ë¡ í•´ì œ ì²˜ë¦¬ë¥¼ í•˜ê²Œ ëœë‹¤.
+	//  ÇØ´ç accept instance¸¦ Ã£¾Æ µî·Ï ÇØÁöÇÑ´Ù.
+	//  acceotorÀÇ Á¾·á¸¦ À§ÇØ close()¸¦ ÇÒ °æ¿ì accpetor instanceµéÀº Ã³¸®¿¡ error
+	//  °¡ ¹ß»ıÇÏ¸ç ½º½º·Î µî·Ï ÇØÁ¦ Ã³¸®¸¦ ÇÏ°Ô µÈ´Ù.
 	// 
-	//  ì£¼ì˜) instanceê°€ thisì˜ ì°¸ì¡°ë¥¼ ê°€ì§€ê³  ìˆìœ¼ë¯€ë¡œ m_iist_instanceì—ì„œ eraseë¡œ
-	//         ì œê±° ì‹œ thisê°€ destroyë ìˆ˜ ìˆìœ¼ë¯€ë£¨ ì£¼ì˜!
+	//  ÁÖÀÇ) instance°¡ thisÀÇ ÂüÁ¶¸¦ °¡Áö°í ÀÖÀ¸¹Ç·Î m_iist_instance¿¡¼­ erase·Î
+	//         Á¦°Å ½Ã this°¡ destroyµÉ ¼ö ÀÖÀ¸¹Ç·ç ÁÖÀÇ!
 	//-----------------------------------------------------------------------------
 
 	// lock) 

@@ -48,7 +48,7 @@ enum class eENTITY_TYPE : uint32_t
 	APPLICATION				 = 0x00020000,
 	APPLICATION_SCRIPT		 = 0x00020001,
 
-	// 4) resourrce
+	// 4) resource
 	RESOURCE				 = 0x00030000,
 
 	//   - resource file

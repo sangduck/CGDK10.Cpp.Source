@@ -22,7 +22,7 @@
 // instance::instance
 //
 // ----------------------------------------------------------------------------
-class server_admin::instance_service_remote : public server_admin::instance_Iservice
+class server_system::instance_service_remote : public server_system::instance_service
 {
 public:
 			instance_service_remote();

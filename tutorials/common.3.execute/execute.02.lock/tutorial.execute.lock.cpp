@@ -1,9 +1,9 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
 //*                                                                           *
-//*                     tutorials common - object_pointer                     *
+//*                         tutorials execute - lock                          *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -28,93 +28,66 @@ int main()
 {
 	//-----------------------------------------------------------------------------
 	//
-	// 1. lockable ê°ì²´
-	//    - lockable<>ì€ lockê°ì²´ë¡œ ì‚¬ì‹¤ìƒ std::recursive_lockê³¼ ë™ì¼í•˜ë‹¤.
+	// 1. lockable °´Ã¼
+	//    - lock_objectÀº lock°´Ã¼·Î std::recursive_lock
 	//
 	//-----------------------------------------------------------------------------
 	{
 		// - lockable<>
-		lockable<> x;
+		lock_object x;
 
-		// - lockí•œë‹¤.
+		// - lockÇÑ´Ù.
 		x.lock();
 
-		// - ì²˜ë¦¬...
+		// - Ã³¸®...
 
-		// - unlockí•œë‹¤.
+		// - unlockÇÑ´Ù.
 		x.unlock();
 	}
 
 	//-----------------------------------------------------------------------------
 	//
-	// 2. ì¼ì²´í™”ëœ lock
-	//
-	//    - í´ë˜ìŠ¤ Të¥¼ lockable<T>ë¡œ ê°ì‹¸ì„œ ìƒì„±í•˜ë©´ 
-	//      Tê°ì²´ê°€ scoped_lock ê¸°ëŠ¥ë„ í• ìˆ˜ ìˆë„ë¡ í•˜ëŠ” ê²ƒì´ë‹¤.
-	//    - ì¦‰ lockable<T> == T + lockable<>
+	// 2. SCOPED_LOCK
+	//    - SCOPED_LOCK(cs)¸¦ »ç¿ëÇÏ¸é RAII¸¦ »ç¿ëÇØ lock°ú unlockÀ» ÀÚµ¿ Ã³¸®ÇÒ ¼ö ÀÖ´Ù.
 	//
 	//-----------------------------------------------------------------------------
+	// 1) ±âº» SCOPED_LOCK
 	{
-		// x = lockable<> + std::vector<int>
-		lockable<std::vector<int>> x;
+		std::mutex x;
 
-		// - xê°ì²´ëŠ” lockì„ í• ìˆ˜ ìˆë‹¤.
-		x.lock();
-
-		// - xê°ì²´ëŠ” std::vector<int>ì˜ ê¸°ëŠ¥ë„ ê°€ì§€ê³  ìˆë‹¤.
-		x.push_back(1);
-		x.push_back(2);
-		x.push_back(3);
-		x.clear();
-
-		// - xê°ì²´ unlock
-		x.unlock();
-	}
-
-
-	//-----------------------------------------------------------------------------
-	//
-	// 3. scoped_lock
-	//    - scoped_lock(cs)ë¥¼ ì‚¬ìš©í•˜ë©´ RAIIë¥¼ ì‚¬ìš©í•´ lockê³¼ unlockì„ ìë™ ì²˜ë¦¬í•  ìˆ˜ ìˆë‹¤.
-	//
-	//-----------------------------------------------------------------------------
-	// 1) ê¸°ë³¸ scoped_lock
-	{
-		std::mutex	x;
-
-		// scoped_lockì„ ì‚¬ìš©í•´ì„œ RAIIë¥¼ ì‚¬ìš©í•œ ìë™ lock í•´ì œ ì²˜ë¦¬ë¥¼ í• ìˆ˜ ìˆë‹¤.
-		scoped_lock(x)
+		// SCOPED_LOCKÀ» »ç¿ëÇØ¼­ RAII¸¦ »ç¿ëÇÑ ÀÚµ¿ lock ÇØÁ¦ Ã³¸®¸¦ ÇÒ ¼ö ÀÖ´Ù.
+		SCOPED_LOCK(x)
 		{
 			std::cout << "locked"sv << std::endl;
 		}
 	}
 
-	// 2) ë‹¤ì¤‘ scoped_lock
+	// 2) ´ÙÁß SCOPED_LOCK
 	{
-		std::mutex	x;
-		std::mutex	y;
+		std::mutex x;
+		std::mutex y;
 
-		scoped_lock(x)
+		SCOPED_LOCK(x)
 		{
-			scoped_lock(y)
+			SCOPED_LOCK(y)
 			{
 				std::cout << "locked"sv << std::endl;
 			}
 		}
 	}
 
-	// 3) namedë¥¼ ì‚¬ìš©í•´ lockì— ì´ë¦„ì„ ë¶€ì—¬í•  ìˆ˜ ìˆë‹¤.
-	//    std::conditional_variableë¥¼ ì‚¬ìš©í•˜ëŠ” ê²½ìš°ë‚˜ ë¸”ë¡ì„ ë¹ ì ¸ë‚˜ê°€ì§€ ì•Šê³  lockì„
-	//    í’€ì–´ì•¼í•  í•„ìš”ê°€ ì´ë¦„ì„ ì •í•´ì¤„ í•„ìš”ê°€ ìˆì„ ìˆ˜ ìˆë‹¤.
+	// 3) named¸¦ »ç¿ëÇØ lock¿¡ ÀÌ¸§À» ºÎ¿©ÇÒ ¼ö ÀÖ´Ù.
+	//    std::conditional_variable¸¦ »ç¿ëÇÏ´Â °æ¿ì³ª ºí·ÏÀ» ºüÁ®³ª°¡Áö ¾Ê°í lockÀ»
+	//    Ç®¾î¾ß ÇÒ ÇÊ¿ä°¡ ÀÌ¸§À» Á¤ÇØÁÙ ÇÊ¿ä°¡ ÀÖÀ» ¼ö ÀÖ´Ù.
 	{
-		std::mutex	x;
+		std::mutex x;
 
-		scoped_lock_named(x, x_scoped)
+		SCOPED_LOCK_NAMED(x, x_scoped)
 		{
 			std::cout << "before lock released"sv << std::endl;
 
-			// ì—¬ê¸° ì´í›„ë¡œëŠ” lockì„ í’€ì–´ë²„ë¦°ë‹¤.
-			scoped_lock_leave(x_scoped);
+			// ¿©±â ÀÌÈÄ·Î´Â lockÀ» Ç®¾î¹ö¸°´Ù.
+			SCOPED_LOCK_LEAVE(x_scoped);
 
 			std::cout << "after lock released"sv << std::endl;
 		}
@@ -123,28 +96,28 @@ int main()
 
 	//-----------------------------------------------------------------------------
 	//
-	// 4. conditional variable
-	//    - ë‹¤ì¤‘ ì“°ë ˆë“œì—ì„œ ë™ê¸°í™” ì²˜ë¦¬ë¥¼ ìœ„í•´ ë™ê¸°ì ìœ¼ë¡œ signalì„ ì „ë‹¬í•˜ê¸° ìœ„í•´
-	//      std::condition_variableì„ ì‚¬ìš©í•œë‹¤.
-	//    - ë¨¼ì € lockì„ ê±´ í›„ ê·¸ lockì•ˆì—ì„œ ì™„ë£Œë¥¼ í†µë³´í•  ì²˜ë¦¬ë¥¼ ë¹„ë™ê¸°ì ìœ¼ë¡œ ìš”ì²­í•œ í›„
-	//    - std::condition_variableì˜ wait() ë“±ì„ í˜¸ì¶œí•´ signalì´ ì „ë‹¬ë˜ê¸° ì „ê¹Œì§€ ë¸”ë¡í‚¹í•œë‹¤.
-	//      ì´ë•Œ wait()í•¨ìˆ˜ì˜ ì¸ìë¡œ ì „ë‹¬ë˜ëŠ” lock ê°ì²´ëŠ” unlockëœë‹¤.
-	//      ì£¼ì˜) waitì— ë“¤ì–´ê°€ê¸° ì „ notify_one()í˜¹ì€ notify_all()ì„ í•  ê²½ìš° ì „ë‹¬ë˜ì§€ ì•ŠëŠ”ë‹¤.
-	//    - std::condition_variableì˜ notify_one() í˜¹ì€ notify_all()ì´ í˜¸ì¶œë˜ë©´ 
-	//      ì¸ìë¡œ ì „ë‹¬ëœ lockê°ì²´ë¥¼ ë‹¤ì‹œ lockí•œí›„ wait()í•¨ìˆ˜ì˜ ë¸”ë¡í‚¹ì´ í•´ì œëœë‹¤.
-	//    - std::promise, std::futureì´ ê°€ëŠ¥í•œ ê³³ì´ë¼ë©´ ê·¸ê²ƒì„ ì‚¬ìš©í•˜ëŠ” ê²ƒì´ ë” í¸ë¦¬í•  ìˆ˜ ìˆë‹¤.
+	// 3. conditional variable
+	//    - ´ÙÁß ½º·¹µå¿¡¼­ µ¿±âÈ­ Ã³¸®¸¦ À§ÇØ µ¿±âÀûÀ¸·Î signalÀ» Àü´ŞÇÏ±â À§ÇØ
+	//      std::condition_variableÀ» »ç¿ëÇÑ´Ù.
+	//    - ¸ÕÀú lockÀ» °Ç ÈÄ ±× lock¾È¿¡¼­ ¿Ï·á¸¦ Åëº¸ÇÒ Ã³¸®¸¦ ºñµ¿±âÀûÀ¸·Î ¿äÃ»ÇÑ ÈÄ
+	//    - std::condition_variableÀÇ wait() µîÀ» È£ÃâÇØ signalÀÌ Àü´ŞµÇ±â Àü±îÁö ºí·ÎÅ·ÇÑ´Ù.
+	//      ÀÌ¶§ wait()ÇÔ¼öÀÇ ÀÎÀÚ·Î Àü´ŞµÇ´Â lock °´Ã¼´Â unlockµÈ´Ù.
+	//      ÁÖÀÇ) wait¿¡ µé¾î°¡±â Àü notify_one()È¤Àº notify_all()À» ÇÒ °æ¿ì Àü´ŞµÇÁö ¾Ê´Â´Ù.
+	//    - std::condition_variableÀÇ notify_one() È¤Àº notify_all()ÀÌ È£ÃâµÇ¸é 
+	//      ÀÎÀÚ·Î Àü´ŞµÈ lock°´Ã¼¸¦ ´Ù½Ã lockÇÑÈÄ wait()ÇÔ¼öÀÇ ºí·ÎÅ·ÀÌ ÇØÁ¦µÈ´Ù.
+	//    - std::promise, std::futureÀÌ °¡´ÉÇÑ °÷ÀÌ¶ó¸é ±×°ÍÀ» »ç¿ëÇÏ´Â °ÍÀÌ ´õ Æí¸®ÇÒ ¼ö ÀÖ´Ù.
 	//
 	//-----------------------------------------------------------------------------
 	// declare) 
-	lockable<> lockable_wait;
+	lock_object lockable_wait;
 	std::condition_variable_any cv_complete;
 
-	// - ì‹¤í–‰í•  í•¨ìˆ˜...
+	// - ½ÇÇàÇÒ ÇÔ¼ö...
 	auto f_process = [&]()
 	{
 		std::cout << "'f_process' executed!!"sv << '\n';
 
-		scoped_lock(lockable_wait)
+		SCOPED_LOCK(lockable_wait)
 		{
 			std::cout << "'cv_complete' notify one!!"sv << '\n';
 
@@ -152,18 +125,18 @@ int main()
 		}
 	};
 
-	scoped_lock_named(lockable_wait, cs)
+	SCOPED_LOCK_NAMED(lockable_wait, cs)
 	{
 		std::cout << "'lockable_wait' locked!"sv << '\n';
 
-		// - ë¹„ë™ê¸° í˜¸ì¶œí•œë‹¤. (ë°˜ë“œì‹œ lock ì•ˆì—ì„œ ì‹¤í–‰í•´ì•¼ í•œë‹¤.)
+		// - ºñµ¿±â È£ÃâÇÑ´Ù. (¹İµå½Ã lock ¾È¿¡¼­ ½ÇÇàÇØ¾ß ÇÑ´Ù.)
 		system_executor::post(make_executable(f_process));
 
-		// - waitë¥¼ í•˜ë©´ lockì„ í•´ì œí•œë‹¤.
+		// - wait¸¦ ÇÏ¸é lockÀ» ÇØÁ¦ÇÑ´Ù.
 		cv_complete.wait(cs);
 	}
 
-	// ì¶œë ¥) 
+	// Ãâ·Â) 
 	std::cout << "completed!!"sv << '\n';
 
 	// return)

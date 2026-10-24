@@ -1,5 +1,5 @@
 #include "pch.h"
-
+#include "platform.h"
 
 #if defined(_IO_APISET_H_)
 
@@ -31,7 +31,7 @@ bool api::io_context_iocp_queued::create() noexcept
 	class threads_iocp : public api::threads, public object::Nnameable
 	{
 	public:
-		threads_iocp() : object::Nnameable("iocp event pump") {}
+		threads_iocp() { this->name("iocp event pump"sv); }
 	};
 
 	// 3) get iocp threads
@@ -105,7 +105,7 @@ bool api::io_context_iocp_queued::post_executable(uint32_t _bytes_transferred, u
 	// check) handle()이 INVALID_CGHANDLE_VALUE이어서는 안된다.
 	RETURN_IF(handle() == INVALID_CGHANDLE_VALUE, false);
 
-	// check) _pexecutable이 nullptr이면 안됀다.
+	// check) _pexecutable이 nullptr이면 안 된다.
 	RETURN_IF(_pexecutable == nullptr, false);
 
 	try
@@ -118,17 +118,19 @@ bool api::io_context_iocp_queued::post_executable(uint32_t _bytes_transferred, u
 		result.bytes_transfered = _bytes_transferred;
 
 		// 2) Post한다.
-		scoped_lock(m_lock_complete)
 		{
-			// - queuning한다.
-			m_queue_executable.push_back(result);
+			// lock)
+			std::lock_guard lock(this->m_lockable_complete);
+
+			// - queueing한다.
+			this->m_queue_executable.push_back(result);
 
 			// - add_ref한다.
 			_pexecutable->add_ref();
 		}
 
 		// 3) Signal시킨다.
-		m_cv_complete.notify_one();
+		this->m_cv_complete.notify_one();
 	}
 	catch (...)
 	{
@@ -145,7 +147,7 @@ bool api::io_context_iocp_queued::post_executable(uint32_t _bytes_transferred, u
 	// check) m_handle_epoll가 INVALID_CGHANDLE_VALUE이어서는 안된다.
 	RETURN_IF(handle() == INVALID_CGHANDLE_VALUE, false);
 
-	// check) _pexecutable이 nullptr이면 안됀다.
+	// check) _pexecutable이 nullptr이면 안 된다.
 	RETURN_IF(_pexecutable.empty(), false);
 
 	try
@@ -158,9 +160,11 @@ bool api::io_context_iocp_queued::post_executable(uint32_t _bytes_transferred, u
 		result.bytes_transfered = _bytes_transferred;
 
 		// 2) Post한다.
-		scoped_lock(this->m_lock_complete)
 		{
-			// - Queuning한다.
+			// lock)
+			std::lock_guard lock(this->m_lockable_complete);
+
+			// - Queueing한다.
 			this->m_queue_executable.push_back(result);
 
 			// - add_ref한다.
@@ -170,7 +174,7 @@ bool api::io_context_iocp_queued::post_executable(uint32_t _bytes_transferred, u
 		// 3) Signal시킨다.
 		this->m_cv_complete.notify_one();
 	}
-	catch(...)
+	catch (...)
 	{
 		// return)
 		return false;
@@ -182,9 +186,9 @@ bool api::io_context_iocp_queued::post_executable(uint32_t _bytes_transferred, u
 
 void api::io_context_iocp_queued::pop_executable(RESULT& _result, chrono::tick::duration _ticks_wait) noexcept
 {
-	conditional_lock(this->m_lock_complete, lock_wait)
+	CONDITIONAL_LOCK(this->m_lockable_complete, lock_wait)
 	{
-		// 1) 갯수가 0개면 wait...
+		// 1) 개수가 0개면 wait...
 		if (this->m_queue_executable.size() == 0 && _ticks_wait != chrono::tick::duration::zero())
 		{
 			// - 
@@ -253,12 +257,14 @@ void api::io_context_iocp_queued::_process_popup_iocp_event()
 		// check) 
 		CONTINUE_IF(count <= 0);
 
-		// declar)
+		// declare)
 		int count_signal = 0;
 
-		// 5) post eexecutable
-		scoped_lock(this->m_lock_complete)
+		// 5) post executable
 		{
+			// lock)
+			std::lock_guard lock(this->m_lockable_complete);
+
 			// - reserve
 			this->m_queue_executable.reserve(this->m_queue_executable.size() + count);
 

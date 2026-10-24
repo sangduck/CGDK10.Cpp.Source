@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "framework.h"
 #include "CGDK10.udp_echo_client.mfc.h"
 #include "CGDK10.udp_echo_client_dlg.h"
@@ -60,7 +60,7 @@ BEGIN_MESSAGE_MAP(Ctcp_echo_client_dlg, CDialogEx)
 END_MESSAGE_MAP()
 #pragma warning(default:4407)
 
-// Ctcp_echo_client_dlg ë©”ì‹œì§€ ì²˜ë¦¬ê¸°
+// Ctcp_echo_client_dlg ¸Ş½ÃÁö Ã³¸®±â
 BOOL Ctcp_echo_client_dlg::OnInitDialog()
 {
 	//-----------------------------------------------------------------
@@ -73,9 +73,9 @@ BOOL Ctcp_echo_client_dlg::OnInitDialog()
 
 
 	//-----------------------------------------------------------------
-	// 2. ì‹œì‘
+	// 2. ½ÃÀÛ
 	//-----------------------------------------------------------------
-	// 1) tester ê°ì²´ ìƒì„±
+	// 1) tester °´Ã¼ »ı¼º
 	g_ptest_udp_echo_client = make_own<test_udp_echo_client>();
 
 	// 2) tester start
@@ -83,7 +83,7 @@ BOOL Ctcp_echo_client_dlg::OnInitDialog()
 
 
 	//-----------------------------------------------------------------
-	// 2. control ì„¤ì •.
+	// 2. control ¼³Á¤.
 	//-----------------------------------------------------------------
 	// 1) Connective
 	this->m_listctrl_sockets.InsertColumn(0, TEXT("bind"), LVCFMT_LEFT, 120, 0);
@@ -139,14 +139,14 @@ BOOL Ctcp_echo_client_dlg::OnInitDialog()
 
 
 	//-----------------------------------------------------------------
-	// 3. Timerì„¤ì •.
+	// 3. Timer¼³Á¤.
 	//-----------------------------------------------------------------
-	// 1) Statisticsë¥¼ ìœ„í•œ Timer
+	// 1) Statistics¸¦ À§ÇÑ Timer
 	this->SetTimer(1, 1000, NULL);
 
 
 	// return) 
-	return TRUE;  // í¬ì»¤ìŠ¤ë¥¼ ì»¨íŠ¸ë¡¤ì— ì„¤ì •í•˜ì§€ ì•Šìœ¼ë©´ TRUEë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.
+	return TRUE;  // Æ÷Ä¿½º¸¦ ÄÁÆ®·Ñ¿¡ ¼³Á¤ÇÏÁö ¾ÊÀ¸¸é TRUE¸¦ ¹İÈ¯ÇÕ´Ï´Ù.
 }
 
 void Ctcp_echo_client_dlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -154,19 +154,19 @@ void Ctcp_echo_client_dlg::OnSysCommand(UINT nID, LPARAM lParam)
 	this->CDialogEx::OnSysCommand(nID, lParam);
 }
 
-// ëŒ€í™” ìƒìì— ìµœì†Œí™” ë‹¨ì¶”ë¥¼ ì¶”ê°€í•  ê²½ìš° ì•„ì´ì½˜ì„ ê·¸ë¦¬ë ¤ë©´
-//  ì•„ë˜ ì½”ë“œê°€ í•„ìš”í•©ë‹ˆë‹¤.  ë¬¸ì„œ/ë·° ëª¨ë¸ì„ ì‚¬ìš©í•˜ëŠ” MFC ì• í”Œë¦¬ì¼€ì´ì…˜ì˜ ê²½ìš°ì—ëŠ”
-//  í”„ë ˆì„ì›Œí¬ì—ì„œ ì´ ì‘ì—…ì„ ìë™ìœ¼ë¡œ ìˆ˜í–‰í•©ë‹ˆë‹¤.
+// ´ëÈ­ »óÀÚ¿¡ ÃÖ¼ÒÈ­ ´ÜÃß¸¦ Ãß°¡ÇÒ °æ¿ì ¾ÆÀÌÄÜÀ» ±×¸®·Á¸é
+//  ¾Æ·¡ ÄÚµå°¡ ÇÊ¿äÇÕ´Ï´Ù.  ¹®¼­/ºä ¸ğµ¨À» »ç¿ëÇÏ´Â MFC ¾ÖÇÃ¸®ÄÉÀÌ¼ÇÀÇ °æ¿ì¿¡´Â
+//  ÇÁ·¹ÀÓ¿öÅ©¿¡¼­ ÀÌ ÀÛ¾÷À» ÀÚµ¿À¸·Î ¼öÇàÇÕ´Ï´Ù.
 
 void Ctcp_echo_client_dlg::OnPaint()
 {
 	if (this->IsIconic())
 	{
-		CPaintDC dc(this); // ê·¸ë¦¬ê¸°ë¥¼ ìœ„í•œ ë””ë°”ì´ìŠ¤ ì»¨í…ìŠ¤íŠ¸ì…ë‹ˆë‹¤.
+		CPaintDC dc(this); // ±×¸®±â¸¦ À§ÇÑ µğ¹ÙÀÌ½º ÄÁÅØ½ºÆ®ÀÔ´Ï´Ù.
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		// í´ë¼ì´ì–¸íŠ¸ ì‚¬ê°í˜•ì—ì„œ ì•„ì´ì½˜ì„ ê°€ìš´ë°ì— ë§ì¶¥ë‹ˆë‹¤.
+		// Å¬¶óÀÌ¾ğÆ® »ç°¢Çü¿¡¼­ ¾ÆÀÌÄÜÀ» °¡¿îµ¥¿¡ ¸ÂÃä´Ï´Ù.
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
@@ -174,7 +174,7 @@ void Ctcp_echo_client_dlg::OnPaint()
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
 
-		// ì•„ì´ì½˜ì„ ê·¸ë¦½ë‹ˆë‹¤.
+		// ¾ÆÀÌÄÜÀ» ±×¸³´Ï´Ù.
 		dc.DrawIcon(x, y, this->m_hIcon);
 	}
 	else
@@ -193,8 +193,8 @@ void Ctcp_echo_client_dlg::OnTimer(UINT_PTR nIDEvent)
 	__super::OnTimer(nIDEvent);
 }
 
-// ì‚¬ìš©ìê°€ ìµœì†Œí™”ëœ ì°½ì„ ë„ëŠ” ë™ì•ˆì— ì»¤ì„œê°€ í‘œì‹œë˜ë„ë¡ ì‹œìŠ¤í…œì—ì„œ
-//  ì´ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•©ë‹ˆë‹¤.
+// »ç¿ëÀÚ°¡ ÃÖ¼ÒÈ­µÈ Ã¢À» ²ô´Â µ¿¾È¿¡ Ä¿¼­°¡ Ç¥½ÃµÇµµ·Ï ½Ã½ºÅÛ¿¡¼­
+//  ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÕ´Ï´Ù.
 HCURSOR Ctcp_echo_client_dlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(this->m_hIcon);
@@ -221,7 +221,7 @@ void Ctcp_echo_client_dlg::OnBnClickedCancel()
 	this->m_dlg_object_factory_status.DestroyWindow();
 	this->m_dlg_thread_status.DestroyWindow();
 
-	// 2) ëª¨ë“  ì†Œì¼“ì˜ ì ‘ì†ì„ ëŠê³  ì²˜ë¦¬ë¥¼ ì¢…ë£Œí•œë‹¤.
+	// 2) ¸ğµç ¼ÒÄÏÀÇ Á¢¼ÓÀ» ²÷°í Ã³¸®¸¦ Á¾·áÇÑ´Ù.
 	g_ptest_udp_echo_client.reset();
 
 	// 3) OnOK~
@@ -283,7 +283,7 @@ void Ctcp_echo_client_dlg::OnBnClickedButtonClosesocket()
 	std::vector<object_ptr<socket_udp>> vector_sockets;
 
 	this->m_listctrl_sockets.SetRedraw(false);
-	scoped_lock(this->m_cs_listctrl_sockets)
+	SCOPED_LOCK(this->m_cs_listctrl_sockets)
 	{
 		for (auto i = 0; i < this->m_listctrl_sockets.GetItemCount(); )
 		{
@@ -315,7 +315,7 @@ void Ctcp_echo_client_dlg::OnBnClickedButtonClosesocketAll()
 	std::vector<object_ptr<socket_udp>> vector_sockets;
 
 	this->m_listctrl_sockets.SetRedraw(false);
-	scoped_lock(this->m_cs_listctrl_sockets)
+	SCOPED_LOCK(this->m_cs_listctrl_sockets)
 	{
 		auto item_count = this->m_listctrl_sockets.GetItemCount();
 		for (auto i = 0; i < item_count; ++i)
@@ -344,7 +344,7 @@ void Ctcp_echo_client_dlg::OnBnClickedButtonDestAddressAdd()
 	object_ptr<socket_udp> psocket_udp;
 
 	// 1) get socket udp
-	scoped_lock(this->m_cs_listctrl_sockets)
+	SCOPED_LOCK(this->m_cs_listctrl_sockets)
 	{
 		// - get selected socket
 		psocket_udp = this->m_socket_selected;
@@ -366,7 +366,7 @@ void Ctcp_echo_client_dlg::OnBnClickedButtonDestAddressDel()
 	object_ptr<socket_udp> psocket_udp;
 
 	// 1) get socket udp
-	scoped_lock(this->m_cs_listctrl_sockets)
+	SCOPED_LOCK(this->m_cs_listctrl_sockets)
 	{
 		// - get selected socket
 		psocket_udp = this->m_socket_selected;
@@ -379,7 +379,7 @@ void Ctcp_echo_client_dlg::OnBnClickedButtonDestAddressDel()
 	int deleted = 0;
 
 	// 1) get socket udp
-	scoped_lock(this->m_cs_listctrl_dest_address)
+	SCOPED_LOCK(this->m_cs_listctrl_dest_address)
 	{
 		for (auto i = 0; i < this->m_listctrl_dest_address.GetItemCount(); )
 		{
@@ -402,13 +402,13 @@ void Ctcp_echo_client_dlg::OnBnClickedButtonDestAddressDel()
 
 void Ctcp_echo_client_dlg::OnCbnSelchangeComboMessageSize()
 {
-	// 1) ìƒˆë¡œ ì„ íƒí•œ ê°’ì„ ì½ì–´ì˜¨ë‹¤.
+	// 1) »õ·Î ¼±ÅÃÇÑ °ªÀ» ÀĞ¾î¿Â´Ù.
 	std::size_t	selected = this->m_comboMessageSize.GetCurSel();
 
-	// 2) ìƒˆë¡œ ì„ íƒí•œ ê°’ì„ ì¨ë„£ëŠ”ë‹¤.
+	// 2) »õ·Î ¼±ÅÃÇÑ °ªÀ» ½á³Ö´Â´Ù.
 	g_ptest_udp_echo_client->set_traffic_test_message_size(selected);
 
-	// 3) Randgeë¥¼ ì„ íƒí•œë‹¤.
+	// 3) Randge¸¦ ¼±ÅÃÇÑ´Ù.
 	int	range_max = 128 * 10000;
 	for(std::size_t i = 0; i < selected; ++i)
 	{
@@ -420,7 +420,7 @@ void Ctcp_echo_client_dlg::OnCbnSelchangeComboMessageSize()
 
 void Ctcp_echo_client_dlg::OnBnClickedButtonSingleSend()
 {
-	g_ptest_udp_echo_client->request_send_immidiately(1);
+	g_ptest_udp_echo_client->request_send_immediately(1);
 }
 
 void Ctcp_echo_client_dlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
@@ -437,13 +437,13 @@ void Ctcp_echo_client_dlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrol
 
 void Ctcp_echo_client_dlg::OnEnChangeEditSendPerOnetime()
 {
-	// check) ìœˆë„ìš°ê°€ ìƒì„±ë˜ì–´ ìˆì§€ ì•Šìœ¼ë©´ ëë‚¸ë‹¤.
+	// check) À©µµ¿ì°¡ »ı¼ºµÇ¾î ÀÖÁö ¾ÊÀ¸¸é ³¡³½´Ù.
 	RETURN_IF(this->m_sliderSendTimes.m_hWnd == NULL);
 
-	// 1) íšŸìˆ˜ë¥¼ êµ¬í•œë‹¤.
+	// 1) È½¼ö¸¦ ±¸ÇÑ´Ù.
 	int	iTimes = GetDlgItemInt(IDC_EDIT_SEND_PER_ONETIME);
 
-	// 2) Sliderì˜ Posë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) SliderÀÇ Pos¸¦ ¼³Á¤ÇÑ´Ù.
 	this->m_sliderSendTimes.SetPos(iTimes);
 
 	// 3) set times
@@ -565,24 +565,24 @@ BOOL Ctcp_echo_client_dlg::PreTranslateMessage(MSG* pMsg)
 
 void Ctcp_echo_client_dlg::list_add_socket_udp(socket_udp* _psocket)
 {
-	scoped_lock(this->m_cs_listctrl_sockets)
+	SCOPED_LOCK(this->m_cs_listctrl_sockets)
 	{
 		// 1) get item_count
 		auto item_count = this->m_listctrl_sockets.GetItemCount();
 
-		// 2) ì¶”ê°€í•œë‹¤.
+		// 2) Ãß°¡ÇÑ´Ù.
 		auto item_pos = this->m_listctrl_sockets.InsertItem(item_count, TEXT(""));
 
-		// 3) Item Dataë¡œ í¬ì¸í„°ë¥¼ ì¶”ê°€í•œë‹¤.
+		// 3) Item Data·Î Æ÷ÀÎÅÍ¸¦ Ãß°¡ÇÑ´Ù.
 		this->m_listctrl_sockets.SetItemData(item_pos, (DWORD_PTR)_psocket);
 
-		// 4) Indexë¥¼ IDë¡œ ë§µí•‘í•˜ì—¬ ì €ì¥í•œë‹¤.
+		// 4) Index¸¦ ID·Î ¸ÊÇÎÇÏ¿© ÀúÀåÇÑ´Ù.
 		_psocket->m_idx_list = this->m_listctrl_sockets.MapIndexToID(item_pos);
 
-		// 5) add_refí•œë‹¤.
+		// 5) add_refÇÑ´Ù.
 		_psocket->add_ref();
 
-		// 6) Updateí•œë‹¤.
+		// 6) UpdateÇÑ´Ù.
 		this->_list_update_socket_udp(item_pos);
 	}
 }
@@ -592,27 +592,27 @@ void Ctcp_echo_client_dlg::list_remove_socket_udp(socket_udp* _psocket)
 	// declare) 
 	int iCountUser;
 
-	scoped_lock(this->m_cs_listctrl_sockets)
+	SCOPED_LOCK(this->m_cs_listctrl_sockets)
 	{
-		// 1) Indexë¥¼ ì–»ëŠ”ë‹¤.
+		// 1) Index¸¦ ¾ò´Â´Ù.
 		int	index = this->m_listctrl_sockets.MapIDToIndex(_psocket->m_idx_list);
 
 		// check)
 		RETURN_IF(index < 0)
 
-		// 2) Itemì„ ì–»ëŠ”ë‹¤.
+		// 2) ItemÀ» ¾ò´Â´Ù.
 		auto* psocket_udp = (socket_udp*)this->m_listctrl_sockets.GetItemData(index);
 
 		// check)
 		CGASSERT_ERROR(_psocket == psocket_udp);
 
-		// 3) ì§€ìš´ë‹¤.
+		// 3) Áö¿î´Ù.
 		this->m_listctrl_sockets.DeleteItem(index);
 
 		// 4) reset m_idex_list
 		psocket_udp->m_idx_list = static_cast<uint32_t>(-1);
 
-		// 5) releaseí•œë‹¤.
+		// 5) releaseÇÑ´Ù.
 		psocket_udp->release();
 
 		// 6) ..
@@ -622,22 +622,22 @@ void Ctcp_echo_client_dlg::list_remove_socket_udp(socket_udp* _psocket)
 
 void Ctcp_echo_client_dlg::list_update_socket_udp(socket_udp* _psocket)
 {
-	scoped_lock(this->m_cs_listctrl_sockets)
+	SCOPED_LOCK(this->m_cs_listctrl_sockets)
 	{
-		// 1) Indexë¥¼ ì–»ëŠ”ë‹¤.
+		// 1) Index¸¦ ¾ò´Â´Ù.
 		int	index = this->m_listctrl_sockets.MapIDToIndex(_psocket->m_idx_list);
 
 		// check)
 		RETURN_IF(index < 0)
 
-		// 2) Group Roomì„ Updateí•œë‹¤.
+		// 2) Group RoomÀ» UpdateÇÑ´Ù.
 		this->_list_update_socket_udp(index);
 	}
 }
 
 void Ctcp_echo_client_dlg::list_update_socket_udp(int _index)
 {
-	scoped_lock(this->m_cs_listctrl_sockets)
+	SCOPED_LOCK(this->m_cs_listctrl_sockets)
 	{
 		this->_list_update_socket_udp(_index);
 	}
@@ -651,7 +651,7 @@ void Ctcp_echo_client_dlg::_list_update_socket_udp(int _index)
 	// declare) 
 	TCHAR text[256]{ 0 };
 
-	// 1) socket_server_lobbyì„ ì–»ëŠ”ë‹¤.
+	// 1) socket_server_lobbyÀ» ¾ò´Â´Ù.
 	auto psocket_udp = (socket_udp*)this->m_listctrl_sockets.GetItemData(_index);
 
 	// 2) 
@@ -671,7 +671,7 @@ void Ctcp_echo_client_dlg::_list_update_socket_udp(int _index)
 
 		// 0. "bind"
 		list_item.iSubItem = 0;
-		wsprintf(text, TEXT("%s:%u"), to_string<TCHAR>(psocket_udp->local_endpoint()).c_str(), psocket_udp->local_endpoint().port());
+		wsprintf(text, TEXT("%hs:%u"), to_string(psocket_udp->local_endpoint()).c_str(), psocket_udp->local_endpoint().port());
 		list_item.pszText = text;
 		this->m_listctrl_sockets.SetItem(&list_item);
 
@@ -683,7 +683,7 @@ void Ctcp_echo_client_dlg::_list_update_socket_udp(int _index)
 
 		// 2. "msg/s"
 		list_item.iSubItem = 2;
-		__to_string(text, 256, mps_send);
+		swprintf_s(text, 256, TEXT("%.2f"), mps_send);
 		list_item.pszText = text;
 		this->m_listctrl_sockets.SetItem(&list_item);
 
@@ -695,7 +695,7 @@ void Ctcp_echo_client_dlg::_list_update_socket_udp(int _index)
 
 		// 4. "msg/s"
 		list_item.iSubItem = 4;
-		__to_string(text, 256, mps_recv);
+		swprintf_s(text, 256, TEXT("%.2f"), mps_recv);
 		list_item.pszText = text;
 		this->m_listctrl_sockets.SetItem(&list_item);
 	}
@@ -736,7 +736,7 @@ void Ctcp_echo_client_dlg::_list_update_socket_udp(int _index)
 void Ctcp_echo_client_dlg::list_update_socket_udp()
 {
 	this->m_listctrl_sockets.SetRedraw(false);
-	scoped_lock(this->m_cs_listctrl_sockets)
+	SCOPED_LOCK(this->m_cs_listctrl_sockets)
 	{
 		auto item_count = this->m_listctrl_sockets.GetItemCount();
 		for (auto i = 0; i < item_count; ++i)
@@ -761,7 +761,7 @@ void Ctcp_echo_client_dlg::list_set_dest_address(socket_udp* _psocket)
 	list_item.iItem = 0;
 
 	this->m_listctrl_dest_address.SetRedraw(false);
-	scoped_lock(this->m_cs_listctrl_dest_address)
+	SCOPED_LOCK(this->m_cs_listctrl_dest_address)
 	{
 		m_listctrl_dest_address.DeleteAllItems();
 
@@ -769,7 +769,7 @@ void Ctcp_echo_client_dlg::list_set_dest_address(socket_udp* _psocket)
 		{
 			// 0. "bind"
 			list_item.iSubItem = 0;
-			wsprintf(text, TEXT("%s:%u"), to_string<TCHAR>(iter).c_str(), iter.port());
+			wsprintf(text, TEXT("%hs:%u"), to_string(iter).c_str(), iter.port());
 			list_item.pszText = text;
 			this->m_listctrl_dest_address.InsertItem(&list_item);
 
@@ -796,13 +796,13 @@ net::sockaddr Ctcp_echo_client_dlg::ReadBindAddress()
 	// declare) 
 	TCHAR str_address[256];
 
-	// 1) Address Stringì„ ì–»ëŠ”ë‹¤.
+	// 1) Address StringÀ» ¾ò´Â´Ù.
 	this->GetDlgItemText(IDC_EDIT_ADDRESS, str_address, 256);
 
-	// 2) Portë¥¼ ì½ëŠ”ë‹¤.
-	auto port = this->GetDlgItemInt(IDC_COMBO_PORT); // - Portë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) Port¸¦ ÀĞ´Â´Ù.
+	auto port = this->GetDlgItemInt(IDC_COMBO_PORT); // - Port¸¦ ¼³Á¤ÇÑ´Ù.
 
-	// 3) Addressë¡œ ë³€í™˜í•œë‹¤.
+	// 3) Address·Î º¯È¯ÇÑ´Ù.
 	 auto sockaddr_bind = from_string(str_address, static_cast<uint16_t>(port), AF_INET);
 
 	// return)
@@ -814,16 +814,16 @@ net::sockaddr Ctcp_echo_client_dlg::ReadDestinationAddress()
 	// declare) 
 	TCHAR str_address[256];
 
-	// 1) Address Stringì„ ì–»ëŠ”ë‹¤.
+	// 1) Address StringÀ» ¾ò´Â´Ù.
 	this->GetDlgItemText(IDC_EDIT_ADDRESS_DESTINATION, str_address, 256);
 
-	// 2) Portë¥¼ ì½ëŠ”ë‹¤.
-	auto port = this->GetDlgItemInt(IDC_COMBO_PORT_DESTINATION); // - Portë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) Port¸¦ ÀĞ´Â´Ù.
+	auto port = this->GetDlgItemInt(IDC_COMBO_PORT_DESTINATION); // - Port¸¦ ¼³Á¤ÇÑ´Ù.
 
 	// declare) 
 	net::sockaddr sockaddr_destination;
 
-	// 3) Addressë¡œ ë³€í™˜í•œë‹¤.
+	// 3) Address·Î º¯È¯ÇÑ´Ù.
 	sockaddr_destination = from_string(str_address);
 	sockaddr_destination.port(static_cast<uint16_t>(port));
 
@@ -839,7 +839,7 @@ void Ctcp_echo_client_dlg::OnLvnItemchangedListSocket(NMHDR* pNMHDR, LRESULT* pR
 		this->enable_dest_address(true);
 
 		object_ptr<socket_udp> psocket;
-		scoped_lock(this->m_cs_listctrl_sockets)
+		SCOPED_LOCK(this->m_cs_listctrl_sockets)
 		{
 			psocket = (socket_udp*)m_listctrl_sockets.GetItemData(pNMLV->iItem);
 			this->m_socket_selected = psocket;
@@ -850,7 +850,7 @@ void Ctcp_echo_client_dlg::OnLvnItemchangedListSocket(NMHDR* pNMHDR, LRESULT* pR
 	{
 		this->enable_dest_address(false);
 		this->m_listctrl_dest_address.SetRedraw(false);
-		scoped_lock(this->m_cs_listctrl_dest_address)
+		SCOPED_LOCK(this->m_cs_listctrl_dest_address)
 		{
 			this->m_listctrl_dest_address.DeleteAllItems();
 			this->m_socket_selected.reset();

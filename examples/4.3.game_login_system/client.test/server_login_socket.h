@@ -67,7 +67,7 @@ public:
 			//SERVER_INFO			m_ServerInfo;
 
 	// - Performance
-			CCGQueryPerformance	m_perforanceConnect;
+			CCGQueryPerformance	m_performanceConnect;
 			lockable<>			m_csGuildTestLock;
 
 			void				GenerateLoginID();

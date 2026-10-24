@@ -13,7 +13,7 @@ doss::manager_repository::manager_repository()
 doss::manager_repository::~manager_repository() noexcept
 {
 	// check) Manager가 파괴될땐 분명 Pool이 하나도 없어야 한다.
-	CGASSERT_ERROR(m_list_repository.empty());
+	CGASSERT_ERROR(this->m_list_repository.empty());
 
 	// Trace) Event Manager를 파괴힌다.
 	LOG_INFO << "(info) doss REPOSITORY_MANAGER is destroyed";
@@ -21,16 +21,16 @@ doss::manager_repository::~manager_repository() noexcept
 
 void doss::manager_repository::set_instance(own_ptr<manager_repository>&& _pInstance)
 {
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) 값을 설정한다.
-		m_pinstance = std::move(_pInstance);
+		m_pinstance.exchange_release(std::move(_pInstance));
 	}
 }
 
 void doss::manager_repository::reset_instance() noexcept
 {
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) Reset한다.
 		m_pinstance.reset();
@@ -39,7 +39,7 @@ void doss::manager_repository::reset_instance() noexcept
 
 void doss::manager_repository::init_instance()
 {
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{ 
 		// check) 기존에 Instance가 있는지 확인한다.
 		RETURN_IF(m_pinstance.exist())
@@ -52,7 +52,7 @@ void doss::manager_repository::init_instance()
 result_code doss::manager_repository::destroy() noexcept
 {
 	// 1) 
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{ 
 	}
 
@@ -62,25 +62,25 @@ result_code doss::manager_repository::destroy() noexcept
 
 void doss::manager_repository::register_repository(Irepository* _prepository)
 {
-	// 1) AddReference한다.
-	add_ref();
-
-	scoped_lock(m_list_repository)
+	SCOPED_LOCK(this->m_lockable_list_repository)
 	{
 		// 2) 같은 것이 있는지 먼저 검사한다.
-		auto iter_connective = std::find(m_list_repository.begin(), m_list_repository.end(), _prepository);
+		auto iter_connective = std::find(this->m_list_repository.begin(), this->m_list_repository.end(), _prepository);
 
 		// check) 찾지 못했다면 끝낸다.
-		RETURN_IF(iter_connective!=m_list_repository.end());
+		RETURN_IF(iter_connective!=this->m_list_repository.end());
 
 		// 3) repository id를 얻는다.
-		sOBJECT_ID repository_id = m_repository_serial++;;
+		sOBJECT_ID repository_id = this->m_repository_serial++;;
 		
 		// 3) set repository_id
 		_prepository->set_object_id(repository_id);
 
 		// 4) add repository...
-		m_list_repository.push_back(_prepository);
+		this->m_list_repository.push_back(_prepository);
+
+		// 5) add reference (only when registered : released by unregister_repository())
+		add_ref();
 	}
 
 	// 5) Message 날리기..
@@ -89,16 +89,16 @@ void doss::manager_repository::register_repository(Irepository* _prepository)
 
 void doss::manager_repository::unregister_repository(Irepository* _prepository) noexcept
 {
-	scoped_lock(m_list_repository)
+	SCOPED_LOCK(this->m_lockable_list_repository)
 	{
 		// 1) Pool 관리 List에서 떼낸다.
-		auto iter_connective = std::find(m_list_repository.begin(), m_list_repository.end(), _prepository);
+		auto iter_connective = std::find(this->m_list_repository.begin(), this->m_list_repository.end(), _prepository);
 
-		// check) 해당 Connectie가 없으면 제거한다.
-		RETURN_IF(iter_connective == m_list_repository.end());
+		// check) 해당 Connective가 없으면 제거한다.
+		RETURN_IF(iter_connective == this->m_list_repository.end());
 
 		// 2) 리스트에서 제거한다.
-		m_list_repository.erase(iter_connective);
+		this->m_list_repository.erase(iter_connective);
 	}
 
 	// 3) Message 날리기..
@@ -113,10 +113,10 @@ object_ptr<doss::Irepository> doss::manager_repository::find(sREPOSITORY_ID _rid
 	// declare)
 	object_ptr<doss::Irepository> prepository;
 
-	scoped_lock(m_list_repository)
+	SCOPED_LOCK(this->m_lockable_list_repository)
 	{
-		auto iter = m_list_repository.begin();
-		auto iter_end = m_list_repository.end();
+		auto iter = this->m_list_repository.begin();
+		auto iter_end = this->m_list_repository.end();
 
 		for (; iter != iter_end; ++iter)
 		{
@@ -137,10 +137,10 @@ object_ptr<doss::Irepository> doss::manager_repository::find(const std::string_v
 	// declare)
 	object_ptr<doss::Irepository> prepository;
 
-	scoped_lock(m_list_repository)
+	SCOPED_LOCK(this->m_lockable_list_repository)
 	{
-		auto iter = m_list_repository.begin();
-		auto iter_end = m_list_repository.end();
+		auto iter = this->m_list_repository.begin();
+		auto iter_end = this->m_list_repository.end();
 
 		for (; iter != iter_end; ++iter)
 		{
@@ -155,8 +155,6 @@ object_ptr<doss::Irepository> doss::manager_repository::find(const std::string_v
 	// return)
 	return prepository;
 }
-
-
 
 result_code doss::manager_repository::process_message(sMESSAGE& _msg)
 {

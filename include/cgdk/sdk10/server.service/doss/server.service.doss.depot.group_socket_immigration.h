@@ -31,7 +31,6 @@ class doss::Idepot::group_immigration :
 {
 public:
 			group_immigration();
-			group_immigration(const std::string_view _name);
 	virtual ~group_immigration();
 
 public:
@@ -52,10 +51,10 @@ protected:
 	virtual	void				on_stop () override;
 
 	// 3) Member Enter/Leave
-	virtual	result_code			on_member_entering (socket* _pmember, sMESSAGE& _msg);
-	virtual	void				on_member_entered (socket* _pmember, sMESSAGE& _msg);
-	virtual	uintptr_t			on_member_leaving (socket* _pmember);
-	virtual	void				on_member_leaved (socket* _pmember, uintptr_t _result);
+	virtual	result_code			on_member_entering (socket* _pmember, sMESSAGE& _msg) override;
+	virtual	void				on_member_entered (socket* _pmember, sMESSAGE& _msg) override;
+	virtual	uintptr_t			on_member_leaving(socket* _pmember, uintptr_t _param) override;
+	virtual	void				on_member_leaved (socket* _pmember, uintptr_t _result) override;
 
 protected:
 	// Declare Message Map

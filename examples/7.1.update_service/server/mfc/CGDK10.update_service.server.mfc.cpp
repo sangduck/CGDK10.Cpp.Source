@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "framework.h"
 #include "CGDK10.update_service.server.mfc.h"
 #include "CGDK10.update_service.server.mfc.dlg.h"
@@ -33,7 +33,7 @@ BOOL CupdateserviceservermfcApp::InitInstance()
 
 	CMFCVisualManager::SetDefaultManager(RUNTIME_CLASS(CMFCVisualManagerWindows));
 
-	SetRegistryKey(_T("ë¡œì»¬ ì• í”Œë¦¬ì¼€ì´ì…˜ ë§ˆë²•ì‚¬ì—ì„œ ìƒì„±ëœ ì• í”Œë¦¬ì¼€ì´ì…˜"));
+	SetRegistryKey(_T("·ÎÄÃ ¾ÖÇÃ¸®ÄÉÀÌ¼Ç ¸¶¹ı»ç¿¡¼­ »ı¼ºµÈ ¾ÖÇÃ¸®ÄÉÀÌ¼Ç"));
 
 	OBJ<Cupdate_service_server_mfc_dlg> dlg;
 	m_pMainWnd = &dlg;

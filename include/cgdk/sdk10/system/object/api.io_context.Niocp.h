@@ -30,7 +30,8 @@ namespace CGDK
 
 *///-----------------------------------------------------------------------------
 class api::io_context_Niocp :
-	virtual public				object::Idestroyable
+	virtual public				object::Idestroyable,
+	private						non_copyable
 {
 // constructor/destructor)
 public:
@@ -55,8 +56,8 @@ public:
 	};
 
 public:
-			[[nodiscard]] size_t	attached_count() const noexcept { return m_count_attached;}
-			[[nodiscard]] CGHANDLE	handle() const noexcept { return m_handle_iocp;}
+			[[nodiscard]] size_t attached_count() const noexcept { return m_count_attached;}
+			[[nodiscard]] CGHANDLE handle() const noexcept { return m_handle_iocp;}
 
 			bool				create() noexcept;
 	virtual	CGHANDLE			dispose() noexcept;

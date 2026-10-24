@@ -72,6 +72,7 @@ public:
 	afx_msg void				OnSize(UINT nType, int cx, int cy);
 	afx_msg	LRESULT				OnCGMessageNotify(WPARAM _wParam, LPARAM _lParam);
 	afx_msg	LRESULT				OnAddString(WPARAM _wParam, LPARAM _lParam);
+	afx_msg void				OnTimer(UINT_PTR _id_event);
 
 public:
 	virtual	result_code			process_message(sMESSAGE& _msg);
@@ -93,9 +94,22 @@ public:
 			size_t				capacity() const noexcept { return m_capacity; }
 			void				capacity(size_t _capacity) noexcept	{ m_capacity = _capacity; }
 
+			// - UI 유입 제어 (프로세스 공용 설정)
+			//   로그는 로깅 스레드에서 큐에만 쌓이고, UI 스레드가 flush_interval 주기의 타이머로 한 번에
+			//   max_records_per_flush 개까지만 리스트박스로 옮긴다. (줄마다 PostMessage 하지 않는다.)
+			//   큐가 queue_capacity 를 넘으면 가장 오래된 레코드부터 버린다. (dropped_count 로 누계 확인)
+			//   note) 이 클래스는 서버 대화상자에 값으로 포함되므로 바이너리 호환을 위해 인스턴스 멤버를 늘리지 않고 정적 설정으로 둔다.
+	static	void				flush_interval(uint32_t _ms) noexcept;
+	static	uint32_t			flush_interval() noexcept;
+	static	void				queue_capacity(size_t _count) noexcept;
+	static	size_t				queue_capacity() noexcept;
+	static	void				max_records_per_flush(size_t _count) noexcept;
+	static	size_t				max_records_per_flush() noexcept;
+	static	size_t				dropped_count() noexcept;
+
 			void				SetHorizontalExtent(int _cx);
 
-	virtual	void				process_log(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record) override;
+	virtual	void				process_log(object_ptr<LOG_RECORD>&& _plog_record) override;
 
 protected:
 			CListBox_log		m_list_log;
@@ -110,13 +124,13 @@ protected:
 				ITEM_LOG(LOG_RECORD* _plog_record, CListBox_log::ITEM_LOG* _pitem) : plog_record(_plog_record), pitem(_pitem)	{}
 			};
 
-			lockable<>			m_lockable_queue_string;
-			circular_list<object_ptr<LOG_RECORD>> m_pqueue_log_record_queuing;
-			circular_list<object_ptr<LOG_RECORD>> m_pqueue_log_record_process;
-			std::atomic<int>	m_count_post_message = 0;
+	mutable	lock_object			m_lockable_queue_string;
+			circular_list<object_ptr<LOG_RECORD>> m_queue_log_record_queuing;
+			circular_list<object_ptr<LOG_RECORD>> m_queue_log_record_process;
+			std::atomic<int>	m_count_post_message = 0;	// (현재 flush 타이머에 걸어 둔 주기(ms). 이름은 바이너리 호환을 위해 유지)
 			size_t				m_capacity;
 
-			lockable<>			m_lockable_log_info;
+	mutable	lock_object			m_lockable_log_info;
 			LOGLIST_INFO		m_log_info;
 
 			int					m_count_log[static_cast<int>(log_type_t::max_)];
@@ -125,6 +139,7 @@ protected:
 			
 protected:
 			void				ShowList(int _iTab, int p_iCmdShow);
+			void				ProcessFlush();
 			void				ProcessAddString(LOG_RECORD* _plog_record, int(&_count_added)[static_cast<size_t>(log_type_t::max_)]);
 			void				ProcessAddString(ITEM_LOG&& _item_log);
 

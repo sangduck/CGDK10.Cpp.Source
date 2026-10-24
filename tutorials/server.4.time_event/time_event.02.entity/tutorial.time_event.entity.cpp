@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/server.time_event.h"
+#include "cgdk/sdk10/server.time_event.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -9,43 +9,43 @@ using namespace CGDK;
 
 
 // ----------------------------------------------------------------------------
-// 1. Event Systemì´ë€?
+// 1. Event SystemÀÌ¶õ?
 //
-//    1) ê°ì¢… Systemì„ ì œì‘í•˜ë‹¤ë³´ë©´ ì¼ì •ì‹œê°„ë§ˆë‹¤ ì‹¤í–‰ì„ í•˜ê±°ë‚˜ íŠ¹ì •í•œ ì‹œê°„ì— ì‹¤í–‰
-//       í•´ì•¼í•˜ëŠ” ê²ƒë“¤ì„ ì„¤ì •í•  í•„ìš”ê°€ ìˆë‹¤.
-//       ì´ë•Œ íŠ¹ì •í•œ ì‹œê°„ì´ë‚˜  íŠ¹ì •í•œ ì‹œê°„ë§ˆë‹¤ ì‹¤í–‰í•˜ë„ë¡ í•˜ëŠ” ì‹œìŠ¤í…œì´ Event ì‹œìŠ¤í…œì´ë‹¤.
+//    1) °¢Á¾ SystemÀ» Á¦ÀÛÇÏ´Ùº¸¸é ÀÏÁ¤½Ã°£¸¶´Ù ½ÇÇàÀ» ÇÏ°Å³ª Æ¯Á¤ÇÑ ½Ã°£¿¡ ½ÇÇà
+//       ÇØ¾ßÇÏ´Â °ÍµéÀ» ¼³Á¤ÇÒ ÇÊ¿ä°¡ ÀÖ´Ù.
+//       ÀÌ¶§ Æ¯Á¤ÇÑ ½Ã°£ÀÌ³ª  Æ¯Á¤ÇÑ ½Ã°£¸¶´Ù ½ÇÇàÇÏµµ·Ï ÇÏ´Â ½Ã½ºÅÛÀÌ Event ½Ã½ºÅÛÀÌ´Ù.
 //
-//    2) Event Systemì€ Event objectì™€ Event Managerë¡œ ë‚˜ë‰˜ì–´ì§„ë‹¤.
-//       - Event ManagerëŠ” ë“±ë¡ëœ EventObjectë¥¼ ë“±ë¡í•˜ì˜€ë‹¤ê°€ ì •í•´ì§„ ì‹œê°„ë§ˆë‹¤ ì‹¤í–‰í•´ì£¼ëŠ”
-//         ê´€ë¦¬ìë¥¼ ì˜ë¯¸í•œë‹¤.
-//       - Event objectëŠ” Event Managerì— ë“±ë¡ë˜ì–´ ë™ì‘í•˜ëŠ” ê°ì²´ë¡œ í•„ìš”ì— ë”°ë¼
-//         ë‹¤ì–‘í•œ ì‹¤í–‰í˜•íƒœë¡œ ì œì‘ë˜ì–´ì ¸ ìˆë‹¤. 
-//         ì„ ì–¸ëœ Event objectëŠ” ì•„ë˜ì™€ ê°™ì€ ê²ƒë“¤ì´ ìˆë‹¤.
+//    2) Event SystemÀº Event object¿Í Event Manager·Î ³ª´µ¾îÁø´Ù.
+//       - Event Manager´Â µî·ÏµÈ EventObject¸¦ µî·ÏÇÏ¿´´Ù°¡ Á¤ÇØÁø ½Ã°£¸¶´Ù ½ÇÇàÇØÁÖ´Â
+//         °ü¸®ÀÚ¸¦ ÀÇ¹ÌÇÑ´Ù.
+//       - Event object´Â Event Manager¿¡ µî·ÏµÇ¾î µ¿ÀÛÇÏ´Â °´Ã¼·Î ÇÊ¿ä¿¡ µû¶ó
+//         ´Ù¾çÇÑ ½ÇÇàÇüÅÂ·Î Á¦ÀÛµÇ¾îÁ® ÀÖ´Ù. 
+//         ¼±¾ğµÈ Event object´Â ¾Æ·¡¿Í °°Àº °ÍµéÀÌ ÀÖ´Ù.
 //
 //         @ time_event::object::COnce
-//           ì˜ˆì•½ëœ ì‹œê°„ì— ë”± 1íšŒë§Œ ì‹¤í–‰ë˜ëŠ” ê°ì²´
+//           ¿¹¾àµÈ ½Ã°£¿¡ µü 1È¸¸¸ ½ÇÇàµÇ´Â °´Ã¼
 //
 //         @ time_event::object::start_end
-//           ì˜ˆì•½ëœ ì‹œì‘ì‹œê°„ê³¼ ì¢…ë£Œì‹œê°„ì— ê°ê° ì •í•´ì§„ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•˜ëŠ” ê°ì²´
+//           ¿¹¾àµÈ ½ÃÀÛ½Ã°£°ú Á¾·á½Ã°£¿¡ °¢°¢ Á¤ÇØÁø ÇÔ¼ö¸¦ È£ÃâÇÏ´Â °´Ã¼
 //
 //         @ time_event::object::start_iteration_end
-//           ì˜ˆì•½ëœ ì‹œì‘ì‹œê°„ì— ì •í•´ì§„ í•¨ìˆ˜ê°€ í˜¸ì¶œë˜ë©° ì´í›„ì— ì •í•´ì§„ ê°„ê²©ì— ë”°ë¼
-//           ì •í•´ì§„ í•¨ìˆ˜ë¥¼ ì •í•´ì§„ ì‹¤í–‰íšŸìˆ˜ë§Œí¼ í˜¸ì¶œí•´ì£¼ëŠ” Event ê°ì²´ì´ë‹¤.
-//           ì‹¤í–‰íšŸìˆ˜ë§Œí¼ í˜¸ì¶œëœ í›„ process_event_end()í•¨ìˆ˜ê°€ í˜¸ì¶œëœë‹¤.
+//           ¿¹¾àµÈ ½ÃÀÛ½Ã°£¿¡ Á¤ÇØÁø ÇÔ¼ö°¡ È£ÃâµÇ¸ç ÀÌÈÄ¿¡ Á¤ÇØÁø °£°İ¿¡ µû¶ó
+//           Á¤ÇØÁø ÇÔ¼ö¸¦ Á¤ÇØÁø ½ÇÇàÈ½¼ö¸¸Å­ È£ÃâÇØÁÖ´Â Event °´Ã¼ÀÌ´Ù.
+//           ½ÇÇàÈ½¼ö¸¸Å­ È£ÃâµÈ ÈÄ process_event_end()ÇÔ¼ö°¡ È£ÃâµÈ´Ù.
 //
 //         @ CCGEventIteration
-//           ì •í•´ì§„ ì‹œê°„ ê°„ê²© ë§ˆë‹¤ ì •í•´ì§„ í•¨ìˆ˜ë¥¼ ë¬´í•œë°˜ë³µì ìœ¼ë¡œ ì‹¤í–‰í•´í•˜ëŠ”
-//           Eventê°ì²´ì´ë‹¤.
+//           Á¤ÇØÁø ½Ã°£ °£°İ ¸¶´Ù Á¤ÇØÁø ÇÔ¼ö¸¦ ¹«ÇÑ¹İº¹ÀûÀ¸·Î ½ÇÇàÇØÇÏ´Â
+//           Event°´Ã¼ÀÌ´Ù.
 //
-//    3) ê° Eventê°ì²´ë“¤ì€ íŠ¹ì •í•œ ì‹œê°„ì— í˜¸ì¶œë˜ì–´ì§€ëŠ” virtualí•¨ìˆ˜ë“¤ì´ ì •ì˜ë˜ì–´ ìˆë‹¤.
-//       ì´ virtualí•¨ìˆ˜ë¥¼ ì¬ì •ì˜í•˜ì—¬ ì‹¤í–‰í•˜ê³ ìí•˜ëŠ” ë‚´ìš©ì„ ì‘ì„±í•˜ë©´ ëœë‹¤.
+//    3) °¢ Event°´Ã¼µéÀº Æ¯Á¤ÇÑ ½Ã°£¿¡ È£ÃâµÇ¾îÁö´Â virtualÇÔ¼öµéÀÌ Á¤ÀÇµÇ¾î ÀÖ´Ù.
+//       ÀÌ virtualÇÔ¼ö¸¦ ÀçÁ¤ÀÇÇÏ¿© ½ÇÇàÇÏ°íÀÚÇÏ´Â ³»¿ëÀ» ÀÛ¼ºÇÏ¸é µÈ´Ù.
 //
-//    4) Eventê°ì²´ì˜ ì •ë°€ë„ëŠ” ì´ˆë‹¨ìœ„ ìˆ˜ì¤€ë§Œì„ ë³´ì¥í•˜ë¯€ë¡œ ë”ìš± ì •ë°€í•œ ì‹¤í–‰ì´ í•„ìš”í• 
-//       ê²½ìš° Executableì´ë‚˜ ë‹¤ë¥¸ ë°©ë²•ì„ ì‚¬ìš©í•˜ê¸°ë¥¼ ê¶Œì¥í•œë‹¤.
+//    4) Event°´Ã¼ÀÇ Á¤¹Ğµµ´Â ÃÊ´ÜÀ§ ¼öÁØ¸¸À» º¸ÀåÇÏ¹Ç·Î ´õ¿í Á¤¹ĞÇÑ ½ÇÇàÀÌ ÇÊ¿äÇÒ
+//       °æ¿ì ExecutableÀÌ³ª ´Ù¸¥ ¹æ¹ıÀ» »ç¿ëÇÏ±â¸¦ ±ÇÀåÇÑ´Ù.
 //
-//    5) Event Systemì—ì„œì˜ ì‹œê°„ì€ ëª¨ë‘ System Timeì„ ì‚¬ìš©í•˜ê³  ìˆë‹¤. System Timeì€
-//       Local Timeê³¼ ë™ì¼í•˜ì§€ ì•Šê¸° ë•Œë¬¸ì— ì‹¤ì œ ì§€ì—­ ì‹œê°„ê³¼ëŠ” ë‹¤ë¥¼ ìˆ˜ ìˆìœ¼ë¯€ë¡œ 
-//       ì„¤ì •ì„ í• ë•ŒëŠ” ë°˜ë“œì‹œ System Timeìœ¼ë¡œ ì„¤ì •í•  í•„ìš”ê°€ ìˆë‹¤.
+//    5) Event System¿¡¼­ÀÇ ½Ã°£Àº ¸ğµÎ System TimeÀ» »ç¿ëÇÏ°í ÀÖ´Ù. System TimeÀº
+//       Local Time°ú µ¿ÀÏÇÏÁö ¾Ê±â ¶§¹®¿¡ ½ÇÁ¦ Áö¿ª ½Ã°£°ú´Â ´Ù¸¦ ¼ö ÀÖÀ¸¹Ç·Î 
+//       ¼³Á¤À» ÇÒ ¶§´Â ¹İµå½Ã System TimeÀ¸·Î ¼³Á¤ÇÒ ÇÊ¿ä°¡ ÀÖ´Ù.
 //
 //
 // ----------------------------------------------------------------------------
@@ -57,7 +57,7 @@ public:
 	virtual	result_code process_event_iteration(const chrono::time::utc::time_point& /*_time*/) override
 	{ 
 		std::cout << "foo_time_event_iteration executed ("sv
-				  << to_string<char>(chrono::time::utc::now()) << ")"sv
+				  << to_string(chrono::time::utc::now()) << ")"sv
 				  << '\n';
 
 		return eRESULT::SUCCESS;
@@ -72,7 +72,7 @@ public:
 	virtual	result_code process_event_start(const chrono::time::utc::time_point& /*_time*/) override
 	{
 		std::cout << "foo_time_event_start_end START executed ("sv
-				  << to_string<char>(chrono::time::utc::now()) << ")"sv
+				  << to_string(chrono::time::utc::now()) << ")"sv
 				  << '\n';
 
 		return eRESULT::SUCCESS;
@@ -80,7 +80,7 @@ public:
 	virtual	result_code process_event_end(const chrono::time::utc::time_point& /*_time*/) override
 	{
 		std::cout << "foo_time_event_start_end END executed ("sv
-				  << to_string<char>(chrono::time::utc::now()) << ")"sv
+				  << to_string(chrono::time::utc::now()) << ")"sv
 				  << '\n';
 
 		return eRESULT::SUCCESS;
@@ -95,7 +95,7 @@ public:
 	virtual	result_code process_event_start(const chrono::time::utc::time_point& /*_time*/) override
 	{
 		std::cout << "foo_time_event_start_iteration_end START executed ("sv
-				  << to_string<char>(chrono::time::utc::now()) << ")"sv
+				  << to_string(chrono::time::utc::now()) << ")"sv
 				  << '\n';
 
 		return eRESULT::SUCCESS;
@@ -103,7 +103,7 @@ public:
 	virtual	result_code			process_event_iteration(const chrono::time::utc::time_point& /*_time*/) override
 	{
 		std::cout << "foo_time_event_start_iteration_end ITERATION executed ("sv
-				  << to_string<char>(chrono::time::utc::now()) << ")"sv
+				  << to_string(chrono::time::utc::now()) << ")"sv
 				  << '\n';
 
 		return eRESULT::SUCCESS;
@@ -128,13 +128,13 @@ int main()
 	// ------------------------------------------------------------------
 	// 1. time_event::entity_iteration
 	//
-	//    - ì •í•´ì§„ ì‹œê°„ì— í•œë²ˆë§Œ ì‹¤í–‰ë˜ëŠ” Eventê°ì²´ì´ë‹¤.
-	//    - set_event_time()ìœ¼ë¡œ ì„¤ì •ëœ ì‹œê°„ì— process_event()í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œë‹¤.
-	//    - process_event()ì— ì²˜ë¦¬í•  ë‚´ìš©ì„ ì¬ì •ì˜í•©ë‹ˆë‹¤.
+	//    - Á¤ÇØÁø ½Ã°£¿¡ ÇÑ¹ø¸¸ ½ÇÇàµÇ´Â Event°´Ã¼ÀÌ´Ù.
+	//    - set_event_time()À¸·Î ¼³Á¤µÈ ½Ã°£¿¡ process_event()ÇÔ¼ö¸¦ È£ÃâÇÑ´Ù.
+	//    - process_event()¿¡ Ã³¸®ÇÒ ³»¿ëÀ» ÀçÁ¤ÀÇÇÕ´Ï´Ù.
 	//
-	//    - ì‹œì‘í›„ 1ì´ˆ í›„ ìµœì´ˆ ì‹¤í–‰í•˜ë©° 3ì´ˆë§ˆë‹¤ 10íšŒ ì¬ì‹¤í–‰í•©ë‹ˆë‹¤.
+	//    - ½ÃÀÛ ÈÄ 1ÃÊ ÈÄ ÃÖÃÊ ½ÇÇàÇÏ¸ç 3ÃÊ¸¶´Ù 10È¸ Àç½ÇÇàÇÕ´Ï´Ù.
 	// ------------------------------------------------------------------
-	// 1) time_event ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) time_event °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto pentity_a = make_own<foo_time_event_iteration>();
 
 	// 2) setting
@@ -149,13 +149,13 @@ int main()
 	// ------------------------------------------------------------------
 	// 2. time_event::entity_start_end
 	//
-	//    - ì‹œì‘ ì‹œê°„ê³¼ process_event_start()ë¥¼ í˜¸ì¶œí•˜ê³ 
-	//      ì¢…ë£Œì‹œê°„ì— process_event_end()ë¥¼ í˜¸ì¶œí•˜ëŠ” time_event ê°ì²´ì´ë‹¤.
+	//    - ½ÃÀÛ ½Ã°£°ú process_event_start()¸¦ È£ÃâÇÏ°í
+	//      Á¾·á½Ã°£¿¡ process_event_end()¸¦ È£ÃâÇÏ´Â time_event °´Ã¼ÀÌ´Ù.
 	//
-	//    - ì‹œì‘í›„ 5ì´ˆ í›„ process_event_start()ê°€ í˜¸ì¶œë˜ë©°
-	//      ì‹œì‘í›„ 15ì´ˆí›„ process_event_end()ê°€ í˜¸ì¶œëœë‹¤.
+	//    - ½ÃÀÛ ÈÄ 5ÃÊ ÈÄ process_event_start()°¡ È£ÃâµÇ¸ç
+	//      ½ÃÀÛ ÈÄ 15ÃÊÈÄ process_event_end()°¡ È£ÃâµÈ´Ù.
 	// ------------------------------------------------------------------
-	// 1) time_event ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) time_event °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto pentity_b = make_own<foo_time_event_start_end>();
 
 	// 2) setting
@@ -169,15 +169,15 @@ int main()
 	// ------------------------------------------------------------------
 	// 3. time_event::entity_start_iteration_end
 	//
-	//    - ì‹œì‘ ì‹œê°„ê³¼ process_event_start()ë¥¼ í˜¸ì¶œí•˜ê³ 
-	//      time_interval ê°„ê²©ë§ˆë‹¤ process_event_iteration()í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œ í›„ 
-	//      ì¢…ë£Œì‹œê°„ì— process_event_end()ë¥¼ í˜¸ì¶œí•˜ëŠ” time_event ê°ì²´ì´ë‹¤.
+	//    - ½ÃÀÛ ½Ã°£°ú process_event_start()¸¦ È£ÃâÇÏ°í
+	//      time_interval °£°İ¸¶´Ù process_event_iteration()ÇÔ¼ö¸¦ È£ÃâÇÑ ÈÄ 
+	//      Á¾·á½Ã°£¿¡ process_event_end()¸¦ È£ÃâÇÏ´Â time_event °´Ã¼ÀÌ´Ù.
 	//
-	//    - ì‹œì‘í›„ 2ì´ˆ í›„ process_event_start()ê°€ í˜¸ì¶œëœë‹¤.
-	//      ì‹œì‘í›„ 3ì´ˆ ê°„ê²©ìœ¼ë¡œ 10ë²ˆ process_event_iteration()ê°€ í˜¸ì¶œë˜ë©°
-	//      ê·¸ 5ì´ˆ í›„ process_event_end()ê°€ í˜¸ì¶œëœë‹¤.
+	//    - ½ÃÀÛ ÈÄ 2ÃÊ ÈÄ process_event_start()°¡ È£ÃâµÈ´Ù.
+	//      ½ÃÀÛ ÈÄ 3ÃÊ °£°İÀ¸·Î 10¹ø process_event_iteration()°¡ È£ÃâµÇ¸ç
+	//      ±× 5ÃÊ ÈÄ process_event_end()°¡ È£ÃâµÈ´Ù.
 	// ------------------------------------------------------------------
-	// 1) time_event ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) time_event °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto pentity_c = make_own<foo_time_event_start_iteration_end>();
 
 	// 2) setting
@@ -190,11 +190,16 @@ int main()
 
 
 	// ------------------------------------------------------------------
-	// 4. JSONìœ¼ë¡œ ì„¤ì •í•˜ê¸°
+	// 4. JSONÀ¸·Î ¼³Á¤ÇÏ±â
 	//
-	//    - 
-	//    - 
+	//    - °´Ã¼ ÀÌ¸§("event_0" µî)À¸·Î context¿¡¼­ ÀÚ½ÅÀÇ ¼³Á¤À» Ã£´Â´Ù.
+	//    - ½Ã°£: "now", "now + 1s", "now - 1h" ¶Ç´Â ³¯Â¥ ¹®ÀÚ¿­
+	//    - °£°İ: "3s", "1500ms", "5m", "2h", "1d", "1h 30m"
+	//    - time_event °´Ã¼´Â ½ÇÇàµÇ´Â µ¿¾È »ì¾Æ ÀÖ¾î¾ß ÇÏ¹Ç·Î ºí·Ï ¹Û¿¡ µĞ´Ù.
 	// ------------------------------------------------------------------
+	own_ptr<foo_time_event_iteration> pentity_x;
+	own_ptr<foo_time_event_start_end> pentity_y;
+	own_ptr<foo_time_event_start_iteration_end> pentity_z;
 	{
 		// 1) set params
 		context param;
@@ -211,9 +216,9 @@ int main()
 		param["event_2"sv]["time_interval"sv] = "6s"sv;
 
 		// 2) create time event object
-		auto pentity_x = make_own<foo_time_event_iteration>("event_0"sv);
-		auto pentity_y = make_own<foo_time_event_start_end>("event_1"sv);
-		auto pentity_z = make_own<foo_time_event_start_iteration_end>("event_2"sv);
+		pentity_x = make_own<foo_time_event_iteration>("event_0"sv);
+		pentity_y = make_own<foo_time_event_start_end>("event_1"sv);
+		pentity_z = make_own<foo_time_event_start_iteration_end>("event_2"sv);
 
 		// 3) start
 		pentity_x->start(param);
@@ -223,19 +228,19 @@ int main()
 	
 
 	// ------------------------------------------------------------------
-	// 4. ì¢…ë£ŒëŒ€ê¸°...
+	// 4. Á¾·á´ë±â...
 	// ------------------------------------------------------------------
-	// 1) ESCë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
+	// 1) ESC¸¦ ´©¸¦ ¶§±îÁö ±â´Ù¸°´Ù.
 	while(_getch() != 27);
 
 
 	// ------------------------------------------------------------------
-	// 5. ë’·ë§ˆë¬´ë¦¬ & ëë‚´ê¸°
+	// 5. µŞ¸¶¹«¸® & ³¡³»±â
 	// ------------------------------------------------------------------
 	// trace) 
 	std::cout << "end tutorial..."sv << std::endl;
 
 
-	// Return) ë.
+	// Return) ³¡.
 	return 0;
 }

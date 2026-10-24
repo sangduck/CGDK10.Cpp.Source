@@ -31,7 +31,7 @@ namespace CGDK
 //       - 이때 Graph Index를 얻을 수 있다.
 //       - 이 Graph Index를 Remove를 하면 변할 수도 있다.
 //    3) Vertical/Horizontal Scale을 설정할 수 있다.
-//    4) AppendData를 통해 데이타를 추가할 수 있다.
+//    4) AppendData를 통해 데이터를 추가할 수 있다.
 //    5) Scroll함수를 통해 출력되는 그래프를 옮길 수 있다.
 //
 //
@@ -72,7 +72,7 @@ public:
 // ----------------------------------------------------------------------------
 private:
 			object_ptr<net::io::connective::manager>	m_pmangerConnective;
-			lockable<>			m_csmangerConnective;
+	mutable	lock_object			m_csmangerConnective;
 
 
 // ****************************************************************************
@@ -96,7 +96,7 @@ protected:
 // ----------------------------------------------------------------------------
 protected:
 			circular_list<CWnd*> m_listWndTarget;
-			lockable<>			m_cslistWndTarget;
+	mutable	lock_object			m_cslistWndTarget;
 
 			void				SendMessageToTarget(WPARAM p_dwMessage, LPARAM _lparam);
 };

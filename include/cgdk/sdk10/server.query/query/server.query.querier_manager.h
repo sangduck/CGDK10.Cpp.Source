@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                           Server Query Classes                            *
+//*                               server.query                                *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -55,11 +55,12 @@ public:
 								operator const std::recursive_mutex& () const noexcept { return m_lockable_list_querier; }
 
 	// 2) init instance/run_executor
-	static	auto				instance() { if(m_pinstance.empty()){ initialize_instance();} return object_ptr<manager_querier>(m_pinstance);}
+	static	auto				instance() { auto p = m_pinstance.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_pinstance.get_acquire(); } return object_ptr<manager_querier>(p);}
 	static	void				initialize_instance();
 	static	void				set_instance(own_ptr<manager_querier>&& _pinstance) noexcept;
 	static	void				reset_instance() noexcept;
 	static	void				detach_instance() noexcept { m_pinstance.detach(); }
+	static	void				print_statistics() noexcept;
 
 // implementation) 
 private:
@@ -72,7 +73,7 @@ private:
 			void				unregister_querier(Iquerier* _pquerier) noexcept;
 
 	// 3) instance
-	static	lockable<>			m_lockable_create;
+	static	lock_object			m_lockable_create;
 	static	own_ptr<manager_querier> m_pinstance;
 
 public:

@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 #include "cgdk/sdk10/server.log.h"
 
 #include <iostream>
@@ -11,19 +11,19 @@ using namespace CGDK;
 
 class socket_tcp : public net::socket::tcp<>
 {
-	// (v) ì ‘ì† ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_connect() override 
 	{
 		std::cout << " @ connected"sv << '\n'; 
 	}
 
-	// (v) ì ‘ì† ì¢…ë£Œ ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó Á¾·á ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_disconnect(uint64_t /*_disconnect_reason*/) override 
 	{
 		std::cout << " @ disconnected"sv << '\n'; 
 	}
 
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜.
+	// (v) ¸Ş½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö.
 	virtual result_code on_message(sMESSAGE_NETWORK& _msg) override
 	{
 		std::cout << " message received and echo sended!"sv << std::endl;
@@ -41,52 +41,52 @@ int main()
 
 	//-----------------------------------------------------------------------------
 	//
-	// ì„¤ëª…) socket loggerë€...
+	// ¼³¸í) socket logger¶õ...
 	//
-	//  ì†Œì¼“ì˜ ì†¡ì‹ ê³¼ ìˆ˜ì‹  í˜¹ì€ ì ‘ì†ê³¼ ì ‘ì†í•´ì œì— ê´€í•œ ì •ë³´ë¥¼ ìƒì„¸íˆ ë¡œê·¸ ì •ë³´ë¡œ ë‚¨
-	//  ê¸¸ìˆ˜ ìˆë‹¤.
-	//  ì¼ë°˜ì ìœ¼ë¡œ ì†Œì¼“ê³¼ ê´€ë ¨í•´ì„œ ì ‘ì†ê³¼ ì ‘ì† ëŠê¹€ ë¬¸ì œ í˜¹ì€ ë©”ì‹œì§€ ì†¡ìˆ˜ì‹  ê³¼ì •ì—ì„œ
-	//  ë°œìƒí•˜ëŠ” ë¬¸ì œë¥¼ í™•ì¸í•˜ê¸° ìœ„í•´ì„œ ë§ì´ ì‚¬ìš©í•œë‹¤.
+	//  ¼ÒÄÏÀÇ ¼Û½Å°ú ¼ö½Å È¤Àº Á¢¼Ó°ú Á¢¼ÓÇØÁ¦¿¡ °üÇÑ Á¤º¸¸¦ »ó¼¼È÷ ·Î±× Á¤º¸·Î ³²
+	//  ±æ ¼ö ÀÖ´Ù.
+	//  ÀÏ¹İÀûÀ¸·Î ¼ÒÄÏ°ú °ü·ÃÇØ¼­ Á¢¼Ó°ú Á¢¼Ó ²÷±è ¹®Á¦ È¤Àº ¸Ş½ÃÁö ¼Û¼ö½Å °úÁ¤¿¡¼­
+	//  ¹ß»ıÇÏ´Â ¹®Á¦¸¦ È®ÀÎÇÏ±â À§ÇØ¼­ »ç¿ëÇÑ´Ù.
 	//
-	//  CGDK::net::io::socket_loggerë¥¼ ì„¤ì •ë§Œ í•˜ë©´ í•´ë‹¹ loggerì— ì†Œì¼“ ì •ë³´ë¥¼ ë‚¨ê¸´ë‹¤.
+	//  CGDK::net::io::socket_logger¸¦ ¼³Á¤¸¸ ÇÏ¸é ÇØ´ç logger¿¡ ¼ÒÄÏ Á¤º¸¸¦ ³²±ä´Ù.
 	// 
 	//   CGDK::net::io::set_default::socket_logger([logger]);
 	//
-	//  í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ loggerë¥¼ ì„¤ì •í•˜ë©´ ì´í›„ ìƒì„±ë˜ëŠ” socketì—ì„œ ìë™ ì„¤ì •ë˜ì—¬ logë¥¼
-	// 	ë‚¨ê¸´ë‹¤.
+	//  ÇÔ¼ö¸¦ »ç¿ëÇØ logger¸¦ ¼³Á¤ÇÏ¸é ÀÌÈÄ »ı¼ºµÇ´Â socket¿¡¼­ ÀÚµ¿ ¼³Á¤µÇ¿© log¸¦
+	// 	³²±ä´Ù.
 	//
 	//-----------------------------------------------------------------------------
 
 	//-----------------------------------------------------------------------------
 	//
-	// 1. loggerë¥¼ ë§Œë“¤ì–´ default socket loggerë¡œ ì„¤ì •í•œë‹¤.
+	// 1. logger¸¦ ¸¸µé¾î default socket logger·Î ¼³Á¤ÇÑ´Ù.
 	// 
 	//-----------------------------------------------------------------------------
 	{
-		// 1) fileloggerë¥¼ ìƒì„±í•œë‹¤.
+		// 1) filelogger¸¦ »ı¼ºÇÑ´Ù.
 		auto plogger_file = make_object<logger_file>();
 
-		// 2) loggerë¥¼ ì´ˆê¸°í™”í•œë‹¤.
+		// 2) logger¸¦ ÃÊ±âÈ­ÇÑ´Ù.
 		plogger_file->initialize();
 
-		// 3) loggerë¥¼ ìƒì„±í•´ default socket loggerë¡œ ì„¤ì •í•œë‹¤.
+		// 3) logger¸¦ »ı¼ºÇØ default socket logger·Î ¼³Á¤ÇÑ´Ù.
 		net::io::set_default_socket_debug_logger(plogger_file);
 	}
 
 	//-----------------------------------------------------------------------------
 	//
-	//  2. ì„œë²„ë¥¼ ì‹œì‘í•œë‹¤.
+	//  2. ¼­¹ö¸¦ ½ÃÀÛÇÑ´Ù.
 	// 
 	//-----------------------------------------------------------------------------
 	try
 	{
-		// 1) acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 1) acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pacceptor = make_own<net::acceptor<socket_tcp>>();
 
-		// 2) acceptorë¥¼ ì‹œì‘í•œë‹¤.(20000ë²ˆ í¬íŠ¸ì—ì„œ listenì„ ì‹œì‘í•œë‹¤.)
+		// 2) acceptor¸¦ ½ÃÀÛÇÑ´Ù.(20000¹ø Æ÷Æ®¿¡¼­ listenÀ» ½ÃÀÛÇÑ´Ù.)
 		pacceptor->start({{ net::ip::make_address("any"sv), 20000 }});
 
-		// - ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+		// - ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 		while(_getch() != 27);
 	}
 	catch (...)
@@ -97,6 +97,6 @@ int main()
 	// trace) 
 	std::cout << "stop server [tut.socket.01.tcp_simple.server]..."sv << std::endl;
 
-	// end) ì„œë²„ ì¢…ë£Œ
+	// end) ¼­¹ö Á¾·á
 	return 0;
 }

@@ -33,9 +33,9 @@ protected:
 	virtual	~Nstatic_service_logger() noexcept;
 
 public:
-	static	object_ptr<logger_hub> get_logger() noexcept;
-	static	object_ptr<logger_hub> initialize_logger();
-	static	object_ptr<logger_hub> initialize_logger(object_ptr<logger_hub>&& _plogger);
+	static	auto				get_logger() noexcept -> object_ptr<logger_hub>;
+	static	auto				initialize_logger() -> object_ptr<logger_hub>;
+	static	auto				initialize_logger(object_ptr<logger_hub>&& _plogger) -> object_ptr<logger_hub>;
 
 protected:
 	static	void				reset_logger() noexcept;

@@ -31,7 +31,7 @@ class CGDK::resource::updatable::file :
 {
 public:
 			result_code			initialize() { context _context; return this->initialize(_context); }
-			result_code			initialize(const INITIALIZE_PARAMETER& _parameter) { context temp{ buffer_view((char*)&_parameter, sizeof(INITIALIZE_PARAMETER)) }; return this->initialize(temp); }
+			result_code			initialize(const INITIALIZE_PARAMETER& _parameter) { context temp; temp = buffer_view((char*)&_parameter, sizeof(INITIALIZE_PARAMETER)); return this->initialize(temp); }
 	virtual	result_code			initialize(context& _context) override { return this->object::Ninitializable::initialize(_context); }
 
 protected:
@@ -42,6 +42,7 @@ protected:
 
 			std::vector<shared_buffer> m_vector_buffer;
 			std::filesystem::path m_full_file_path;
+
 
 	virtual	result_code			process_message(sMESSAGE& _msg) override;
 	virtual shared_buffer		get_block(uint64_t _pos) override;

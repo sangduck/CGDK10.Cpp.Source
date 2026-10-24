@@ -1,4 +1,4 @@
-﻿#include "asio/asio.h"
+#include "asio/asio.h"
 #include <iostream>
 #include <sstream>
 #include <boost/thread.hpp>

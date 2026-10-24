@@ -1,0 +1,13 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="group.02.message_mediator\server.console\tutorial.group.message_mediator.server.console.vs18.vcxproj" Id="8cc33f66-e082-49e6-a7ba-21db3721a314" />
+  <Project Path="group.03.schedulable\server.console\tutorial.group.schedulable.server.console.vs18.vcxproj" Id="d5c4a204-9408-4184-bff1-779fe7e873f3" />
+  <Project Path="group.05.observer.1\server.console\tutorial.group.observer.1.server.console.vs18.vcxproj" Id="775b8fdc-bf53-4323-b863-2fbeceea4951" />
+  <Project Path="group.06.observer.2\server.console\tutorial.group.observer.2.server.console.vs18.vcxproj" Id="a61f260e-8d54-4a30-b5ed-91ee48d8ab7a" />
+  <Project Path="group.04.chatting\server.console\tutorial.group.chatting.server.console.vs18.vcxproj" Id="d3f93b29-eb8e-4cc8-b239-52cd229f3d64" />
+  <Project Path="group.ex01.group_type\server.console\tutorial.group.group_type.server.console.vs18.vcxproj" Id="e871a4bc-dd9c-4030-b52b-06729864e67b" />
+  <Project Path="group.ex02.startable\server.console\tutorial.group.startable.server.console.vs18.vcxproj" Id="3606096a-5da3-486f-b222-1dd1fd13e64c" />
+  <Project Path="group.01.simple\server.console\tutorial.group.simple.server.console.vs18.vcxproj" Id="bd69591e-2e73-4411-9142-6a884b787bba" />
+</Solution>

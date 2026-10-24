@@ -155,11 +155,17 @@ namespace time_event
 		void						statistics_succeeded() noexcept	{ ++count_succeeded; time_last_succeeded = chrono::time::utc::now();}
 		void						statistics_failed() noexcept	{ ++count_failed; time_last_failed = chrono::time::utc::now();}
 	};
+
+	// - time settings in a context (e.g. JSON)
+	//   duration   : "10s", "1500ms", "5m" / "5min", "2h", "1d", "1h 30m", "10" (seconds)
+	//   time point : "now", "now + 1s", "now - 1h", or a date time string (e.g. "2026-01-01 12:00:00")
+	[[nodiscard]] bool				parse_duration(std::string_view _string, chrono::time::duration& _duration) noexcept;
+	[[nodiscard]] bool				parse_time_point(std::string_view _string, chrono::time::utc::time_point& _time_point) noexcept;
 }
 
-template<class TTYPE = char> std::basic_string_view<TTYPE>	to_string(time_event::eSETTER _setter, bool _upper_case = true) noexcept;
-template<class TTYPE = char> std::basic_string_view<TTYPE>	to_string(time_event::eSTATE _state, bool _upper_case = true) noexcept;
-template<class TTYPE = char> std::basic_string_view<TTYPE>	to_string(time_event::eTYPE _type, bool _upper_case = true) noexcept;
+std::string_view to_string(time_event::eSETTER _setter, bool _upper_case = true) noexcept;
+std::string_view to_string(time_event::eTYPE _state, bool _upper_case = true) noexcept;
+std::string_view to_string(time_event::eSTATE _state, bool _upper_case = true) noexcept;
 using EVENT_FUNCTION = std::function<result_code(chrono::time::utc::time_point)>;
 
 

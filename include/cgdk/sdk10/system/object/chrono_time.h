@@ -98,7 +98,7 @@ namespace utc
         constexpr time_point& operator = (const clock::time_point& _rhs) { *static_cast<clock::time_point*>(this) = _rhs; return *this; }
     };
 
-    [[nodiscard]] inline time_point now() noexcept;
+    [[nodiscard]] time_point now() noexcept;
 	[[nodiscard]] inline std::time_t to_time_t(const time_point& _time) noexcept { return clock::to_time_t(_time); }
 	[[nodiscard]] inline time_point from_time_t(std::time_t _tm) noexcept { return clock::from_time_t(_tm); }
 }
@@ -126,60 +126,15 @@ namespace local
         constexpr time_point& operator = (const clock::time_point& _rhs) { *static_cast<clock::time_point*>(this) = _rhs; return *this; }
     };
 
-    [[nodiscard]] inline time_point now() noexcept;
+    [[nodiscard]] time_point now() noexcept;
 	[[nodiscard]] inline std::time_t to_time_t(const time_point& _time) noexcept { return clock::to_time_t(_time); }
 	[[nodiscard]] inline time_point from_time_t(std::time_t _tm) noexcept { return clock::from_time_t(_tm); }
 }
 
-clock::duration _get_utc_diff() noexcept;
-inline clock::duration get_utc_diff() noexcept
-{
-    static clock::duration time_diff = _get_utc_diff();
-    return time_diff;
-}
-
-inline clock::time_point __convert_time_to_local(const clock::time_point& _utc_time)
-{
-    return _utc_time + get_utc_diff();
-}
-inline clock::time_point __convert_time_to_utc(const clock::time_point& _local_time)
-{
-    return _local_time - get_utc_diff();
-}
-
-// local
-inline local::time_point::time_point(const utc::time_point& _utc_time) : clock::time_point(__convert_time_to_local(_utc_time))
-{
-}
-inline local::time_point& local::time_point::operator = (const utc::time_point& _rhs)
-{
-    *reinterpret_cast<clock::time_point*>(this) = __convert_time_to_local(_rhs);
-    return *this;
-}
-inline local::time_point local::now() noexcept
-{
-    return clock::now() + get_utc_diff();
-}
-
-// utc
-inline utc::time_point::time_point(const local::time_point& _local_time) : clock::time_point(__convert_time_to_utc(_local_time))
-{
-}
-inline utc::time_point& utc::time_point::operator = (const local::time_point& _rhs)
-{
-    *reinterpret_cast<clock::time_point*>(this) = __convert_time_to_utc(_rhs);
-    return *this;
-}
-inline utc::time_point utc::now() noexcept
-{
-    return clock::now();
-}
-
 
 }
 }
 
-// 
 template<> class is_std_chrono_time_point <chrono::time::time_point> : public std::true_type {};
 template<> class is_std_chrono_time_point <chrono::time::utc::time_point> : public std::true_type {};
 template<> class is_std_chrono_time_point <chrono::time::local::time_point> : public std::true_type {};

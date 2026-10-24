@@ -5,10 +5,13 @@ using namespace CGDK;
 
 query::rdb::odbc::transaction_guard::transaction_guard(session* _psession) : m_psession(_psession)
 {
-	if (this->m_psession.empty())
+	// declare)
+	auto psession = this->m_psession;
+
+	if (psession.empty())
 		return;
 
-	this->m_psession->start_transaction();
+	psession->start_transaction();
 }
 
 query::rdb::odbc::transaction_guard::~transaction_guard() noexcept 
@@ -34,7 +37,7 @@ void query::rdb::odbc::transaction_guard::_commit()
 		throwable::failure_ex e;
 
 		// - add error log
-		e.add_description("(error) _commit transaction");
+		e.add_description("(error) fail to 'commit_transaction'");
 
 		// - get error records
 		CGDK::query::rdb::odbc::_dump_error_records(e, SQL_HANDLE_DBC, psession->m_handle_dbc);

@@ -1,9 +1,9 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
 //*                                                                           *
-//*                     tutorials common - object_pointer                     *
+//*                       tutorials execute - executor                        *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -69,99 +69,99 @@ void test_function_2(int _x, int _y)
 int main()
 {
 	// ------------------------------------------------------------------
-	// 1. post() í•¨ìˆ˜!
-	//    - system_executorì˜ postí•¨ìˆ˜ë¡œ ë¹„ë™ê¸° ì‹¤í–‰ì„ í•  ìˆ˜ ìˆë‹¤.
-	//    - post() í•¨ìˆ˜ëŠ” ë°˜ë“œì‹œ Iexecutable ê°ì²´ë¥¼ ë°›ì•„ ë¹„ë™ê¸°ì ìœ¼ë¡œ
-	//      Iexecutable::process_execute() í•¨ìˆ˜ë¥¼ ì‹¤í–‰í•œë‹¤.
+	// 1. post() ÇÔ¼ö!
+	//    - system_executorÀÇ postÇÔ¼ö·Î ºñµ¿±â ½ÇÇàÀ» ÇÒ ¼ö ÀÖ´Ù.
+	//    - post() ÇÔ¼ö´Â ¹İµå½Ã Iexecutable °´Ã¼¸¦ ¹Ş¾Æ ºñµ¿±âÀûÀ¸·Î
+	//      Iexecutable::process_execute() ÇÔ¼ö¸¦ ½ÇÇàÇÑ´Ù.
 	// ------------------------------------------------------------------
 	{
-		// - executableì„ ìƒì„±í•œë‹¤.
+		// - executableÀ» »ı¼ºÇÑ´Ù.
 		auto pexecutor_1 = make_object<foo>();
 
-		// - ë¹„ë™ê¸°ì ìœ¼ë¡œ pexecutor_1ì˜ process_executeí•¨ìˆ˜ë¥¼ ì‹¤í–‰í•œë‹¤.
+		// - ºñµ¿±âÀûÀ¸·Î pexecutor_1ÀÇ process_executeÇÔ¼ö¸¦ ½ÇÇàÇÑ´Ù.
 		system_executor::post(pexecutor_1);
 
-		// - executableì„ ìƒì„±í•´ì„œ ë°”ë¡œ ì‹¤í–‰ê±¸ê¸°
+		// - executableÀ» »ı¼ºÇØ¼­ ¹Ù·Î ½ÇÇà°É±â
 		system_executor::post(make_object<foo>());
 	}
 	//-----------------------------------------------------------------
-	// 2. make_executable í•¨ìˆ˜
-	//    - ì¼ë°˜ í•¨ìˆ˜, lambdaí•¨ìˆ˜, std::bind ë“±ë“± ì‹¤í–‰ê°€ëŠ¥í•œ ëª¨ë“  ê°ì²´ì™€
-	//      í•¨ìˆ˜ë“¤ì€ make_executableì„ ì‚¬ìš©í•´ í¸ë¦¬í•˜ê²Œ Iexecutable ê°ì²´ë¡œ
-	//      ë§Œë“¤ì–´ ì¤€ë‹¤.
-	//    - make_executable í•¨ìˆ˜ë¡œ ë§Œë“¤ì–´ì§„ Iexecutable ê°ì²´ë¥¼ post í•¨ìˆ˜ë¡œ
-	//      ë¹„ë™ê¸°ì ìœ¼ë¡œ ì‹¤í–‰í•œë‹¤.
+	// 2. make_executable ÇÔ¼ö
+	//    - ÀÏ¹İ ÇÔ¼ö, lambdaÇÔ¼ö, std::bind µîµî ½ÇÇà°¡´ÉÇÑ ¸ğµç °´Ã¼¿Í
+	//      ÇÔ¼öµéÀº make_executableÀ» »ç¿ëÇØ Æí¸®ÇÏ°Ô Iexecutable °´Ã¼·Î
+	//      ¸¸µé¾î ÁØ´Ù.
+	//    - make_executable ÇÔ¼ö·Î ¸¸µé¾îÁø Iexecutable °´Ã¼¸¦ post ÇÔ¼ö·Î
+	//      ºñµ¿±âÀûÀ¸·Î ½ÇÇàÇÑ´Ù.
 	//
-	//     system_executor::post(make_executable([í•¨ìˆ˜]));
-	//     system_executor::post(make_executable([lambda í•¨ìˆ˜]));
+	//     system_executor::post(make_executable([ÇÔ¼ö]));
+	//     system_executor::post(make_executable([lambda ÇÔ¼ö]));
 	//     system_executor::post(make_executable([std::bind(...)]));
 	// 
 	//-----------------------------------------------------------------
 	{
-		// 1) ì¼ë°˜ í•¨ìˆ˜(test_function_1)ë¥¼ ë¹„ë™ê¸°ì ìœ¼ë¡œ ì‹¤í–‰í•œë‹¤.
+		// 1) ÀÏ¹İ ÇÔ¼ö(test_function_1)¸¦ ºñµ¿±âÀûÀ¸·Î ½ÇÇàÇÑ´Ù.
 		system_executor::post(make_executable(&test_function_1));
 
-		// 2) lambda í•¨ìˆ˜ë¥¼ ë¹„ë™ê¸°ì ìœ¼ë¡œ ì‹¤í–‰í•œë‹¤.
+		// 2) lambda ÇÔ¼ö¸¦ ºñµ¿±âÀûÀ¸·Î ½ÇÇàÇÑ´Ù.
 		system_executor::post(make_executable([=]()
 			{
 				std::cout << "lambda execution."sv;
 			}));
 
-		// 3)  std::bindë„ ë¹„ë™ê¸°ì ìœ¼ë¡œ ì‹¤í–‰í•  ìˆ˜ ìˆë‹¤.
+		// 3)  std::bindµµ ºñµ¿±âÀûÀ¸·Î ½ÇÇàÇÒ ¼ö ÀÖ´Ù.
 		system_executor::post(make_executable(std::bind(&test_function_2, 10, 20)));
 
-		// 4) memberí•¨ìˆ˜ë¥¼ ë¹„ë™ê¸°ì ìœ¼ë¡œ ì‹¤í–‰í•˜ê¸°
-		//    - ë¹„ë™ê¸°ì ìœ¼ë¡œ í˜¸ì¶œë˜ë¯€ë¡œ ê°ì²´ì˜ ì†Œë©¸ ì‹œì ì„ ì£¼ì˜í•  í•„ìš”ê°€ ìˆë‹¤.
-		//      object_ptr<T>ì„ ì‚¬ìš©í•˜ë©´ ìë™ì ìœ¼ë¡œ í˜¸ì¶œì´ ì™„ë£Œë  ë•Œê¹Œì§€ ê°ì²´ë¥¼ í•´ì œí•˜ì§€ëŠ” ì•ŠìŠµë‹ˆë‹¤.
-		//    - std::bind()í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ë©¤ë²„í•¨ìˆ˜ë„ ë¹„ë™ê¸°ì ìœ¼ë¡œ í˜¸ì¶œí•  ìˆ˜ ìˆë‹¤.
+		// 4) memberÇÔ¼ö¸¦ ºñµ¿±âÀûÀ¸·Î ½ÇÇàÇÏ±â
+		//    - ºñµ¿±âÀûÀ¸·Î È£ÃâµÇ¹Ç·Î °´Ã¼ÀÇ ¼Ò¸ê ½ÃÁ¡À» ÁÖÀÇÇÒ ÇÊ¿ä°¡ ÀÖ´Ù.
+		//      object_ptr<T>À» »ç¿ëÇÏ¸é ÀÚµ¿ÀûÀ¸·Î È£ÃâÀÌ ¿Ï·áµÉ ¶§±îÁö °´Ã¼¸¦ ÇØÁ¦ÇÏÁö´Â ¾Ê½À´Ï´Ù.
+		//    - std::bind()ÇÔ¼ö¸¦ »ç¿ëÇØ ¸â¹öÇÔ¼öµµ ºñµ¿±âÀûÀ¸·Î È£ÃâÇÒ ¼ö ÀÖ´Ù.
 		{
 			auto pobject = make_object<goo>();
 
-			// - ìœ„ì˜ í˜•ì´ ì•„ë‹ ê²½ìš° std::bindë¥¼ ì‚¬ìš©í•œë‹¤.
+			// - À§ÀÇ ÇüÀÌ ¾Æ´Ò °æ¿ì std::bind¸¦ »ç¿ëÇÑ´Ù.
 			system_executor::post(make_executable(std::bind(&goo::print_string, pobject, "std::bind!!"s)));
 		}
 	}
 	//-----------------------------------------------------------------
-	// 3. ì¼ì •ì‹œê°„ ì´í›„ ì‹¤í–‰í•˜ê¸°
-	//    - postí•¨ìˆ˜ì˜ ë‘ë²ˆì§¸ ì¸ìë¡œ ì‹¤í–‰ ì‹œê°„ì„ ë„£ìœ¼ë©´ í•´ë‹¹ ì‹œê°„ì—
-	//      ì‹¤í–‰í•  ìˆ˜ ìˆë‹¤.
-	//    - chroho::durationë¥¼ ë‘ë²ˆì§¸ ì¸ìë¡œ ë„£ìœ¼ë©´ í˜„ì¬ ì‹œê°„ì—ì„œ 
-	//      ê·¸ ì‹œê°„ë§Œì¿  í›„ì— ì‹¤í–‰ëœë‹¤.
+	// 3. ÀÏÁ¤½Ã°£ ÀÌÈÄ ½ÇÇàÇÏ±â
+	//    - postÇÔ¼öÀÇ µÎ ¹øÂ° ÀÎÀÚ·Î ½ÇÇà ½Ã°£À» ³ÖÀ¸¸é ÇØ´ç ½Ã°£¿¡
+	//      ½ÇÇàÇÒ ¼ö ÀÖ´Ù.
+	//    - chroho::duration¸¦ µÎ ¹øÂ° ÀÎÀÚ·Î ³ÖÀ¸¸é ÇöÀç ½Ã°£¿¡¼­ 
+	//      ±× ½Ã°£¸¸Äí ÈÄ¿¡ ½ÇÇàµÈ´Ù.
 	//
-	//     system_executor::post([Iexecutable], [ì‹œê°(timc_duration)]);
-	//     system_executor::post([Iexecutable], [ì‹œê°„(duration)]);
+	//     system_executor::post([Iexecutable], [½Ã°¢(timc_duration)]);
+	//     system_executor::post([Iexecutable], [½Ã°£(duration)]);
 	// 
 	//-----------------------------------------------------------------
 	{
-		// 1) ì‹¤í–‰ ê°ì²´ë“¤ì„ ìƒì„±í•˜ì—¬ ì¶”ê°€í•œë‹¤. 
-		//   ( ê°ê° 1ì´ˆí›„, 2ì´ˆí›„, 5ì´ˆ í›„ì— fooê°ì²´ì˜ process_execute()ì„ ì‹¤í–‰í•œë‹¤.)
+		// 1) ½ÇÇà °´Ã¼µéÀ» »ı¼ºÇÏ¿© Ãß°¡ÇÑ´Ù. 
+		//   ( °¢°¢ 1ÃÊÈÄ, 2ÃÊÈÄ, 5ÃÊ ÈÄ¿¡ foo°´Ã¼ÀÇ process_execute()À» ½ÇÇàÇÑ´Ù.)
 		system_executor::post(make_object<foo>("after 1sec"s), chrono::tick::now() + 1s);
 		system_executor::post(make_object<foo>("after 2sec"s), chrono::tick::now() + 2s);
-		system_executor::post(make_object<foo>("after 5sec"s), 5s); // í˜„ì¬ì—ì„œ 5ì´ˆí›„ ì‹¤í–‰ 'chrono::tick::now() + 5s'ì™€ ë™ì¼í•˜ë‹¤.
+		system_executor::post(make_object<foo>("after 5sec"s), 5s); // ÇöÀç¿¡¼­ 5ÃÊÈÄ ½ÇÇà 'chrono::tick::now() + 5s'¿Í µ¿ÀÏÇÏ´Ù.
 
-		// 2) lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•  ìˆ˜ë„ ìˆë‹¤.(1.5ì´ˆ í›„ì— ì‹¤í–‰ëœë‹¤. LambdaëŠ” VS2010ë¶€í„° ì§€ì›ëœë‹¤.)
+		// 2) lambdaÇÔ¼ö¸¦ »ç¿ëÇÒ ¼öµµ ÀÖ´Ù.(1.5ÃÊ ÈÄ¿¡ ½ÇÇàµÈ´Ù. Lambda´Â VS2010ºÎÅÍ Áö¿øµÈ´Ù.)
 		system_executor::post(make_executable([]() {std::cout << "lambda execution. [after 1500ms]\n"sv; }), chrono::tick::now() + 1500ms);
 
-		// 3) memberí•¨ìˆ˜ë¥¼ ì‹¤í–‰ ì‹œí‚¬ ìˆ˜ë„ ìˆë‹¤.(10ì´ˆ í›„ ì‹¤í–‰ëœë‹¤.)
+		// 3) memberÇÔ¼ö¸¦ ½ÇÇà ½ÃÅ³ ¼öµµ ÀÖ´Ù.(10ÃÊ ÈÄ ½ÇÇàµÈ´Ù.)
 		system_executor::post(make_executable(std::bind(&goo::print_string, make_object<goo>(), "std::bind!!"s)), chrono::tick::now() + 10s);
 
-		// 4) ì¼ë°˜ í•¨ìˆ˜ë¥¼ ì‹¤í–‰ì‹œí‚¬ ìˆ˜ë„ ìˆë‹¤.
-		system_executor::post(make_executable(&test_function_1), chrono::tick::now() + 4s); // (í˜„ì¬ì‹œê°ì˜ 4ì´ˆ í›„ì— ì‹¤í–‰ëœë‹¤.)
+		// 4) ÀÏ¹İ ÇÔ¼ö¸¦ ½ÇÇà½ÃÅ³ ¼öµµ ÀÖ´Ù.
+		system_executor::post(make_executable(&test_function_1), chrono::tick::now() + 4s); // (ÇöÀç½Ã°¢ÀÇ 4ÃÊ ÈÄ¿¡ ½ÇÇàµÈ´Ù.)
 	}
 	// ------------------------------------------------------------------
-	// 4. executor ì§ì ‘ ìƒì„±í•´ ì‚¬ìš©í•˜ê¸°
-	//    - system_executorê°€ ì•„ë‹ˆë¼ ì‚¬ìš©ìê°€ ì§ì ‘ ìƒì„±í•œ executorì„ ìƒì„±í•´ 
-	//      ì‹¤í–‰í•  ìˆ˜ë„ ìˆë‹¤.
+	// 4. executor Á÷Á¢ »ı¼ºÇØ »ç¿ëÇÏ±â
+	//    - system_executor°¡ ¾Æ´Ï¶ó »ç¿ëÀÚ°¡ Á÷Á¢ »ı¼ºÇÑ executorÀ» »ı¼ºÇØ 
+	//      ½ÇÇàÇÒ ¼öµµ ÀÖ´Ù.
 	//
 	// ------------------------------------------------------------------
 	{
-		// (*) executorë¥¼ ìƒì„±í•œë‹¤.
-		auto pexecutor = make_own<executor::io_context_threads>();
+		// (*) executor¸¦ »ı¼ºÇÑ´Ù.
+		auto pexecutor = make_own<executor::queue_list_threads>();
 
-		// 2) thread 2ê°œë¥¼ ì‹œì‘í•œë‹¤.
+		// 2) thread 2°³¸¦ ½ÃÀÛÇÑ´Ù.
 		pexecutor->start({ 2 });
 
-		// 3) executorì— postí•¨ìˆ˜ë¡œ ë¹„ë™ê¸° ì‹¤í–‰ì„ ìš”ì²­í•œë‹¤.
+		// 3) executor¿¡ postÇÔ¼ö·Î ºñµ¿±â ½ÇÇàÀ» ¿äÃ»ÇÑ´Ù.
 		pexecutor->post(make_executable([=]()
 			{
 				std::cout << "lambda execution."sv;
@@ -170,22 +170,22 @@ int main()
 
 	//-----------------------------------------------------------------
 	//
-	// 5. í‚¤ë¥¼ ì…ë ¥í•  ë•Œë§ˆë‹¤ foo ê°ì²´ë¥¼ ë§Œë“¤ì–´ ë¹„ë™ê¸° ì‹¤í–‰ì„ ê±´ë‹¤.
+	// 5. Å°¸¦ ÀÔ·ÂÇÒ ¶§¸¶´Ù foo °´Ã¼¸¦ ¸¸µé¾î ºñµ¿±â ½ÇÇàÀ» °Ç´Ù.
 	//
 	//-----------------------------------------------------------------
 	for (;;)
 	{
-		// 1) í‚¤ë³´ë“œë¡œë¶€í„° ì…ë ¥ì„ ë°›ëŠ”ë‹¤.
+		// 1) Å°º¸µå·ÎºÎÅÍ ÀÔ·ÂÀ» ¹Ş´Â´Ù.
 		int	ch = _getch();
 
-		// check) ë°›ì€ í‚¤ì…ë ¥ì´ ESC(VK_ESCAPE)ë¼ë©´ ë¹ ì ¸ë‚˜ê°„ë‹¤.
+		// check) ¹ŞÀº Å°ÀÔ·ÂÀÌ ESC(VK_ESCAPE)¶ó¸é ºüÁ®³ª°£´Ù.
 		BREAK_IF(ch == 0x1B);
 
-		// 2) ìƒˆ ì‹¤í–‰ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+		// 2) »õ ½ÇÇà °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 		auto pexecutor = make_object<foo>("key pressed"s);
 
-		// 3) ê¸°ë³¸ executorì— ì‹¤í–‰ì„ ê±´ë‹¤.
-		//    (ì‹¤í–‰ëœ ì´í›„ ìë™ìœ¼ë¡œ detachëœë‹¤.)
+		// 3) ±âº» executor¿¡ ½ÇÇàÀ» °Ç´Ù.
+		//    (½ÇÇàµÈ ÀÌÈÄ ÀÚµ¿À¸·Î detachµÈ´Ù.)
 		system_executor::post(pexecutor);
 	}
 

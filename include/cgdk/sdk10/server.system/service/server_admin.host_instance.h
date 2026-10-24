@@ -21,15 +21,10 @@
 namespace CGDK
 {
 
-
-struct server_admin::sINSTANCE_HOST
+class server_system::host::instance : 
+	public						Ninstance
 {
-	ENABLE_STRUCT_SERIALIZABLE
-
-	int						service_type{ eINSTANCE_TYPE::HOST };
-	sHOST_SETTING_INFO		setting;
-	sHOST_INSTANCE_INFO		info;
-	sHOST_INSTANCE_STATUS	status;
+	virtual	result_code			process_message(sMESSAGE& /*_msg*/) override { return eRESULT::BYPASS; }
 };
 
 } 

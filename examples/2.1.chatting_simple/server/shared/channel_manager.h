@@ -27,12 +27,13 @@ public:
 			object_ptr<Igroup>	register_channel(CHANNEL_ID _id_channel, own_ptr<Igroup> _pgroup_channel);
 			own_ptr<Igroup>		unregister_channel(CHANNEL_ID _id_channel) noexcept;
 			object_ptr<Igroup>	get_channel(CHANNEL_ID	_id_channel) noexcept;
-			uint64_t			get_channel_count() const noexcept { scoped_lock(this->m_container_channel) { return this->m_container_channel.size(); } }
+			uint64_t			get_channel_count() const noexcept { std::lock_guard lock(this->m_lockable_container_channel); return this->m_container_channel.size(); }
 private:
 	virtual	void				on_starting(context& _msg) override;
 	virtual	void				on_stop() override;
 
-			lockable<std::unordered_map<CHANNEL_ID, own_ptr<Igroup>>> m_container_channel;
+	mutable	lock_object			m_lockable_container_channel;
+			std::unordered_map<CHANNEL_ID, own_ptr<Igroup>> m_container_channel;
 			std::atomic<uint64_t> m_statistics_channel_create;
 			std::atomic<uint64_t> m_statistics_channel_destroy;
 };

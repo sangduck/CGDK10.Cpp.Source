@@ -38,25 +38,13 @@ public:
 			acceptor_web_server()
 			{
 				// check) 
-				static_assert(std::is_base_of_v<Icryptable, TSOCKET>, "TSOCKET must inherit 'net::io::Nhttp_server' interface");
-			}
-			acceptor_web_server(const std::string_view _name) : net::io::connective::acceptor::Ntcp_secure{ _name }
-			{
-				// check) 
-				static_assert(std::is_base_of_v<Icryptable, TSOCKET>, "TSOCKET must inherit 'net::io::Nhttp_server' interface");
+				static_assert(std::is_base_of_v<net::io::Nhttp_server, TSOCKET>, "TSOCKET must inherit 'net::io::Nhttp_server' interface");
 
-				// 1) Name이 없을 경우 acceptor의 Name을 설정한다.
-				if (_name.empty())
-				{
-					// declare) 
-					char temp[MAX_NAME_LENGTH];
+				std::string temp_name("acceptor.http<");
+				temp_name += typeid(TSOCKET).name();
+				temp_name += ">"sv;
 
-					// - 기본 acceptor의 Name을 설정한다.
-					__sprintf(temp, "acceptor web_server<%s>", typeid(TSOCKET).name());
-
-					// - 기본 이름을 설정한다.
-					this->set_name(temp);
-				}
+				this->name(temp_name);
 			}
 	virtual	~acceptor_web_server() noexcept {}
 };

@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -34,11 +34,11 @@ using namespace CGDK;
 //
 // tutorial common - object pointer
 //
-// CGDKì—ì„œ ê°ì²´ì˜ ìƒì„±ê³¼ íŒŒê´´ í˜¹ì€ ê°ì¢… ê¸°ëŠ¥ì˜ ìˆ˜í–‰ì˜ ê³µí†µëœ ì²˜ë¦¬ë¥¼ ìœ„í•´ ì—¬ëŸ¬
-// Inteface classë¥¼ ì‚¬ìš©í•˜ê³  ìˆìŠµë‹ˆë‹¤.
-// ì´ê²ƒë“¤ì— ëŒ€í•œ ì„¤ëª…ì…ë‹ˆë‹¤.
+// CGDK¿¡¼­ °´Ã¼ÀÇ »ı¼º°ú ÆÄ±« È¤Àº °¢Á¾ ±â´ÉÀÇ ¼öÇàÀÇ °øÅëµÈ Ã³¸®¸¦ À§ÇØ ¿©·¯
+// Inteface class¸¦ »ç¿ëÇÏ°í ÀÖ½À´Ï´Ù.
+// ÀÌ°Íµé¿¡ ´ëÇÑ ¼³¸íÀÔ´Ï´Ù.
 //
-//  1) ë©”ì‹œì§€ ì²˜ë¦¬ ê´€ë ¨ interface class
+//  1) ¸Ş½ÃÁö Ã³¸® °ü·Ã interface class
 //
 //       - CGDK::Imessageable	(+CGDK::Ireferenceable)
 //       - CGDK::Imessage_transmitter	(+CGDK::Iattachable<Imessageable>)
@@ -51,7 +51,7 @@ class foo :
 	public	object::Nstartable
 {
 public:
-	// 1) ìƒì„±ìì™€  ì†Œë©¸ì
+	// 1) »ı¼ºÀÚ¿Í  ¼Ò¸êÀÚ
 			foo()				{ std::cout << "@ Contructor..."sv << std::endl; }
 	virtual	~foo()				{ std::cout << "@ Destructor..."sv << std::endl; }
 
@@ -79,6 +79,6 @@ int main()
 	// - getch
 	_getch();
 
-	// Return) ë.
+	// Return) ³¡.
 	return 0;
 }

@@ -38,14 +38,18 @@ static const std::size_t MAX_TCP_MESSAGE_SIZE						= ( 512 * 1024 * 1024);
 	#define	DEFAULT_ENABLE_TCP_NODELAY					true
 #endif
 
+// - TCP Fast Open : the pending TFO connections of a listen socket when the acceptor parameter "tcp_fastopen" is true (linux. windows : enable only)
+static const int DEFAULT_TCP_FASTOPEN_QUEUE_LENGTH					= 256;
+
 // 3) For TCP receiveable
 static const std::size_t DEFAULT_BYTES_TCP_MESSAGE_BUFFER			= (          1 * 1024);
 static const std::size_t DEFAULT_BYTES_MAX_TCP_MESSAGE_BUFFER		= (MEMORYPOOL_MAX_SIZE_OF_MEMORY_BLOCK);
 static const std::size_t DEFAULT_BYTES_MAX_MESSAGE_RECEIVE_QUEUE	= ( 256 * 1024 * 1024);
 
 // 4) For TCP sendable with gathering
-static const std::size_t DEFAULT_MAX_DEPTH_OF_MESSAGE_SEND_QUEUE	= (               256); // - 이 숫자는 반드시 2의 승수(2,4,8,16,32,64,128,256 ...)여야 한다.
+static const std::size_t DEFAULT_MAX_DEPTH_OF_MESSAGE_SEND_QUEUE	= (              4096); // - 이 숫자는 반드시 2의 승수(2,4,8,16,32,64,128,256 ...)여야 한다.
 static const std::size_t DEFAULT_BYTES_MAX_MESSAGE_SEND_QUEUE		= (   8 * 1024 * 1024); // -   8M bytes
+static const std::size_t DEFAULT_BYTES_MAX_MESSAGE_SEND_QUEUE_ACCEPTED= (   4 * 1024 * 1024); // -   4M bytes (acceptor로 받은 접속(client)의 기본값. 연결 수가 많으므로 낮게 둔다.)
 static const std::size_t BYTES_SEND_ASYNC_THRESHOLD					= (          4 * 1024); // -  32k bytes
 static const std::size_t COUNT_SEND_GATHER_START_DEPTH				= (                16); // -   16 
 static const std::size_t BYTES_SEND_GATHER_BUFFER_MIN				= (          1 * 1024); // -  64k bytes
@@ -117,47 +121,51 @@ enum class eSOCKET_STATE : int32_t
 	LOGINED				 = 12,	// 12 : ID와 Password를 넣고 Log-In이 된 상태.
 	MAX
 };
-template <class T>
-std::basic_string_view<T>		to_string(eSOCKET_STATE _state) noexcept;
-template<> std::string_view		to_string<char>(eSOCKET_STATE _state) noexcept;
-template<> std::wstring_view	to_string<wchar_t>(eSOCKET_STATE _state) noexcept;
+std::string_view		to_string(eSOCKET_STATE _state) noexcept;
 
 // 2) acceptor
 #define	NO_START_ACCEPT						(-1)
 
-const uint64_t	DISCONNECT_REASON_NODISCONNECTEX			 = 0x1000000000000000;	// Mask
+using disconnect_reason_t = uint64_t;
 
-const uint64_t	DISCONNECT_REASON_NONE						 = 0x0000'0000'0000'0000;	// 일상적인 처리 과정일 경우
-const uint64_t	DISCONNECT_REASON_FAIL						 = 0x0000'0001'0000'0000;	// 오류로 인한 접속 종료인 경우(송수신 중 오류, 상대방에 의한 강제접속 종료)
-const uint64_t	DISCONNECT_REASON_ACTIVE					 = 0x0000'0002'0000'0000;	// 접속 종료를 요청한 측일 경우(설정되어 있지 않으면 Passive)
-const uint64_t	DISCONNECT_REASON_ABORTIVE					 = 0x0000'0004'0000'0000;	// 강제 접속종료일 경우(설정되어 있지 않으면 Graceful)
-const uint64_t	DISCONNECT_REASON_EXCEPTION					 = 0x0000'0008'0000'0000;	// 예외로 인해 것일 경우
-const uint64_t	DISCONNECT_REASON_MASK						 = 0x0000'ffff'0000'0000;	// mask
-const uint64_t	DISCONNECT_REASON_MASK_USER					 = 0x0000'0000'ffff'ffff;	// user 정의
+const disconnect_reason_t	DISCONNECT_REASON_NODISCONNECTEX			 = 0x1000'0000'0000'0000;	// Mask
 
-const uint64_t	DISCONNECT_REASON_OVERFLOW_MAX_MESSAGES		 = 0x0000'0000'0000'0001;	// send시 message 수의 Overflow로 접속을 종료했다.
-const uint64_t	DISCONNECT_REASON_OVERFLOW_MAX_BYTES		 = 0x0000'0000'0000'0002;	// send시 Bytes 수의 Overflow로 접속을 종료했다.
-const uint64_t	DISCONNECT_REASON_MESSAGE_LENGTH_TOO_LONG	 = 0x0000'0000'0000'0003;	// message의 길이가 너무 길다
-const uint64_t	DISCONNECT_REASON_MESSAGE_LENGTH_TOO_SHORT	 = 0x0000'0000'0000'0004;	// message의 길이가 너무 짧다
-const uint64_t	DISCONNECT_REASON_MESSAGE_UNHANDLED_EXCEPTION= 0x0000'0000'0000'0005;	// message처리 중 핸들링 되지 않은 Exception
-const uint64_t	DISCONNECT_REASON_BUFFER_IS_NULL			 = 0x0000'0000'0000'0006;	// shared_buffer의 buf값이 nullptr이다.
-const uint64_t	DISCONNECT_REASON_INVALID_STATE				 = 0x0000'0000'0000'0007;	// 처리 과정상 있을 수 없는 상태이다.
-const uint64_t	DISCONNECT_REASON_INVALID_SOCKET_HANDLE		 = 0x0000'0000'0000'0008;	// socket handle이 INVALID_SOCKET_HANDLE이다.
-const uint64_t	DISCONNECT_REASON_FAIL_TO_SOCKET_PREPARE	 = 0x0000'0000'0000'0009;	// socket의 prepare단계에서 실패했다.
-const uint64_t	DISCONNECT_REASON_FAIL_TO_SOCKET_ACCEPT		 = 0x0000'0000'0000'000a;	// socket의 Accept 과정에서실패했다.
-const uint64_t	DISCONNECT_REASON_FAIL_TO_SOCKET_CONNECT	 = 0x0000'0000'0000'000b;	// socket의 connect 단계에서 실패했다.
-const uint64_t	DISCONNECT_REASON_FAIL_TO_SOCKET_BIND		 = 0x0000'0000'0000'000c;	// socket의 최대 생성 수를 초과해 접속이 종료되었다.
-const uint64_t	DISCONNECT_REASON_KEEP_ALIVE_TIME_OUT		 = 0x0000'0000'0000'000d;	// socket의 prepare단계에서 실패했다.
-const uint64_t	DISCONNECT_REASON_DISABLED					 = 0x0000'0000'0000'000e;	// acceptor나 connector가 disabled된 상태이다.
-const uint64_t	DISCONNECT_REASON_CONNECTION_FULL			 = 0x0000'0000'0000'000f;	// 최대접속수를 초과해 접속종료되어다.
-const uint64_t	DISCONNECT_REASON_EXCEPTION_OCCURED			 = 0x0000'0000'0000'0010;	// 처리중 예외가 발생해 접속이 종료되었다.
-const uint64_t	DISCONNECT_REASON_OPEN_SOCKET_LIMITS		 = 0x0000'0000'0000'0011;	// socket의 최대 생성 수를 초과해 접속이 종료되었다.
+const disconnect_reason_t	DISCONNECT_REASON_NONE						 = 0x0000'0000'0000'0000;	// 일상적인 처리 과정일 경우
+const disconnect_reason_t	DISCONNECT_REASON_FAIL						 = 0x0001'0000'0000'0000;	// 오류로 인한 접속 종료인 경우(송수신 중 오류, 상대방에 의한 강제접속 종료)
+const disconnect_reason_t	DISCONNECT_REASON_ACTIVE					 = 0x0002'0000'0000'0000;	// 접속 종료를 요청한 측일 경우(설정되어 있지 않으면 Passive)
+const disconnect_reason_t	DISCONNECT_REASON_ABORTIVE					 = 0x0004'0000'0000'0000;	// 강제 접속종료일 경우(설정되어 있지 않으면 Graceful)
+const disconnect_reason_t	DISCONNECT_REASON_EXCEPTION					 = 0x0008'0000'0000'0000;	// 예외로 인해 것일 경우
+const disconnect_reason_t	DISCONNECT_REASON_NO_RECEIVE_SHUTDOWN		 = 0x0010'0000'0000'0000;	// receive shutdown을 수행하지 않는다.
+const disconnect_reason_t	DISCONNECT_REASON_MASK						 = 0x00ff'0000'0000'0000;	// mask
+const disconnect_reason_t	DISCONNECT_REASON_MASK_USER					 = 0x0000'ffff'ffff'ffff;	// user 정의
 
-const uint64_t	DISCONNECT_REASON_SUCCESS					 = 0;
-const uint64_t	DISCONNECT_REASON_GRACEFUL					 = 0;
-const uint64_t	DISCONNECT_REASON_FAIL_TIMEOUT				 = (DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ACTIVE);
-const uint64_t	DISCONNECT_REASON_FAIL_ABORTIVE				 = (DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ABORTIVE | DISCONNECT_REASON_ACTIVE);
-const uint64_t	DISCONNECT_REASON_FAIL_EXCEPTION			 = (DISCONNECT_REASON_FAIL | DISCONNECT_REASON_EXCEPTION);
+const disconnect_reason_t	DISCONNECT_REASON_OVERFLOW_MAX_MESSAGES		 = 0x0000'0000'0000'0001;	// send시 message 수의 Overflow로 접속을 종료했다.
+const disconnect_reason_t	DISCONNECT_REASON_OVERFLOW_MAX_BYTES		 = 0x0000'0000'0000'0002;	// send시 Bytes 수의 Overflow로 접속을 종료했다.
+const disconnect_reason_t	DISCONNECT_REASON_MESSAGE_LENGTH_TOO_LONG	 = 0x0000'0000'0000'0003;	// message의 길이가 너무 길다
+const disconnect_reason_t	DISCONNECT_REASON_MESSAGE_LENGTH_TOO_SHORT	 = 0x0000'0000'0000'0004;	// message의 길이가 너무 짧다
+const disconnect_reason_t	DISCONNECT_REASON_MESSAGE_UNHANDLED_EXCEPTION= 0x0000'0000'0000'0005;	// message처리 중 핸들링 되지 않은 Exception
+const disconnect_reason_t	DISCONNECT_REASON_BUFFER_IS_NULL			 = 0x0000'0000'0000'0006;	// shared_buffer의 buf값이 nullptr이다.
+const disconnect_reason_t	DISCONNECT_REASON_INVALID_STATE				 = 0x0000'0000'0000'0007;	// 처리 과정상 있을 수 없는 상태이다.
+const disconnect_reason_t	DISCONNECT_REASON_INVALID_SOCKET_HANDLE		 = 0x0000'0000'0000'0008;	// socket handle이 INVALID_SOCKET_HANDLE이다.
+const disconnect_reason_t	DISCONNECT_REASON_FAIL_TO_SOCKET_PREPARE	 = 0x0000'0000'0000'0009;	// socket의 prepare단계에서 실패했다.
+const disconnect_reason_t	DISCONNECT_REASON_FAIL_TO_SOCKET_ACCEPT		 = 0x0000'0000'0000'000a;	// socket의 Accept 과정에서실패했다.
+const disconnect_reason_t	DISCONNECT_REASON_FAIL_TO_SOCKET_CONNECT	 = 0x0000'0000'0000'000b;	// socket의 connect 단계에서 실패했다.
+const disconnect_reason_t	DISCONNECT_REASON_FAIL_TO_SOCKET_BIND		 = 0x0000'0000'0000'000c;	// socket의 최대 생성 수를 초과해 접속이 종료되었다.
+const disconnect_reason_t	DISCONNECT_REASON_KEEP_ALIVE_TIME_OUT		 = 0x0000'0000'0000'000d;	// socket의 prepare단계에서 실패했다.
+const disconnect_reason_t	DISCONNECT_REASON_DISABLED					 = 0x0000'0000'0000'000e;	// acceptor나 connector가 disabled된 상태이다.
+const disconnect_reason_t	DISCONNECT_REASON_CONNECTION_FULL			 = 0x0000'0000'0000'000f;	// 최대접속수를 초과해 접속종료되어다.
+const disconnect_reason_t	DISCONNECT_REASON_EXCEPTION_OCCURRED			 = 0x0000'0000'0000'0010;	// 처리중 예외가 발생해 접속이 종료되었다.
+const disconnect_reason_t	DISCONNECT_REASON_OPEN_SOCKET_LIMITS		 = 0x0000'0000'0000'0011;	// socket의 최대 생성 수를 초과해 접속이 종료되었다.
+const disconnect_reason_t	DISCONNECT_REASON_FAIL_TO_INITIALIZE_CRYPT	 = 0x0000'0000'0000'0012;	// socket의 crypt 초기화에 실해했다.
+const disconnect_reason_t	DISCONNECT_REASON_INVALID_CRC				 = 0x0000'0000'0000'0013;	// crc가 다른 값이다.
+const disconnect_reason_t	DISCONNECT_REASON_FAIL_TO_ENCRYPT			 = 0x0000'0000'0000'0014;	// encrypt에 실패했다.
+const disconnect_reason_t	DISCONNECT_REASON_SUSTAIN_TIMEOUT			 = 0x0000'0000'0000'0015;	// socket sustain의 시간 제한(접속 중, 송수신 없음 등)으로 접속을 종료했다.
+
+const disconnect_reason_t	DISCONNECT_REASON_SUCCESS					 = 0;
+const disconnect_reason_t	DISCONNECT_REASON_GRACEFUL					 = 0;
+const disconnect_reason_t	DISCONNECT_REASON_FAIL_TIMEOUT				 = (DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ACTIVE);
+const disconnect_reason_t	DISCONNECT_REASON_FAIL_ABORTIVE				 = (DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ABORTIVE | DISCONNECT_REASON_ACTIVE);
+const disconnect_reason_t	DISCONNECT_REASON_FAIL_EXCEPTION			 = (DISCONNECT_REASON_FAIL | DISCONNECT_REASON_EXCEPTION);
 
 
 // ----------------------------------------------------------------------------
@@ -196,6 +204,14 @@ namespace io
 		namespace tcp
 		{
 			using Ndefault = net::io::connect_requestable::Ntcp;
+		}
+	}
+
+	namespace connect_notify
+	{
+		namespace tcp
+		{
+			using Ndefault = net::io::connect_notify::Nbase;
 		}
 	}
 
@@ -266,47 +282,15 @@ bool operator == (const sockaddr_in& _lhs, const sockaddr_in& _rhs);
 
 net::sockaddr								from_string			(std::string_view		_address, uint16_t _port, ADDRESS_FAMILY _af_prefer);
 net::sockaddr								from_string			(std::wstring_view		_address, uint16_t _port, ADDRESS_FAMILY _af_prefer);
-net::sockaddr								from_string			(std::u16string_view	_address, uint16_t _port, ADDRESS_FAMILY _af_prefer);
-net::sockaddr								from_string			(std::u32string_view	_address, uint16_t _port, ADDRESS_FAMILY _af_prefer);
 net::sockaddr								from_string			(std::string_view		_address, uint16_t _port = 0, const addrinfo* _hints = nullptr);
 net::sockaddr								from_string			(std::wstring_view		_address, uint16_t _port = 0, const addrinfo* _hints = nullptr);
-net::sockaddr								from_string			(std::u16string_view	_address, uint16_t _port = 0, const addrinfo* _hints = nullptr);
-net::sockaddr								from_string			(std::u32string_view	_address, uint16_t _port = 0, const addrinfo* _hints = nullptr);
 net::sockaddr								from_string			(std::string_view		_address, std::string_view		_service, int _socket_type = SOCK_STREAM, int _protocol = IPPROTO_RESERVED_MAX);
 net::sockaddr								from_string			(std::wstring_view		_address, std::wstring_view		_service, int _socket_type = SOCK_STREAM, int _protocol = IPPROTO_RESERVED_MAX);
-net::sockaddr								from_string			(std::u16string_view	_address, std::u16string_view	_service, int _socket_type = SOCK_STREAM, int _protocol = IPPROTO_RESERVED_MAX);
-net::sockaddr								from_string			(std::u32string_view	_address, std::u32string_view	_service, int _socket_type = SOCK_STREAM, int _protocol = IPPROTO_RESERVED_MAX);
 
-template <class T>
-std::basic_string_view<T>					to_string			(T* _str_address, std::size_t _max_length, const net::sockaddr& _sockaddr);
-template<> std::string_view					to_string<char>		(char* _str_address, std::size_t _max_length, const net::sockaddr& _sockaddr);
-template<> std::wstring_view				to_string<wchar_t>	(wchar_t* _str_address, std::size_t _max_length, const net::sockaddr& _sockaddr);
-
-template <class T>
-std::basic_string<T>
-to_string(const net::sockaddr& _address) { T temp[256]; return std::basic_string<T>(to_string<T>(temp, 256, _address)); }
-template <class T>
-std::basic_string<T>
-to_string(const net::ip::address& _address) { T temp_str[256]; return std::basic_string<T>(to_string<T>(temp_str, 256, _address)); }
-template <class T>
-std::basic_string<T>
-to_string(const net::ip::address_v4& _address) { T temp_str[256]; return std::basic_string<T>(to_string<T>(temp_str, 256, _address)); }
-template <class T>
-std::basic_string<T>
-to_string(const net::ip::address_v6& _address) { T temp_str[256]; return std::basic_string<T>(to_string<T>(temp_str, 256, _address)); }
-
-template <class T, class Allocator = std::allocator<T>>
-std::basic_string<T, std::char_traits<T>, Allocator>
-to_string (const net::sockaddr& _address, const Allocator& _allocator) { T temp_str[256]; return std::basic_string<T, std::char_traits<T>, Allocator>(to_string<T>(temp_str, 256, _address), _allocator); }
-template <class T, class Allocator = std::allocator<T>>
-std::basic_string<T, std::char_traits<T>, Allocator>
-to_string (const net::ip::address& _address, const Allocator& _allocator) { T temp_str[256]; return std::basic_string<T, std::char_traits<T>, Allocator>(to_string<T>(temp_str, 256, _address), _allocator); }
-template <class T, class Allocator = std::allocator<T>>
-std::basic_string<T, std::char_traits<T>, Allocator>
-to_string (const net::ip::address_v4& _address, const Allocator& _allocator) { T temp_str[256]; return	std::basic_string<T, std::char_traits<T>, Allocator>(to_string<T>(temp_str, 256, _address), _allocator); }
-template <class T, class Allocator = std::allocator<T>>
-std::basic_string<T, std::char_traits<T>, Allocator>
-to_string (const net::ip::address_v6& _address, const Allocator& _allocator) { T temp_str[256]; return	std::basic_string<T, std::char_traits<T>, Allocator>(to_string<T>(temp_str, 256, _address), _allocator); }
+std::string									to_string			(const net::sockaddr& _address);
+std::string									to_string			(const net::ip::address& _address);
+std::string									to_string			(const net::ip::address_v4& _address);
+std::string									to_string			(const net::ip::address_v6& _address);
 
 
 // ----------------------------------------------------------------------------
@@ -338,7 +322,7 @@ enum class eSSL_PROTOCOL : uint8_t
 	APPLICATION			 = 23
 };
 
-enum class eSSL_ALEART_LEVEL : uint8_t
+enum class eSSL_ALERT_LEVEL : uint8_t
 {
 	WARNING				 = 1,
 	FATAL				 = 2		// SSL terminates connection, other connections in same session continue, no new connections allow

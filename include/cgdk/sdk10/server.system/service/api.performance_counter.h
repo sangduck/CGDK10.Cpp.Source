@@ -53,14 +53,14 @@ public:
 protected:
 #if defined (_WIN32)
 			PDH_HCOUNTER		m_hCounter;
-			object_ptr<manager_perfornamce_query>	m_pmanager;
+			object_ptr<manager_performance_query>	m_pmanager;
 #elif defined(__linux__)
 
 #else
 
 #endif
 
-	friend	class manager_perfornamce_query;
+	friend	class manager_performance_query;
 };
 
 

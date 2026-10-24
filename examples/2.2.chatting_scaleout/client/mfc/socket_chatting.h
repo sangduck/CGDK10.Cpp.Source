@@ -11,11 +11,7 @@
 //*****************************************************************************
 
 #pragma once
-// ----------------------------------------------------------------------------
-//
-// socket_chatting
-//
-// ----------------------------------------------------------------------------
+
 class socket_chatting :
 	public						net::socket::tcp_client<>
 {
@@ -29,12 +25,8 @@ protected:
 	virtual	void				on_disconnect(uint64_t _disconnect_reason) override;
 	virtual	void				on_fail_connect(uint64_t _disconnect_reason) override;
 
-protected:
-	DECLARE_CGMESSAGE_MAP
-
 	virtual result_code			on_message(sMESSAGE_NETWORK& _msg) override;
-
-			result_code			on_message_RESPONSE_USER_CHECKIN(sMESSAGE_NETWORK& _msg);
+			result_code			on_message_RESPONSE_ACCOUNT_CHECKIN(sMESSAGE_NETWORK& _msg);
 			result_code			on_message_NOTIFY_ENTER_CHANNEL	(sMESSAGE_NETWORK& _msg);
 			result_code			on_message_SEND_CHATTING_MESSAGE(sMESSAGE_NETWORK& _msg);
 };

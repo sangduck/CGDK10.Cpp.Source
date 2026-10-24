@@ -1,5 +1,8 @@
-ï»¿// ì£¼ì˜) protobuf header íŒŒì¼ì€ ë°˜ë“œì‹œ CGDK10 í—¤ë”íŒŒì¼ë³´ë‹¤ ì•ì— ì™€ì•¼ í•œë‹¤.
+// ÁÖÀÇ) protobuf header ÆÄÀÏÀº ¹İµå½Ã CGDK10 Çì´õÆÄÀÏº¸´Ù ¾Õ¿¡ ¿Í¾ß ÇÑ´Ù.
 #if defined(_MSC_VER)
+	#pragma warning(disable:4018)
+	#pragma warning(disable:4100)
+	#pragma warning(disable:4244)
 	#pragma warning(disable:4251)
 	#pragma warning(disable:4127)
 	#pragma warning(disable:5054)
@@ -7,7 +10,11 @@
 
 #include <iostream>
 #include "../common/messages.pb.h"
+
 #if defined(_MSC_VER)
+	#pragma warning(default:4018)
+	#pragma warning(default:4100)
+	#pragma warning(default:4244)
 	#pragma warning(default:4251)
 	#pragma warning(default:4127)
 	#pragma warning(default:5054)
@@ -21,16 +28,16 @@
 
 using namespace CGDK;
 
-// 1) socket í´ë˜ìŠ¤ë¥¼ ì •ì˜í•œë‹¤.
+// 1) socket Å¬·¡½º¸¦ Á¤ÀÇÇÑ´Ù.
 class socket_tcp : public net::socket::tcp<>
 {
-	// (v) ì ‘ì† ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_connect() override;
 
-	// (v) ì ‘ì† ì¢…ë£Œ ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó Á¾·á ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_disconnect(uint64_t) override;
 
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜.
+	// (v) ¸Ş½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö.
 	virtual result_code on_message(sMESSAGE_NETWORK& _msg) override;
 			void on_message_SEND_A(sMESSAGE_NETWORK& _msg);
 			void on_message_SEND_B(sMESSAGE_NETWORK& _msg);
@@ -50,10 +57,10 @@ void socket_tcp::on_disconnect(uint64_t)
 
 result_code socket_tcp::on_message(sMESSAGE_NETWORK& _msg)
 {
-	// 1) ë©”ì‹œì§€ íƒ€ì…ì„ ì–»ëŠ”ë‹¤.
+	// 1) ¸Ş½ÃÁö Å¸ÀÔÀ» ¾ò´Â´Ù.
 	auto message_type = _msg.buf_message.front<eMESSAGE_TYPE>(4);
 
-	// 2) ë©”ì‹œì§€ ì¢…ë¥˜ì— ë”°ë¼ ì²˜ë¦¬ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œë‹«.
+	// 2) ¸Ş½ÃÁö Á¾·ù¿¡ µû¶ó Ã³¸® ÇÔ¼ö¸¦ È£ÃâÇÑ´İ.
 	switch (message_type)
 	{
 	case	eMESSAGE_TYPE::SEND_A:
@@ -87,14 +94,14 @@ void socket_tcp::on_message_SEND_A(sMESSAGE_NETWORK& _msg)
 	//
 	// ----------------------------------------------
 
-	// 1) offset 8Byteë¥¼ ì£¼ì–´ MESSAGEE_SEND_Aë¥¼ ì½ì–´ë‚¸ë‹¤.
+	// 1) offset 8Byte¸¦ ÁÖ¾î MESSAGEE_SEND_A¸¦ ÀĞ¾î³½´Ù.
 	auto message = _msg.buf_message.front<tutorial::SendA>(8);
 
-	// 2) ì½ì€ ê°’ì„ ì¶œë ¥í•œë‹«.
+	// 2) ÀĞÀº °ªÀ» Ãâ·ÂÇÑ´İ.
 	std::cout << " 'eMESSAGE_TYPE::SEND_A' received"sv << '\n';
 	std::cout << "   temp.TestValue: "sv << message.testvalue() << '\n';
 
-	// 3) echo ì „ì†¡í•œë‹¤.(echo ì „ì†¡ì€ ë°›ì€ ë©”ì‹œì§€ë¥¼ ê·¸ëŒ€ë¡œ ì „ì†¡í•˜ë©´ ëœë‹¤.)
+	// 3) echo Àü¼ÛÇÑ´Ù.(echo Àü¼ÛÀº ¹ŞÀº ¸Ş½ÃÁö¸¦ ±×´ë·Î Àü¼ÛÇÏ¸é µÈ´Ù.)
 	send(_msg.buf_message);
 }
 
@@ -111,16 +118,16 @@ void socket_tcp::on_message_SEND_B(sMESSAGE_NETWORK& _msg)
 	//
 	// ----------------------------------------------
 
-	// 1) offset 8Byteë¥¼ ì£¼ì–´ MESSAGEE_SEND_Bë¥¼ ì½ì–´ë‚¸ë‹¤.
+	// 1) offset 8Byte¸¦ ÁÖ¾î MESSAGEE_SEND_B¸¦ ÀĞ¾î³½´Ù.
 	auto message = _msg.buf_message.front<tutorial::SendB>(8);
 
-	// 2) ì½ì€ ê°’ì„ ì¶œë ¥í•œë‹«.
+	// 2) ÀĞÀº °ªÀ» Ãâ·ÂÇÑ´İ.
 	std::cout << " 'eMESSAGE_TYPE::SEND_B' received"sv << '\n';
 	std::cout << "   temp.TestValue1: "sv << message.testvalue1() << '\n';
 	std::cout << "   temp.TestValue2: "sv << message.testvalue2() << '\n';
 	std::cout << "   temp.TestValue3: "sv << message.testvalue3() << '\n';
 
-	// 3) echo ì „ì†¡í•œë‹¤.(echo ì „ì†¡ì€ ë°›ì€ ë©”ì‹œì§€ë¥¼ ê·¸ëŒ€ë¡œ ì „ì†¡í•˜ë©´ ëœë‹¤.)
+	// 3) echo Àü¼ÛÇÑ´Ù.(echo Àü¼ÛÀº ¹ŞÀº ¸Ş½ÃÁö¸¦ ±×´ë·Î Àü¼ÛÇÏ¸é µÈ´Ù.)
 	send(_msg.buf_message);
 }
 
@@ -137,10 +144,10 @@ void socket_tcp::on_message_SEND_C(sMESSAGE_NETWORK& _msg)
 	//
 	// ----------------------------------------------
 
-	// 1) offset 8Byteë¥¼ ì£¼ì–´ MESSAGEE_SEND_Cë¥¼ ì½ì–´ë‚¸ë‹¤.
+	// 1) offset 8Byte¸¦ ÁÖ¾î MESSAGEE_SEND_C¸¦ ÀĞ¾î³½´Ù.
 	auto message = _msg.buf_message.front<tutorial::SendC>(8);
 
-	// 2) ì½ì€ ê°’ì„ ì¶œë ¥í•œë‹«.
+	// 2) ÀĞÀº °ªÀ» Ãâ·ÂÇÑ´İ.
 	std::cout << " 'eMESSAGE_TYPE::SEND_C' received"sv << '\n';
 	std::cout << "   temp.TestValue1: "sv << message.testvalue1() << '\n';
 	std::cout << "   temp.TestValue2: "sv << message.testvalue2() << '\n';
@@ -149,7 +156,7 @@ void socket_tcp::on_message_SEND_C(sMESSAGE_NETWORK& _msg)
 		std::cout << iter << " "sv;
 	std::cout << '\n';
 
-	// 3) echo ì „ì†¡í•œë‹¤.(echo ì „ì†¡ì€ ë°›ì€ ë©”ì‹œì§€ë¥¼ ê·¸ëŒ€ë¡œ ì „ì†¡í•˜ë©´ ëœë‹¤.)
+	// 3) echo Àü¼ÛÇÑ´Ù.(echo Àü¼ÛÀº ¹ŞÀº ¸Ş½ÃÁö¸¦ ±×´ë·Î Àü¼ÛÇÏ¸é µÈ´Ù.)
 	send(_msg.buf_message);
 }
 
@@ -158,19 +165,19 @@ int main()
 	// trace) 
 	std::cout << "start server [tut.socket.02.tcp_protobuf.server]..."sv << '\n';
 
-	// 2) 'socket_tcp'ì„ ì‚¬ìš©í•˜ëŠ” acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 2) 'socket_tcp'À» »ç¿ëÇÏ´Â acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto pacceptor = make_own<net::acceptor<socket_tcp>>();
 
-	// 3) 20000ë²ˆ í¬íŠ¸ì—ì„œ listenì„ ì‹œì‘í•œë‹¤. (ê¸°ë³¸ì„¤ì •ì€ IPv4ê³¼ IPv6 ë™ì‹œ ì§€ì›ì´ë‹¤.)
+	// 3) 20000¹ø Æ÷Æ®¿¡¼­ listenÀ» ½ÃÀÛÇÑ´Ù. (±âº»¼³Á¤Àº IPv4°ú IPv6 µ¿½Ã Áö¿øÀÌ´Ù.)
 	pacceptor->start({{net::ip::tcp::v6(), 20000}});
 
-	// - ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+	// - ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 	while(_getch() != 27);
 
 	// trace) 
 	std::cout << "stop server [tut.socket.02.tcp_send_receive.server]..."sv << '\n';
 
-	// end) ì„œë²„ ì¢…ë£Œ
+	// end) ¼­¹ö Á¾·á
 	return 0;
 }
 

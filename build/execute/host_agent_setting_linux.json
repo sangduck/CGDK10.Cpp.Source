@@ -1,0 +1,42 @@
+{
+  "socket_to_admin_server": {
+    "local_endpoint": {
+      "address": "127.0.0.1",
+      "port": 21887
+    }
+  },
+
+  "acceptor_control": {
+    "local_endpoint": {
+      "port": 22045
+    }
+  },
+
+  "acceptor_server": {
+    "local_endpoint": {
+      "Port": 23044
+    }
+  },
+
+  "acceptor_web": {
+    "local_endpoint": {
+      "Port": 22052
+    }
+  },
+
+  "log_file": {
+    "--disabled": true,
+    "--path": "./",
+    "path": "/home/sangduck/projects/CGDK10.C++/src/server.admin/host_agent.service/",  
+    "filename": "log_file",
+    "--interval": 1440,
+    "--recreation": true,
+    "--origin_time_type": "day_begin",
+    "--create_new": true
+  }
+
+}
+
+
+
+

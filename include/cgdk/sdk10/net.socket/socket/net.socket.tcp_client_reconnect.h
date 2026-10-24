@@ -30,11 +30,10 @@ namespace CGDK
 template <class RECEIVE_HEADER_T = uint32_t, class SEND_HEADER_T = RECEIVE_HEADER_T>
 class net::socket::tcp_client_reconnect :
 	public						net::io::connect_requestable::Ntcp_reconnect,
-	public						net::socket::tcp<RECEIVE_HEADER_T, RECEIVE_HEADER_T>
+	public						net::socket::Itcp<RECEIVE_HEADER_T, RECEIVE_HEADER_T>,
+	public						net::io::connect_notify::tcp::Ndefault
 {
-public:
-			tcp_client_reconnect() {}
-			tcp_client_reconnect(std::string_view _name) : net::io::connect_requestable::Ntcp_reconnect(_name) {}
+	virtual result_code			on_message(sMESSAGE_NETWORK& /*_msg*/) override { return eRESULT::BYPASS; }
 };
 
 

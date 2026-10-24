@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 #include "../../define_message.h"
 
 #include <iostream>
@@ -8,20 +8,20 @@
 
 using namespace CGDK;
 
-// 1) socket í´ë˜ìŠ¤ë¥¼ ì •ì˜í•œë‹¤.
+// 1) socket Å¬·¡½º¸¦ Á¤ÀÇÇÑ´Ù.
 class socket_udp : public net::socket::udp
 {
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜. 
-	//     - í™”ë©´ì— ì¶œë ¥í•˜ê³  ë°”ë¡œ echo ì „ì†¡í•˜ë„ë¡ ì‘ì„±.
+	// (v) ¸Ş½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö. 
+	//     - È­¸é¿¡ Ãâ·ÂÇÏ°í ¹Ù·Î echo Àü¼ÛÇÏµµ·Ï ÀÛ¼º.
 	virtual result_code on_message(sMESSAGE_NETWORK& _msg) override
 	{
-		// - ë°›ì€ ë°ì´í„°ë¥¼ ë¬¸ìì—´ë¡œ 
+		// - ¹ŞÀº µ¥ÀÌÅÍ¸¦ ¹®ÀÚ¿­·Î 
 		auto str_recv = _msg.buf_message.front<std::string_view>();
 
-		// - í™”ë©´ì— ë¬¸ìì—´ ì¶œë ¥
+		// - È­¸é¿¡ ¹®ÀÚ¿­ Ãâ·Â
 		std::cout << ' ' << str_recv << '\n';
 
-		// - echo ì „ì†¡
+		// - echo Àü¼Û
 		send_to(_msg.buf_message, _msg.address);
 
 		// return) 
@@ -33,18 +33,18 @@ int main()
 	// trace) 
 	std::cout << "start server [tut.socket.04.udp_simple.server]..."sv << '\n';
 
-	// 2) udp socketì„ ìƒì„±í•œë‹¤.
+	// 2) udp socketÀ» »ı¼ºÇÑ´Ù.
 	auto psocket = make_own<socket_udp>();
 
-	// 3) 22500ë²ˆ í¬íŠ¸ì— bindí•œë‹¤.
+	// 3) 22500¹ø Æ÷Æ®¿¡ bindÇÑ´Ù.
 	psocket->start({{ net::ip::address_v4::any(), 22500 }});
 
-	// 4) ESCí‚¤ë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+	// 4) ESCÅ°¸¦ ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 	while (_getch() != 27);
 
 	// trace) 
 	std::cout << "stop server [tut.socket.04.udp_simple.server]..."sv << '\n';
 
-	// end) ì„œë²„ ì¢…ë£Œ
+	// end) ¼­¹ö Á¾·á
 	return 0;
 }

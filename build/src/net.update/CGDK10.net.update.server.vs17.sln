@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.net.update.server", "update.server\shared\CGDK10.net.update.server.vcxitems", "{151B0F4A-2283-4131-886D-A7CFF711F996}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.update.server.mfc", "update.server\windows.mfc\CGDK10.net.update.server.mfc.vcxproj", "{28248AF2-3B95-412F-99A6-355AC9699F7B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.net.update.server.console", "update.server\console\CGDK10.net.update.server.console.vcxproj", "{2D83A2EB-A623-4AA6-AC34-0407B70C3089}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{28248AF2-3B95-412F-99A6-355AC9699F7B}.Debug|x64.ActiveCfg = Debug|x64
+		{28248AF2-3B95-412F-99A6-355AC9699F7B}.Debug|x64.Build.0 = Debug|x64
+		{28248AF2-3B95-412F-99A6-355AC9699F7B}.Release|x64.ActiveCfg = Release|x64
+		{28248AF2-3B95-412F-99A6-355AC9699F7B}.Release|x64.Build.0 = Release|x64
+		{2D83A2EB-A623-4AA6-AC34-0407B70C3089}.Debug|x64.ActiveCfg = Debug|x64
+		{2D83A2EB-A623-4AA6-AC34-0407B70C3089}.Debug|x64.Build.0 = Debug|x64
+		{2D83A2EB-A623-4AA6-AC34-0407B70C3089}.Release|x64.ActiveCfg = Release|x64
+		{2D83A2EB-A623-4AA6-AC34-0407B70C3089}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {95F9F5E4-9B27-4631-93B4-60DCB157CE29}
+	EndGlobalSection
+EndGlobal

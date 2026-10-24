@@ -1,0 +1,9 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="buffer.01.basic\tutorial.buffer.01.basic.console.vs18.vcxproj" Id="787972a7-81b0-4cc7-aebc-3732687f6837" />
+  <Project Path="buffer.02.append_extract\tutorial.buffer.02.append_extract.console.vs18.vcxproj" Id="492d8d06-b38a-40d2-ab8c-6fe99583eb56" />
+  <Project Path="buffer.03.struct_serialize\tutorial.buffer.03.struct_serialize.console.vs18.vcxproj" Id="49001313-6f6c-41e5-9ee8-e6980eaa092d" />
+  <Project Path="buffer.04.Ibuffer_serializable\tutorial.buffer.04.Ibuffer_serializable.console.vs18.vcxproj" Id="b5b57b04-05f4-4c1e-8f6f-b7067fe64e47" />
+</Solution>

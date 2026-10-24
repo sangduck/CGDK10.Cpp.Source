@@ -1,7 +1,12 @@
 #include "pch.h"
+#include "platform.h"
 
 #if defined(_WIN32)
 	#include "process.h"
+#elif defined(__linux__)
+#include <unistd.h>
+#include <signal.h>
+#include <pthread.h>
 #endif
 
 namespace CGDK
@@ -37,7 +42,8 @@ object_ptr<Iexecutor> get_current_executor() noexcept
 	auto pthread_now = g_pthread_now;
 
 	// check) 
-	RETURN_IF(pthread_now == nullptr, object_ptr<Iexecutor>());
+	if(pthread_now == nullptr) 
+		return object_ptr<Iexecutor>();
 
 	// return)
 	return pthread_now->m_pexecutor;
@@ -51,14 +57,56 @@ api::Nthread::~Nthread() noexcept
 
 void api::Nthread::reset() noexcept
 {
-	// 1) Thread 객체를 reset한다.
-	if (this->m_thread.joinable())
 	{
-		this->m_thread.detach();
+		// lock)
+		std::lock_guard lock(this->m_lockable_thread);
+
+		// 1) Thread 객체를 reset한다.
+		if (this->m_thread.joinable())
+		{
+			this->m_thread.detach();
+		}
 	}
 
-	// 2) Thread ID를 reset한다.
-	this->m_statistics_thread.id_thread = 0;
+	// 2) close control handle
+	this->_close_control_handle();
+
+	// 3) Thread ID를 reset한다.
+	this->m_statistics_thread.id_thread = THREAD_ID{};
+}
+
+void api::Nthread::_on_thread_started()
+{
+	// lock)
+	std::lock_guard lock(this->m_lockable_control);
+
+	// 1) control handle for suspend() / resume() (still valid after m_thread is joined)
+#if defined(_WIN32)
+	if (this->m_handle_control != nullptr)
+	{
+		::CloseHandle(this->m_handle_control);
+		this->m_handle_control = nullptr;
+	}
+	::DuplicateHandle(::GetCurrentProcess(), this->m_thread.native_handle(), ::GetCurrentProcess(), &this->m_handle_control, 0, FALSE, DUPLICATE_SAME_ACCESS);
+#endif
+
+	// statistics)
+	this->m_statistics_thread.id_thread = this->m_thread.native_handle();
+}
+
+void api::Nthread::_close_control_handle() noexcept
+{
+#if defined(_WIN32)
+	// lock)
+	std::lock_guard lock(this->m_lockable_control);
+
+	// 1) close
+	if (this->m_handle_control != nullptr)
+	{
+		::CloseHandle(this->m_handle_control);
+		this->m_handle_control = nullptr;
+	}
+#endif
 }
 
 void api::Nthread::register_thread()
@@ -67,19 +115,22 @@ void api::Nthread::register_thread()
 	auto pmanager = api::manager_thread::instance();
 
 	// check) pmanager
-	CGASSERT_ERROR(pmanager.exist());
+	CGASSERT_FATAL(pmanager.exist());
 
 	// 1) Pool Manager에 등록한다.
 	auto result = pmanager->register_thread(this);
 	
 	// check) 
-	RETURN_IF(result == false);
+	if (result == false)
+		return;
 
 	// 2) Manager를 등록한다.
-	scoped_lock(this->m_pmanager)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_pmanager);
+
 		// check)
-		CGASSERT_ERROR(this->m_pmanager.empty());
+		CGASSERT_FATAL(this->m_pmanager.empty());
 
 		// - 등록...
 		this->m_pmanager = pmanager;
@@ -91,20 +142,23 @@ void api::Nthread::unregister_thread() noexcept
 	// declare) 
 	object_ptr<api::manager_thread>	pmanager;
 
-	scoped_lock(this->m_pmanager)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_pmanager);
+
 		pmanager = this->m_pmanager;
 		this->m_pmanager.reset();
 	}
 
 	// check) 
-	RETURN_IF(pmanager.empty());
+	if(pmanager.empty())
+		return;
 
 	// 1) UnRegister한다.
 	if(pmanager->unregister_thread(this)==false)
 	{
 		// - 해당 Thread를 찾지 못했다.
-		CGASSERT_ERROR(false);
+		CGASSERT_FATAL(false);
 	}
 }
 
@@ -113,32 +167,41 @@ void api::Nthread::statistics_executing_begin() noexcept
 	statistics_executing_begin(chrono::tick::now());
 }
 
+//-----------------------------------------------------------------------------
+// 설명) 실행 통계 (이 thread만 쓰고 monitor(is_time_out)가 읽는다.)
+//  - 실행할 때마다 불리므로 lock 계열 명령(seq_cst store=xchg, ++=lock xadd)을 쓰지 않는다.
+//    (x86/arm64에서 relaxed/release store는 일반 store, 횟수는 relaxed load + store다.)
+//  - tick_last_execute를 먼저 쓰고 is_executing을 release로 쓴다.
+//    (is_executing을 acquire로 읽어 true면 그 실행의 tick_last_execute를 본다.)
+//-----------------------------------------------------------------------------
 void api::Nthread::statistics_executing_begin(chrono::tick::time_point _tick ) noexcept
 {
-	this->m_statistics_thread.is_executing = true;
+	auto& statistics = this->m_statistics_thread;
 
-	this->m_statistics_thread.tick_last_execute = _tick;
-
-	++this->m_statistics_thread.count_executed;
+	statistics.tick_last_execute.store(_tick, std::memory_order_relaxed);
+	statistics.is_executing.store(true, std::memory_order_release);
+	statistics.count_executed.store(statistics.count_executed.load(std::memory_order_relaxed) + 1, std::memory_order_relaxed);
 }
 
 void api::Nthread::statistics_executing_end() noexcept
 {
-	this->m_statistics_thread.is_executing = false;
+	this->m_statistics_thread.is_executing.store(false, std::memory_order_release);
 }
 
 void api::Nthread::statistics_error() noexcept
 {
-	++this->m_statistics_thread.count_error;
+	auto& statistics = this->m_statistics_thread;
+	statistics.count_error.store(statistics.count_error.load(std::memory_order_relaxed) + 1, std::memory_order_relaxed);
 }
 
 bool api::Nthread::is_time_out(chrono::tick::duration _tick_execute) const noexcept
 {
 	// check) 
-	RETURN_IF(this->m_statistics_thread.is_executing == false, false);
+	if(this->m_statistics_thread.is_executing.load(std::memory_order_acquire) == false)
+		return false;
 
 	// 1) 차이값을 계산한다.
-	chrono::tick::duration tick_differ = chrono::tick::now() - this->m_statistics_thread.tick_last_execute;
+	chrono::tick::duration tick_differ = chrono::tick::now() - this->m_statistics_thread.tick_last_execute.load(std::memory_order_relaxed);
 
 	// return) 
 	return (tick_differ >= _tick_execute);
@@ -147,188 +210,225 @@ bool api::Nthread::is_time_out(chrono::tick::duration _tick_execute) const noexc
 bool api::Nthread::is_time_out(chrono::tick::duration _tick_execute, chrono::tick::time_point _tick_now) const noexcept
 {
 	// check) 
-	RETURN_IF(this->m_statistics_thread.is_executing == false, false);
+	if(this->m_statistics_thread.is_executing.load(std::memory_order_acquire) == false)
+		return false;
 
 	// 1) 차이값을 계산한다.
-	chrono::tick::duration tick_differ = _tick_now - this->m_statistics_thread.tick_last_execute;
+	chrono::tick::duration tick_differ = _tick_now - this->m_statistics_thread.tick_last_execute.load(std::memory_order_relaxed);
 
 	// return) 
 	return (tick_differ >= _tick_execute);
 }
 
-#ifdef _WIN32
-__declspec (noreturn) void raise_throw()
+bool api::Nthread::request_stop() noexcept
 {
-	throw throwable::force_raise();
+	// 1) copy the stop_source (does not wait for a thread joining m_thread)
+	std::stop_source stop_source;
+	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_control);
+
+		stop_source = this->m_stop_source;
+	}
+
+	// 2) request stop (outside the lock : stop_callbacks run here)
+	return stop_source.request_stop();
 }
-#endif
 
-bool api::Nthread::wait()
+bool api::Nthread::wait() noexcept
 {
-#if _MSC_VER>=_MSC_VER_2015
-#define	USE_STD
-#endif
+	// check) called on this thread itself => cannot wait for itself
+	//  - checked before the lock : another thread may be holding it while joining this thread
+	if (g_pthread_now == this)
+		return false;
 
-#if !defined(_MSC_VER) || defined(USE_STD)
-	// check)
-	RETURN_IF(this->m_thread.joinable() == false, false);
+	// lock) only one thread joins at a time
+	std::lock_guard lock(this->m_lockable_thread);
+
+	// check) no thread
+	if (this->m_thread.joinable() == false)
+		return false;
+
+	// check) called on this thread itself => cannot wait for itself
+	if (this->m_thread.get_id() == std::this_thread::get_id())
+		return false;
 
 	// 1) wait한다.
-	this->m_thread.join();
-#else
-	// check) 
-	RETURN_IF(this->m_thread.joinable() == false, false);
-
-	// 1) Datach한다.
-	if (this->m_thread.joinable())
+	try
 	{
-		this->m_thread.detach();
+		this->m_thread.join();
 	}
-
-	// declare)
-	uint32_t dwResult;
-
-	// 2) 종료를 기다림 (최대 60초)
-	while((dwResult = WaitForSingleObject(this->m_thread.native_handle(), 60000)) == WAIT_TIMEOUT)
+	catch (...)
 	{
-	#ifndef NDEBUG
-		// - 강제 종료시킨다.
-		this->Terminate();
-
-		// trace) 
-		LOG_ERROR << "(err ) CGDK.system.object: thread is abortive closed!";
-
-		// Break)
-		break;
-	#endif
-	}
-#endif
-
-	// return) 
-	return true;
-}
-
-#if defined(_WIN32)
-bool api::Nthread::terminate(uint32_t _exit_code, chrono::tick::duration /*_wait*/)
-{
-#pragma warning( push )
-#pragma warning( disable : 6258)	// TerminateThread는 항상 경고를 내므로 이렇게 처리해 놓는다.
-	// check) 
-	RETURN_IF(this->m_thread.get_id() == std::thread::id(), false);
-
-	// warning) don't use this function!!!
-	CGASSERT_ERROR(false);
-
-	// 1) Terminate한다.
-	::TerminateThread(m_thread.native_handle(), _exit_code);
-
-	// 2) Handle을 닫는다.
-	if (this->m_thread.joinable())
-	{
-		this->m_thread.detach();
+		return false;
 	}
 
 	// statistics)
-	this->m_statistics_thread.id_thread = 0;
+	this->m_statistics_thread.id_thread = THREAD_ID{};
 	this->m_statistics_thread.is_executing = false;
 
-	// 성공!!
+	// return)
 	return true;
-#pragma warning( pop )
 }
-#else
-bool api::Nthread::terminate(uint32_t /*_exit_code*/, chrono::tick::duration /*_wait*/)
+
+bool api::Nthread::stop() noexcept
 {
-	// 1) get thread handle
-	auto thread_handle = this->thread_handle();
+	// 1) request stop (the return value is not used : the stop may have been requested already)
+	this->request_stop();
 
-	// 2) kill thread
-	::pthread_kill(thread_handle, SIGINT);
-
-	// 3) wait until end
-	::pthread_join(thread_handle, NULL);
-
-	printf("thread terminated");
-
-	// 성공!!
-	return false;
+	// 2) wait until the thread ends
+	return this->wait();
 }
-#endif
 
-bool api::Nthread::raise_exception()
+bool api::Nthread::force_raise_exception(const std::string_view& _message) noexcept
 {
-#if defined (_MSC_VER)
-	// 1) 일단 Thread를 suspend한다.
-	uint32_t dwVal = suspend();
-
-	// check) 
-	RETURN_IF(dwVal == INFINITE, false);
-
 #if defined(_WIN32)
-#if defined(_M_X64)
-	// declare) 
-	WOW64_CONTEXT context_control;
+	// Windows implementation: APC-based exception injection
+	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_control);
 
-	// 2) ContextFlag를 변경
-	context_control.ContextFlags = CONTEXT_CONTROL;
+		// check) thread handle exists
+		if (this->m_handle_control == nullptr)
+			return false;
 
-	// 3) Thread Context를 얻는다.
-	BOOL result = ::Wow64GetThreadContext(thread_handle(), &context_control);
+		// check) don't call on self
+		if (::GetCurrentThreadId() == ::GetThreadId(this->m_handle_control))
+			return false;
 
-	// check) 얻지 못했다면 false를 리턴한다.
-	ERROR_RETURN_IF(result == FALSE, false, this->resume());
+		// 1) allocate and store exception message
+		static thread_local std::string exception_msg;
+		exception_msg = std::string(_message);
 
-	// 4) Throw() 함수로 점프하도록 한다.
-	context_control.Eip = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(raise_throw));
+		// 2) APC callback that throws exception
+		auto apc_callback = [](ULONG_PTR /*_param*/) noexcept
+		{
+			try
+			{
+				// This will be called when the thread is in alertable state
+				throw std::runtime_error(exception_msg);
+			}
+			catch (...)
+			{
+				// Let the thread's exception handling deal with it
+			}
+		};
 
-	// 5) Context를 설정한다.
-	result = Wow64SetThreadContext(thread_handle(), &context_control);
+		try
+		{
+			// 3) Queue APC to the thread
+			//    (thread must be in alertable state to execute: WaitForSingleObject, Sleep, etc.)
+			PAPCFUNC pfn_apc = apc_callback;
 
-	// check) 얻지 못했다면 false를 리턴한다.
-	ERROR_RETURN_IF(result == FALSE, false, this->resume());
-#elif defined(_M_IX86) 
-	// declare) 
-	CONTEXT context_control;
+			if (!::QueueUserAPC(pfn_apc, this->m_handle_control, 0))
+			{
+				// If QueueUserAPC fails, fallback to SetThreadContext method
+				// 1) suspend thread
+				if (::SuspendThread(this->m_handle_control) == static_cast<DWORD>(-1))
+					return false;
 
-	// 2) ContextFlag를 변경
-	context_control.ContextFlags = CONTEXT_CONTROL;
+				// 2) get thread context
+				CONTEXT ctx = {};
+				ctx.ContextFlags = CONTEXT_FULL;
+				if (!::GetThreadContext(this->m_handle_control, &ctx))
+				{
+					::ResumeThread(this->m_handle_control);
+					return false;
+				}
 
-	// 3) Thread Context를 얻는다.
-	auto result = GetThreadContext(thread_handle(), &context_control);
-
-	// check) 얻지 못했다면 false를 리턴한다.
-	ERROR_RETURN_IF(result == FALSE, false, this->resume());
-
-	// 4) Throw() 함수로 점프하도록 한다.
-	context_control.Eip = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(raise_throw));
-
-	// 5) Context를 설정한다.
-	result = SetThreadContext(thread_handle(), &context_control);
-
-	// check) 얻지 못했다면 false를 리턴한다.
-	ERROR_RETURN_IF(result == FALSE, false, this->resume());
-#endif
+				// 3) set RIP to terminate (safer than trying to throw C++ exception)
+#ifdef _WIN64
+				ctx.Rip = reinterpret_cast<DWORD64>(&std::terminate);
 #else
+				ctx.Eip = reinterpret_cast<DWORD>(&std::terminate);
 #endif
 
-	// 6) resume한다.
-	this->resume();
+				// 4) set context and resume
+				if (!::SetThreadContext(this->m_handle_control, &ctx))
+				{
+					::ResumeThread(this->m_handle_control);
+					return false;
+				}
+
+				::ResumeThread(this->m_handle_control);
+				return true;
+			}
+
+			return true;
+		}
+		catch (...)
+		{
+			return false;
+		}
+	}
+#elif defined(__linux__)
+	// Linux implementation: signal-based exception injection
+	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_control);
+
+		// check) thread id is valid
+		if (this->m_statistics_thread.id_thread == THREAD_ID{})
+			return false;
+
+		// Store exception message in thread-local storage
+		static thread_local std::string exception_message;
+		exception_message = std::string(_message);
+
+		// Define signal handler
+		auto signal_handler = [](int /*_sig*/)
+		{
+			throw std::runtime_error(exception_message);
+		};
+
+		// 1) Setup signal handler
+		struct sigaction sa = {}, old_sa = {};
+		sa.sa_handler = signal_handler;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = 0;
+
+		if (::sigaction(SIGUSR2, &sa, &old_sa) == -1)
+			return false;
+
+		try
+		{
+			// 2) Send SIGUSR2 to the thread
+			pthread_t tid = this->m_statistics_thread.id_thread.load();
+			if (::pthread_kill(tid, SIGUSR2) != 0)
+			{
+				::sigaction(SIGUSR2, &old_sa, nullptr);
+				return false;
+			}
+
+			// 3) Restore original signal handler
+			::sigaction(SIGUSR2, &old_sa, nullptr);
+			return true;
+		}
+		catch (...)
+		{
+			::sigaction(SIGUSR2, &old_sa, nullptr);
+			return false;
+		}
+	}
 #else
-
+	// Unsupported platform
+	(void)_message;
+	return false;
 #endif
-
-	// return) 성공!
-	return true;
 }
 
 uint32_t api::Nthread::suspend()
 {
-#if defined (_MSC_VER)/* && !defined(WINAPI_FAMILY)*/
-#if defined(_M_X64)
-	return ::Wow64SuspendThread(thread_handle());
-#else
-	return SuspendThread(thread_handle());
-#endif
+#if defined(_WIN32)
+	// lock)
+	std::lock_guard lock(this->m_lockable_control);
+
+	// check)
+	if (this->m_handle_control == nullptr)
+		return static_cast<uint32_t>(-1);
+
+	// 1) suspend
+	return ::SuspendThread(this->m_handle_control);
 #else
 	return 0;
 #endif
@@ -336,28 +436,44 @@ uint32_t api::Nthread::suspend()
 
 uint32_t api::Nthread::resume()
 {
-#if defined (_MSC_VER)/* && !defined(WINAPI_FAMILY)*/
-	return ::ResumeThread(thread_handle());
+#if defined(_WIN32)
+	// lock)
+	std::lock_guard lock(this->m_lockable_control);
+
+	// check)
+	if (this->m_handle_control == nullptr)
+		return static_cast<uint32_t>(-1);
+
+	// 1) resume
+	return ::ResumeThread(this->m_handle_control);
 #else
 	return 0;
 #endif
 }
 
+void api::Nthread::process_set_exception_handler_to_thread() noexcept
+{
+#if defined(_WIN32)
+	// 1) SEH Exception Handler를 설정한다.
+	dump_manager::instance()->set_seh_to_thread();
+
+	// 2) Invalid parameter Handler를 설정한다.
+	dump_manager::instance()->set_invalid_parameter_handle();
+#elif defined(__linux__)
+	// 1) crash signal handler (process-wide : installed once)
+	dump_manager::set_signal_handler_crash();
+#endif
+}
+
 void api::Nthread::process_begin_thread()
 {
-	// 1) Exception Translator를 설정한다.
-	set_seh_to_thread();
+	// 1) 강제 Exception Raise를 위해 Optimization을 방지해주는 Code...
+	process_set_exception_handler_to_thread();
 
-	// 2) 강제 Exception Raise를 위해 Optimization을 방지해주는 Code...
-#if defined(_WIN32)
-	volatile int i = 0;
-	if (i) raise_throw();
-#endif
-
-	// 3) 현재 Thread를 설정한다.
+	// 2) 현재 Thread를 설정한다.
 	g_pthread_now = this;
 
-	// 4) Thread를 등록한다.
+	// 3) Thread를 등록한다.
 	this->register_thread();
 }
 
@@ -371,41 +487,46 @@ void api::Nthread::process_end_thread()
 
 	// 3) 기타...
 	this->notify_unblocked();
+
 }
 
 void api::Nthread::notify_blocked() noexcept
 {
-	scoped_lock(this->m_lockable_executor)
-	{
-		// check) ...
-		RETURN_IF(this->m_is_blocked == true);
+	// lock)
+	std::lock_guard lock(this->m_lockable_executor);
 
-		// check) ...
-		RETURN_IF(this->m_pexecutor == nullptr);
+	// check) ...
+	if(this->m_is_blocked == true)
+		return;
 
-		// 1) notify blocked
-		this->m_pexecutor->control(1, 0);
+	// check) ...
+	if(this->m_pexecutor == nullptr)
+		return;
 
-		// 2) blocked == true;
-		this->m_is_blocked = true;
-	}
+	// 1) notify blocked
+	this->m_pexecutor->thread_blocked();
+
+	// 2) blocked == true;
+	this->m_is_blocked = true;
 }
 void api::Nthread::notify_unblocked() noexcept
 {
-	scoped_lock(this->m_lockable_executor)
-	{
-		// check) ...
-		RETURN_IF(this->m_is_blocked == false);
+	// lock)
+	std::lock_guard lock(this->m_lockable_executor);
 
-		// check) ...
-		RETURN_IF(this->m_pexecutor == nullptr);
+	// check) ...
+	if(this->m_is_blocked == false)
+		return;
 
-		// 1) notify unblocked
-		this->m_pexecutor->control(2, 0);
+	// check) ...
+	if(this->m_pexecutor == nullptr)
+		return;
 
-		// 2) blocked == true;
-		this->m_is_blocked = false;
-	}
+	// 1) notify unblocked
+	this->m_pexecutor->thread_unblocked();
+
+	// 2) blocked == true;
+	this->m_is_blocked = false;
 }
 
 

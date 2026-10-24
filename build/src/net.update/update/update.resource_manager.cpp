@@ -1,4 +1,5 @@
-ï»¿#include "pch.h"
+#include "pch.h"
+#include <charconv>
 
 using namespace CGDK;
 
@@ -7,7 +8,7 @@ object_ptr<resource::Iupdatable> update::resource_manager::get_resource(UPDATE_R
 	// declare) 
 	object_ptr<resource::Iupdatable> pupdate_resource;
 
-	scoped_lock(this->m_cs_map_resource)
+	SCOPED_LOCK(this->m_lockable_map_resource)
 	{
 		// 1) find resource 
 		auto iter_find = this->m_map_resource.find(_update_resource_id);
@@ -36,112 +37,106 @@ result_code update::resource_manager::_process_initializing(context& _context)
 	std::map<UPDATE_RESOURCE_ID, object_ptr<resource::Iupdatable>> map_updatable_resource;
 
 	// 1) root path
+	if (auto context_root_path = _context.find("root_path"sv); context_root_path.is_valid())
 	{
-		auto context_root_path = _context.find("root_path"sv);
-
-		if (context_root_path.is_valid())
-		{
-			root_path = static_cast<std::string>(context_root_path);
-		}
+		root_path = (std::string&&)context_root_path;
 	}
 
 	// 2) update resource list
+	if (auto context_system_executor = _context.find("resource_list"sv); context_system_executor.is_valid())
 	{
-		auto context_system_executor = _context.find("resource_list"sv);
+		// ¼³¸í) resourceµéÀ» »ı¼ºÇÑ´Ù.
+		//       - updatable resourceÀÇ ¼³Á¤¿¡ µû¶ó »ı¼ºÀ» ÇÑ´Ù.
+		//       - ¹®Á¦´Â reference ¼Ó¼ºÀ» °¡Áø °Íµµ Á¸ÀçÇÏ±â ¶§¹®¿¡ 3¹øÀÇ pass¸¦ °ÅÃ³ »ı¼ºÀ» ÇÑ´Ù.
+		// 
+		//         pass1, °´Ã¼ÀÇ Á¾·ù¸¦ È®ÀÎÇØ °´Ã¼¸¸ »ı¼ºÇÑ´Ù.
+		//         pass2, ¸ğµç °´Ã¼¸¦ initializeÇÑ´Ù. 
+		//
+		//      - 
 
-		if (context_system_executor.is_valid())
+		// definitions) 
+		struct _TEMP_INFO
 		{
-			// ì„¤ëª…) resourceë“¤ì„ ìƒì„±í•œë‹¤.
-			//       - updatable resourceì˜ ì„¤ì •ì— ë”°ë¼ ìƒì„±ì„ í•œë‹¤.
-			//       - ë¬¸ì œëŠ” reference ì†ì„±ì„ ê°€ì§„ ê²ƒë„ ì¡´ì¬í•˜ê¸° ë•Œë¬¸ì— 3ë²ˆì˜ passë¥¼ ê±°ì²˜ ìƒì„±ì„ í•œë‹¤.
-			// 
-			//         pass1, ê°ì²´ì˜ ì¢…ë¥˜ë¥¼ í™•ì¸í•´ ê°ì²´ë§Œ ìƒì„±í•œë‹¤.
-			//         pass2, ëª¨ë“  ê°ì²´ë¥¼ initliaizeí•œë‹¤. 
-			//
-			//      - 
+			UPDATE_RESOURCE_ID	id;
+			resource::eTYPE type;
+			context* pcontext;
+			object_ptr<resource::Iupdatable> pupdatable_resource;
+		};
 
-			// definitions) 
-			struct _TEMP_INFO
-			{
-				UPDATE_RESOURCE_ID	id;
-				resource::eTYPE type;
-				context* pcontext;
-				object_ptr<resource::Iupdatable> pupdatable_resource;
-			};
+		// declare)
+		std::vector<_TEMP_INFO> vector_updatable_resource_info;
+
+		// - pass I - create first
+		for (auto& iter : context_system_executor)
+		{
+			// declare)
+			int64_t value_id = 0;
+			std::from_chars(iter.first.data(), iter.first.data() + iter.first.size(), value_id);
+			auto temp_id = static_cast<UPDATE_RESOURCE_ID>(value_id);
+
+			// - ÀÌ¹Ì Á¸ÀçÇÏ´ÂÁö È®ÀÎÇÑ´Ù.
+			auto iter_find = std::find_if(vector_updatable_resource_info.begin(), vector_updatable_resource_info.end(), [=](const _TEMP_INFO& _i) { return _i.id == temp_id; });
+
+			// check) ÀÌ¹Ì Á¸ÀçÇÑ´Ù.
+			THROW_IF(iter_find != vector_updatable_resource_info.end(), throwable::failure(eRESULT::ALREADY_EXIST, 0, "resource id already exist"sv));
 
 			// declare)
-			std::vector<_TEMP_INFO> vector_updatable_resource_info;
+			_TEMP_INFO temp_info;
+			temp_info.id = temp_id;
+			temp_info.type = _get_updatable_resource_type(iter.second);
+			temp_info.pcontext = &iter.second;
 
-			// - pass I - create first
-			for (auto& iter : context_system_executor)
+			// - create 
+			switch (temp_info.type)
 			{
-				// declare)
-				auto temp_id = static_cast<UPDATE_RESOURCE_ID>(__from_string<char>(iter.first));
+			case	resource::eTYPE::FILE:
+					temp_info.pupdatable_resource = make_object<resource::updatable::file>();
+					break;
 
-				// - ì´ë¯¸ ì¡´ì¬í•˜ëŠ”ì§€ í™•ì¸í•œë‹¤.
-				auto iter_find = std::find_if(vector_updatable_resource_info.begin(), vector_updatable_resource_info.end(), [=](const _TEMP_INFO& _i) { return _i.id == temp_id; });
+			case	resource::eTYPE::FOLDER:
+					temp_info.pupdatable_resource = make_object<resource::updatable::folder>();
+					break;
 
-				// check) ì´ë¯¸ ì¡´ì¬í•œë‹¤.
-				THROW_IF(iter_find != vector_updatable_resource_info.end(), throwable::failure(eRESULT::ALEADY_EXIST, 0, "resource id aleady exist"sv));
+			case	resource::eTYPE::REFERENCE:
+					temp_info.pupdatable_resource = make_object<resource::updatable::folder>(); // reference == folder
+					break;
 
-				// declare)
-				_TEMP_INFO temp_info;
-				temp_info.id = temp_id;
-				temp_info.type = _get_updatable_resource_type(iter.second);
-				temp_info.pcontext = &iter.second;
-
-				// - create 
-				switch (temp_info.type)
-				{
-				case	resource::eTYPE::FILE:
-						temp_info.pupdatable_resource = make_object<resource::updatable::file>();
-						break;
-
-				case	resource::eTYPE::FOLDER:
-						temp_info.pupdatable_resource = make_object<resource::updatable::folder>();
-						break;
-
-				case	resource::eTYPE::REFERENCE:
-						temp_info.pupdatable_resource = make_object<resource::updatable::folder>(); // reference == folder
-						break;
-
-				default:
-						throw throwable::failure(eRESULT::INVALID_ARGUMENT, 0,"fail to create"sv);
-				}
-
-				// check) 
-				CONTINUE_IF(temp_info.pupdatable_resource.empty());
-
-				// - insert
-				auto result_insert = map_updatable_resource.insert({ temp_info.id, temp_info.pupdatable_resource });
-
-				// check)
-				CGASSERT_ERROR(result_insert.second == true);
-
-				// check) 
-				THROW_IF(result_insert.second == false, throwable::failure(eRESULT::ALEADY_EXIST, 0, "duplicated 'updatable resource id'"sv));
-
-				// - ì¶”ê°€
-				vector_updatable_resource_info.push_back(temp_info);
+			default:
+					throw throwable::failure(eRESULT::INVALID_ARGUMENT, 0,"fail to create"sv);
 			}
 
-			// - pass 2 - reference initialize
-			for (auto& iter : vector_updatable_resource_info)
-			{
-				// log) 
-				LOG_PROGRESS << "   [id " << iter.id << "] ..."sv;
+			// check) 
+			CONTINUE_IF(temp_info.pupdatable_resource.empty());
 
-				// - set resource manager
-				(*iter.pcontext)["resource_manager"sv] = (std::map<std::string, object_ptr<resource::Iupdatable>>*)&map_updatable_resource;
+			// - insert
+			auto result_insert = map_updatable_resource.insert({ temp_info.id, temp_info.pupdatable_resource });
 
-				// - initialize
-				iter.pupdatable_resource->initialize(*iter.pcontext);
-			}
+			// check)
+			CGASSERT_ERROR(result_insert.second == true);
+
+			// check) 
+			THROW_IF(result_insert.second == false, throwable::failure(eRESULT::ALREADY_EXIST, 0, "duplicated 'updatable resource id'"sv));
+
+			// - Ãß°¡
+			vector_updatable_resource_info.push_back(temp_info);
+		}
+
+		// - pass 2 - reference initialize
+		for (auto& iter : vector_updatable_resource_info)
+		{
+			// log) 
+			LOG_PROGRESS << "   [id " << iter.id << "] ..."sv;
+
+			// - set resource manager
+			(*iter.pcontext)["resource_manager"sv] = &map_updatable_resource;
+
+			// - initialize
+			iter.pupdatable_resource->initialize(*iter.pcontext);
 		}
 	}
 
 	// 2) setting
-	scoped_lock(m_cs_map_resource)
+	SCOPED_LOCK(this->m_lockable_map_resource)
 	{
 		this->m_map_resource = std::move(map_updatable_resource);
 	}
@@ -191,7 +186,7 @@ result_code update::resource_manager::_process_destroy() noexcept
 		std::map<UPDATE_RESOURCE_ID, object_ptr<resource::Iupdatable>> map_resource;
 
 		// 1) 
-		scoped_lock(m_cs_map_resource)
+		SCOPED_LOCK(m_lockable_map_resource)
 		{
 			map_resource = std::move(this->m_map_resource);
 		}

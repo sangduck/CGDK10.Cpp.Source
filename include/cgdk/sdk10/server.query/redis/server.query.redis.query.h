@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                               Redis Classes                               *
+//*                            server.query.redis                             *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -22,12 +22,11 @@ namespace CGDK
 {
 //-----------------------------------------------------------------------------
 //
-// net::io::sender::Nredis
+// query::redis::query
 //
 //
 //-----------------------------------------------------------------------------
 class query::redis::query :
-// inherited classes)
 	virtual public				Iquery,
 	public						Npoolable<query>
 {

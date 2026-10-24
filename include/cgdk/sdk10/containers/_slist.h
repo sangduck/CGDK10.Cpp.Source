@@ -34,7 +34,7 @@ class slist
 //     4) X:iterator		순회할 때 사용되는 반복자.
 //     5) X:const_iterator	순회할 때 사용되는 반복자(const형)
 //     6) X:difference_type	두 iterator에 담김 값의 거리를 나타내는 타입.
-//     7) X:size_type		X의 크기를 나타낼때 사용되는 형.
+//     7) X:size_type		X의 크기를 나타낼 때 사용되는 형.
 //
 // ----------------------------------------------------------------------------
 public:
@@ -53,7 +53,7 @@ public:
 	typedef size_t			size_type;
 	typedef ptrdiff_t		difference_type;
 
-	// Self) 자기자신(표준 아님.)
+	// Self) 자기 자신(표준 아님.)
 	typedef	slist<TDATA>	_mytype;
 
 	// Rebinder) 

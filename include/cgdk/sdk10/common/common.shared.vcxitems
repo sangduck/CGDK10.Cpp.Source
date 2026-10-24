@@ -25,10 +25,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)definitions.system.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)definitions.types.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)lockable.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)locked_identity.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)locked_self_stack.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)lockfree_self_stack.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)lockfree_self_stack_64.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)message_map.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)scoped_lock.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)string_functions.android.h" />

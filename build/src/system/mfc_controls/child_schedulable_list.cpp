@@ -158,7 +158,7 @@ void CChild_schedulable_list::OnEnable(BOOL _is_enable)
 	// 1) control 버튼
 	GetDlgItem(IDC_BUTTON_FORCE_EXCEPTION)->EnableWindow(_is_enable & m_is_enable_control);
 
-	// 2) Thread 갯수
+	// 2) Thread 개수
 	GetDlgItem(IDC_STATIC_T1)->EnableWindow(_is_enable);
 	GetDlgItem(IDC_STATIC_SCHEDULABLE_COUNT)->EnableWindow(_is_enable);
 
@@ -178,9 +178,11 @@ void CChild_schedulable_list::OnDestroy()
 void CChild_schedulable_list::SetSchedulableList(schedulable::manager* _pschedulable_manager)
 {
 	// 1) Thread Manager를 설정한다.
-	scoped_lock(m_lockable_manager_thread)
 	{
-		m_pexecutor_schedulable	 = _pschedulable_manager;
+		// lock)
+		std::lock_guard lock(this->m_lockable_manager_thread);
+
+		m_pexecutor_schedulable = _pschedulable_manager;
 	}
 
 	// 2) Update한다.
@@ -192,19 +194,20 @@ void CChild_schedulable_list::SetSchedulableList(schedulable::manager* _pschedul
 
 void CChild_schedulable_list::ClearSchedulableList()
 {
-	scoped_lock(m_lockable_manager_thread)
-	{
-		m_pexecutor_schedulable.reset();
-	}
+	// lock)
+	std::lock_guard lock(this->m_lockable_manager_thread);
+
+	// 1) reset Thread Manager
+	this->m_pexecutor_schedulable.reset();
 }
 
 void CChild_schedulable_list::UpdateSchedulableList()
 {
 	// check) 윈도우가 생성되어 있지 않으면 끝낸다.
-	RETURN_IF(m_hWnd == nullptr)
+	RETURN_IF(this->m_hWnd == nullptr)
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
-	RETURN_IF(IsWindowEnabled() == FALSE)
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
+	RETURN_IF(this->IsWindowEnabled() == FALSE)
 
 
 	//-----------------------------------------------------------------
@@ -214,8 +217,10 @@ void CChild_schedulable_list::UpdateSchedulableList()
 	object_ptr<schedulable::manager> pschedulable_manager;
 
 	// 1) Thread Manager를 설정한다.
-	scoped_lock(m_lockable_manager_thread)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_manager_thread);
+
 		pschedulable_manager = m_pexecutor_schedulable;
 	}
 
@@ -246,7 +251,7 @@ void CChild_schedulable_list::UpdateSchedulableList()
 	auto tick_now = chrono::tick::now();
 
 	// 2) Thread list Iterator의 begin과 end를 얻는다.
-	scoped_lock(pschedulable_manager->get_lockable())
+	SCOPED_LOCK(pschedulable_manager->get_lockable())
 	{
 		auto iter = pschedulable_manager->begin();
 		auto iter_end = pschedulable_manager->end();
@@ -291,7 +296,7 @@ void CChild_schedulable_list::UpdateSchedulableList()
 		m_list_schedulable.DeleteItem(index);
 	}
 
-	// 8) Thread의 갯수를 표시한다.
+	// 8) Thread의 개수를 표시한다.
 	SetDlgItemInt(IDC_STATIC_SCHEDULABLE_COUNT, static_cast<int>(pschedulable_manager->size()));
 
 	// 9) Redraw On
@@ -333,7 +338,7 @@ void CChild_schedulable_list::UpdateSchedulableList(int _index, chrono::tick::ti
 
 	// 1. "Type"
 	list_item.iSubItem = 1;
-	__sprintf(text, MAX_STRING_LENGTH, TEXT("%hs"), typeid(*pschedulable).name());
+	std::swprintf(text, MAX_STRING_LENGTH, std::wstring_view(TEXT("%hs")).data(), typeid(*pschedulable).name());
 	for(int i=0;text[i]!=NULL;++i)	if(text[i]=='*') {text[i]=NULL;break;}
 	list_item.pszText = &text[13];
 	m_list_schedulable.SetItem(&list_item);
@@ -347,7 +352,7 @@ void CChild_schedulable_list::UpdateSchedulableList(int _index, chrono::tick::ti
 
 		if(millisecInterval<1000)
 		{
-			__sprintf(text, MAX_STRING_LENGTH, TEXT("%I64ums"), millisecInterval);
+			std::swprintf(text, MAX_STRING_LENGTH, std::wstring_view(TEXT("%I64ums")).data(), millisecInterval);
 		}
 		else
 		{
@@ -356,11 +361,11 @@ void CChild_schedulable_list::UpdateSchedulableList(int _index, chrono::tick::ti
 
 			if(millisecInterval != 0)
 			{
-				__sprintf(text, MAX_STRING_LENGTH, TEXT("%I64usec %I64ums"), secInterval, millisecInterval);
+				std::swprintf(text, MAX_STRING_LENGTH, std::wstring_view(TEXT("%I64usec %I64ums")).data(), secInterval, millisecInterval);
 			}
 			else
 			{
-				__sprintf(text, MAX_STRING_LENGTH, TEXT("%I64usec"), secInterval);
+				std::swprintf(text, MAX_STRING_LENGTH, std::wstring_view(TEXT("%I64usec")).data(), secInterval);
 			}
 		}
 
@@ -370,7 +375,7 @@ void CChild_schedulable_list::UpdateSchedulableList(int _index, chrono::tick::ti
 		m_list_schedulable.SetItem(&list_item);
 
 		//const auto& timeNext = pschedulable_executable->next_tick();
-		//__sprintf(text, TEXT("%s"), timeNext.);
+		//std::swprintf(text, std::size(text), std::wstring_view(TEXT("%s")).data(), timeNext.);
 
 		// 3. "Next Tick"
 		list_item.iSubItem = 3;
@@ -397,7 +402,7 @@ void CChild_schedulable_list::UpdateSchedulableList(int _index, chrono::tick::ti
 	list_item.iSubItem = 4;
 	if (pexecutable != nullptr)
 	{
-		__sprintf(text, MAX_STRING_LENGTH, TEXT("%d"), 0);
+		std::swprintf(text, MAX_STRING_LENGTH, std::wstring_view(TEXT("%d")).data(), 0);
 		list_item.pszText = text;
 	}
 	else
@@ -435,10 +440,10 @@ void CChild_schedulable_list::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		UpdateSchedulableList();
@@ -475,13 +480,13 @@ void CChild_schedulable_list::OnBnClickedUnregisterSchedulable()
 	//// 2. Dump를 남긴다.
 	////-----------------------------------------------------------------
 	//// declare) 
-	//bool	bResult;
+	//bool	result;
 
 	//// 1) Dump를 남긴다.
-	//bResult	 = CGException::snap_dump(tempFileName);
+	//result = CGDK::snap_dump(tempFileName);
 
 	//// check) 
-	//if(bResult==false)
+	//if(result==false)
 	//{
 	//	AfxMessageBox(TEXT("Fail to snap Mini dump"), MB_OK);
 	//}

@@ -55,7 +55,7 @@ public:
 		[[nodiscard]] constexpr std::size_t	size() const noexcept { return data_.length; }
 		template<class T>
 		[[nodiscard]] constexpr T size() const noexcept { return static_cast<T>(data_.length); }
-		void					resize(std::size_t _new_size) { if (_new_size > sizeof(net::sockaddr)) throw std::invalid_argument(); data_.length = _new_size; }
+		void					resize(std::size_t _new_size) { if (_new_size > sizeof(net::sockaddr)) throw std::invalid_argument("basic_endpoint::resize size too large"); data_.length = _new_size; }
 		[[nodiscard]] constexpr auto capacity() const noexcept { return sizeof(data_); }
 		[[nodiscard]] constexpr auto port() const noexcept { return data_.port(); }
 		void					port(unsigned short _port) noexcept { data_.port(_port); }
@@ -81,13 +81,13 @@ private:
 };
 
 template <typename TPROTOCOL>
-[[nodiscard]] bool operator == (const basic_endpoint<TPROTOCOL>& _lhs, const basic_endpoint<TPROTOCOL>& _rhs) noexcept { return _lhs == _rhs; }
+[[nodiscard]] bool operator == (const basic_endpoint<TPROTOCOL>& _lhs, const basic_endpoint<TPROTOCOL>& _rhs) noexcept { return _lhs.data() == _rhs.data(); }
 template <typename TPROTOCOL>
 [[nodiscard]] bool operator != (const basic_endpoint<TPROTOCOL>& _lhs, const basic_endpoint<TPROTOCOL>& _rhs) noexcept { return !(_lhs == _rhs); }
 template <typename TPROTOCOL>
 [[nodiscard]] bool operator <  (const basic_endpoint<TPROTOCOL>& _lhs, const basic_endpoint<TPROTOCOL>& _rhs) noexcept { return _lhs.data_ < _rhs.data_; }
 template <typename TPROTOCOL>
-[[nodiscard]] bool operator >  (const basic_endpoint<TPROTOCOL>& _lhs, const basic_endpoint<TPROTOCOL>& _rhs) noexcept { return _rhs.data_ < _lhs.data_; }
+[[nodiscard]] bool operator >  (const basic_endpoint<TPROTOCOL>& _lhs, const basic_endpoint<TPROTOCOL>& _rhs) noexcept { return _rhs < _lhs; }
 template <typename TPROTOCOL>
 [[nodiscard]] bool operator <= (const basic_endpoint<TPROTOCOL>& _lhs, const basic_endpoint<TPROTOCOL>& _rhs) noexcept { return !(_rhs < _lhs); }
 template <typename TPROTOCOL>

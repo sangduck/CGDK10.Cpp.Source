@@ -28,10 +28,10 @@ class CGDK::update::resource_manager :
 	public						object::Nnameable
 {
 public:
-			object_ptr<resource::Iupdatable> get_resource(UPDATE_RESOURCE_ID _update_resource_id) const;
+			auto				get_resource(UPDATE_RESOURCE_ID _update_resource_id) const -> object_ptr<resource::Iupdatable>;
 
 protected:
-			lockable<>			m_cs_map_resource;
+			lock_object			m_lockable_map_resource;
 			std::map<UPDATE_RESOURCE_ID, object_ptr<resource::Iupdatable>> m_map_resource;
 
 	virtual result_code			_process_initializing(context& _context) override;

@@ -22,15 +22,15 @@ namespace CGDK
 {
 //-----------------------------------------------------------------------------
 //
-// loggber_buffer
+// logger_buffer
 //
-// 1. loggber_buffer은~
+// 1. logger_buffer은~
 //     Log처리를 위한 것이다.
 //
 // 2. Log의 내용
 //		0) Date/Time	Log가 남은 시간이다.(자동기록)
 //		1) Logger		Log를 남기는 자의 이름이다.(자동 등록)
-//		2) type			Log의 종류이다. Errror, Progress, Warning, Info, ...
+//		2) type			Log의 종류이다. Error, Progress, Warning, Info, ...
 //	    3) Level		Log의 중요도이다.
 //		4) Source		Log에 남기는 Event의 주체가 되는 것을 의미한다.
 //		5) Dest			Log에 남기는 Event의 대상이 되는 것을 의미한다.
@@ -39,7 +39,7 @@ namespace CGDK
 //		8) Message		남길 Log Message를 의미한다.
 //
 //-----------------------------------------------------------------------------
-class loggber_buffer : public Nlogger
+class logger_buffer : public Nlogger
 {
 public:
 			struct INITIALIZE_PARAMETER
@@ -47,25 +47,26 @@ public:
 				uint64_t		reserve_buffer_size;
 			};
 
-			loggber_buffer();
-			loggber_buffer(const std::string_view _name);
-	virtual ~loggber_buffer() noexcept;
+			logger_buffer();
+	virtual ~logger_buffer() noexcept;
 
 			result_code			initialize() { context _context; return this->object::Ninitializable::initialize(_context);}
-			result_code			initialize(const INITIALIZE_PARAMETER& _parameter) { context temp(buffer_view((char*)&_parameter, static_cast<uint32_t>(sizeof(INITIALIZE_PARAMETER)))); return this->initialize(temp); }
+			result_code			initialize(const INITIALIZE_PARAMETER& _parameter) { context temp; temp = buffer_view((char*)&_parameter, static_cast<uint32_t>(sizeof(INITIALIZE_PARAMETER))); return this->initialize(temp); }
 	virtual	result_code			initialize(context& _context) override { return this->object::Ninitializable::initialize(_context); }
 
 	[[nodiscard]] shared_buffer	get_buffer() const noexcept { return this->m_buffer_log;}
 
 protected:
-	virtual	void				process_log(const std::vector<object_ptr<LOG_RECORD>>& _vector_log_record) override;
+	virtual	void				process_log(object_ptr<LOG_RECORD>&& _plog_record) override;
 
 	virtual	result_code			_process_initializing(context& _context) override;
 	virtual	result_code			_process_destroying() noexcept override;
 
-			lockable<>			m_cs_buffer_log;
+	mutable	lock_object			m_lockable_buffer_log;
 			shared_buffer		m_buffer_log;
 };
+
+[[deprecated("use logger_buffer")]] typedef logger_buffer loggber_buffer;
 
 
 }

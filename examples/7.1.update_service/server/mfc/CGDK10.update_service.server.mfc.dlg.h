@@ -1,4 +1,4 @@
-ï»¿#pragma once
+#pragma once
 
 class Cupdate_service_server_mfc_dlg : 
 	public						CDialogEx,
@@ -46,7 +46,7 @@ protected:
 	afx_msg void				OnLvnItemchangedListUpdatableResource(NMHDR* pNMHDR, LRESULT* pResult);
 
 private:
-	// 1) messageë¥¼ ë°›ì•˜ì„ ë•Œ ë¶ˆë ¤ì§€ëŠ” í•¨ìˆ˜.
+	// 1) message¸¦ ¹Ş¾ÒÀ» ¶§ ºÒ·ÁÁö´Â ÇÔ¼ö.
 	virtual result_code			process_message(sMESSAGE& _msg) override;
 
 	// 2) message
@@ -87,8 +87,9 @@ public:
 				uint32_t					message;
 				object_ptr<socket_peer>		psource;
 			};
-			lockable<CListCtrl>	m_listctrl_socket_peer;
-			lockable<>			m_cs_vector_event_socket_peer;
+			lock_object			m_lockable_listctrl_socket_peer;
+			CListCtrl			m_listctrl_socket_peer;
+			lock_object			m_cs_vector_event_socket_peer;
 			std::vector<EVENT_SOCKET_USER_NOTIFY> m_vector_event_socket_peer_queuing;
 			std::vector<EVENT_SOCKET_USER_NOTIFY> m_vector_event_socket_peer_processing;
 			int					list_add_socket_peer(socket_peer* _psocket_peer);
@@ -103,8 +104,9 @@ public:
 				uint32_t					message;
 				object_ptr<socket_peer>		psource;
 			};
-			lockable<CListCtrl>	m_listctrl_updatable_resource;
-			lockable<>			m_cs_vector_event_updatable_resource;
+			lock_object			m_lockable_listctrl_updatable_resource;
+			CListCtrl			m_listctrl_updatable_resource;
+			lock_object			m_cs_vector_event_updatable_resource;
 			std::vector<EVENT_UPDATABLE_RESOURCE_NOTIFY> m_vector_event_updatable_resource_queuing;
 			std::vector<EVENT_UPDATABLE_RESOURCE_NOTIFY> m_vector_event_updatable_resource_processing;
 			int					list_add_updatable_resource(socket_peer* _psocket_peer);

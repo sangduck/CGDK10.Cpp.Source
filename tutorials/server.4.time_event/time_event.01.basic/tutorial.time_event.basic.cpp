@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/server.time_event.h"
+#include "cgdk/sdk10/server.time_event.h"
 
 #include <iostream>
 #if defined(_WIN32)
@@ -9,45 +9,45 @@ using namespace CGDK;
 
 
 // ----------------------------------------------------------------------------
-// 1. Functionì„ í˜¸ì¶œí•˜ê²Œ í•˜ëŠ” Event ê°ì²´.
+// 1. FunctionÀ» È£ÃâÇÏ°Ô ÇÏ´Â Event °´Ã¼.
 //
-//    1) time_event::object::COnce, time_event::object::CStartEnd, ë“±ë“±ì˜ í´ë˜ìŠ¤ëŠ”
-//       ì‹¤í–‰ì„ ì •ì˜í•˜ê¸° ìœ„í•´ ë°˜ë“œì‹œ ìƒì†ë°›ì•„ í•´ë‹¹ process_event~()í•¨ìˆ˜ë¥¼ ì¬ì •ì˜í•˜ì—¬
-//       ì‹¤í–‰ë‚´ìš©ì„ ì‘ì„±í•´ì•¼ í–ˆë‹¤. 
-//       ê°„ë‹¨í•œ ì²˜ë¦¬ ë‚´ìš©ì„ ì‘ì„±í•˜ê¸° ìœ„í•´ Classë¥¼ ì •ì˜í•˜ëŠ” ê²ƒì´ ë¶€ë‹´ë  ê²½ìš° ì‚¬ìš©í•˜ëŠ”
-//       Event ê°ì²´ë¼ê³  í• ìˆ˜ ìˆë‹¤.
+//    1) time_event::object::COnce, time_event::object::CStartEnd, µîµîÀÇ Å¬·¡½º´Â
+//       ½ÇÇàÀ» Á¤ÀÇÇÏ±â À§ÇØ ¹İµå½Ã »ó¼Ó¹Ş¾Æ ÇØ´ç process_event~()ÇÔ¼ö¸¦ ÀçÁ¤ÀÇÇÏ¿©
+//       ½ÇÇà³»¿ëÀ» ÀÛ¼ºÇØ¾ß Çß´Ù. 
+//       °£´ÜÇÑ Ã³¸® ³»¿ëÀ» ÀÛ¼ºÇÏ±â À§ÇØ Class¸¦ Á¤ÀÇÇÏ´Â °ÍÀÌ ºÎ´ãµÉ °æ¿ì »ç¿ëÇÏ´Â
+//       Event °´Ã¼¶ó°í ÇÒ ¼ö ÀÖ´Ù.
 //
-//    2) ì£¼ìš” Functionì„ í˜¸ì¶œí•˜ëŠ” Eventê°ì²´ëŠ” ì•„ë˜ì™€ ê°™ë‹¤.
+//    2) ÁÖ¿ä FunctionÀ» È£ÃâÇÏ´Â Event°´Ã¼´Â ¾Æ·¡¿Í °°´Ù.
 //
 //       @ time_event::entity_iteration_function<TFUNCTION>
-//         - ì¼ì •ì‹œê°„ë§ˆë‹¤ ì‹¤í–‰ë˜ëŠ” 
-//         - ì˜ˆì•½ëœ ì‹œê°„ì— ë”± 1íšŒë§Œ ì‹¤í–‰ë˜ëŠ” ê°ì²´
+//         - ÀÏÁ¤½Ã°£¸¶´Ù ½ÇÇàµÇ´Â 
+//         - ¿¹¾àµÈ ½Ã°£¿¡ µü 1È¸¸¸ ½ÇÇàµÇ´Â °´Ã¼
 //
 //       @ time_event::object::start_end_function<TFUNCTION>
-//         - time_event::object::CStartEndì™€ ë™ì‘ ë™ì¼
-//         - ì˜ˆì•½ëœ ì‹œì‘ì‹œê°„ê³¼ ì¢…ë£Œì‹œê°„ì— ê°ê° ì •í•´ì§„ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•˜ëŠ” ê°ì²´
+//         - time_event::object::CStartEnd¿Í µ¿ÀÛ µ¿ÀÏ
+//         - ¿¹¾àµÈ ½ÃÀÛ½Ã°£°ú Á¾·á½Ã°£¿¡ °¢°¢ Á¤ÇØÁø ÇÔ¼ö¸¦ È£ÃâÇÏ´Â °´Ã¼
 //
 //       @ time_event::object::start_iteration_end_function<TFUNCTION>
-//         - time_event::object::CStartIterationEndì™€ ë™ì‘ ë™ì¼í•˜ë‹¤.
-//         - ì˜ˆì•½ëœ ì‹œì‘ì‹œê°„ì— ì •í•´ì§„ í•¨ìˆ˜ê°€ í˜¸ì¶œë˜ë©° ì´í›„ì— ì •í•´ì§„ ê°„ê²©ì— ë”°ë¼
-//           ì •í•´ì§„ í•¨ìˆ˜ë¥¼ ì •í•´ì§„ ì‹¤í–‰íšŸìˆ˜ë§Œí¼ í˜¸ì¶œí•´ì£¼ëŠ” Event ê°ì²´ì´ë‹¤.
-//           ì‹¤í–‰íšŸìˆ˜ë§Œí¼ í˜¸ì¶œëœ í›„ process_event_end()í•¨ìˆ˜ê°€ í˜¸ì¶œëœë‹¤.
+//         - time_event::object::CStartIterationEnd¿Í µ¿ÀÛ µ¿ÀÏÇÏ´Ù.
+//         - ¿¹¾àµÈ ½ÃÀÛ½Ã°£¿¡ Á¤ÇØÁø ÇÔ¼ö°¡ È£ÃâµÇ¸ç ÀÌÈÄ¿¡ Á¤ÇØÁø °£°İ¿¡ µû¶ó
+//           Á¤ÇØÁø ÇÔ¼ö¸¦ Á¤ÇØÁø ½ÇÇàÈ½¼ö¸¸Å­ È£ÃâÇØÁÖ´Â Event °´Ã¼ÀÌ´Ù.
+//           ½ÇÇàÈ½¼ö¸¸Å­ È£ÃâµÈ ÈÄ process_event_end()ÇÔ¼ö°¡ È£ÃâµÈ´Ù.
 //
 //       @ time_event::object::iteration_function<TFUNCTION>
-//         - time_event::object::CIterationì™€ ë™ì‘ ë™ì¼í•˜ë‹¤.
-//         - ì •í•´ì§„ ì‹œê°„ ê°„ê²© ë§ˆë‹¤ ì •í•´ì§„ í•¨ìˆ˜ë¥¼ ë¬´í•œë°˜ë³µì ìœ¼ë¡œ ì‹¤í–‰í•´í•˜ëŠ”
-//           Eventê°ì²´ì´ë‹¤.
+//         - time_event::object::CIteration¿Í µ¿ÀÛ µ¿ÀÏÇÏ´Ù.
+//         - Á¤ÇØÁø ½Ã°£ °£°İ ¸¶´Ù Á¤ÇØÁø ÇÔ¼ö¸¦ ¹«ÇÑ¹İº¹ÀûÀ¸·Î ½ÇÇàÇØÇÏ´Â
+//           Event°´Ã¼ÀÌ´Ù.
 //
-//    3) ì‹¤í–‰í•¨ìˆ˜ëŠ” ì¼ë°˜ì ì¸ Function í˜¹ì€ lambda í•¨ìˆ˜ ëª¨ë‘ ì‚¬ìš©ì´ ê°€ëŠ¥í•˜ë‹¤.
+//    3) ½ÇÇàÇÔ¼ö´Â ÀÏ¹İÀûÀÎ Function È¤Àº lambda ÇÔ¼ö ¸ğµÎ »ç¿ëÀÌ °¡´ÉÇÏ´Ù.
 //
-//       @ ì¼ë°˜í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•  ê²½ìš° template ì¸ìì— EVENT_FUNCTIONë¥¼ ì‚¬ìš©í•˜ë©´ ëœë‹¤.
-//         ë‹¤ë§Œ ì´ ì¸ìëŠ” ë””í´íŠ¸ë¡œ ì„¤ì •ë˜ì–´ ìˆìœ¼ë¯€ë¡œ êµ³ì´ ì„¤ì •í•˜ì§€ ì•Šì•„ë„ ëœë‹¤.
+//       @ ÀÏ¹İÇÔ¼ö¸¦ »ç¿ëÇÒ °æ¿ì template ÀÎÀÚ¿¡ EVENT_FUNCTION¸¦ »ç¿ëÇÏ¸é µÈ´Ù.
+//         ´Ù¸¸ ÀÌ ÀÎÀÚ´Â µğÆúÆ®·Î ¼³Á¤µÇ¾î ÀÖÀ¸¹Ç·Î ±»ÀÌ ¼³Á¤ÇÏÁö ¾Ê¾Æµµ µÈ´Ù.
 //
 //         time_event::object::once_function<EVENT_FUNCTION>
 //         time_event::object::once_function<>
 //
-//       @ ëŒë‹¤í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•  ê²½ìš° template ì¸ìì— EVENT_LAMBDAë¥¼ ì‚¬ìš©í•˜ë©´ ëœë‹¤.
-//         ë‹¤ë§Œ ëŒë‹¤í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•˜ëŠ” ê²ƒì€ Visual C++ 2010ë¶€í„° ì‚¬ìš©ê°€ëŠ¥í•˜ë‹¤.
+//       @ ¶÷´ÙÇÔ¼ö¸¦ »ç¿ëÇÒ °æ¿ì template ÀÎÀÚ¿¡ EVENT_LAMBDA¸¦ »ç¿ëÇÏ¸é µÈ´Ù.
+//         ´Ù¸¸ ¶÷´ÙÇÔ¼ö¸¦ »ç¿ëÇÏ´Â °ÍÀº Visual C++ 2010ºÎÅÍ »ç¿ë°¡´ÉÇÏ´Ù.
 //
 //         time_event::object::once_function<EVENT_LAMBDA>
 //
@@ -62,13 +62,13 @@ int main()
 	// ------------------------------------------------------------------
 	// 1. time_event::entity_iteration
 	//
-	//    - ì •í•´ì§„ ì‹œê°„ì— í•œë²ˆë§Œ ì‹¤í–‰ë˜ëŠ” Eventê°ì²´ì´ë‹¤.
-	//    - set_event_time()ìœ¼ë¡œ ì„¤ì •ëœ ì‹œê°„ì— process_event()í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œë‹¤.
-	//    - process_event()ì— ì²˜ë¦¬í•  ë‚´ìš©ì„ ì¬ì •ì˜í•©ë‹ˆë‹¤.
+	//    - Á¤ÇØÁø ½Ã°£¿¡ ÇÑ¹ø¸¸ ½ÇÇàµÇ´Â Event°´Ã¼ÀÌ´Ù.
+	//    - set_event_time()À¸·Î ¼³Á¤µÈ ½Ã°£¿¡ process_event()ÇÔ¼ö¸¦ È£ÃâÇÑ´Ù.
+	//    - process_event()¿¡ Ã³¸®ÇÒ ³»¿ëÀ» ÀçÁ¤ÀÇÇÕ´Ï´Ù.
 	//
-	//    - ì‹œì‘í›„ 1ì´ˆ í›„ ìµœì´ˆ ì‹¤í–‰í•˜ë©° 3ì´ˆë§ˆë‹¤ 10íšŒ ì¬ì‹¤í–‰í•©ë‹ˆë‹¤.
+	//    - ½ÃÀÛ ÈÄ 1ÃÊ ÈÄ ÃÖÃÊ ½ÇÇàÇÏ¸ç 3ÃÊ¸¶´Ù 10È¸ Àç½ÇÇàÇÕ´Ï´Ù.
 	// ------------------------------------------------------------------
-	// 1) time_event ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) time_event °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto pentity_a = make_own<time_event::entity_iteration<>>();
 
 	// 2) setting
@@ -80,7 +80,7 @@ int main()
 	pentity_a->set_event_function([=](chrono::time::utc::time_point /*_time*/)
 	{
 		std::cout << "event1(time_event::entity_iteration) executed ("sv
-				  << to_string<char>(chrono::time::utc::now()) << ")"sv
+				  << to_string(chrono::time::utc::now()) << ")"sv
 				  << '\n';
 
 		return eRESULT::SUCCESS;
@@ -93,13 +93,13 @@ int main()
 	// ------------------------------------------------------------------
 	// 2. time_event::entity_start_end
 	//
-	//    - ì‹œì‘ ì‹œê°„ê³¼ process_event_start()ë¥¼ í˜¸ì¶œí•˜ê³ 
-	//      ì¢…ë£Œì‹œê°„ì— process_event_end()ë¥¼ í˜¸ì¶œí•˜ëŠ” time_event ê°ì²´ì´ë‹¤.
+	//    - ½ÃÀÛ ½Ã°£°ú process_event_start()¸¦ È£ÃâÇÏ°í
+	//      Á¾·á½Ã°£¿¡ process_event_end()¸¦ È£ÃâÇÏ´Â time_event °´Ã¼ÀÌ´Ù.
 	//
-	//    - ì‹œì‘í›„ 5ì´ˆ í›„ process_event_start()ê°€ í˜¸ì¶œë˜ë©°
-	//      ì‹œì‘í›„ 15ì´ˆí›„ process_event_end()ê°€ í˜¸ì¶œëœë‹¤.
+	//    - ½ÃÀÛ ÈÄ 5ÃÊ ÈÄ process_event_start()°¡ È£ÃâµÇ¸ç
+	//      ½ÃÀÛ ÈÄ 15ÃÊÈÄ process_event_end()°¡ È£ÃâµÈ´Ù.
 	// ------------------------------------------------------------------
-	// 1) time_event ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) time_event °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto pentity_b = make_own<time_event::entity_start_end<>>();
 
 	// 2) setting
@@ -110,7 +110,7 @@ int main()
 	pentity_b->set_start_function([=](chrono::time::utc::time_point /*_time*/)
 	{
 		std::cout << "event2(time_event::entity_start_end) START executed ("sv
-				  << to_string<char>(chrono::time::utc::now()) << ")"sv
+				  << to_string(chrono::time::utc::now()) << ")"sv
 				  << '\n';
 
 		return eRESULT::SUCCESS;
@@ -119,7 +119,7 @@ int main()
 	pentity_b->set_end_function([=](chrono::time::utc::time_point /*_time*/)
 	{
 		std::cout << "event2(time_event::entity_start_end) END executed ("sv
-				  << to_string<char>(chrono::time::utc::now()) << ")"sv
+				  << to_string(chrono::time::utc::now()) << ")"sv
 				  << '\n';
 
 		return eRESULT::SUCCESS;
@@ -132,15 +132,15 @@ int main()
 	// ------------------------------------------------------------------
 	// 3. time_event::entity_start_iteration_end
 	//
-	//    - ì‹œì‘ ì‹œê°„ê³¼ process_event_start()ë¥¼ í˜¸ì¶œí•˜ê³ 
-	//      time_interval ê°„ê²©ë§ˆë‹¤ process_event_iteration()í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œ í›„ 
-	//      ì¢…ë£Œì‹œê°„ì— process_event_end()ë¥¼ í˜¸ì¶œí•˜ëŠ” time_event ê°ì²´ì´ë‹¤.
+	//    - ½ÃÀÛ ½Ã°£°ú process_event_start()¸¦ È£ÃâÇÏ°í
+	//      time_interval °£°İ¸¶´Ù process_event_iteration()ÇÔ¼ö¸¦ È£ÃâÇÑ ÈÄ 
+	//      Á¾·á½Ã°£¿¡ process_event_end()¸¦ È£ÃâÇÏ´Â time_event °´Ã¼ÀÌ´Ù.
 	//
-	//    - ì‹œì‘í›„ 2ì´ˆ í›„ process_event_start()ê°€ í˜¸ì¶œëœë‹¤.
-	//      ì‹œì‘í›„ 3ì´ˆ ê°„ê²©ìœ¼ë¡œ 10ë²ˆ process_event_iteration()ê°€ í˜¸ì¶œë˜ë©°
-	//      ê·¸ 5ì´ˆ í›„ process_event_end()ê°€ í˜¸ì¶œëœë‹¤.
+	//    - ½ÃÀÛ ÈÄ 2ÃÊ ÈÄ process_event_start()°¡ È£ÃâµÈ´Ù.
+	//      ½ÃÀÛ ÈÄ 3ÃÊ °£°İÀ¸·Î 10¹ø process_event_iteration()°¡ È£ÃâµÇ¸ç
+	//      ±× 5ÃÊ ÈÄ process_event_end()°¡ È£ÃâµÈ´Ù.
 	// ------------------------------------------------------------------
-	// 1) time_event ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) time_event °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto pentity_c = make_own<time_event::entity_start_iteration_end<>>();
 
 	// 2) setting
@@ -152,7 +152,7 @@ int main()
 	pentity_c->set_start_function([=](chrono::time::utc::time_point /*_time*/)
 	{
 		std::cout << "event3(time_event::entity_start_iteration_end) START executed ("sv
-				  << to_string<char>(chrono::time::utc::now()) << ")"sv
+				  << to_string(chrono::time::utc::now()) << ")"sv
 				  << '\n';
 
 		return eRESULT::SUCCESS;
@@ -161,7 +161,7 @@ int main()
 	pentity_c->set_iteration_function([=](chrono::time::utc::time_point /*_time*/)
 	{
 		std::cout << "event3(time_event::entity_start_iteration_end) ITERATION executed ("sv
-				  << to_string<char>(chrono::time::utc::now()) << ")"sv
+				  << to_string(chrono::time::utc::now()) << ")"sv
 				  << '\n';
 
 		return eRESULT::SUCCESS;
@@ -170,7 +170,7 @@ int main()
 	pentity_c->set_end_function([=](chrono::time::utc::time_point /*_time*/)
 	{
 		std::cout << "event3(time_event::entity_start_iteration_end) END executed ("sv
-				  << to_string<char>(chrono::time::utc::now()) << ")"sv
+				  << to_string(chrono::time::utc::now()) << ")"sv
 				  << '\n';
 
 		return eRESULT::SUCCESS;
@@ -181,15 +181,15 @@ int main()
 
 
 	// ------------------------------------------------------------------
-	// 4. ì¢…ë£ŒëŒ€ê¸°...
+	// 4. Á¾·á´ë±â...
 	// ------------------------------------------------------------------
-	// 1) ESCë¥¼ ëˆ„ë¥¼ ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
+	// 1) ESC¸¦ ´©¸¦ ¶§±îÁö ±â´Ù¸°´Ù.
 	while (_getch() != 27);
 
 	// trace) 
 	std::cout << "end tutorial..."sv << std::endl;
 
 
-	// return) ë.
+	// return) ³¡.
 	return 0;
 }

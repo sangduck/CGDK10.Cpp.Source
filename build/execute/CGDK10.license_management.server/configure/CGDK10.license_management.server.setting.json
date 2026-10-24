@@ -1,0 +1,24 @@
+{
+  "service": {
+    "name": "CGDK10 license_managment server",
+    "id": 100
+  },
+
+  "license_manager": {
+    "querier_license": {
+      "provider": "mysql",
+      "server": "192.168.0.55",
+      "uid": "sangduck",
+      "pwd": "Cofls1212!@",
+      "database": "CGDK_license"
+    }
+  },
+
+  "acceptor_socket_client": {
+    "local_endpoint": {
+      "port": 43316
+    },
+    "prepare_on_start": "x2",
+    "must_prepare": "4"
+  }
+}

@@ -66,7 +66,7 @@ public:
 struct REQUEST_TOKEN : public query::REQUEST
 {
 public:												// grant_type은 refresh_token으로 고정
-	static_string<64>			client_id;			// 앱 생성시 발급 받은 REST_API 키
+	static_string<64>			client_id;			// 앱 생성 시 발급 받은 REST_API 키
 	static_string<64>			redirect_uri;		// 코드가 리다이렉트 된 URI, 설정>일반>웹>도매이니사이트에서 설정한 각각의 도메인에 설정>일반>웹>Redirect Path를 붙인 URI
 	static_string<64>			code;				// 위 코드받기(AUTHORIZE)에서 발급 받은 인증된 코드('authorize_code')
 	static_string<64>			client_secret;		// Option) 

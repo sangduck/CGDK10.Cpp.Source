@@ -60,7 +60,8 @@ namespace CGDK
 //			void				reset_executor() noexcept { this->m_psystem_executor.reset();}
 //
 //private:
-//			lockable<std::vector<object_ptr<Iexecutable>>> m_priorityqueue_executable;
+//			lock_object			m_cs_priorityqueue_executable;
+//			std::vector<object_ptr<Iexecutable>> m_priorityqueue_executable;
 //			object_ptr<Iexecutor> m_psystem_executor;
 //
 //	virtual	bool				process_post(object_ptr<Iexecutable>&& _pexecutable) override;

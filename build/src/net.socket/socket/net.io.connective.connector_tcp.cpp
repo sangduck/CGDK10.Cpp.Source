@@ -20,7 +20,44 @@ private:
 		object_ptr<Iconnectable> pconnectable;
 		object_ptr<Iconnective>	pconnective;
 
-		scoped_lock(this->m_lockable_connective)
+		// - io_uring completion : posted by process_connecting : this worker thread submits the CONNECT op (the op belongs to it :
+		//   the kernel cancels the requests of a thread that exits). closed meanwhile (the handle is not the one of the post) => a failure
+		if (this->m_is_submit)
+		{
+			this->m_is_submit = false;
+
+			SCOPED_LOCK(this->m_lockable_connective)
+			{
+				// check)
+				RETURN_IF(this->m_pconnectable.empty(), 0);
+
+				pconnectable = this->m_pconnectable;
+				pconnective = this->m_pconnective;
+			}
+
+			if (pconnectable->socket_state() == eSOCKET_STATE::SYN && pconnectable->native_handle() == this->m_fd)
+			{
+				this->m_is_op = true;
+
+				if (auto pio_context = pconnectable->io_context(); pio_context.exist() && pio_context->submit_connect(this->m_fd, reinterpret_cast<const ::sockaddr*>(&this->m_address), this->m_address.length, this))
+					return intptr_t(0);
+
+				this->m_is_op = false;
+				pconnectable->m_last_socket_error = api::get_last_error();
+			}
+
+			// - a failure (no completion follows)
+			SCOPED_LOCK(this->m_lockable_connective)
+			{
+				this->m_pconnectable.reset();
+				this->m_pconnective.reset();
+			}
+
+			pconnective->process_connective_connect(pconnectable, 1);
+			return intptr_t(0);
+		}
+
+		SCOPED_LOCK(this->m_lockable_connective)
 		{
 			// check)
 			RETURN_IF(this->m_pconnectable.empty(), 0);
@@ -29,15 +66,30 @@ private:
 			pconnective = std::move(this->m_pconnective);
 		}
 
-		// check)
-		if (_result & EPOLLOUT)
+		// - io_uring completion : the result of the CONNECT op (0 / -errno. EISCONN, m_is_connected : connected at once (a UDS) : posted)
+		if (this->m_is_op || this->m_is_connected)
 		{
-			_result = 0;
-		}
+			const bool is_connected = this->m_is_connected || _result == 0 || _result == -EISCONN;
 
-		if (_result & (EPOLLHUP | EPOLLERR))
+			if (is_connected == false && _result != -ECANCELED)
+				pconnectable->m_last_socket_error = static_cast<int>(-_result);
+
+			_result = is_connected ? 0 : 1;
+			this->m_is_op = false;
+			this->m_is_connected = false;
+		}
+		else
 		{
-			_result = 1;
+			// check)
+			if (_result & EPOLLOUT)
+			{
+				_result = 0;
+			}
+
+			if (_result & (EPOLLHUP | EPOLLERR))
+			{
+				_result = 1;
+			}
 		}
 
 		// 1) process_connective_connect
@@ -57,12 +109,18 @@ private:
 		// return) 
 		return intptr_t(0);
 	}
-	virtual	void				on_final_release() noexcept override { this->m_pconnectable.reset(); this->m_pconnective.reset(); }
+	virtual	void				on_final_release() noexcept override { this->m_pconnectable.reset(); this->m_pconnective.reset(); this->m_is_op = false; this->m_is_connected = false; this->m_is_submit = false; this->m_fd = INVALID_SOCKET; }
 
 public:
 	#if defined(_SYS_EPOLL_H)
-			lockable<>			m_lockable_connective;
+	mutable	lock_object			m_lockable_connective;
 	#endif
+			// - io_uring completion : the executable of a CONNECT op (the result is 0 / -errno), or posted for a socket connected at once (a UDS)
+			bool				m_is_op = false;
+			bool				m_is_connected = false;
+			bool				m_is_submit = false;
+			CGSOCKET			m_fd = INVALID_SOCKET;
+			net::sockaddr		m_address;
 			object_ptr<Iconnectable> m_pconnectable;
 			object_ptr<Iconnective>	m_pconnective;
 };
@@ -72,8 +130,9 @@ bool net::io::connective::connector::Ntcp::process_set_enable(bool _is_state)
 	// 1) Disable로 상태를 바꾼다.
 	int pre_state = this->m_is_enable.exchange((_is_state) ? 1 : 0);
 
-	// check) 이전 상태가 Disable된 상태라면 그냥 끝낸다.
-	RETURN_IF(pre_state != 0, false);
+	// check) 상태가 바뀌지 않았으면 그냥 끝낸다. (Nenable과 같다 : 바뀌었을 때만 알린다)
+	//        (이전 : 'pre_state != 0'이라 enable->disable은 알리지 않고, 이미 disable인 것을 disable하면 알렸다.)
+	RETURN_IF(pre_state == ((_is_state) ? 1 : 0), false);
 
 	// notify) message 전달하기
 	net::io::connective::manager::instance()->transmit_message(sMESSAGE_NOTIFY((_is_state == true) ? eMESSAGE::NETWORK::SOCKET::CONNECTIVE_ENABLE : eMESSAGE::NETWORK::SOCKET::CONNECTIVE_DISABLE, 0, reinterpret_cast<uintptr_t>(static_cast<net::io::Iconnective*>(this))));
@@ -95,23 +154,29 @@ result_code net::io::connective::connector::Ntcp::_process_starting(context& _co
 	try
 	{
 		// - 'enable progress_log
-		if (_context.type() != eCONTEXT_VALUE_TYPE::BUFFER_)
+		if (_context.type() != context::value_type_t::buffer_)
 		{
-			// - find context
-			if (std::string str_find = _context.find("progress_log"sv, "progress log"sv, "enable_progress_log"sv, "enable progress log"sv); str_find.empty() == false)
+			if (auto& context_find = _context.find("progress_log", "progress log", "enable_progress_log", "enable progress log"); context_find.is_valid())
 			{
-				if (__stricmp(str_find, "true") == 0
-					|| __stricmp(str_find, "enable") == 0)
+				// - get stringvalue
+				std::string str_find = context_find;
+
+				if (CGDK::__stricmp(str_find, "true") == 0
+					|| CGDK::__stricmp(str_find, "enable") == 0)
 				{
 					this->m_enable_progress_log = true;
 				}
-				else if (__stricmp(str_find, "false") == 0
-					|| __stricmp(str_find, "disable") == 0)
+				else if (CGDK::__stricmp(str_find, "false") == 0
+					|| CGDK::__stricmp(str_find, "disable") == 0)
 				{
 					this->m_enable_progress_log = false;
 				}
 			}
 		}
+
+		// - socket_option ("socket_option": {...}) : the tcp socket option of the sockets allocated by this connector (alloc_connectable)
+		if (_context.type() != context::value_type_t::buffer_ && get_parameter_socket_option(_context, this->m_socket_option, this->m_enable_progress_log))
+			this->m_flag_socket_option = true;
 
 		enable_progress_log = this->m_enable_progress_log;
 
@@ -146,7 +211,7 @@ result_code net::io::connective::connector::Ntcp::_process_starting(context& _co
 					if (auto pnameable = dynamic_cast<Inameable*>(pconnectable.get()); pnameable != nullptr)
 					{
 						// - set socket name
-						pnameable->set_name(iter.first.c_str());
+						pnameable->name(iter.first.c_str());
 					}
 
 					// - connect를 수행한다.
@@ -158,7 +223,7 @@ result_code net::io::connective::connector::Ntcp::_process_starting(context& _co
 				catch (throwable::failure& _e)
 				{
 					// log) 
-					LOG_ERROR << "  @ (excp) fail to connecting '"sv << iter.first << "' (reason:"sv << to_string<char>(_e.reason<eRESULT>()) << ")"sv;
+					LOG_ERROR << "  @ (excp) fail to connecting '"sv << iter.first << "' (reason:"sv << to_string(_e.reason<eRESULT>()) << ")"sv;
 				}
 				catch (...)
 				{
@@ -273,7 +338,7 @@ result_code net::io::connective::connector::Ntcp::_process_stop() noexcept
 	}
 
 	// check) 아직 IO처리 중일 경우...
-	EXECUTE_IF(this->statistics_get_now_async_io() > 0, LOG_ERROR << log_level_t::important() << "(excp) CGDK.net.socket: listen soocket is exist yet.[prepared:"sv << statistics_get_now_async_io() << "]"sv);
+	EXECUTE_IF(this->statistics_get_now_async_io() > 0, LOG_ERROR << log_level_t::important() << "(excp) CGDK.net.socket: listen socket is exist yet.[prepared:"sv << statistics_get_now_async_io() << "]"sv);
 
 	// check) 아직 접속 종료되지 않은 socket이 존재할 경우...
 	EXECUTE_IF(this->count() != 0, LOG_ERROR << log_level_t::important() << "(excp) CGDK.net.socket: connected socket is exist yet[connected:"sv << count() << "]"sv);
@@ -307,7 +372,7 @@ void net::io::connective::connector::Ntcp::_process_disable_reconnectable()
 	// declare) 
 	Iconnectable* pconnectable = nullptr;
 
-	// 1) Itrarator를 얻는다.
+	// 1) Iterator를 얻는다.
 	auto pIterator = this->alloc_iterator();
 
 	// 2) 전체를 돌며 disconnect 처리를 한다.
@@ -327,20 +392,26 @@ void net::io::connective::connector::Ntcp::_process_disable_reconnectable()
 
 object_ptr<net::io::Iconnectable> net::io::connective::connector::Ntcp::process_request_connect(context& _context_connect)
 {
+	// declare)
+	object_ptr<net::io::Iconnectable> pconnectable;
+
 	// check) enable 여부를 확인한다.
-	RETURN_IF(this->m_is_enable == false, object_ptr<net::io::Iconnectable>());
+	if(this->m_is_enable == false)
+		return pconnectable;
 
 	// 1) socket을 만든다.
-	auto pconnectable = this->alloc_connectable();
+	pconnectable = this->alloc_connectable();
 
 	// check) 
-	RETURN_IF(pconnectable.empty(), object_ptr<net::io::Iconnectable>());
+	if(pconnectable.empty())
+		return pconnectable;
 
 	// 2) connect를 수행한다.
 	auto result = this->process_connecting(pconnectable, _context_connect);
 
 	// check) 
-	RETURN_IF(result == false, object_ptr<net::io::Iconnectable>());
+	if (result == false)
+		pconnectable.reset();
 
 	// return) 성공!!!
 	return pconnectable;
@@ -360,11 +431,18 @@ object_ptr<net::io::Iconnectable> net::io::connective::connector::Ntcp::alloc_co
 
 	try
 	{
-		// 2) socket을 무조건 만든다.(기존에 있는것을 지운다.)
+		// 2) socket을 무조건 만든다.(기존에 있는 것을 지운다.)
 		pconnectable = this->process_alloc_connectable();
 
 		// check) pconnectable가 nullptr이어서는 안된다.
 		CGASSERT(pconnectable.exist(), object_ptr<net::io::Iconnectable>());
+
+		// - the socket option back to the defaults (a socket from the pool kept the option of its last connection)
+		pconnectable->socket_option(sSOCKET_OPTION_TCP{});
+
+		// 3) the tcp socket option of the connector ("socket_option") : applied when the connect completes. (on_alloc_connectable() may change it)
+		if (this->m_flag_socket_option)
+			pconnectable->socket_option(this->m_socket_option);
 
 		// 4) on_alloc_connectable을 호출한다.
 		this->on_alloc_connectable(pconnectable);
@@ -413,7 +491,7 @@ bool net::io::connective::connector::Ntcp::process_connecting( Iconnectable* _pc
 	// 1) ENDPOINT을 얻는다.
 	sSOCKET_CONNECT_REQUEST_PARAMETER parameter;
 
-	if (_context_connect.type() == eCONTEXT_VALUE_TYPE::BUFFER_)
+	if (_context_connect.type() == context::value_type_t::buffer_)
 	{
 		// - get parameter
 		parameter = _context_connect.v.value_buffer.front<sSOCKET_CONNECT_REQUEST_PARAMETER>();
@@ -423,10 +501,21 @@ bool net::io::connective::connector::Ntcp::process_connecting( Iconnectable* _pc
 		parameter = get_parameter_connection(_context_connect, true);
 	}
 
+	// 2) the tcp socket option of this connection ("socket_option" of the connect context / START_PARAMETER::flag_socket_option) : the socket keeps its own one if not given
+	if (_context_connect.type() == context::value_type_t::buffer_)
+	{
+		if (parameter.flag_socket_option != 0)
+			_pconnectable->socket_option(parameter.socket_option);
+	}
+	else
+	{
+		get_parameter_socket_option(_context_connect, _pconnectable->socket_option(), true);
+	}
+
 	// check) throw exception if remote endpoint is empty
 	RETURN_IF(parameter.remote_endpoint.empty(), false);
 
-	// check) addres length가 0이면 안됀다.
+	// check) addres length가 0이면 안 된다.
 	CGASSERT_ERROR(parameter.remote_endpoint.size() != 0)
 
 	// check) SocketAddress의 길이가 0이 아닌가?
@@ -459,7 +548,7 @@ bool net::io::connective::connector::Ntcp::process_connecting( Iconnectable* _pc
 		// 3) set client socket
 		_pconnectable->set_as_client_socket();
 
-		// 4) port를 reuse하도록 한다.(중요:connect의 경우 pool로 동작할 때 socket address를 Reuse하지 않으면 error를 발생시킬수 있다.)
+		// 4) port를 reuse하도록 한다.(중요:connect의 경우 pool로 동작할 때 socket address를 Reuse하지 않으면 error를 발생시킬 수 있다.)
 		api::socket::set_reuse_address(_pconnectable->native_handle(), true);
 	}
 	catch (throwable::failure& _e)
@@ -562,10 +651,19 @@ bool net::io::connective::connector::Ntcp::process_connecting( Iconnectable* _pc
 	// 6) connectable의 request_connect를 호출한다.
 	_pconnectable->process_request_connect(parameter.remote_endpoint);
 
+	// - no bind endpoint (or any:0) : a loopback connect may go through the UDS (linux. see 6.)
+	[[maybe_unused]] const bool is_bind_any = parameter.bind_endpoint.empty() || (parameter.bind_endpoint.address().is_unspecified() && parameter.bind_endpoint.port() == 0);
+
 
 	//-----------------------------------------------------------------
 	// 5. bind 한다.
 	//-----------------------------------------------------------------
+#if defined(_SYS_EPOLL_H)
+	// - linux : bound only when a bind endpoint is given. connect() picks the local port itself (and may reuse a port in TIME_WAIT).
+	//   bind(any:0) takes a port no other socket holds (TIME_WAIT included) : many connects in a short time run the ports out
+	//   (EADDRINUSE : the connect failed before connect())
+	if (is_bind_any == false)
+#endif
 	{
 		// 1) set socket_addr
 		if (parameter.bind_endpoint.empty())
@@ -592,15 +690,16 @@ bool net::io::connective::connector::Ntcp::process_connecting( Iconnectable* _pc
 		// 2) bind socket
 		result = api::socket::bind(_pconnectable->native_handle(), reinterpret_cast<::sockaddr*>(&parameter.bind_endpoint.data()), parameter.bind_endpoint.data().length);
 
-	#if defined(_WINSOCK2API_)
-		// check)
+		// check) SUCCESSED!
 		if (result == SOCKET_ERROR)
 		{
 			// - get error code
 			auto error_code = api::get_last_error();
 
-			// - set last socket error
-			_pconnectable->m_last_socket_error = error_code;
+		#if defined(_SYS_EPOLL_H)
+			// - reset executable
+			_pconnectable->process_reset_executable_socket();
+		#elif defined(_WINSOCK2API_)
 
 			// - re-alloc socket handle
 			if (error_code == WSAEINVAL || error_code == WSAEADDRINUSE)
@@ -611,22 +710,20 @@ bool net::io::connective::connector::Ntcp::process_connecting( Iconnectable* _pc
 				// - try binding one more
 				result = api::socket::bind(_pconnectable->native_handle(), (::sockaddr*)&parameter.bind_endpoint.data(), parameter.bind_endpoint.data().length);
 			}
-		}
-	#endif
-
-		// check) SUCCESSED!
-		if (result == SOCKET_ERROR)
-		{
-		#if defined(_SYS_EPOLL_H)
-			// - reset executable
-			_pconnectable->process_reset_executable_socket();
+			
+			if (result == SOCKET_ERROR)
+			{
 		#endif
-			// - set last error
-			_pconnectable->m_last_socket_error = api::get_last_error();
+			// - set last socket error
+			_pconnectable->m_last_socket_error = error_code;
 
 			// trace) 
 			LOG_DEBUG << "(err ) CGDK.net.socket: fail to bind socket [error_code:"sv << api::get_last_error() << "] " << __CGFUNCTION__ ""sv;
 
+		#if defined(_SYS_EPOLL_H)
+			// - on_fail_connect (the connector and the connectable) and CLOSED, like a failed connect() (closed silently before : the requester never heard of it)
+			this->process_connective_connect(_pconnectable, 1);
+		#else
 			// - close socket
 			_pconnectable->process_close_socket(DISCONNECT_REASON_ACTIVE | DISCONNECT_REASON_ABORTIVE | DISCONNECT_REASON_FAIL_TO_SOCKET_BIND);
 
@@ -635,9 +732,13 @@ bool net::io::connective::connector::Ntcp::process_connecting( Iconnectable* _pc
 
 			// statistics) 
 			statistics_on_fail_connect();
+		#endif
 
 			// return) 
 			return false;
+		#if defined(_WINSOCK2API_)
+			}
+		#endif
 		}
 	}
 
@@ -687,39 +788,91 @@ bool net::io::connective::connector::Ntcp::process_connecting( Iconnectable* _pc
 	}
 
 #elif defined(_SYS_EPOLL_H)
-	// 1) allocate executable accept object
-	auto pexecutable_connective = make_object<executable_connective>();
+	// 1) connect를 요청한다. (connect first, then attach to epoll like connect_requestable::Ntcp)
+	//    - a TCP socket not connected yet is reported as EPOLLOUT | EPOLLHUP at once : attached before connect(), a worker taking that event
+	//      before connect() completed the connect as a failure (a spurious on_fail_connect, and the ONESHOT event was spent)
+	//    - connected at once (0) is completed by the EPOLLOUT event too (completed here as well, the event completed it twice)
+	//    - a loopback address : the UDS of the port first ("\0cgdk.tcp.<port>" : an acceptor with enable_uds. same as connect_requestable::Ntcp,
+	//      connect_requestable::Ntcp::enable_uds_loopback() switches both). a UDS connect completes or fails at once.
+	//      connected => the TCP socket is replaced with the UDS one (not attached yet) and the rest is the same. failed (no UDS listener) => TCP
+	int result_connect = -1;
+	bool is_connected_uds = false;
 
-	// check)
-	CGASSERT_ERROR(pexecutable_connective->reference_count() == 1);
-
-	// 2) set connective
-	pexecutable_connective->m_pconnective = this;
-	pexecutable_connective->m_pconnectable = _pconnectable;
-
-	// 3) set event
-	auto result = _pconnectable->io_context()->attach(_pconnectable->native_handle(), pexecutable_connective, EPOLLONESHOT | EPOLLWAKEUP | EPOLLOUT | EPOLLERR);
-
-	// check) 
-	if (result == false)
+	if (is_bind_any && net::io::connect_requestable::Ntcp::is_enable_uds_loopback() && parameter.remote_endpoint.data().is_loopback() && parameter.remote_endpoint.port() != 0)
 	{
-		// - call process_connective_connect
-		this->process_connective_connect(_pconnectable, 1);
+		::sockaddr_un addr_uds;
+		socklen_t addr_length = 0;
+		api::socket::make_uds_address(parameter.remote_endpoint.port(), addr_uds, addr_length);
 
-		// return)
-		return false;
+		auto handle_uds = api::socket::instance().create_socket(AF_UNIX, SOCK_STREAM, 0);
+
+		if (handle_uds != INVALID_SOCKET)
+		{
+			if (::connect(handle_uds, reinterpret_cast<const ::sockaddr*>(&addr_uds), addr_length) == 0)
+			{
+				// - replace the socket (the handle, the address family, the epoll handle : stored apart from the handle)
+				auto handle_tcp = _pconnectable->native_handle(handle_uds);
+				if (auto pio_context = _pconnectable->io_context(); pio_context.exist())
+					pio_context->detach(static_cast<CGHANDLE>(handle_tcp));
+				api::socket::closesocket(handle_tcp);
+				_pconnectable->address_family(AF_UNIX);
+				_pconnectable->set_epoll_handle(handle_uds);
+				is_connected_uds = true;
+				result_connect = 0;
+			}
+			else
+			{
+				api::socket::closesocket(handle_uds);
+			}
+		}
 	}
 
-	// 5) connect를 요청한다.
-	auto result_connect = ::connect(_pconnectable->native_handle(), reinterpret_cast<const ::sockaddr*>(&parameter.remote_endpoint.data()), parameter.remote_endpoint.data().length);
+	// - io_uring completion : the connect is a CONNECT op (TCP) or posted (a UDS connected at once). no readiness registration
+	const bool is_completion_backend = _pconnectable->io_context().exist() && _pconnectable->io_context()->backend() == executor::io_backend::io_uring_completion;
 
-	// 6-1) connection completed! - 접속까지 완료! (접속까지 완료된 상황이므로 접속 완료 처리를 해준다.)
-	if (result_connect == 0)
+	if (is_completion_backend)
 	{
-		// - call process_connective_connect
-		this->process_connective_connect(_pconnectable, 0);
+		// - the executable (the op / the post takes a reference)
+		auto pexecutable_connective = make_object<executable_connective>();
+
+		pexecutable_connective->m_pconnective = this;
+		pexecutable_connective->m_pconnectable = _pconnectable;
+
+		bool result;
+
+		if (is_connected_uds)
+		{
+			pexecutable_connective->m_is_connected = true;
+			result = _pconnectable->io_context()->post(object_ptr<Iexecutable>(pexecutable_connective.get()));
+		}
+		else
+		{
+			// - submitted by a worker of the io_context (the op belongs to the thread that submitted it : this thread may exit before the completion)
+			pexecutable_connective->m_is_submit = true;
+			pexecutable_connective->m_fd = _pconnectable->native_handle();
+			pexecutable_connective->m_address = parameter.remote_endpoint.data();
+			result = _pconnectable->io_context()->post(object_ptr<Iexecutable>(pexecutable_connective.get()));
+		}
+
+		// check) no completion follows => failed here
+		if (result == false)
+		{
+			pexecutable_connective->m_pconnectable.reset();
+			pexecutable_connective->m_pconnective.reset();
+			_pconnectable->m_last_socket_error = api::get_last_error();
+			this->process_connective_connect(_pconnectable, 1);
+			return false;
+		}
+
+		// return) pending
+		return true;
 	}
-	else
+
+	// - TCP
+	if (is_connected_uds == false)
+		result_connect = ::connect(_pconnectable->native_handle(), reinterpret_cast<const ::sockaddr*>(&parameter.remote_endpoint.data()), parameter.remote_endpoint.data().length);
+
+	if (result_connect != 0)
 	{
 		// - get last error code
 		auto error_code = api::get_last_error();
@@ -740,6 +893,29 @@ bool net::io::connective::connector::Ntcp::process_connecting( Iconnectable* _pc
 			return false;
 		}
 	}
+
+	// 2) allocate executable accept object
+	auto pexecutable_connective = make_object<executable_connective>();
+
+	// check)
+	CGASSERT_ERROR(pexecutable_connective->reference_count() == 1);
+
+	// 3) set connective
+	pexecutable_connective->m_pconnective = this;
+	pexecutable_connective->m_pconnectable = _pconnectable;
+
+	// 4) set event : EPOLLOUT (connected) / EPOLLERR (failed) completes the connect
+	auto result = _pconnectable->io_context()->attach(_pconnectable->native_handle(), pexecutable_connective, EPOLLONESHOT | EPOLLWAKEUP | EPOLLOUT | EPOLLERR);
+
+	// check)
+	if (result == false)
+	{
+		// - call process_connective_connect
+		this->process_connective_connect(_pconnectable, 1);
+
+		// return)
+		return false;
+	}
 #else
 	#error	"unsupported network API"
 #endif
@@ -751,7 +927,7 @@ bool net::io::connective::connector::Ntcp::process_connecting( Iconnectable* _pc
 void net::io::connective::connector::Ntcp::process_connective_connect( Iconnectable* _pconnectable, uintptr_t _result)
 {
 	// check) 
-	CGASSERT_ERROR(_pconnectable != nullptr);
+	CGASSERT_FATAL(_pconnectable != nullptr);
 
 	// check) 
 	THROW_IF(_pconnectable == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT));
@@ -814,7 +990,7 @@ void net::io::connective::connector::Ntcp::process_connective_connect( Iconnecta
 			{
 				// 6) connected list에 추가한다.
 				//    주의) add_connectable은 반드시 set_event 이전에 호출되어야 한다.
-				//          그러지 않으면 add_connectable 진행중 다른 쓰레드에서 disconnect와 같은 다른 처리가 진행되어 문제가 될수 있다.
+				//          그러지 않으면 add_connectable 진행 중 다른 스레드에서 disconnect와 같은 다른 처리가 진행되어 문제가 될 수 있다.
 				{
 					// - call 'add_connectable'
 					auto result = this->add_connectable(_pconnectable);
@@ -831,8 +1007,8 @@ void net::io::connective::connector::Ntcp::process_connective_connect( Iconnecta
 					// check)
 					CGASSERT_ERROR(_pconnectable->io_context().exist());
 
-					// 6) attach to socket io_context
-					auto result = _pconnectable->io_context()->set_event((CGHANDLE)_pconnectable->get_epoll_handle(), _pconnectable->m_epoll_event_flag, _pconnectable->m_pexecutable_socket);
+					// 6) attach to socket io_context (io_uring completion : the first RECV op)
+					auto result = _pconnectable->process_start_io(_pconnectable->io_context().get(), true);
 
 					// check)
 					THROW_IF(result == false, throwable::failure(eRESULT::FAIL));
@@ -921,7 +1097,7 @@ void net::io::connective::connector::Ntcp::process_connective_connect( Iconnecta
 	}
 
 	// statistics) 
-	this->statistics_on_decrese_async();
+	this->statistics_on_decrease_async();
 }
 
 void net::io::connective::connector::Ntcp::process_connective_disconnect( Iconnectable* _pconnectable)

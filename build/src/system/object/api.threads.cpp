@@ -11,13 +11,16 @@ void api::threads::process_begin_thread_object(thread* /*_pthread*/) noexcept
 
 void api::threads::process_end_thread_object(thread* _pthread) noexcept
 {
-	scoped_lock(this->m_vector_thread)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_vector_thread);
+
 		// 1) 찾는다.
 		auto iter_find = std::find(this->m_vector_thread.begin(), this->m_vector_thread.end(), _pthread);
 
 		// check) 찾지 못했으면 끝낸다.
-		RETURN_IF(iter_find == this->m_vector_thread.end());
+		if(iter_find == this->m_vector_thread.end())
+			return;
 
 		// 2) 찾은 객체를 제거한다.
 		this->m_vector_thread.erase(iter_find);
@@ -30,55 +33,52 @@ void api::threads::process_end_thread_object(thread* _pthread) noexcept
 	CGASSERT_ERROR(count >= 0);
 
 	// check)
-	RETURN_IF(count < 0, );
+	if(count < 0)
+		return;
 
 	// 4) Release
 	this->release();
 }
 
-//! @brief 쓰레드의 종료 설정 후 모든 쓰레드가 종료될 때까지 대기한다.
+//! @brief 스레드의 종료 설정 후 모든 스레드가 종료될 때까지 대기한다.
 bool api::threads::wait()
 {
-	// 1) 모든 Thread가 완전히 닫힐 때까지 기다린다.
-#ifdef NDEBUG
-	// declare) 최대 executor 완료 대기시간 (10초)
-	const int MAX_LOOP = 1000;
+	// 1) Get All threads
+	std::vector<object_ptr<api::thread>> vector_threads;
 
-	for(auto iLoop=MAX_LOOP; this->get_existing_thread_count(); --iLoop)
+	// 2) get all threads
 	{
-		// check) 
-		RETURN_IF(iLoop <= 0, false);
-		
-		// - 1mss만큼 sleep한다.
-		api::sleep_for(1ms);
+		// lock)
+		std::lock_guard lock(this->m_lockable_vector_thread);
+
+		vector_threads = this->m_vector_thread;
 	}
-#else
-	while(this->exist())
-	{
-		// - 1ms만큼 sleep한다.
-		api::sleep_for(1ms);
-	}
-#endif
+
+	// 2) join all thread
+	for(auto& iter: vector_threads)
+		iter->wait();
 
 	// return)
 	return true;
 }
 
-void api::threads::terminate_all()
+void api::threads::stop()
 {
-	// 1) 모두 지운다.
-	scoped_lock(this->m_vector_thread)
+	// 1) get all threads
+	//    - copy and unlock : an ending thread removes itself from the list in process_end_thread_object() with the same lock
+	std::vector<object_ptr<api::thread>> vector_threads;
 	{
-		for(auto& iter:this->m_vector_thread)
-		{
-			iter->terminate();
-		}
+		// lock)
+		std::lock_guard lock(this->m_lockable_vector_thread);
 
-		this->m_vector_thread.clear();
+		vector_threads = this->m_vector_thread;
 	}
 
-	// 2) 존재하는 Thread수를 0개로 설정한다.
-	this->m_count_thread_exist = 0;
+	// 2) request stop to all threads first (they stop in parallel)
+	for(auto& iter: vector_threads)
+		iter->request_stop();
+
+	// 3) wait for all threads to finish (each thread removes itself from the list and releases this object)
+	for(auto& iter: vector_threads)
+		iter->wait();
 }
-
-

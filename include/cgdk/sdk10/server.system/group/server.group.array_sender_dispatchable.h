@@ -61,7 +61,7 @@ void group::array_sender_dispatchable<_TMEMBER, _TPARAM, _TMEMBER_DATA, _TMEMBER
 	}
 	catch(...)
 	{
-		// - Unreigster 
+		// - Unregister 
 		_pmember->unregister_messageable(this);
 
 		// reraise) 

@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <filesystem>
+
 namespace CGDK
 {
 //-----------------------------------------------------------------------------
@@ -58,7 +60,7 @@ public:
 
 	// 4) parent entity
 			object_ptr<Ientity>	m_pentity_parent;
-			std::map<std::string, object_ptr<Ientity>>::iterator m_iter_parent;
+			std::map<std::string, object_ptr<Ientity>, std::less<>>::iterator m_iter_parent;
 	static	shared_buffer		m_buffer_context_tail;
 	static	void				init_context();
 };

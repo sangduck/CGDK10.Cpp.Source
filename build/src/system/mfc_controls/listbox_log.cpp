@@ -1,4 +1,8 @@
 #include "pch.h"
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <cstring>
 
 #if defined(_DEBUG) && !defined(NDEBUG)
 	#define new DEBUG_NEW
@@ -41,7 +45,7 @@ CListBox_log::CListBox_log()
 
 		lf.lfWeight			 = FW_BOLD;
 		lf.lfHeight			 = 15;
-		__strcpy(lf.lfFaceName, TEXT("Calibri"));
+		_tcscpy_s(lf.lfFaceName, std::size(lf.lfFaceName), TEXT("Calibri"));
 
 		//lf.lfWeight			 = FW_BOLD;
 		//lf.lfHeight			 = 14;
@@ -57,7 +61,152 @@ CListBox_log::~CListBox_log()
 
 
 BEGIN_MESSAGE_MAP(CListBox_log, CListBox)
+	ON_WM_KEYDOWN()
+	ON_MESSAGE(WM_COPY, &CListBox_log::OnCopyMessage)
 END_MESSAGE_MAP()
+
+LRESULT CListBox_log::OnCopyMessage(WPARAM /*_wParam*/, LPARAM /*_lParam*/)
+{
+	// - WM_COPY (edit control 과 같은 표준 메시지) : 선택한 줄(없으면 전체)을 클립보드에 복사한다.
+	return this->CopyToClipboard(true) ? 1 : 0;
+}
+
+void CListBox_log::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
+{
+	// 1) Ctrl+C : 선택한 줄(없으면 전체) 복사, Ctrl+A : 전체 선택
+	if (::GetKeyState(VK_CONTROL) < 0)
+	{
+		if (nChar == 'C')
+		{
+			this->CopyToClipboard(true);
+			return;
+		}
+
+		if (nChar == 'A')
+		{
+			this->SelectAll();
+			return;
+		}
+	}
+
+	// 2) 기본 처리
+	__super::OnKeyDown(nChar, nRepCnt, nFlags);
+}
+
+void CListBox_log::SelectAll()
+{
+	// check) 다중 선택 listbox 에서만 가능하다.
+	RETURN_IF((this->GetStyle() & (LBS_MULTIPLESEL | LBS_EXTENDEDSEL)) == 0);
+
+	// 1) 전체 선택
+	this->SetSel(-1, TRUE);
+}
+
+bool CListBox_log::CopyToClipboard(bool _selected_only)
+{
+	// check)
+	const int count_total = this->GetCount();
+	RETURN_IF(count_total <= 0, false);
+
+	// 1) 복사할 줄의 index 를 모은다. (선택한 줄, 선택이 없으면 전체)
+	std::vector<int> vector_index;
+
+	if (_selected_only)
+	{
+		if ((this->GetStyle() & (LBS_MULTIPLESEL | LBS_EXTENDEDSEL)) != 0)
+		{
+			const int count_sel = this->GetSelCount();
+
+			if (count_sel > 0)
+			{
+				vector_index.resize(static_cast<size_t>(count_sel));
+				const int count_get = this->GetSelItems(count_sel, vector_index.data());
+				vector_index.resize(count_get > 0 ? static_cast<size_t>(count_get) : 0);
+			}
+		}
+		else
+		{
+			const int index_sel = this->GetCurSel();
+
+			if (index_sel != LB_ERR)
+				vector_index.push_back(index_sel);
+		}
+	}
+
+	if (vector_index.empty())
+	{
+		vector_index.resize(static_cast<size_t>(count_total));
+		for (int i = 0; i < count_total; ++i)
+			vector_index[static_cast<size_t>(i)] = i;
+	}
+
+	std::sort(vector_index.begin(), vector_index.end());
+
+	// 2) 텍스트를 만든다. ("[time] message\r\n" 줄 단위)
+	std::basic_string<TCHAR> text;
+	text.reserve(vector_index.size() * 128);
+
+	for (int index : vector_index)
+	{
+		// - item data
+		const DWORD_PTR item_data = this->GetItemData(index);
+
+		// check)
+		CONTINUE_IF(item_data == 0 || item_data == static_cast<DWORD_PTR>(LB_ERR));
+
+		// - item
+		auto* pitem_log = reinterpret_cast<ITEM_LOG*>(item_data);
+
+		// - head
+		if (pitem_log->str_head[0] != 0)
+		{
+			text += pitem_log->str_head;
+			text += TEXT(' ');
+		}
+
+		// - message
+		if (pitem_log->str_message != nullptr)
+			text += pitem_log->str_message;
+
+		text += TEXT("\r\n");
+	}
+
+	// check)
+	RETURN_IF(text.empty(), false);
+
+	// 3) 클립보드에 넣는다.
+	RETURN_IF(this->OpenClipboard() == FALSE, false);
+
+	bool result = false;
+
+	::EmptyClipboard();
+
+	const size_t size_bytes = (text.size() + 1) * sizeof(TCHAR);
+
+	if (HGLOBAL hglobal = ::GlobalAlloc(GMEM_MOVEABLE, size_bytes); hglobal != nullptr)
+	{
+		if (void* pmemory = ::GlobalLock(hglobal); pmemory != nullptr)
+		{
+			std::memcpy(pmemory, text.c_str(), size_bytes);
+			::GlobalUnlock(hglobal);
+
+		#ifdef _UNICODE
+			result = (::SetClipboardData(CF_UNICODETEXT, hglobal) != nullptr);
+		#else
+			result = (::SetClipboardData(CF_TEXT, hglobal) != nullptr);
+		#endif
+		}
+
+		// - 클립보드가 가져가지 못했으면 해제한다.
+		if (result == false)
+			::GlobalFree(hglobal);
+	}
+
+	::CloseClipboard();
+
+	// return)
+	return result;
+}
 
 
 BOOL CListBox_log::PreCreateWindow(CREATESTRUCT& cs)
@@ -208,17 +357,10 @@ int CListBox_log::AddString(LOG_RECORD* _pLogRecord, COLORREF _color_text, BOOL 
 	object_ptr<ITEM_LOG> pitem_log = _make_object<ITEM_LOG>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL);
 
 	// 2) get system time
-	auto time_temp = chrono::to_date_time(_pLogRecord->time_occure);
+	auto time_temp = chrono::to_date_time(_pLogRecord->time_occurred);
 
 	// 3) setting
-	__sprintf(pitem_log->str_head, TEXT("[%4d/%02d/%02d %02d:%02d:%02d]"),
-		time_temp.t_year,
-		time_temp.t_month,
-		time_temp.t_day,
-		time_temp.t_hour,
-		time_temp.t_minute,
-		time_temp.t_second
-		);
+	std::swprintf(pitem_log->str_head, std::size(pitem_log->str_head), std::wstring_view(TEXT("[%4d/%02d/%02d %02d:%02d:%02d]")).data(), time_temp.t_year, time_temp.t_month, time_temp.t_day, time_temp.t_hour, time_temp.t_minute, time_temp.t_second);
 
 	pitem_log->color_text = _color_text;
 	pitem_log->is_bold = _is_bold;
@@ -238,14 +380,7 @@ int CListBox_log::AddString(const chrono::time::utc::time_point& _time_log, std:
 	auto time_temp = chrono::to_date_time(_time_log);
 
 	// 3) setting
-	__sprintf(pitem_log->str_head, TEXT("[%4d/%02d/%02d %02d:%02d:%02d]"), 
-		time_temp.t_year,
-		time_temp.t_month,
-		time_temp.t_day,
-		time_temp.t_hour,
-		time_temp.t_minute,
-		time_temp.t_second
-	);
+	std::swprintf(pitem_log->str_head, std::size(pitem_log->str_head), std::wstring_view(TEXT("[%4d/%02d/%02d %02d:%02d:%02d]")).data(), time_temp.t_year, time_temp.t_month, time_temp.t_day, time_temp.t_hour, time_temp.t_minute, time_temp.t_second);
 
 	// 4) set  to...
 	pitem_log->color_text = _color_text;
@@ -256,7 +391,7 @@ int CListBox_log::AddString(const chrono::time::utc::time_point& _time_log, std:
 
 	plog_record->type = log_type_t::user;
 	plog_record->set_message(_message);
-	plog_record->time_occure = _time_log;
+	plog_record->time_occurred = _time_log;
 
 	pitem_log->plog_record = plog_record;
 
@@ -270,7 +405,7 @@ int CListBox_log::AddString(std::basic_string_view<TCHAR> _str_head, std::basic_
 	object_ptr<ITEM_LOG> pitem_log = _make_object<ITEM_LOG>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL);
 
 	// 2) setting
-	__strcpy(pitem_log->str_head, _str_head);
+	_tcsncpy_s(pitem_log->str_head, std::size(pitem_log->str_head), _str_head.empty() ? TEXT("") : _str_head.data(), (std::min)(_str_head.size(), std::size(pitem_log->str_head) - 1));
 
 	// 3) 새로운 Log Record 객체를 생성한다.
 	pitem_log->color_text = _color_text;
@@ -281,7 +416,7 @@ int CListBox_log::AddString(std::basic_string_view<TCHAR> _str_head, std::basic_
 
 	plog_record->type = log_type_t::user;
 	plog_record->set_message(_message);
-	plog_record->time_occure = chrono::time::utc::now();
+	plog_record->time_occurred = chrono::time::utc::now();
 
 	pitem_log->plog_record = plog_record;
 
@@ -302,17 +437,17 @@ bool CListBox_log::UpdateString(int _index, const chrono::time::utc::time_point&
 		auto temp_time = chrono::to_date_time(_time_log);
 
 		// 2) setting
-		__sprintf(pitem_log->str_head, TEXT("[%4d/%02d/%02d %02d:%02d:%02d]"),
-			temp_time.t_year,
-			temp_time.t_month,
-			temp_time.t_day,
-			temp_time.t_hour,
-			temp_time.t_minute,
-			temp_time.t_second
-		);
+		std::swprintf(pitem_log->str_head, std::size(pitem_log->str_head), std::wstring_view(TEXT("[%4d/%02d/%02d %02d:%02d:%02d]")).data(), temp_time.t_year, temp_time.t_month, temp_time.t_day, temp_time.t_hour, temp_time.t_minute, temp_time.t_second);
 
 		// 2) 기타 값들을 설정한다.
-		pitem_log->plog_record->set_message(_message, MFC_CHAR_ENCODING);
+		{
+			// - a new log record (the record shown may be traced and shared : it isn't changed)
+			auto plog_record = _make_object<LOG_RECORD>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL);
+			plog_record->type = (pitem_log->plog_record.exist()) ? pitem_log->plog_record->type : log_type_t::user;
+			plog_record->time_occurred = (pitem_log->plog_record.exist()) ? pitem_log->plog_record->time_occurred : chrono::time::utc::now();
+			plog_record->set_message(_message, MFC_CHAR_ENCODING);
+			pitem_log->plog_record = std::move(plog_record);
+		}
 		pitem_log->color_text = _color_text;
 		pitem_log->is_bold	 = _is_bold;
 	}
@@ -338,10 +473,17 @@ bool CListBox_log::UpdateString(int _index, std::basic_string_view<TCHAR> _str_h
 		RETURN_IF(pitem_log == nullptr, false)
 
 		// 1) setting
-		__strcpy(pitem_log->str_head, _str_head);
+		_tcsncpy_s(pitem_log->str_head, std::size(pitem_log->str_head), _str_head.empty() ? TEXT("") : _str_head.data(), (std::min)(_str_head.size(), std::size(pitem_log->str_head) - 1));
 
 		// 2) 기타 값들을 설정한다.
-		pitem_log->plog_record->set_message(_message, MFC_CHAR_ENCODING);
+		{
+			// - a new log record (the record shown may be traced and shared : it isn't changed)
+			auto plog_record = _make_object<LOG_RECORD>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL);
+			plog_record->type = (pitem_log->plog_record.exist()) ? pitem_log->plog_record->type : log_type_t::user;
+			plog_record->time_occurred = (pitem_log->plog_record.exist()) ? pitem_log->plog_record->time_occurred : chrono::time::utc::now();
+			plog_record->set_message(_message, MFC_CHAR_ENCODING);
+			pitem_log->plog_record = std::move(plog_record);
+		}
 		pitem_log->color_text = _color_text;
 		pitem_log->is_bold	 = _is_bold;
 	}

@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 #include "cgdk/sdk10/server.observer.h"
 #include "../../define_message.h"
 
@@ -25,22 +25,22 @@ public:
 };
 
 class observable_simple : 
-	public observable::list_sender<socket_tcp, int64_t>	// @) Listí˜• groupì„ ë§Œë“ ë‹¤.
+	public observable::list_sender<socket_tcp, int64_t>	// @) ListÇü groupÀ» ¸¸µç´Ù.
 {
 protected:
-	// @) observerê°€  ì…ì¥í–ˆì„ ë•Œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜.
+	// @) observer°¡  ÀÔÀåÇßÀ» ¶§ È£ÃâµÇ´Â ÇÔ¼ö.
 	virtual	void on_observer_registered(socket_tcp* _pmember, observer_channel_t /*_ocid*/, const int64_t& /*_observer_data*/) override
 	{
 		// trace) 
 		std::cout << "observer registered"sv << '\n';
 
-		// - ëª¨ë“  group ë©¤ë²„ì— Message ì „ì†¡
+		// - ¸ğµç group ¸â¹ö¿¡ Message Àü¼Û
 		send(alloc_shared_buffer(256) << uint32_t() << uint32_t(eMESSAGE_TYPE::ENTER_MEMBER) << _pmember->m_member_serial << "test_id"sv << SET_LENGTH());
 	}
-	// @) observerê°€ ë‚˜ê°ˆ ë•Œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜.
+	// @) observer°¡ ³ª°¥ ¶§ È£ÃâµÇ´Â ÇÔ¼ö.
 	virtual	uintptr_t on_observer_unregistering(socket_tcp* _pmember, observer_channel_t /*_ocid*/) override
 	{
-		// - ëª¨ë“  group ë©¤ë²„ì— Message ì „ì†¡
+		// - ¸ğµç group ¸â¹ö¿¡ Message Àü¼Û
 		send(alloc_shared_buffer(12) << uint32_t(12) << uint32_t(eMESSAGE_TYPE::LEAVE_MEMBER) << _pmember->m_member_serial);
 
 		// trace) 
@@ -56,16 +56,16 @@ int g_member_serial = 0;
 
 void socket_tcp::on_connect()
 {
-	// 1) ì ‘ì†í•˜ë©´ ë¨¼ì € Member Serialì„ ì¨ë„£ëŠ”ë‹¤.
+	// 1) Á¢¼ÓÇÏ¸é ¸ÕÀú Member SerialÀ» ½á³Ö´Â´Ù.
 	m_member_serial = g_member_serial++;
 
-	// 2) observable channel 1ì— ë“±ë¡í•œë‹¤.
+	// 2) observable channel 1¿¡ µî·ÏÇÑ´Ù.
 	g_pobservable->subscribe(this, 1);
 }
 
 void socket_tcp::on_disconnect(uint64_t /*_disconnect_reason*/)
 {
-	// 1) ëª¨ë“  observerì—ì„œ ë–¼ë‚¸ë‹¤.
+	// 1) ¸ğµç observer¿¡¼­ ¶¼³½´Ù.
 	unsubscribe_all();
 }
 
@@ -86,19 +86,19 @@ int main(int /*argc*/, char* /*argv*/[])
 	// trace) 
 	std::cout << "CGCII tutorial.group.server 05.1..."sv << std::endl;
 
-	// 1) observable ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 1) observable °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	g_pobservable = make_own<observable_simple>();
 
-	// 2) acceptor ê°ì²´ë¥¼ ìƒì„±í•œë‹¤ / create Acceptor object
+	// 2) acceptor °´Ã¼¸¦ »ı¼ºÇÑ´Ù / create Acceptor object
 	auto pacceptor = make_own<net::acceptor<socket_tcp>>();
 
-	// 3) 20000ë²ˆ í¬íŠ¸ì— Listenì„ ì‹œì‘í•œë‹¤ / start listening on 20000 port
+	// 3) 20000¹ø Æ÷Æ®¿¡ ListenÀ» ½ÃÀÛÇÑ´Ù / start listening on 20000 port
 	pacceptor->start({{ net::ip::tcp::v6(), 20000 }});
 
-	// 4) ESCë¥¼ ëˆŒëŸ¬ ì¢…ë£Œí•˜ê¸°ë¥¼ ê¸°ë‹¤ë¦°ë‹¤. / wait for exit pressing ESC key
+	// 4) ESC¸¦ ´­·¯ Á¾·áÇÏ±â¸¦ ±â´Ù¸°´Ù. / wait for exit pressing ESC key
 	while(_getch() != 27);
 
-	// 5) acceptorë¥¼ ë‹«ëŠ”ë‹¤ / close acceptor
+	// 5) acceptor¸¦ ´İ´Â´Ù / close acceptor
 	pacceptor->stop();
 
 	// return) 

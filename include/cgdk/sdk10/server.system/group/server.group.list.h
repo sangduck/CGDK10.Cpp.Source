@@ -41,6 +41,7 @@ public:
 	using container_t		 = circular_list<member_set_t>;
 	using iterator_t		 = typename container_t::iterator;
 	using const_iterator_t	 = typename container_t::const_iterator;
+	using member_snapshot_t	 = member_snapshot_ptr<member_t>;
 
 public:
 			list() noexcept;
@@ -57,18 +58,33 @@ public:
 
 			void				lock_member_enter() noexcept { Ireferenceable::add_ref(); m_lockable_enter.lock();}
 			void				unlock_member_enter() noexcept { m_lockable_enter.unlock(); Ireferenceable::release();}
-	[[nodiscard]] lockable<>&	member_enter_lock() noexcept { return m_lockable_enter;}
+	[[nodiscard]] lock_object&	member_enter_lock() noexcept { return m_lockable_enter;}
 
 	[[nodiscard]] iterator_t	begin() noexcept { return this->m_container_member.begin();}
 	[[nodiscard]] const_iterator_t begin() const noexcept { return this->m_container_member.begin();}
 	[[nodiscard]] iterator_t	end() noexcept { return this->m_container_member.end();}
 	[[nodiscard]] const_iterator_t end() const noexcept { return this->m_container_member.end();}
 
+	//! @brief members as an immutable array (copy-on-write). no group lock while the published one is valid. in on_member_entered / on_member_leaving : the live members
+	[[nodiscard]] member_snapshot_t get_member_snapshot() const;
+	//! @brief calls _function for the members of the snapshot out of the group lock. (members may enter / leave in _function) @return false _function returned false
+			bool				for_each_member_snapshot(const std::function<bool (member_t*)>& _function) const;
+
+	//! @brief returns the first member _pred returned true for. _pred runs out of the group lock over the member snapshot (see for_each_member)
 	[[nodiscard]] virtual object_ptr<_TMEMBERBASE> find_member(const std::function<bool (_TMEMBERBASE*)>& _pred) override;
 
+	//! @brief calls _function for the members of the snapshot out of the group lock (same as for_each_member_snapshot) @return false _function returned false
+	// - _function may lock other members or enter / leave members. a member can leave (or move to another group) before or while _function runs :
+	//   lock the member and check is_member_of() when it matters. member_data() / member_serial() are valid only while it is a member.
 	virtual	bool				for_each_member(const std::function<bool (_TMEMBERBASE*)>& _function) override;
 
 protected:
+	// - lock of the events (lock order : member lock -> enter lock -> group lock)
+	//   on_member_entering : in the lock of the member and the enter lock
+	//   on_member_entered / on_member_leaving : in the lock of the member and the group lock
+	//   on_member_leaved : in the lock of the member (out of the group lock)
+	//   do not lock another member (or wait for a thread which locks one) in these events. it deadlocks with the enter / leave of other threads.
+	//   find_member / for_each_member / get_member_snapshot can be called in them (the live members). send_conditional() of the sender calls _pred in the group lock too.
 	virtual	void				on_enable_enter() {}
 	virtual	void				on_disable_enter() {}
 
@@ -92,6 +108,7 @@ private:
 			void				_attach_member_to_list_head (member_t* _pmember);
 			void				_attach_member_to_list_tail (member_t* _pmember);
 			void				_detach_member (member_base_t* _pmember) noexcept;
+	[[nodiscard]] member_snapshot<member_t>* _build_member_snapshot() const;
 
 	virtual	result_code			_process_member_entering (member_t* _pmember, param_t& _param);
 	virtual	void				_process_member_entered (member_t* _pmember, param_t& _param);
@@ -100,10 +117,13 @@ private:
 
 protected:
 			bool				m_enable_enter;
-			lockable<>			m_lockable_enter;
+	mutable	lock_object			m_lockable_enter;
 
 			container_t			m_container_member;
 			size_t				m_count_max_member;
+
+	// - published member snapshot (changed in the group lock, read without it)
+	mutable	member_snapshot_holder<member_t> m_member_snapshot;
 };
 
 

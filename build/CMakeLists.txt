@@ -19,19 +19,21 @@
 #-----------------------------------------------------------------------------
 # Setting
 #-----------------------------------------------------------------------------
-# 1) Project name
-PROJECT ( "CGDK10" )
+# 1) Build version
+CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
+CMAKE_POLICY( VERSION 3.20 )
 
-# 2) Project version
+# 2) Project name
+PROJECT ( "CGDK10.core" )
+
+# 3) Project version
 SET ( PROJECT_VERSION_MAJOR 0 )
 SET ( PROJECT_VERSION_MINOR 0 )
 SET ( PROJECT_VERSION_PATCH 100 )
 SET ( PROJECT_VERSION_TWEAK 1 )
 
-# 3) Build version
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.20 )
-CMAKE_POLICY( VERSION 3.20 )
-
+# svn
+#SET (SVN_TEMPLATE ${CMAKE_SOURCE_DIR}/include/cgdk/sdk10/svn_version.template)
 
 #-----------------------------------------------------------------------------
 # Compile

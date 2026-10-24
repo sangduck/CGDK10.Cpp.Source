@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "asio.ex/asio.h"
 

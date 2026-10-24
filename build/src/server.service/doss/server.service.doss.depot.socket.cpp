@@ -21,8 +21,8 @@ bool doss::Idepot::socket::send_restoreable(Itransactable* _ptransactable)
 {
 	// locked) 
 	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(m_lockable_send_sequence);
+		// SCOPED_LOCK) 
+		std::lock_guard cs(m_lockable_send_sequence);
 
 		// 1) generate send_sequence
 		uint64_t send_sequence = ++m_send_sequence;
@@ -36,8 +36,8 @@ bool doss::Idepot::socket::send_restoreable(eTRANSACTION_TYPE _command, const sC
 {
 	// locked)
 	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(m_lockable_send_sequence);
+		// SCOPED_LOCK) 
+		std::lock_guard cs(m_lockable_send_sequence);
 
 		// 1) generate send_sequence
 		uint64_t send_sequence = ++m_send_sequence;
@@ -47,12 +47,12 @@ bool doss::Idepot::socket::send_restoreable(eTRANSACTION_TYPE _command, const sC
 	}
 }
 
-bool doss::Idepot::socket::send_restoreable_control_resquest(eTRANSACTION_TYPE _command, const sCHECKIN_ID& _cid, sREQUEST_ID _rid, eRESULT _result)
+bool doss::Idepot::socket::send_restoreable_control_request(eTRANSACTION_TYPE _command, const sCHECKIN_ID& _cid, sREQUEST_ID _rid, eRESULT _result)
 {
 	// locked)
 	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(m_lockable_send_sequence);
+		// SCOPED_LOCK) 
+		std::lock_guard cs(m_lockable_send_sequence);
 
 		// 1) generate send_sequence
 		uint64_t send_sequence = ++m_send_sequence;
@@ -66,8 +66,8 @@ void doss::Idepot::socket::process_send_ack(uint64_t _send_sequence) noexcept
 {
 	// locked) 
 	{
-		// scoped_lock) 
-		std::lock_guard<lockable<>> cs(m_lockable_send_sequence);
+		// SCOPED_LOCK) 
+		std::lock_guard cs(m_lockable_send_sequence);
 
 		// check)
 		CGASSERT_ERROR(m_send_sequence >= _send_sequence);
@@ -89,7 +89,7 @@ void doss::Idepot::socket::process_receive_ack(uint64_t _receive_sequence) noexc
 	CGASSERT_ERROR(m_receive_sequence < _receive_sequence);
 
 	// 1) update send_sequence
-	m_receive_sequence = _receive_sequence;
+	m_receive_sequence.store(_receive_sequence);
 
 	// 2) send ack
 	send(message_SERVER_DOSS_SEND_ACK(_receive_sequence));
@@ -98,7 +98,15 @@ void doss::Idepot::socket::process_receive_ack(uint64_t _receive_sequence) noexc
 void doss::Idepot::socket::on_connect()
 {
 	// 1) get group
-	auto pgroup = dynamic_cast<Igroup_enterable<socket>*>(this->m_pconnectable_notify);
+	//    - the start object of the connective (the acceptor of a depot starts sockets in 'group_immigration')
+	//    - or the connective itself if it is a group
+	object_ptr<Igroup_enterable<socket>> pgroup;
+
+	if (auto pconnective = dynamic_cast<net::io::Iconnective*>(this->m_pconnectable_notify); pconnective != nullptr)
+		pgroup = pconnective->start_object<Igroup_enterable<socket>>();
+
+	if (pgroup.empty())
+		pgroup = dynamic_cast<Igroup_enterable<socket>*>(this->m_pconnectable_notify);
 
 	// check) 
 	THROW_IF(pgroup == nullptr, throwable::failure(eRESULT::NOT_READY), LOG_ERROR << "(err ) doss depot is not initialized[group is NULL]");

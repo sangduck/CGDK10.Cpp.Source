@@ -30,14 +30,15 @@ namespace CGDK
 class Iresource : virtual public Iobject, virtual public object::Idestroyable
 {
 public:
-	virtual ~Iresource() noexcept { unregister();}
+	virtual ~Iresource() noexcept { this->unregister();}
 
 public:
 			bool				register_();
 			bool				unregister() noexcept;
 
 private:
-			lockable<object_ptr<resource::manager>>	m_pmanager;
+			lock_object			m_lockable_pmanager;
+			object_ptr<resource::manager> m_pmanager;
 };
 
 

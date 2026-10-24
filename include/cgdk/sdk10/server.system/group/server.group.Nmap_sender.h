@@ -65,29 +65,16 @@ bool group::Nmap_sender<_TMEMBER, _TKEY, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::
 	// check) 
 	RETURN_IF(_buffer.empty(), false)
 
-	// declare)
-	std::vector<object_ptr<_TMEMBER>> vector_send;
-
-	// 1) make member list
-	scoped_lock(this->m_lockable_group)
-	{
-		// - reserve
-		vector_send.reserve(this->m_container_member.size());
-
-		// - copy member
-		for (const auto& iter : this->m_container_member)
-		{
-			// check) 
-			CONTINUE_IF(iter->member() == _member_except);
-
-			// - push back
-			vector_send.push_back(iter.second.member());
-		}
-	}
+	// 1) member snapshot (copy-on-write)
+	auto snapshot_send = this->get_member_snapshot();
 
 	// 2) send
-	for (auto& iter : vector_send)
+	for (auto* iter : snapshot_send)
 	{
+		// check) 
+		CONTINUE_IF(iter == _member_except);
+
+		// - send
 		iter->process_send(shared_buffer(_buffer), 1, _option);
 	}
 
@@ -105,7 +92,7 @@ bool group::Nmap_sender<_TMEMBER, _TKEY, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::
 	std::vector<object_ptr<_TMEMBER>> vector_send;
 
 	// 1) make member list
-	scoped_lock(this->m_lockable_group)
+	SCOPED_LOCK(this->m_lockable_group)
 	{
 		// - reserve
 		vector_send.reserve(this->m_container_member.size());
@@ -114,10 +101,10 @@ bool group::Nmap_sender<_TMEMBER, _TKEY, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::
 		for (const auto& iter : this->m_container_member)
 		{
 			// check) _pred가 false면 전송하지 않는다.
-			CONTINUE_IF(_pred(iter.second.member()) == false);
+			CONTINUE_IF(_pred(*iter.second) == false);
 
 			// - push back
-			vector_send.push_back(iter.second.member());
+			vector_send.push_back(*iter.second);
 		}
 	}
 
@@ -137,24 +124,11 @@ bool group::Nmap_sender<_TMEMBER, _TKEY, _TPARAM, _TMEMBER_DATA, _TMEMBERBASE>::
 	// check)
 	RETURN_IF(_buffer.empty(), false)
 
-	// declare)
-	std::vector<object_ptr<_TMEMBER>> vector_send;
-
-	// 1) make member list
-	scoped_lock(this->m_lockable_group)
-	{
-		// - reserve
-		vector_send.reserve(this->m_container_member.size());
-
-		// - copy member
-		for(const auto& iter: this->m_container_member)
-		{
-			vector_send.push_back(iter.second.member());
-		}
-	}
+	// 1) member snapshot (copy-on-write. no group lock while the published one is valid)
+	auto snapshot_send = this->get_member_snapshot();
 
 	// 2) send to all
-	for (auto& iter : vector_send)
+	for (auto* iter : snapshot_send)
 	{
 		iter->process_send(shared_buffer(_buffer), _count_message, _option);
 	}

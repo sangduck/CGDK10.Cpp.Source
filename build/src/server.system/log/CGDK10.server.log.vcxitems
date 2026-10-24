@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{eeda7395-fa2e-4547-8a0f-8e53ddbe5ee0}</ItemsProjectGuid>
+    <ItemsProjectName>CGDK10.server.log</ItemsProjectName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.definitions.log.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.logger_acceptor.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.logger_buffer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.logger_console.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.logger_file.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.logger_hub.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.logger_hub_archive.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.logger_slack.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.logger_socket.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.logger_syslog.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.logger_system.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.log_filter.default.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)server.Nlogger.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\read_me.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.log.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.definitions.log.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.definitions.log.protocol.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.logger_acceptor.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.logger_buffer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.logger_console.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.logger_file.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.logger_hub.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.logger_hub_archive.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.logger_slack.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.logger_socket.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.logger_syslog.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.logger_system.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.log_filter.default.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\server.system\log\server.Nlogger.h" />
+  </ItemGroup>
+</Project>

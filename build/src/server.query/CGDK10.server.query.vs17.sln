@@ -1,0 +1,79 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "windows", "windows", "{C1D94D85-B9B4-4D54-9720-77C12480A702}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.query.mfc_controls", "mfc_controls\CGDK10.server.query.mfc_controls.vs17.vcxproj", "{B7178181-5E51-42DC-9B5C-FA15F9870BD1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.query", "query\CGDK10.server.query.vs17.vcxproj", "{0AF3BDBD-016A-4C98-AA1B-E984630077E3}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.query.rdb.odbc", "rdb.odbc\CGDK10.server.query.rdb.odbc.vs17.vcxproj", "{9E121877-1300-4FEC-B259-0243C74B4445}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.query.http", "http\CGDK10.server.query.http.vs17.vcxproj", "{29DDACD9-91CB-4180-A03E-899DC8B550F2}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CGDK10.server.query.redis", "redis\CGDK10.server.query.redis.vs17.vcxproj", "{644842BE-D547-43DD-946B-3D1CF6EDB51A}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "cgdk_info.shared", "..\common\cgdk_info.shared.vcxitems", "{F2B5DF8C-26A7-4F26-BD80-933BB4870B0A}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.server.query.http", "http\CGDK10.server.query.http.vcxitems", "{D075A614-23E6-4B1A-9F40-D7C29EBC5FBA}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.server.query.rdb.odbc", "rdb.odbc\CGDK10.server.query.rdb.odbc.vcxitems", "{4A90F49B-8059-4BBB-94AE-6355C5DC2A10}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.server.query", "query\CGDK10.server.query.vcxitems", "{08904C6E-AA8F-42DD-A3A9-3A398E7454CE}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.server.query.redis", "redis\CGDK10.server.query.redis.vcxitems", "{DB196FF8-EE17-4C7C-8490-13F2FF9B351B}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CGDK10.server.query.mfc_controls.shared", "mfc_controls\CGDK10.server.query.mfc_controls.shared.vcxitems", "{3CE81DD7-04AB-4FC4-A83C-5FDE39DC0620}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "unit_test", "unit_test", "{9A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C5D}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unit_test.server_query", "unit_test\unit_test.server_query\unit_test.server_query.vcxproj", "{C8E5F3B2-6D4A-4F9C-8AE7-2A3F4D5C6B71}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B7178181-5E51-42DC-9B5C-FA15F9870BD1}.Debug|x64.ActiveCfg = Debug|x64
+		{B7178181-5E51-42DC-9B5C-FA15F9870BD1}.Debug|x64.Build.0 = Debug|x64
+		{B7178181-5E51-42DC-9B5C-FA15F9870BD1}.Release|x64.ActiveCfg = Release|x64
+		{B7178181-5E51-42DC-9B5C-FA15F9870BD1}.Release|x64.Build.0 = Release|x64
+		{0AF3BDBD-016A-4C98-AA1B-E984630077E3}.Debug|x64.ActiveCfg = Debug|x64
+		{0AF3BDBD-016A-4C98-AA1B-E984630077E3}.Debug|x64.Build.0 = Debug|x64
+		{0AF3BDBD-016A-4C98-AA1B-E984630077E3}.Release|x64.ActiveCfg = Release|x64
+		{0AF3BDBD-016A-4C98-AA1B-E984630077E3}.Release|x64.Build.0 = Release|x64
+		{9E121877-1300-4FEC-B259-0243C74B4445}.Debug|x64.ActiveCfg = Debug|x64
+		{9E121877-1300-4FEC-B259-0243C74B4445}.Debug|x64.Build.0 = Debug|x64
+		{9E121877-1300-4FEC-B259-0243C74B4445}.Release|x64.ActiveCfg = Release|x64
+		{9E121877-1300-4FEC-B259-0243C74B4445}.Release|x64.Build.0 = Release|x64
+		{29DDACD9-91CB-4180-A03E-899DC8B550F2}.Debug|x64.ActiveCfg = Debug|x64
+		{29DDACD9-91CB-4180-A03E-899DC8B550F2}.Debug|x64.Build.0 = Debug|x64
+		{29DDACD9-91CB-4180-A03E-899DC8B550F2}.Release|x64.ActiveCfg = Release|x64
+		{29DDACD9-91CB-4180-A03E-899DC8B550F2}.Release|x64.Build.0 = Release|x64
+		{644842BE-D547-43DD-946B-3D1CF6EDB51A}.Debug|x64.ActiveCfg = Debug|x64
+		{644842BE-D547-43DD-946B-3D1CF6EDB51A}.Debug|x64.Build.0 = Debug|x64
+		{644842BE-D547-43DD-946B-3D1CF6EDB51A}.Release|x64.ActiveCfg = Release|x64
+		{644842BE-D547-43DD-946B-3D1CF6EDB51A}.Release|x64.Build.0 = Release|x64
+		{C8E5F3B2-6D4A-4F9C-8AE7-2A3F4D5C6B71}.Debug|x64.ActiveCfg = Debug|x64
+		{C8E5F3B2-6D4A-4F9C-8AE7-2A3F4D5C6B71}.Debug|x64.Build.0 = Debug|x64
+		{C8E5F3B2-6D4A-4F9C-8AE7-2A3F4D5C6B71}.Release|x64.ActiveCfg = Release|x64
+		{C8E5F3B2-6D4A-4F9C-8AE7-2A3F4D5C6B71}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B7178181-5E51-42DC-9B5C-FA15F9870BD1} = {C1D94D85-B9B4-4D54-9720-77C12480A702}
+		{0AF3BDBD-016A-4C98-AA1B-E984630077E3} = {C1D94D85-B9B4-4D54-9720-77C12480A702}
+		{9E121877-1300-4FEC-B259-0243C74B4445} = {C1D94D85-B9B4-4D54-9720-77C12480A702}
+		{29DDACD9-91CB-4180-A03E-899DC8B550F2} = {C1D94D85-B9B4-4D54-9720-77C12480A702}
+		{644842BE-D547-43DD-946B-3D1CF6EDB51A} = {C1D94D85-B9B4-4D54-9720-77C12480A702}
+		{C8E5F3B2-6D4A-4F9C-8AE7-2A3F4D5C6B71} = {9A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C5D}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {95867559-92E1-46B0-86F0-5351FC73C26B}
+	EndGlobalSection
+EndGlobal

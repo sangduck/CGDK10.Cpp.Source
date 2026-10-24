@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 #include "../../define_message.h"
 
 #include <iostream>
@@ -19,9 +19,6 @@ private:
 																	  
 class socket_tcp_client : public net::socket::tcp_client<>
 {
-public:
-	explicit socket_tcp_client(std::string_view _name) : net::socket::tcp_client<>(_name) {}
-
 private:
 	virtual void		on_request_connect(const net::sockaddr&) override	{ std::cout << " @ request connect"sv << '\n'; }
 	virtual void		on_connect() override								{ std::cout << " @ connected"sv << '\n'; }
@@ -37,27 +34,27 @@ int main()
 
 	// ------------------------------------------------------------------
 	//
-	// 1. ê¸°ë³¸ì ì¸ ë°©ë²• (basic Method)
+	// 1. ±âº»ÀûÀÎ ¹æ¹ı (basic Method)
 	//
-	//   Istartable ì¸í„°í˜ì´ìŠ¤ë¥¼ ê°€ì§„ ê°ì²´ë“¤ì€ 
-	//   startí•¨ìˆ˜ì— ë°”ë¡œ contextë¥¼ ì‚¬ìš©í•œ íŒŒë¼ë©”í„°ë¥¼ ë„£ì–´ì„œ ì´ˆê¸°í™” í•  ìˆ˜ ìˆë‹¤.
+	//   Istartable ÀÎÅÍÆäÀÌ½º¸¦ °¡Áø °´Ã¼µéÀº 
+	//   startÇÔ¼ö¿¡ ¹Ù·Î context¸¦ »ç¿ëÇÑ ÆÄ¶ó¸ŞÅÍ¸¦ ³Ö¾î¼­ ÃÊ±âÈ­ ÇÒ ¼ö ÀÖ´Ù.
 	//
 	// ------------------------------------------------------------------
 	{
 		// trace)
 		std::cout << " example 01...start"sv << '\n';
 
-		// 1) ê° ê°ì²´ì— ì´ë¦„ì„ ì„¤ì •í•˜ì—¬ ìƒì„±í•œë‹¤.
+		// 1) °¢ °´Ã¼¿¡ ÀÌ¸§À» ¼³Á¤ÇÏ¿© »ı¼ºÇÑ´Ù.
 		auto pacceptor = make_own<net::acceptor<socket_tcp>>();
 
-		// 2) acceptorì˜ íŒŒë¼ë©”í„°ë¥¼ ì„¤ì •í•œë‹¤.
+		// 2) acceptorÀÇ ÆÄ¶ó¸ŞÅÍ¸¦ ¼³Á¤ÇÑ´Ù.
 		context	param;
 		param["local_endpoint"sv]["port"sv] = 20000;
 
-		// 3) startí•œë‹¤.
+		// 3) startÇÑ´Ù.
 		pacceptor->start(param);
 
-		// 4) ì•„ë¬´í‚¤ë‚˜ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+		// 4) ¾Æ¹« Å°³ª ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 		_getch();
 
 		// trace)
@@ -67,25 +64,30 @@ int main()
 
 	// ------------------------------------------------------------------
 	//
-	// 2. ë™ì‹œì— ì—¬ëŸ¬ ê°ì²´ ì´ˆê¸°í™”í•˜ê¸°
+	// 2. µ¿½Ã¿¡ ¿©·¯ °´Ã¼ ÃÊ±âÈ­ÇÏ±â
 	//
-	//  contextë¥¼ ì‚¬ìš©í•´ í•œêº¼ë²ˆì— ì—¬ëŸ¬ ê°ì²´ë¥¼ ì´ˆê¸°í™”í•  ìˆ˜ ìˆë‹¤.
-	//  ê³„ì¸µ êµ¬ì¡°ë¥¼ ê°€ì§„ ê°ì²´ë„ í•œë²ˆì— ê°’ì„ ì „ë‹¬í•´ ì´ˆê¸°í™”í•  ìˆ˜ ìˆë‹¤.
+	//  context¸¦ »ç¿ëÇØ ÇÑ²¨¹ø¿¡ ¿©·¯ °´Ã¼¸¦ ÃÊ±âÈ­ÇÒ ¼ö ÀÖ´Ù.
+	//  °èÃş ±¸Á¶¸¦ °¡Áø °´Ã¼µµ ÇÑ¹ø¿¡ °ªÀ» Àü´ŞÇØ ÃÊ±âÈ­ÇÒ ¼ö ÀÖ´Ù.
 	//
 	// ------------------------------------------------------------------
 	{
 		// trace)
 		std::cout << " example 02...start"sv << '\n';
 
-		// 1) ê° ê°ì²´ì— ì´ë¦„ì„ ì„¤ì •í•˜ì—¬ ìƒì„±í•œë‹¤.
-		auto pacceptor_a = make_own<net::acceptor<socket_tcp>>("bar"sv);
-		auto pacceptor_b = make_own<net::acceptor<socket_tcp>>("foz"sv);
-		auto psocket_client_c = make_own<socket_tcp_client>("taz"sv);
+		// 1) °¢ °´Ã¼¿¡ ÀÌ¸§À» ¼³Á¤ÇÏ¿© »ı¼ºÇÑ´Ù.
+		auto pacceptor_a = make_own<net::acceptor<socket_tcp>>();
+		pacceptor_a->name("bar"sv);
 
-		// declare) ì„¤ì •ê°’ì„ ì „ë‹¬í•  sMESSAGE_CONTEXT ê°ì²´ë¥¼ ì„ ì–¸í•œë‹¤.
+		auto pacceptor_b = make_own<net::acceptor<socket_tcp>>();
+		pacceptor_b->name("foz"sv);
+
+		auto psocket_client_c = make_own<socket_tcp_client>();
+		psocket_client_c->name("taz"sv);
+
+		// declare) ¼³Á¤°ªÀ» Àü´ŞÇÒ sMESSAGE_CONTEXT °´Ã¼¸¦ ¼±¾ğÇÑ´Ù.
 		context	param;
 
-		// 2) "baz", "foz", "taz"ì— ì „ë‹¬í•  íŒŒë¼ë¯¸í„°ë¥¼ ì„¤ì •í•œë‹¤.
+		// 2) "baz", "foz", "taz"¿¡ Àü´ŞÇÒ ÆÄ¶ó¹ÌÅÍ¸¦ ¼³Á¤ÇÑ´Ù.
 		param["bar"sv]["local_endpoint"sv]["port"sv]	 = 22010;
 
 		param["foz"sv]["local_endpoint"sv]["address"sv]	 = "127.0.0.1"sv;
@@ -95,12 +97,12 @@ int main()
 		param["taz"sv]["remote_endpoint"sv]["address"sv] = "127.0.0.1"sv;
 		param["taz"sv]["remote_endpoint"sv]["port"sv]	 = 22020;
 
-		// 3) contextë¥¼ startì‹œ ì „ë‹¬í•´ startí•œë‹¤.
+		// 3) context¸¦ start½Ã Àü´ŞÇØ startÇÑ´Ù.
 		pacceptor_a->start(param);
 		pacceptor_b->start(param);
 		psocket_client_c->start(param);
 
-		// 4) ì•„ë¬´í‚¤ë‚˜ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+		// 4) ¾Æ¹« Å°³ª ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 		_getch();
 
 		// trace)
@@ -110,20 +112,25 @@ int main()
 
 	// ------------------------------------------------------------------
 	//
-	// 3. JSON í¬ë§·ì„ ì‚¬ìš©í•´ ì´ˆê¸°í™”í•˜ê¸°
+	// 3. JSON Æ÷¸ËÀ» »ç¿ëÇØ ÃÊ±âÈ­ÇÏ±â
 	//    
-	//    JSONì„ ì‚¬ìš©í•´ contextì— ê°’ì„ ì„¤ì •í•˜ëŠ” ê¸°ëŠ¥ì„ ì œê³µí•´ì¤€ë‹¤.
+	//    JSONÀ» »ç¿ëÇØ context¿¡ °ªÀ» ¼³Á¤ÇÏ´Â ±â´ÉÀ» Á¦°øÇØÁØ´Ù.
 	// ------------------------------------------------------------------
 	{
 		// trace)
 		std::cout << " example 03...start"sv << '\n';
 
-		// 1) ê° ê°ì²´ì— ì´ë¦„ì„ ì„¤ì •í•˜ì—¬ ìƒì„±í•œë‹¤.
-		auto pacceptor_a  = make_own<net::acceptor<socket_tcp>>("bar"sv);
-		auto pacceptor_b  = make_own<net::acceptor<socket_tcp>>("foz"sv);
-		auto psocket_client_c = make_own<socket_tcp_client>("taz"sv);
+		// 1) °¢ °´Ã¼¿¡ ÀÌ¸§À» ¼³Á¤ÇÏ¿© »ı¼ºÇÑ´Ù.
+		auto pacceptor_a  = make_own<net::acceptor<socket_tcp>>();
+		pacceptor_a->name("bar"sv);
 
-		// 2) ì„¤ì •í•  JSON ë‚´ìš©
+		auto pacceptor_b  = make_own<net::acceptor<socket_tcp>>();
+		pacceptor_b->name("foz"sv);
+
+		auto psocket_client_c = make_own<socket_tcp_client>();
+		psocket_client_c->name("taz"sv);
+
+		// 2) ¼³Á¤ÇÒ JSON ³»¿ë
 		// definitions) JSON string
 		//
 		// {
@@ -142,38 +149,27 @@ int main()
 		//   },
 		// 
 		//   "taz": {
-		//     "connection": {
-		//       "x1": {
-		//         "remote_endpoint": {
-		//           "address": "127.0.0.1",
-		//           "port": 22020
-		//         }
-		//       },
-		// 
-		//       "x2": {
-		//         "remote_endpoint": {
-		//           "address": "127.0.0.1",
-		//           "port": 22030
-		//         }
-		//       }
+		//     "remote_endpoint": {
+		//       "address": "127.0.0.1",
+		//       "port": 22020
 		//     }
 		//   }
 		// }
 		//
-		std::string_view str_json = "{\"bar\": {\"local_endpoint\": {\"port\": 22010}},\"foz\": {\"local_endpoint\": {\"address\": \"127.0.0.1\",\"port\" : 22020},\"prepare_on_start\" : 256},\"taz\": {\"connection\": {\"x1\": {\"remote_endpoint\": {\"address\": \"127.0.0.1\",\"port\" : 22030}},\"x2\": {\"remote_endpoint\": {\"address\": \"127.0.0.1\",\"port\" : 22040}}}}}"sv;
+		std::string_view str_json = "{\"bar\": {\"local_endpoint\": {\"port\": 22010}},\"foz\": {\"local_endpoint\": {\"address\": \"127.0.0.1\",\"port\" : 22020},\"prepare_on_start\" : 256},\"taz\": {\"remote_endpoint\": {\"address\": \"127.0.0.1\",\"port\" : 22020}}}"sv;
 
 		// declare)
 		context	param;
 
-		// 2) jsoin stringì—ì„œ ì„¤ì •ì„ ì½ì–´ë“¤ì—¬ context ê°ì²´ì— ë„£ëŠ”ë‹¤.
-		param.read_from_json_string(str_json);
+		// 2) jsoin string¿¡¼­ ¼³Á¤À» ÀĞ¾îµé¿© context °´Ã¼¿¡ ³Ö´Â´Ù.
+		param.from_json(str_json);
 
-		// 3) contextë¡œ ì—¬ëŸ¬ ê°ì²´ì˜ íŒŒë¼ë¯¸í„°ê°’ì„ ì „ë‹¬í•´ startí•œë‹¤.
+		// 3) context·Î ¿©·¯ °´Ã¼ÀÇ ÆÄ¶ó¹ÌÅÍ°ªÀ» Àü´ŞÇØ startÇÑ´Ù.
 		pacceptor_a->start(param);
 		pacceptor_b->start(param);
 		psocket_client_c->start(param);
 
-		// 4) ì•„ë¬´í‚¤ë‚˜ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+		// 4) ¾Æ¹« Å°³ª ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 		_getch();
 
 		// trace)
@@ -183,30 +179,35 @@ int main()
 
 	// ------------------------------------------------------------------
 	//
-	// 4. contextë¥¼ ì‚¬ìš©í•œ í†µí•© ì´ˆê¸°í™” (4) - JSON file
+	// 4. context¸¦ »ç¿ëÇÑ ÅëÇÕ ÃÊ±âÈ­ (4) - JSON file
 	//
 	// ------------------------------------------------------------------
 	{
 		// trace)
 		std::cout << " example 04...start"sv << '\n';
 
-		// 1) ê° ê°ì²´ì— ì´ë¦„ì„ ì„¤ì •í•˜ì—¬ ìƒì„±í•œë‹¤.
-		auto pacceptor_a = make_own<net::acceptor<socket_tcp>>("bar"sv);
-		auto pacceptor_b = make_own<net::acceptor<socket_tcp>>("foz"sv);
-		auto psocket_client_c = make_own<socket_tcp_client>("taz"sv);
+		// 1) °¢ °´Ã¼¿¡ ÀÌ¸§À» ¼³Á¤ÇÏ¿© »ı¼ºÇÑ´Ù.
+		auto pacceptor_a = make_own<net::acceptor<socket_tcp>>();
+		pacceptor_a->name("bar"sv);
+
+		auto pacceptor_b = make_own<net::acceptor<socket_tcp>>();
+		pacceptor_b->name("foz"sv);
+
+		auto psocket_client_c = make_own<socket_tcp_client>();
+		psocket_client_c->name("taz"sv);
 
 		// Declare)
 		context	param;
 
-		// 2) JSON íŒŒì¼ì—ì„œ ì½ì–´ ë“¤ì¸ë‹¤.
-		param.read_from_json_file("param.json"sv);
+		// 2) JSON ÆÄÀÏ¿¡¼­ ÀĞ¾î µéÀÎ´Ù.
+		param.from_json(api::file::read_file("setting.json"sv));
 
-		// 3) msg_contextì— ì„¤ì •ëœ ë‚´ìš©ëŒ€ë¡œ startí•œë‹¤.
+		// 3) msg_context¿¡ ¼³Á¤µÈ ³»¿ë´ë·Î startÇÑ´Ù.
 		pacceptor_a->start(param);
 		pacceptor_b->start(param);
 		psocket_client_c->start(param);
 
-		// 4) ì•„ë¬´í‚¤ë‚˜ ëˆ„ë¥¼ ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
+		// 4) ¾Æ¹« Å°³ª ´©¸¦ ¶§±îÁö ´ë±âÇÑ´Ù.
 		_getch();
 
 		// trace)
@@ -216,6 +217,6 @@ int main()
 	// trace) 
 	std::cout << "stop server [tut.socket.03.tcp_configure.server]..."sv << '\n';
 
-	// Return) ì¢…ë£Œ
+	// Return) Á¾·á
 	return 0;
 }

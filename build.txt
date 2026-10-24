@@ -1,0 +1,28 @@
+1.ubuntu 
+sudo apt install build-essentials
+sudo apt install gcc-12 g++-12
+sudo apt -y install cmake
+
+sudo apt -y install svn
+sudo apt -y install openssl libssl-dev
+sudo apt -y install unixodbc unixodbc-dev
+
+sudo apt install libboost-all-dev
+
+
+2. redhat
+
+sudo yum install gcc-toolset-13
+source scl_source enable gcc-toolset-13
+scl enable gcc-toolset-13 bash
+scl run gcc-toolset-13 bash
+sudo yum -y install cmake
+
+sudo yum -y install svn
+sudo yum -y install openssl-devel
+sudo yum -y install unixODBC-devel
+
+
+
+// option
+sudo yum -y install asio-devel

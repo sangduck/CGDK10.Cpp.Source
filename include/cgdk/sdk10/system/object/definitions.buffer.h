@@ -59,46 +59,6 @@ struct SET_LENGTH_CRC : public crc
 	SET_LENGTH_CRC(edc::crc* p) noexcept : crc(p) {}
 };
 
-struct sha224
-{
-public:
-	sha224() noexcept : str_source(nullptr) {}
-	sha224(const char* _str_source) noexcept : str_source(_str_source) {}
-
-public:
-	const char*	str_source;
-};
-
-struct sha256
-{
-public:
-	sha256() noexcept : str_source(nullptr) {}
-	sha256(const char* _str_source) noexcept : str_source(_str_source) {}
-
-public:
-	const char*	str_source;
-};
-
-struct sha384
-{
-public:
-	sha384() noexcept : str_source(nullptr) {}
-	sha384(const char* _str_source) noexcept : str_source(_str_source) {}
-
-public:
-	const char* str_source;
-};
-
-struct sha512
-{
-public:
-	sha512() noexcept : str_source(nullptr) {}
-	sha512(const char* _str_source) noexcept : str_source(_str_source) {}
-
-public:
-	const char* str_source;
-};
-
 template <class X>
 _buffer_view<X> _append_CRC(buffer& _dest, const crc& _crc)
 {
@@ -168,7 +128,7 @@ shared_buffer _extract_compress(_buffer_view<T>& _source)
 	// check)
 	if((sizeof(uint32_t) + sizeof(uint32_t)) > _source.size()) throw std::length_error("buffer is too short!! [0] ");
 
-	// Declar) 
+	// Declare) 
 	int64_t	temp_offset = 0;
 
 	// 1) get [compressed_size]
@@ -181,21 +141,20 @@ shared_buffer _extract_compress(_buffer_view<T>& _source)
 	auto size_original = static_cast<std::size_t>(_source.template _front<uint32_t>(temp_offset));
 
 	// 3) allocate [decompressed_data_buffer] as size as [decompressed_size]
-	shared_buffer dest = alloc_shared_buffer(size_original);
-	auto length = dest.size();
+	shared_buffer dest = alloc_shared_buffer(size_original) ^ size_original;
 
 	// 4) decompress to [decompressed_data_buffer]
-	auto result = compress::unzip(const_cast<char*>(dest.data()), &length, _source._front(temp_offset), size_compressed);
+	auto result = compress::unzip(dest, buffer_view(_source._front(temp_offset), size_compressed));
 
 	// check) 
-	if(result != 0)
+	if(result.size() == 0)
 		throw std::domain_error("Uncompression fail!! ");
 
 	// 5) Pop Front
 	_source._extract_bytes(temp_offset+size_compressed);
 
-	// 6) length Udpate
-	dest.set_size(length);
+	// 6) length Update
+	dest.set_size(result.size());
 	
 	// return) 
 	return	dest;
@@ -209,7 +168,7 @@ inline shared_buffer _front_compress(const buffer_view& _source, int64_t& _offse
 		throw std::length_error("buffer is too short!! [0] ");
 	}
 
-	// Declar) 
+	// Declare) 
 	int64_t	temp_offset	 = _offset;
 
 	// 1) get [compressed_size]
@@ -222,8 +181,7 @@ inline shared_buffer _front_compress(const buffer_view& _source, int64_t& _offse
 	std::size_t size_original = static_cast<std::size_t>(_source.template _front<uint32_t>(temp_offset));
 
 	// 3) allocate [decompressed_data_buffer] as size as [decompressed_size]
-	shared_buffer dest = alloc_shared_buffer(size_original);
-	std::size_t length = dest.size();
+	shared_buffer dest = alloc_shared_buffer(size_original) ^ size_original;
 
 	// 4) decompress to [decompressed_data_buffer]
 	auto result = compress::unzip(dest, buffer_view(_source._front(temp_offset), size_compressed));
@@ -235,8 +193,8 @@ inline shared_buffer _front_compress(const buffer_view& _source, int64_t& _offse
 	// 5) update _offset
 	_offset = static_cast<int64_t>(temp_offset+size_compressed);
 
-	// 6) length Udpate
-	dest.set_size(length);
+	// 6) length Update
+	dest.set_size(result.size());
 
 	// return) 
 	return dest;
@@ -263,7 +221,7 @@ template<class B> class serializer_extract<B, CGDK::COMPRESS>	{ public: using ty
 // class for front)
 template<class B>	class serializer_peek<B, CGDK::COMPRESS>
 					{	public:	using type = shared_buffer;
-						template<class S> static type _do_peek(const S& _s, int& _offset)	{ return _front_compress(_s, _offset); }
+						template<class S> static type _do_peek(const S& _s, int64_t& _offset)	{ return _front_compress(_s, _offset); }
 					};
 template<class B>	class serializer_size_of<B, CGDK::COMPRESS>
 					{	public:

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UDS (같은 host 접속) · CGDK10 기술 문서</title>
+<meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - Linux UDS(Unix domain socket)로 같은 host 의 TCP 접속을 대신하는 기능의 사용법, 동작, 성능">
+<link rel="icon" href="assets/CGCII_logo.PNG">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
+  <div class="ver">Game Server Engine</div>
+  <ul>
+    <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
+    <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
+    <li class="sub"><a href="pool.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Pool system</a></li>
+    <li class="sub"><a href="object.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l6 3v7l-6 3-6-3v-7z"/><path d="M2 4.5l6 3 6-3M8 7.5v7"/></svg>Object system</a></li>
+    <li class="sub"><a href="log.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h6l3 3v10H4z"/><path d="M6.5 8h4M6.5 10.5h4M6.5 5.5h2"/></svg>Log system</a></li>
+    <li class="sub"><a href="socket.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1.5v3.5M10 1.5v3.5"/><path d="M3.5 5h9v3.5a4.5 4.5 0 0 1-9 0z"/><path d="M8 13v1.5"/></svg>Socket system</a></li>
+    <li class="sub"><a href="socket.io_uring.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 1.5L3.5 9h4.5l-1 5.5L12.5 7H8z"/></svg>io_uring</a></li>
+    <li class="sub"><a href="socket.uds.html" class="cur"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.6-1.6a2.8 2.8 0 0 1 4 4L11 8.5"/><path d="M9 11.5l-1.6 1.6a2.8 2.8 0 0 1-4-4L5 7.5"/></svg>UDS (같은 host 접속)</a></li>
+    <li class="sub"><a href="socket.send.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 1.5L7 9"/><path d="M14.5 1.5l-4.5 13-2.2-5.3L2.5 6z"/></svg>send 최적화</a></li>
+    <li class="sub"><a href="socket.recv.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9.5v4h12v-4"/><path d="M8 2v8M5 7.5l3 3 3-3"/></svg>Receive 최적화</a></li>
+    <li class="sub"><a href="p2p.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="8" cy="12" r="2"/><path d="M5.6 5.2l1.6 5.2M10.4 5.2l-1.6 5.2M6 4h4"/></svg>P2P system</a></li>
+    <li class="sub"><a href="update.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5V5.2h-2.7"/></svg>Update system</a></li>
+    <li class="sub"><a href="server.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="4.5" rx="1"/><rect x="2" y="9.5" width="12" height="4.5" rx="1"/><path d="M4.5 4.25h.01M4.5 11.75h.01"/></svg>Server system</a></li>
+    <li class="sub"><a href="group.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 2.8a2.3 2.3 0 0 1 0 4.4M13.5 14c0-1.8-1-3.1-2.5-3.6"/></svg>Group system</a></li>
+    <li class="sub"><a href="query.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Query system</a></li>
+    <li class="head"><a href="build.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-3.8 3.8L2.8 12.2a1.4 1.4 0 0 0 2 2l5.9-3.9a3 3 0 0 0 3.8-3.8l-2 2-2-2z"/></svg>빌드 · 플랫폼</a></li>
+    <li class="head"><a href="tests.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5.5 8.2l2 2 3.2-4"/></svg>단위 테스트 · CI</a></li>
+    <li class="head"><a href="benchmarks.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V9M8 13.5V4M13 13.5V7"/><path d="M1.5 13.5h13"/></svg>벤치마크</a></li>
+    <li class="sub"><a href="benchmarks.push.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4 3 3 6-6"/><path d="M10.5 5.5h4v4"/></svg>큰 묶음 push 처리량</a></li>
+    <li class="sub"><a href="benchmarks.cork.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h8M2 11.5h5"/><path d="M12 9.5l2 2-2 2"/></svg>send cork · 서버 push</a></li>
+    <li class="head"><a href="samples.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4"/></svg>예제 · 튜토리얼</a></li>
+    <li class="head"><a href="releases.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h5.5l6.5 6.5-5.5 5.5L2 8z"/><circle cx="5.2" cy="5.2" r=".9"/></svg>릴리즈 노트</a></li>
+    <li class="head"><a href="status.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3M8 11.5h.01"/></svg>미구현 · 알려진 문제</a></li>
+  </ul>
+</aside>
+<main>
+<h1 id="uds">UDS (같은 host 접속) <small>net.io.connective.acceptor_tcp, net.io.connect_requestable.tcp, net.io.connective.connector_tcp, api.net.socket (Linux)</small></h1>
+<p>같은 host 안의 서버끼리 TCP 대신 Unix domain socket 으로 통신하게 하는 기능이다.</p>
+<ul>
+  <li>Linux 전용. Windows 의 <code>SIO_LOOPBACK_FAST_PATH</code> 에 해당한다.</li>
+  <li>소켓 클래스와 코드는 그대로다. UDS 로 붙은 소켓도 같은 클래스로 만들어지고 <code>on_connect / on_message / on_disconnect</code> 도 같다.</li>
+  <li>주소는 여전히 <code>127.0.0.1:port</code> 로 적는다. 엔진이 그 port 의 UDS 로 바꿔 붙는다.</li>
+  <li>서버와 클라이언트가 <b>둘 다 켜야</b> UDS 로 붙는다. 기본값은 양쪽 모두 꺼짐이다.</li>
+</ul>
+
+<h4 class="sec">켜는 법</h4>
+<p><b>서버 (acceptor)</b></p>
+<pre><code>net::acceptor&lt;socket_server&gt;::START_PARAMETER parameter;
+parameter.local_endpoint = net::ip::tcp::endpoint{ net::ip::address_v6::any(), 20000 };
+parameter.enable_uds = true;     // TCP 와 함께 UDS "\0cgdk.tcp.20000" 로도 받는다
+// parameter.uds_only = true;    // UDS 로만 받는다 (TCP port 는 bind 만, listen 안 함)
+pacceptor-&gt;start(parameter);</code></pre>
+<p>설정 파일(context)로는 같은 이름의 키를 쓴다.</p>
+<pre><code>{ "local_endpoint": { "port": 20000 }, "enable_uds": true }     // 또는 "uds_only": true</code></pre>
+<p><b>클라이언트</b></p>
+<pre><code>// 프로세스에서 한 번. 이후 loopback 주소로의 모든 접속이 UDS 를 먼저 시도한다.
+net::io::connect_requestable::Ntcp::enable_uds_loopback(true);
+
+psocket-&gt;start({ net::ip::tcp::endpoint{ net::ip::address_v4::loopback(), 20000 } });
+// 붙은 뒤 확인
+bool is_uds = psocket-&gt;remote_endpoint().is_unix();</code></pre>
+<table class="bench wrap">
+<tr><th>설정</th><th class="lbl">기본값</th><th class="lbl">설명</th></tr>
+<tr><td><code>START_PARAMETER::enable_uds</code> / <code>"enable_uds"</code></td><td class="lbl">false</td><td class="lbl">TCP 와 함께 UDS 로도 listen</td></tr>
+<tr><td><code>START_PARAMETER::uds_only</code> / <code>"uds_only"</code></td><td class="lbl">false</td><td class="lbl">UDS 로만 listen. 외부에서 TCP 로 접속 불가</td></tr>
+<tr><td><code>connect_requestable::Ntcp::enable_uds_loopback(bool)</code></td><td class="lbl">false</td><td class="lbl">loopback 접속 시 UDS 먼저 시도. 프로세스 전역</td></tr>
+</table>
+<p>클라이언트 기본값은 처음 들어갈 때(r11386) true 였고 r11440 에서 false 로 바꿨다. 켜지 않으면 서버가 UDS 로 listen 해도 TCP 로 붙는다.</p>
+
+<h4 class="sec">동작</h4>
+<p><b>이름 규칙</b></p>
+<ul>
+  <li>추상 이름(abstract namespace) <code>"\0cgdk.tcp.&lt;실제 listen port&gt;"</code>. 파일이 생기지 않고 프로세스가 죽으면 이름도 사라진다.</li>
+  <li>이름은 <code>api::socket::make_uds_address(port, ...)</code> 한 곳에서 만든다. 서버와 클라이언트가 같은 함수를 쓴다.</li>
+  <li>port 가 재할당되면(<code>reallocate_port_at_duplicate_port_error</code>) 바뀐 port 로 이름을 만든다.</li>
+</ul>
+<p><b>서버</b></p>
+<ul>
+  <li><code>enable_uds</code> : listen 주소가 any(0.0.0.0, ::) 나 loopback 일 때만 UDS 로도 받는다. 특정 외부 주소면 무시한다.</li>
+  <li>UDS listen 이 실패하면 경고 로그를 남기고 TCP 로만 동작한다. 같은 port 의 UDS 를 이미 다른 프로세스가 쓰는 경우다.</li>
+  <li><code>uds_only</code> : TCP 소켓은 bind 만 하고 listen 하지 않는다. SO_REUSEADDR 를 꺼서 port 를 독점한다. TCP 접속은 ECONNREFUSED.</li>
+  <li><code>uds_only</code> 에서 UDS 가 실패하면 소켓을 닫고 예외를 던진다(시작 실패). 주소 제한은 없다.</li>
+  <li>시작 로그에 <code>listen on UDS 'cgdk.tcp.&lt;port&gt;'</code> 가 찍힌다. <code>stop()</code> 은 TCP 와 UDS 를 함께 닫는다.</li>
+  <li>Windows 는 두 설정을 경고 후 무시하고 TCP 로 동작한다.</li>
+</ul>
+<p><b>클라이언트</b></p>
+<ul>
+  <li>대상이 loopback(127.x.x.x, ::1)이고 스위치가 켜져 있으면 먼저 그 port 의 UDS 로 connect 한다. UDS connect 는 즉시 성공하거나 즉시 실패한다.</li>
+  <li>성공하면 TCP 핸들을 UDS 핸들로 바꾼다. 실패하면 원래대로 TCP 로 접속한다.</li>
+  <li><code>bind_endpoint</code> 를 지정하면 시도하지 않는다. 단 any:0 은 지정하지 않은 것으로 본다.</li>
+  <li><code>connective::connector</code>(다중 접속기)도 같은 규칙과 같은 스위치로 UDS 를 쓴다(r11406).</li>
+  <li>서버에 UDS 가 없을 때 시도 비용은 접속당 약 2.5 µs 다. TCP loopback connect+close 는 약 18.5 µs.</li>
+</ul>
+<p><b>UDS 소켓 구분</b></p>
+<ul>
+  <li><code>net::sockaddr::is_unix()</code> 가 true. <code>to_string()</code> 은 <code>"unix"</code>.</li>
+  <li><code>is_loopback()</code> 도 true 다. loopback 으로 판단하는 기존 코드가 그대로 동작한다.</li>
+  <li>대입과 비교는 AF_UNIX family 를 유지한다. 주소 조회는 family 만 남기고 경로는 넣지 않는다.</li>
+</ul>
+<p><b>UDS 에 적용되지 않는 것</b></p>
+<ul>
+  <li>TCP socket option(<code>TCP_NODELAY</code>, <code>TCP_QUICKACK</code>, <code>SO_BUSY_POLL</code>, <code>TCP_NOTSENT_LOWAT</code>, TFO). <code>apply_socket_option()</code> 이 건너뛴다.</li>
+  <li>MSG_ZEROCOPY 송신(AF_INET/AF_INET6 만).</li>
+  <li>epoll busy poll. UDS 는 NAPI ID 가 없어 효과가 없다.</li>
+  <li>공인 주소 조회(<code>socket_address_in_public</code>).</li>
+</ul>
+
+<h4 class="sec">성능</h4>
+<p>Linux 32 코어 서버(Ubuntu 26.04, g++ 15.2), 같은 host 의 서버·클라이언트. 처음 도입 때 측정. Release(벤치 <code>-O3</code>, CGDK Release 라이브러리).</p>
+<table class="bench wrap">
+<tr><th>항목</th><th>TCP (loopback)</th><th>UDS</th><th class="lbl">비고</th></tr>
+<tr><td>저부하 echo 지연 p50</td><td>16.7 µs</td><td><b>9.3 µs</b></td><td class="lbl">처리량 약 2배</td></tr>
+<tr><td>pipeline 처리량</td><td>1.00</td><td><b>1.26</b></td><td class="lbl">+26%</td></tr>
+<tr><td>64 KB 메시지 처리량</td><td>1.00</td><td><b>1.17</b></td><td class="lbl">+17%</td></tr>
+<tr><td>서버 포화 ping-pong</td><td>1.00</td><td><b>1.03</b></td><td class="lbl">p99 271 → 148 µs</td></tr>
+<tr><td>접속 (raw 클라이언트, 1 thread)</td><td>5.3만/s (18 µs)</td><td><b>25.6만/s (3.6 µs)</b></td><td class="lbl">서버 포화 시 UDS 약 51.5만/s</td></tr>
+<tr><td>접속 (CGDK 클라이언트, 8 worker)</td><td>2.2만/s</td><td><b>17.5만/s</b></td><td class="lbl"><code>start()</code> 자체가 약 30 µs</td></tr>
+</table>
+<p>echo ping-pong(64 B, 클라이언트 32개, window 16, epoll, msg/s). Release r11445, 32 코어 서버(kernel 7.0). 8 코어 장비(Release r11463)에서는 TCP 3,676,791 · UDS 4,932,962 (+34%).</p>
+<table class="bench wrap">
+<tr><th>executor thread</th><th>TCP</th><th>UDS</th></tr>
+<tr><td>4</td><td>6,685,047</td><td><b>7,160,978</b></td></tr>
+<tr><td>8</td><td>8,659,203</td><td><b>8,538,468</b></td></tr>
+</table>
+<ul>
+  <li>지연과 접속 비용에서 이득이 크다. 접속은 5 ~ 8배, 저부하 지연은 절반에 가깝다.</li>
+  <li>작은 메시지를 대량으로 주고받는 포화 상태에서는 차이가 작다. 이때는 커널 복사보다 사용자 영역 처리가 병목이다.</li>
+  <li><code>enable_uds</code> 를 켜도 TCP 경로의 성능은 변하지 않았다(accept 40만/s 동일, pipeline 24.61M 대 24.67M).</li>
+</ul>
+
+<h4 class="sec">함께 고친 버그</h4>
+<p>UDS 접속 벤치에서 드러났지만 <b>TCP 에도 있던</b> epoll 소켓 버그들이다.</p>
+<ul>
+  <li><b>즉시 성공한 connect</b> : <code>connect()</code> 가 바로 0 을 돌려주면 epoll attach 없이 이벤트만 바꿔 수신을 못 받았다. 즉시 성공도 진행 중처럼 attach 한 뒤 EPOLLOUT 으로 완료한다.</li>
+  <li><b>any:0 bind</b> : connect 전에 any:0 을 명시 bind 해 TIME_WAIT 가 많으면 bind 0.8 ms·port 고갈. Linux 는 bind 를 생략한다(r11387, r11413).</li>
+  <li><b>닫은 fd 의 epoll 핸들</b> : SYN·BINDED 상태 close 가 fd 를 닫고 epoll 핸들을 지우지 않아, 소멸자가 재사용된 남의 fd 를 detach·close 했다(r11387).</li>
+  <li><b>접속 완료와 close 경합</b> : on_connect 뒤 이벤트 재설정 사이에 다른 thread 가 close 하면 재사용된 fd 의 남의 executable 을 바꿔치기했다. 처리 중 표시로 close 를 큐에 넣는다(r11387, r11395~r11397).</li>
+  <li><b>acceptor 수명</b> : accept executable 이 acceptor 를 raw 포인터로 들어 <code>stop()</code> 직후 해제하면 pure virtual 호출(r11388). 처리 중 accept 를 세어 stop 이 기다리게 했다(r11418).</li>
+  <li><b>풀 객체 필드</b> : accept executable 은 풀에서 재사용된다. UDS 용 필드를 TCP 경로에서 초기화하지 않아, UDS 를 쓴 뒤 TCP acceptor 가 닫힌 UDS fd 에서 accept 했다.</li>
+</ul>
+<div class="note">핸들을 UDS 로 바꿀 때는 detach, closesocket, address family, epoll 핸들을 <b>모두</b> 바꿔야 한다. epoll 핸들은 native handle 과 따로 저장된다. 풀 객체에 필드를 넣으면 모든 할당 경로에서 초기화한다.</div>
+
+<h4 class="sec">이력</h4>
+<table class="bench wrap">
+<tr><th>리비전</th><th class="lbl">내용</th></tr>
+<tr><td>r11386</td><td class="lbl">도입. acceptor <code>enable_uds</code> / <code>uds_only</code>, 클라이언트 loopback 자동 UDS, <code>is_unix()</code></td></tr>
+<tr><td>r11387</td><td class="lbl">접속 벤치에서 찾은 epoll 버그 3개 수정, Linux any:0 bind 생략</td></tr>
+<tr><td>r11388</td><td class="lbl">acceptor 수명(raw 포인터) 수정, 단위 테스트 23개</td></tr>
+<tr><td>r11389</td><td class="lbl">튜토리얼 <code>socket.ex14.uds</code></td></tr>
+<tr><td>r11406</td><td class="lbl"><code>connective::connector</code> UDS 지원</td></tr>
+<tr><td>r11417 · r11418</td><td class="lbl">io_uring 에서 UDS listen 이름 해제 지연, acceptor stop 대기</td></tr>
+<tr><td>r11440</td><td class="lbl">클라이언트 스위치 기본값 true → false</td></tr>
+</table>
+
+<h4 class="sec">테스트 · 튜토리얼</h4>
+<ul>
+  <li>단위 테스트 <code>build/src/net.socket/unit_test/unit_test.net_socket.http/test_uds.cpp</code>. Linux 전용, CMake 만. listen · connect · 통신 · epoll 핸들 수명. UDS 여부는 <code>SO_DOMAIN</code> 으로 확인한다.</li>
+  <li>이 실행 파일은 시작 시 클라이언트 스위치를 켠다. 각 테스트의 가드가 이전 값을 복원한다.</li>
+  <li>튜토리얼 <code>tutorials/network.1.socket/socket.ex14.uds</code> : enable_uds, uds_only, context 설정 세 가지.</li>
+  <li>CGDK 구조체 크기가 바뀐 변경이 있었으므로(r11386, r11418) CGDK 를 쓰는 프로젝트는 재빌드한다.</li>
+</ul>
+
+<footer>CGDK10 · 소스 기준 정리 (r11440, 2026-10-23) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+</main>
+</div>
+</body>
+</html>

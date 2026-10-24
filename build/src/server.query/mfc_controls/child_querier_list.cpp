@@ -87,7 +87,7 @@ void CChild_querier_list::OnDestroy()
 	m_list_querier.DeleteAllItems();
 
 	// 3) EventManager를 Reset한다.
-	scoped_lock(m_lockable_querier_manager)
+	SCOPED_LOCK(m_lockable_querier_manager)
 	{
 		m_pquerier_manager.reset();
 	}
@@ -99,7 +99,7 @@ void CChild_querier_list::OnDestroy()
 void CChild_querier_list::SetDBQuerierManager(query::manager_querier* _pquerier_manager)
 {
 	// 1) Querier Manager를 설정한다.
-	scoped_lock(m_lockable_querier_manager)
+	SCOPED_LOCK(m_lockable_querier_manager)
 	{
 		m_pquerier_manager = _pquerier_manager;
 	}
@@ -116,14 +116,14 @@ void CChild_querier_list::UpdateQuerierManager()
 	// check) 윈도우가 생성되어 있지 않으면 끝낸다.
 	RETURN_IF(m_hWnd == nullptr)
 
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 	// declare) 
 	object_ptr<query::manager_querier> pmanager_querier;
 
 	// 1) Connective Manager를 설정한다.
-	scoped_lock(m_lockable_querier_manager)
+	SCOPED_LOCK(m_lockable_querier_manager)
 	{
 		pmanager_querier	 = m_pquerier_manager;
 	}
@@ -143,7 +143,7 @@ void CChild_querier_list::UpdateQuerierManager()
 	// declare) 
 	int index = 0;
 	
-	scoped_lock(pmanager_querier->get_lockable())
+	SCOPED_LOCK(pmanager_querier->get_lockable())
 	{
 		auto iter = m_pquerier_manager->begin();
 		auto iter_end = m_pquerier_manager->end();
@@ -235,7 +235,8 @@ void CChild_querier_list::UpdateQuerier(int p_iIndex)
 
 	// [1] "Type"
 	list_item.iSubItem		 = 1;
-	list_item.pszText		 = (TCHAR*)to_string<TCHAR>((eOBJECT_TYPE)pquerier->object_type()).data();
+	wsprintf(text, TEXT("%hs"), to_string((eOBJECT_TYPE)pquerier->object_type()).data());
+	list_item.pszText		 = text;
 	m_list_querier.SetItem(&list_item);
 
 	// [2] "Status"
@@ -386,10 +387,10 @@ void CChild_querier_list::OnTimer(UINT_PTR _nIDEvent)
 {
 	if(_nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// - 상태를 Update한다.
@@ -445,7 +446,7 @@ void CChild_querier_list::OnBnClickedOpen()
 	// declare) 
 	object_ptr<query::manager_querier> pmanager_querier;
 
-	scoped_lock(m_lockable_querier_manager)
+	SCOPED_LOCK(m_lockable_querier_manager)
 	{
 		pmanager_querier = m_pquerier_manager;
 	}
@@ -453,7 +454,7 @@ void CChild_querier_list::OnBnClickedOpen()
 	// check)
 	RETURN_IF(pmanager_querier.empty());
 
-	scoped_lock(pmanager_querier->get_lockable())
+	SCOPED_LOCK(pmanager_querier->get_lockable())
 	{
 		for(int i=0; i<m_list_querier.GetItemCount(); ++i)
 		{
@@ -480,12 +481,12 @@ void CChild_querier_list::OnBnClickedOpenWithParam()
 	// declare) 
 	object_ptr<query::manager_querier> pmanager_querier;
 
-	scoped_lock(m_lockable_querier_manager)
+	SCOPED_LOCK(m_lockable_querier_manager)
 	{
 		pmanager_querier = m_pquerier_manager;
 	}
 
-	scoped_lock(pmanager_querier->get_lockable())
+	SCOPED_LOCK(pmanager_querier->get_lockable())
 	{
 		for(int i=0; i<m_list_querier.GetItemCount(); ++i)
 		{
@@ -512,12 +513,12 @@ void CChild_querier_list::OnBnClickedClose()
 	// declare) 
 	object_ptr<query::manager_querier> pmanager_querier;
 
-	scoped_lock(m_lockable_querier_manager)
+	SCOPED_LOCK(m_lockable_querier_manager)
 	{
 		pmanager_querier = m_pquerier_manager;
 	}
 
-	scoped_lock(pmanager_querier->get_lockable())
+	SCOPED_LOCK(pmanager_querier->get_lockable())
 	{
 		for(int i=0; i<m_list_querier.GetItemCount(); ++i)
 		{

@@ -18,7 +18,7 @@ CGSERVERQUERYMFCCONTROL_EXT_API CChild_querier_list* WINAPI create_child_querier
 	// 3) Show茄促.
 	pWnd->ShowWindow(SW_SHOW);
 
-	// Retrun) 积己等 扩档快 府畔~
+	// Return) 积己等 扩档快 府畔~
 	return	pWnd;
 }
 

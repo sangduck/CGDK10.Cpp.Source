@@ -4,8 +4,7 @@ namespace CGDK
 {
 
 
-schedulable::entity::entity(std::string_view _name) noexcept :
-	schedulable::Ninitializable_startable(_name) 
+schedulable::entity::entity() noexcept
 {
 	this->set_object_type(eOBJECT_TYPE::SCHEDULABLE_ENTITY);
 }

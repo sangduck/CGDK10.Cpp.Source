@@ -66,7 +66,7 @@ shared_buffer message_SERVER_DOSS_COMMAND_REQUEST(uint64_t _send_sequence, doss:
 {
 	// check) 
 	CGASSERT_ERROR(_ptransactable->m_cid.id_entity.exist());
-	CGASSERT_ERROR(_ptransactable->m_cid.id_session.exist());
+	CGASSERT_ERROR(_ptransactable->m_cid.id_session.exist() || _ptransactable->m_type == eTRANSACTION_TYPE::CREATE || _ptransactable->m_type == eTRANSACTION_TYPE::REMOVE);
 	CGASSERT_ERROR(_ptransactable->m_cid.id_entity == _ptransactable->m_pentity->m_eid);
 
 	// 1) get size of message
@@ -96,13 +96,13 @@ shared_buffer message_SERVER_DOSS_COMMAND_RESPONSE(uint64_t _send_sequence, doss
 {
 	// check) 
 	CGASSERT_ERROR(_ptransactable->m_cid.entity_id().exist());
-	CGASSERT_ERROR(_ptransactable->m_cid.session_id().exist());
+	CGASSERT_ERROR(_ptransactable->m_cid.session_id().exist() || _ptransactable->m_type == eTRANSACTION_TYPE::CREATE || _ptransactable->m_type == eTRANSACTION_TYPE::REMOVE);
 
 	// check)
 	CGASSERT_ERROR(_ptransactable->m_type != eTRANSACTION_TYPE::CHECKOUT);
 
 	// 1) get size of message
-	auto buffer_size = 8 + sizeof(uint64_t) + sizeof(eTRANSACTION_TYPE) + sizeof(sCHECKIN_ID) + sizeof(sREQUEST_ID) + sizeof(eRESULT) + get_size_of(_ptransactable->m_buf_request);
+	auto buffer_size = 8 + sizeof(uint64_t) + sizeof(eTRANSACTION_TYPE) + sizeof(sCHECKIN_ID) + sizeof(sREQUEST_ID) + sizeof(eRESULT) + get_size_of(_ptransactable->m_buf_result);	// the result buffer is appended (not the request buffer)
 
 	// 2) alloc memory buffer
 	auto buf_temp = alloc_shared_buffer(buffer_size);
@@ -128,7 +128,7 @@ shared_buffer message_SERVER_DOSS_COMMAND_RESPONSE(uint64_t _send_sequence, eTRA
 {
 	// check)
 	CGASSERT_ERROR(_cid.entity_id().exist());
-	CGASSERT_ERROR(_cid.session_id().exist());
+	CGASSERT_ERROR(_cid.session_id().exist() || _command == eTRANSACTION_TYPE::CREATE || _command == eTRANSACTION_TYPE::REMOVE);
 
 	// 1) get size of message
 	auto buffer_size = 8 + sizeof(uint64_t) + sizeof(eTRANSACTION_TYPE) + sizeof(sCHECKIN_ID) + sizeof(sREQUEST_ID) + sizeof(eRESULT) + get_size_of(_buf_response);

@@ -1,0 +1,21 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/windows/unit_test/" Id="9a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d">
+    <Project Path="unit_test\unit_test.server_query\unit_test.server_query.vs18.vcxproj" Id="c8e5f3b2-6d4a-4f9c-8ae7-2a3f4d5c6b71" />
+  </Folder>
+  <Folder Name="/windows/" Id="c1d94d85-b9b4-4d54-9720-77c12480a702">
+    <Project Path="mfc_controls/CGDK10.server.query.mfc_controls.vs18.vcxproj" Id="b7178181-5e51-42dc-9b5c-fa15f9870bd1" />
+    <Project Path="query\CGDK10.server.query.vs18.vcxproj" Id="0af3bdbd-016a-4c98-aa1b-e984630077e3" />
+    <Project Path="rdb.odbc\CGDK10.server.query.rdb.odbc.vs18.vcxproj" Id="9e121877-1300-4fec-b259-0243c74b4445" />
+    <Project Path="http\CGDK10.server.query.http.vs18.vcxproj" Id="29ddacd9-91cb-4180-a03e-899dc8b550f2" />
+    <Project Path="redis\CGDK10.server.query.redis.vs18.vcxproj" Id="644842be-d547-43dd-946b-3d1cf6edb51a" />
+  </Folder>
+  <Project Path="..\common\cgdk_info.shared.vcxitems" Id="f2b5df8c-26a7-4f26-bd80-933bb4870b0a" />
+  <Project Path="http\CGDK10.server.query.http.vcxitems" Id="d075a614-23e6-4b1a-9f40-d7c29ebc5fba" />
+  <Project Path="rdb.odbc\CGDK10.server.query.rdb.odbc.vcxitems" Id="4a90f49b-8059-4bbb-94ae-6355c5dc2a10" />
+  <Project Path="query\CGDK10.server.query.vcxitems" Id="08904c6e-aa8f-42dd-a3a9-3a398e7454ce" />
+  <Project Path="redis\CGDK10.server.query.redis.vcxitems" Id="db196ff8-ee17-4c7c-8490-13f2ff9b351b" />
+  <Project Path="mfc_controls\CGDK10.server.query.mfc_controls.shared.vcxitems" Id="3ce81dd7-04ab-4fc4-a83c-5fde39dc0620" />
+</Solution>

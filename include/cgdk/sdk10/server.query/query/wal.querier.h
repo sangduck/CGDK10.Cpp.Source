@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                           Server Query Classes                            *
+//*                               server.query                                *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -34,14 +34,14 @@ class wal::querier :
 	public						object::Nnameable,
 	public						object::Ninitializable_startable
 {
-// defintion) 
+// definition) 
 public:
 	typedef	typename TQUERY::IQUERY		IQUERY;
 	typedef	typename TQUERY::QUERIER	QUERIER;
 	typedef	sCHUNK<object_ptr<TQUERY>>	CHUNK;
 	typedef	sQUERY<TQUERY>				QUERY;
 
-// contructor/destructor)
+// constructor/destructor)
 public:
 			querier() noexcept;
 			~querier() noexcept;
@@ -117,7 +117,7 @@ template <class TQUERY>
 wal::querier<TQUERY>::querier() noexcept
 {
 	// 1) header file initialize
-	__strcpy(m_header.init_string, "CGCII wal file");
+	m_header.init_string[std::basic_string_view("CGCII wal file").copy(m_header.init_string, (std::size(m_header.init_string)) - 1)] = 0;
 	m_header.key[0] = (static_cast<uint64_t>(std::rand()) << 32) | static_cast<uint64_t>(rand());
 	m_header.key[1] = (static_cast<uint64_t>(std::rand()) << 32) | static_cast<uint64_t>(rand());
 	m_header.key[2] = (static_cast<uint64_t>(std::rand()) << 32) | static_cast<uint64_t>(rand());
@@ -191,7 +191,7 @@ void wal::querier<TQUERY>::Cquery::process_execute_query()
 template <class TQUERY>
 void wal::querier<TQUERY>::Cquery::process_reset_session() noexcept
 {
-	scoped_lock(this->m_lockable_state_query)
+	SCOPED_LOCK(this->m_lockable_state_query)
 	{
 		// 1) reset query pointer
 		m_pwal.reset();
@@ -224,7 +224,7 @@ void wal::querier<TQUERY>::execute_query(TQUERY* _pquery)
 	// check) 
 	CGASSERT_ERROR(size_data == temp_buffer.size());
 
-	scoped_lock(m_lockable_lock)
+	SCOPED_LOCK(m_lockable_lock)
 	{
 		// check) 
 		CGASSERT_ERROR(m_pos_requested >= m_pos_completed);
@@ -276,7 +276,7 @@ void wal::querier<TQUERY>::on_start(context& _context)
 {
 	// 1) filename을 얻는다.
 	std::string filename = _context["filename"sv];
-	std::size_t max_count = _context.find("max_size"sv, "max size"sv);
+	std::size_t max_count = _context.find("max_size", "max size");
 
 	// 1) restore한다.
 	process_restore_file(filename);
@@ -309,7 +309,7 @@ void wal::querier<TQUERY>::on_stopping()
 	m_file.m_pwal.reset();
 
 	// 3) ...
-	scoped_lock(m_lockable_lock)
+	SCOPED_LOCK(m_lockable_lock)
 	{
 		m_queue_chunk_requested.clear();
 		m_vector_chunk_journaled.clear();
@@ -329,7 +329,7 @@ void wal::querier<TQUERY>::process_restore_file(const std::string_view _journali
 	// 1) 파일을 연다.
 	auto file_handle = api::file::open(_journaling_filename, eFILE_OPERATION::READ);
 
-	// check) return if file do not exsit
+	// check) return if file do not exist
 	RETURN_IF(file_handle == INVALID_FILE_HANDLE);
 
 	// 2) read CGCII wal file header
@@ -447,13 +447,13 @@ void wal::querier<TQUERY>::process_recreate_file(const std::string_view _journal
 template <class TQUERY>
 void wal::querier<TQUERY>::process_write_complete(const shared_buffer& _buffer)
 {
-	// check) _buffer.size_이 0이면 안됀다.
+	// check) _buffer.size_이 0이면 안 된다.
 	CGASSERT_ERROR(_buffer.size() != 0);
 
 	//declare)
 	int	count_completed = 0;
 
-	scoped_lock(m_lockable_lock)
+	SCOPED_LOCK(m_lockable_lock)
 	{
 		// declare) 
 		std::size_t remained_bytes = _buffer.size();
@@ -467,7 +467,7 @@ void wal::querier<TQUERY>::process_write_complete(const shared_buffer& _buffer)
 			// - ...
 			auto& iter = m_queue_chunk_requested.front();
 
-			// check) transaction 하나의 크기보다 크면 안됀다.
+			// check) transaction 하나의 크기보다 크면 안 된다.
 			BREAK_IF(iter.size > remained_bytes);
 
 			// - 길이 줄이기
@@ -521,7 +521,7 @@ void wal::querier<TQUERY>::process_write_complete(const shared_buffer& _buffer)
 template <class TQUERY>
 void wal::querier<TQUERY>::process_complete_wal(TQUERY* _pquery, result_code /*_result*/)
 {
-	scoped_lock(m_lockable_lock)
+	SCOPED_LOCK(m_lockable_lock)
 	{
 		// check) 
 		CGASSERT_ERROR(m_vector_query.empty() == false);
@@ -590,7 +590,7 @@ void wal::querier<TQUERY>::process_generate_query(std::size_t /*_count_completed
 		temp_queue->m_pquery = data.pquery;
 
 		// 6) queuing query data
-		scoped_lock(m_lockable_lock)
+		SCOPED_LOCK(m_lockable_lock)
 		{
 			m_vector_query.push_back(std::move(data));
 		}
@@ -630,7 +630,7 @@ void wal::querier<TQUERY>::process_shrink_file()
 	// check) 복사할 크기가 파일크기보다 클 수는 없다.
 	CGASSERT_ERROR(size_copy <= m_file.get_file_length());
 
-	// check) 그냥 통채로 copy해야하면 진행하지 않는다
+	// check) 그냥 통째로 copy해야하면 진행하지 않는다
 	RETURN_IF(size_copy + sizeof(sHEADER) == m_file.get_file_length());
 
 	// 3) 기존 파일을 먼저 닫는다.

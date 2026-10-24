@@ -31,7 +31,7 @@ class CGDK::resource::updatable::folder :
 {
 public:
 			result_code			initialize() { context _context; return this->initialize(_context); }
-			result_code			initialize(const INITIALIZE_PARAMETER& _parameter) { context temp{ buffer_view((char*)&_parameter, sizeof(INITIALIZE_PARAMETER)) }; return this->initialize(temp); }
+			result_code			initialize(const INITIALIZE_PARAMETER& _parameter) { context temp; temp = buffer_view((char*)&_parameter, sizeof(INITIALIZE_PARAMETER)); return this->initialize(temp); }
 	virtual	result_code			initialize(context& _context) override { return this->object::Ninitializable::initialize(_context); }
 
 protected:

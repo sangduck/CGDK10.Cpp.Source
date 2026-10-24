@@ -24,20 +24,16 @@ namespace CGDK
 //
 // net::io::sendable::Ntcp_sync
 //
-// 1. net::io::sendable::Ntcp_sync란!
-//    1) TCP용 send로 한번의 send를 한번의 Overlapped I/O로 걸어서 수행하는 
-//       sendable이다.
-//    2) 한번의 send에 한번의 Overlapped I/O를 쓰기 때문에 구조가 간단하여 send
-//       빈도가 낮은 socket에서는 좋은 성능을 낸다.
-//    3) 하지만 send의 빈도가 높은 socket에서는 많은 I/O가 오히려 성능이 떨어질
-//       수 있으므로 빈도가 높은 send를 수행하는 socket에서는 이 sendable대신
-//       send Gathering을 수행하는 TCPGathering을 사용하도록 권한다.
-//    4) 대부분의 Server socket이나 Client socket의 경우 이 간단한 sendable로
-//       충분하다.
-//
-// 2. net::io::sendable::CTCP의 핵심! Function의 기능 설명
-//    1) process_sendable()		buffer를 전송한다.
-//
+//    1) TCP용 send로 동기식 i/o 방식으로 수행한다.
+//	  2) 가장 기본적인 형태인 블로킹 전송을 수행한다.
+// 	     - linux
+// 	       send함수를 사용해 전송한다.
+// 	     - windows
+// 	       Overlapped i/o를 사용한다.
+//	   	   Overlapped를 사용한 비동기 송수신의 경우 적은 데이터를 빈번하지 않게 전송할 경우 오히려 오버헤드가 더 클 수 있다.
+//		   이 sendable 클래스는 전송 과정에서 복잡한 처리 과정이 일절 없기 때문에 전송 트래픽이 높지 않다면 오히려 더 좋은 효율을 낼 수 있다.
+//		   전송 상태에 대한 아무런 동작도 처리하지 않기 때문에 대용량의 전송에는 비효율적일 수 있으며 전송량이 많으면 접속이 끊어질 수도 있다.
+//    3) 간혹 한번씩 송신하는 socket의 경우 이 방법이 효율적일 수 있다.
 //
 //-----------------------------------------------------------------------------
 class net::io::sendable::Ntcp_sync :

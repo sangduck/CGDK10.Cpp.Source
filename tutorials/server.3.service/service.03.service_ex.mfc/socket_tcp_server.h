@@ -19,6 +19,4 @@
 
 class socket_tcp_server : public net::socket::tcp_client<>
 {
-public:
-	explicit socket_tcp_server(std::string_view _name) : net::socket::tcp_client<>(_name) {}
 };

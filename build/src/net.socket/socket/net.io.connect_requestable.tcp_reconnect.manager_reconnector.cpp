@@ -4,9 +4,9 @@
 using namespace CGDK;
 
 
-net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::manager_reconnector():
-	Nnameable("tcp reconnect manager")
+net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::manager_reconnector()
 {
+	this->name("tcp reconnect manager"sv);
 }
 
 net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::~manager_reconnector()
@@ -18,7 +18,7 @@ bool net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::register
 	// check)
 	RETURN_IF(_preconnector == nullptr, false);
 
-	scoped_lock(this->m_set_reconnect)
+	SCOPED_LOCK(this->m_lockable_set_reconnect)
 	{
 		// 1) 이미 존재하는지 확인한다.
 		auto iter_find = this->m_set_reconnect.find(_preconnector);
@@ -42,10 +42,15 @@ bool net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::register
 
 bool net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::unregister_reconnector(net::io::connect_requestable::Ntcp_reconnect* _preconnector) noexcept
 {
-	scoped_lock(this->m_set_reconnect)
+	SCOPED_LOCK(this->m_lockable_set_reconnect)
 	{
 		// 1) remove _preconnector
-		this->m_set_reconnect.erase(_preconnector);
+		//    (found by the pointer : an object_ptr made of '_preconnector' for erase() would add a reference to it while it is
+		//     being destroyed. called from its final release -> stop() -> process_cancel_reconnector() -> released twice)
+		auto iter_find = std::find_if(this->m_set_reconnect.begin(), this->m_set_reconnect.end(), [=](const object_ptr<net::io::connect_requestable::Ntcp_reconnect>& _preconnector_set) { return _preconnector_set.get() == _preconnector; });
+
+		if (iter_find != this->m_set_reconnect.end())
+			this->m_set_reconnect.erase(iter_find);
 
 		// 2) sop schedulable
 		if (this->m_set_reconnect.empty())
@@ -64,7 +69,7 @@ intptr_t net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::proc
 	std::vector<object_ptr<net::io::connect_requestable::Ntcp_reconnect>> vector_temp;
 
 	// 1) 먼저 복사한다.
-	scoped_lock(this->m_set_reconnect)
+	SCOPED_LOCK(this->m_lockable_set_reconnect)
 	{
 		// - Resize
 		vector_temp.reserve(this->m_set_reconnect.size());
@@ -82,7 +87,7 @@ intptr_t net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::proc
 		// check) true면 제거한다.
 		if(result ==true)
 		{
-			scoped_lock(this->m_set_reconnect)
+			SCOPED_LOCK(this->m_lockable_set_reconnect)
 			{
 				this->m_set_reconnect.erase(iter);
 			}
@@ -95,7 +100,7 @@ intptr_t net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::proc
 
 void net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::initialize_instance()
 {
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// check) 
 		RETURN_IF(m_pinstance.exist());
@@ -104,7 +109,7 @@ void net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::initiali
 		auto pinstance = _make_own_raw<manager_reconnector>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL);
 		
 		// 2) set instance
-		m_pinstance = std::move(pinstance); 
+		m_pinstance.exchange_release(std::move(pinstance)); 
 	} 
 }
 
@@ -113,13 +118,13 @@ void net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::set_inst
 	// declare)
 	own_ptr<manager_reconnector> pentity_pre;
 
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) move old instance
 		pentity_pre = std::move(m_pinstance);
 
 		// 2) set new instance
-		m_pinstance = std::move(_pinstance);
+		m_pinstance.exchange_release(std::move(_pinstance));
 	}
 
 	// 3) reset old instance
@@ -131,7 +136,7 @@ void net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::reset_in
 	// declare) 
 	own_ptr<manager_reconnector> pinstance;
 	
-	scoped_lock(m_lockable_create)
+	SCOPED_LOCK(m_lockable_create)
 	{
 		// 1) move instance
 		pinstance = std::move(m_pinstance);
@@ -156,7 +161,7 @@ result_code net::io::connect_requestable::Ntcp_reconnect::manager_reconnector::d
 	std::set<object_ptr<net::io::connect_requestable::Ntcp_reconnect>> set_reconnect;
 
 	// 2) swap
-	scoped_lock(this->m_set_reconnect)
+	SCOPED_LOCK(this->m_lockable_set_reconnect)
 	{
 		// - swap
 		set_reconnect.swap(this->m_set_reconnect);

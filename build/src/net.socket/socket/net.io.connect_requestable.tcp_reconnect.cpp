@@ -9,11 +9,6 @@ net::io::connect_requestable::Ntcp_reconnect::Ntcp_reconnect() noexcept :
 {
 }
 
-net::io::connect_requestable::Ntcp_reconnect::Ntcp_reconnect(std::string_view _name) :
-	net::io::connect_requestable::Ntcp(_name)
-{
-}
-
 net::io::connect_requestable::Ntcp_reconnect::~Ntcp_reconnect() noexcept
 {
 	this->destroy();
@@ -51,6 +46,14 @@ bool net::io::connect_requestable::Ntcp_reconnect::process_request_connecting( c
 	{
 		// - connective를 reset한다.
 		this->m_pconnectable_notify = nullptr;
+
+		// - an immediate failure (connect() failed at once. ex. ECONNREFUSED on loopback) : no completion follows, so
+		//   process_complete_connecting() does not schedule the reconnect => scheduled here. pending like an asynchronous connect (true)
+		if (this->reconnection_enable() && this->socket_state() == eSOCKET_STATE::CLOSED)
+		{
+			this->process_request_reconnect();
+			result = true;
+		}
 	}
 
 	// return) 
@@ -69,7 +72,7 @@ void net::io::connect_requestable::Ntcp_reconnect::process_request_reconnect()
 		return;
 	}
 
-	scoped_lock(this->m_lockable_reconnector)
+	SCOPED_LOCK(this->m_lockable_reconnector)
 	{
 		// 1) Reconnection을 시작했음으로 설정한다.
 		this->m_flag_reconnecting = true;
@@ -88,9 +91,9 @@ void net::io::connect_requestable::Ntcp_reconnect::process_request_reconnect()
 
 void net::io::connect_requestable::Ntcp_reconnect::process_cancel_reconnector() noexcept
 {
-	scoped_lock(this->m_lockable_reconnector)
+	SCOPED_LOCK(this->m_lockable_reconnector)
 	{
-		// 1) Unreister한다.
+		// 1) Unregister한다.
 		if(this->m_pmanager_reconnector.exist())
 		{
 			// - unregister한다.
@@ -129,14 +132,48 @@ void net::io::connect_requestable::Ntcp_reconnect::process_complete_connecting( 
 	}
 
 #elif defined(_SYS_EPOLL_H)
-	// cheeck) 중복처리 중이면 그냥 끝낸다.(epoll은 중복으로 들어 올 수 있다.)
-	scoped_lock(this->m_epoll_event_cs)
-	{
-		// check)
-		RETURN_IF(this->m_result_connecting != eRESULT::REQUEST);
+	// check) 중복처리 중이면 그냥 끝낸다.(epoll은 중복으로 들어 올 수 있다.)
+	bool is_close_after_connect = false;
 
-		// - 처리된 것임을 표시한다.
-		this->m_result_connecting = eRESULT::PROCESS;
+	SCOPED_LOCK(this->m_epoll_event_cs)
+	{
+		// check) the completion of a request closed and started again meanwhile (io_uring completion : the sequence in _result) => dropped
+		RETURN_IF(this->_process_check_connecting_seq(_result) == false);
+
+		// check) the connect is being processed or was completed by another thread (epoll may report it twice)
+		if (this->m_result_connecting != eRESULT::REQUEST)
+		{
+			// - not a close => a duplicate event : dropped
+			RETURN_IF((_result & (EPOLLHUP | EPOLLERR)) == 0);
+
+			// - a close (process_close_socket() of a SYN socket : EPOLLHUP) while that thread processes the connect => queued.
+			//   _process_end_complete_connect() of that thread completes the disconnect (the handle is closed by then : no re-arm)
+			if (this->m_epoll_event_processing_now)
+			{
+				this->m_epoll_event_flag_queued |= EPOLLHUP;
+				return;
+			}
+
+			// - a close after that thread completed the connect meanwhile (the state was SYN when the close began) => the disconnect now
+			is_close_after_connect = true;
+		}
+		else
+		{
+			// - processing (like an epoll event : a close meanwhile, in on_connect or by another thread, is queued and done by
+			//   _process_end_complete_connect(). set here, under the guard : set later, a close queued between was lost)
+			this->m_result_connecting = eRESULT::PROCESS;
+			this->m_epoll_event_flag_queued = 0;
+			this->m_epoll_event_processing_now = true;
+		}
+	}
+
+	// - the close of a socket connected meanwhile (above) : process_close_socket() closed the handle, the disconnect completes here
+	if (is_close_after_connect)
+	{
+		if (this->socket_state() != eSOCKET_STATE::CLOSED)
+			this->process_complete_disconnect();
+
+		return;
 	}
 
 	//-----------------------------------------------------------------
@@ -173,6 +210,7 @@ void net::io::connect_requestable::Ntcp_reconnect::process_complete_connecting( 
 #endif
 
 	// 3) 완료 후 처리 - process_complete_connect
+	//    (epoll : a close meanwhile is queued till _process_end_complete_connect, see the guard above)
 	auto result = this->process_complete_connect(_result);
 
 #if defined(_WINSOCK2API_)
@@ -217,6 +255,17 @@ void net::io::connect_requestable::Ntcp_reconnect::process_complete_connecting( 
 	//        다만 m_connective가 nullptr이 아닌 경우에만...
 	if (result == false)
 	{
+		// - end
+		this->_process_end_complete_connect(false);
+
+		// - 실패한 접속의 handle을 epoll에서 뗀다. (process_request_connecting에서 붙였다.)
+		//   떼지 않으면 같은 fd 번호로 다시 접속할 때 이전 등록(끝난 executable)이 먼저 찾아져 완료를 받지 못한다. (재접속이 멈춘다)
+		if (auto handle_socket = this->native_handle(); handle_socket != INVALID_SOCKET)
+		{
+			if (auto pio_context = this->io_context(); pio_context.exist())
+				pio_context->detach(static_cast<CGHANDLE>(handle_socket));
+		}
+
 		if (this->m_pconnectable_notify != nullptr && this->reconnection_enable())
 		{
 			// - connective를 reset한다.
@@ -242,21 +291,15 @@ void net::io::connect_requestable::Ntcp_reconnect::process_complete_connecting( 
 		// - 접속에 성공했으므로 재접속처리를 종료한다.
 		this->process_cancel_reconnector();
 
-		// check)
-		CGASSERT_ERROR(this->io_context().exist());
-
-		// check)
-		CGASSERT_ERROR(this->get_epoll_handle() != INVALID_SOCKET);
-
-		// - attach to socket eexecutor
-		auto result = this->io_context()->set_event(get_epoll_handle(), this->m_epoll_event_flag, m_pexecutable_socket);
+		// - attach to socket executor (or completes the close queued in on_connect)
+		auto result_attach = this->_process_end_complete_connect(true);
 
 		// - result를 설정한다.
-		this->m_result_connecting = (result == true) ? eRESULT::SUCCESS : eRESULT::FAIL;
+		this->m_result_connecting = (result_attach == true) ? eRESULT::SUCCESS : eRESULT::FAIL;
 	}
 #endif
 
-	// statistics) connect/disconnect를 위해 실행중인 Overlapped I/O수를 줄임.
+	// statistics) connect/disconnect를 위해 실행 중인 Overlapped I/O수를 줄임.
 	this->statistics_on_decrease_async_con_dis();
 }
 
@@ -268,12 +311,12 @@ void net::io::connect_requestable::Ntcp_reconnect::process_connective_connect( n
 
 void net::io::connect_requestable::Ntcp_reconnect::process_connective_disconnect( net::io::Iconnectable* /*_pconnectable*/) noexcept
 {
-	scoped_lock(m_lockable_reconnector)
+	SCOPED_LOCK(m_lockable_reconnector)
 	{
 		// 1) connective를 reset한다.
 		this->m_pconnectable_notify = nullptr;
 
-		// 2) 접속 종료시 m_tick_disconnect시간을 설정한다.
+		// 2) 접속 종료 시 m_tick_disconnect시간을 설정한다.
 		auto tick_now = chrono::tick::now();
 		auto tick_differ_execute = tick_now - this->m_tick_disconnected;
 
@@ -296,7 +339,7 @@ void net::io::connect_requestable::Ntcp_reconnect::process_connective_disconnect
 
 bool net::io::connect_requestable::Ntcp_reconnect::process_wait_reconnect()
 {
-	scoped_lock_named(this->m_lockable_reconnector, cs)
+	SCOPED_LOCK_NAMED(this->m_lockable_reconnector, cs)
 	{
 		// check) 만약에 Disable상태라면 재접속을 하지 않는다.
 		RETURN_IF(this->reconnection_enable() == false, true);
@@ -307,8 +350,8 @@ bool net::io::connect_requestable::Ntcp_reconnect::process_wait_reconnect()
 		// 1) 접속 종료한 시점 이후의 tick을 구한다.
 		auto tick_differ_execute = chrono::tick::now() - this->m_tick_disconnected;
 
-		// check) 접속 종료후 m_tick_reconnection_interval보다 시간이 더 지나지 않았으면 그냥 끝낸다.
-		RETURN_IF(tick_differ_execute < this->m_tick_reconnection_interval, false)
+		// check) 접속 종료 후 m_tick_reconnection_interval보다 시간이 더 지나지 않았으면 그냥 끝낸다.
+		RETURN_IF(tick_differ_execute < this->m_tick_reconnection_interval, false);
 
 		// 2) 재접속 시도 시간을 설정한다.
 		m_tick_disconnected	+= this->m_tick_reconnection_interval;
@@ -341,7 +384,7 @@ bool net::io::connect_requestable::Ntcp_reconnect::process_wait_reconnect()
 	// check) connect에 실패했으면 Reconnecting을 true로 바꿔 놓는다.
 	if(result == false)
 	{
-		scoped_lock(this->m_lockable_reconnector)
+		SCOPED_LOCK(this->m_lockable_reconnector)
 		{
 			// - Reconnection을 시작했음으로 설정한다.
 			this->m_flag_reconnecting = true;
@@ -364,7 +407,7 @@ result_code net::io::connect_requestable::Ntcp_reconnect::process_start(context&
 	START_PARAMETER parameter;
 
 	// 1) parsing socket setting options
-	if (_context.type() == eCONTEXT_VALUE_TYPE::BUFFER_)
+	if (_context.type() == context::value_type_t::buffer_)
 	{
 		parameter = _context.v.value_buffer.front<START_PARAMETER>();
 	}

@@ -6,7 +6,7 @@ void user::manager::register_user(user::socket* _psocket)
 	// declare) 
 	object_ptr<user::socket> psocket_user_old;
 
-	scoped_lock(m_container_user)
+	SCOPED_LOCK(m_lockable_container_user)
 	{
 		// 1) ACCOUNT_ID를 얻어 놓는다.
 		auto aid = _psocket->m_aid;
@@ -36,12 +36,12 @@ void user::manager::register_user(user::socket* _psocket)
 
 void user::manager::unregister_user(user::socket* _psocket) noexcept
 {
-	scoped_lock(m_container_user)
+	SCOPED_LOCK(m_lockable_container_user)
 	{
 		// 1) ACCOUNT_ID를 얻어 놓는다.
 		auto aid = _psocket->m_aid;
 
-		// check) ACCOUNT_ID가 valid하지 않으면 끝냄. (아직 Register가 안됀다. 경우)
+		// check) ACCOUNT_ID가 valid하지 않으면 끝냄. (아직 Register가 안 된다. 경우)
 		RETURN_IF(aid.valid() == false);
 
 		// 2) 찾아 제거한다.

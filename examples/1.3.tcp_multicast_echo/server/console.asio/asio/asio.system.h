@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
@@ -22,7 +22,7 @@ class asio::system
 public:
 	~system() noexcept;
 
-	[[nodiscard]] static boost::asio::io_service& get_io_service() { return instance()->io_service;}
+	[[nodiscard]] static boost::asio::io_context& get_io_service() { return instance()->io_service;}
 	[[nodiscard]] static std::shared_ptr<asio::system> instance() { if (!pinstance) { return init_instance(); }; return pinstance; }
 	static std::shared_ptr<asio::system> init_instance(int _thread_count = -1);
 	static void destroy_instance() noexcept;
@@ -32,7 +32,7 @@ protected:
 	void process_prepare_thread(int _thread_count);
 	void process_run_executor();
 	void process_destroy();
-	boost::asio::io_service io_service;
+	boost::asio::io_context io_service;
 	std::vector<std::shared_ptr<std::thread>> m_vector_threads;
 	bool m_is_thread_run;
 

@@ -27,9 +27,6 @@ namespace eMESSAGE
 {
 	namespace SERVER
 	{
-		constexpr static message_t	CERTIFY_REQUEST						= COMMON + 10;
-		constexpr static message_t	CERTIFY_RESPONSE					= COMMON + 11;
-
 		namespace ADMIN
 		{
 			constexpr static message_t	CERTIFY_REQUEST					 = BASE +  1;	//	213050	0x00034039
@@ -52,7 +49,8 @@ namespace eMESSAGE
 			constexpr static message_t	INSTANCE_UPDATE_INFO			 = BASE + 21;	//	213049	0x00034038
 			constexpr static message_t	INSTANCE_UPDATE_STATUS 			 = BASE + 22;	//	213049	0x00034038
 			constexpr static message_t	INSTANCE_UPDATE_STATE 			 = BASE + 23;	//	213049	0x00034038
-			constexpr static message_t	INSTANCE_UPDATE_PID 			 = BASE + 24;	//	213049	0x00034038
+			constexpr static message_t	INSTANCE_UPDATE_PID 			 = BASE + 24;
+			constexpr static message_t	HOST_UPDATE_STATUS 				 = BASE + 25;	//	(host iid, SYSTEM::sSTATUS) host_agent -> admin server	//	213049	0x00034038
 
 			constexpr static message_t	REQUEST_VERSION_UPDATE			 = BASE + 62;	//	213033	0x00034022
 			constexpr static message_t	REQUEST_UPDATE_SETTING			 = BASE + 63;	//	213033	0x00034022
@@ -65,6 +63,7 @@ namespace eMESSAGE
 			constexpr static message_t	REQUEST_CONTINUE_SERVICE		 = BASE + 70;	//	213060	0x00034044
 
 			constexpr static message_t	SERVER_STATUS_UPDATE			 = BASE + 71;	//	213063	0x00034047
+			constexpr static message_t	REQUEST_RESULT					 = BASE + 72;	//	213064	0x00034048 (iid, request, eRESULT, message)
 			constexpr static message_t	SERVER_PID_UPDATE				 = BASE + 151;	//	213143	0x00034092
 
 			constexpr static message_t	DUMP_INFO_LIST					 = BASE + 181;	//	213173	0x000340B5
@@ -81,11 +80,12 @@ namespace eMESSAGE
 	}
 }
 
-shared_buffer message_SERVER_ADMIN_REQUEST_INIT_SERVICE();
-shared_buffer message_SERVER_ADMIN_REQUEST_DESTROY_SERVICE();
-shared_buffer message_SERVER_ADMIN_REQUEST_START_SERVICE();
-shared_buffer message_SERVER_ADMIN_REQUEST_STOP_SERVICE();
-shared_buffer message_SERVER_ADMIN_REQUEST_PAUSE_SERVICE();
-shared_buffer message_SERVER_ADMIN_REQUEST_CONTINUE_SERVICE();
+shared_buffer make_message_SERVER_ADMIN_REQUEST_INIT_SERVICE();
+shared_buffer make_message_SERVER_ADMIN_REQUEST_DESTROY_SERVICE();
+shared_buffer make_message_SERVER_ADMIN_REQUEST_START_SERVICE();
+shared_buffer make_message_SERVER_ADMIN_REQUEST_STOP_SERVICE();
+shared_buffer make_message_SERVER_ADMIN_REQUEST_PAUSE_SERVICE();
+shared_buffer make_message_SERVER_ADMIN_REQUEST_CONTINUE_SERVICE();
+
 
 }

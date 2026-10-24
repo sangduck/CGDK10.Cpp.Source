@@ -18,8 +18,10 @@ result_code executor::strand::_process_initialize(context& _context)
 	this->on_initialize(_context);
 
 	// 2) 
-	scoped_lock(this->m_cs_pexecutor)
 	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_pexecutor);
+
 		if (this->m_pexecutor.empty())
 		{
 			this->m_pexecutor = system_executor::executor();
@@ -41,26 +43,26 @@ result_code executor::strand::_process_destroying() noexcept
 		std::vector<EXECUTABLE> queue_executable;
 		std::list<EXECUTABLE_AT> queue_executable_at;
 
-		// declar) 
+		// declare) 
 
-		// 2) clear quque
+		// 2) clear queue
 		for (;;)
 		{
-			scoped_lock(this->m_cs_queue_executable)
-			{
-				if (this->m_is_processing == true)
-				{
-					std::this_thread::sleep_for(1ms);
-					continue;
-				}
+			// lock)
+			std::lock_guard lock(this->m_cs_queue_executable);
 
-				queue_executable = std::move(this->m_queue_executable);
-				queue_executable_at = std::move(this->m_queue_executable_at);
-				break;
+			if (this->m_is_processing == true)
+			{
+				std::this_thread::sleep_for(1ms);
+				continue;
 			}
+
+			queue_executable = std::move(this->m_queue_executable);
+			queue_executable_at = std::move(this->m_queue_executable_at);
+			break;
 		}
 
-		// 3) executal
+		// 3) execute
 		for (auto& iter : queue_executable)
 		{
 			try
@@ -92,10 +94,13 @@ bool executor::strand::process_post(object_ptr<Iexecutable>&& _pexecutable)
 	CGASSERT_ERROR(_pexecutable.exist());
 
 	// 1) queuing한다.
-	scoped_lock(this->m_cs_queue_executable)
 	{
+		// lock)
+		std::lock_guard lock(this->m_cs_queue_executable);
+
 		// check)
-		RETURN_IF(this->get_object_state() != eOBJECT_STATE::RUNNING, false);
+		if(this->get_object_state() != eOBJECT_STATE::RUNNING)
+			return false;
 
 		// - make executable item
 		EXECUTABLE executable_temp;
@@ -107,7 +112,8 @@ bool executor::strand::process_post(object_ptr<Iexecutable>&& _pexecutable)
 		this->m_queue_executable.push_back(std::move(executable_temp));
 
 		// check) processing 중이면 queuing만하고 끝냄.
-		RETURN_IF(this->m_is_processing == true, true);
+		if(this->m_is_processing == true)
+			return true;
 
 		// - set flag true
 		this->m_is_processing = true;
@@ -117,7 +123,7 @@ bool executor::strand::process_post(object_ptr<Iexecutable>&& _pexecutable)
 	auto pexecutor = this->process_get_executor();
 
 	// check) 
-	CGASSERT_ERROR(pexecutor.exist());
+	CGASSERT_FATAL(pexecutor.exist());
 
 	// 3) 비동기 걸기
 	pexecutor->post(this);
@@ -134,7 +140,7 @@ public:
 	virtual	intptr_t process_execute(intptr_t, size_t)
 	{
 		// check)
-		CGASSERT_ERROR(pexecutor.exist())
+		CGASSERT_FATAL(pexecutor.exist())
 
 		// - call 'process_execute_at'
 		pexecutor->process_execute_post_at();
@@ -151,57 +157,47 @@ public:
 
 bool executor::strand::process_post_at(object_ptr<Iexecutable>&& _pexecutable, chrono::tick::time_point _tick_execute)
 {
-	// check) 
+	// check)
 	CGASSERT_ERROR(_pexecutable.exist());
 
-	if(_tick_execute < chrono::tick::now())
-	{
-		// check)
-		RETURN_IF(this->get_object_state() != eOBJECT_STATE::RUNNING, false);
+	// 1) 이미 지난 시각이면 바로 실행한다.
+	if (_tick_execute <= chrono::tick::now())
+		return this->process_post(std::move(_pexecutable));
 
-		// 1) make sEXECUTABLE_AT
+	// 2) 미래 시각이면 시각 순서로 queuing한다.
+	{
+		// lock)
+		std::lock_guard lock(this->m_cs_queue_executable);
+
+		// check)
+		if(this->get_object_state() != eOBJECT_STATE::RUNNING)
+			return false;
+
+		// - make sEXECUTABLE_AT
 		EXECUTABLE_AT executable_at;
 		executable_at.executable.pexecutable = std::move(_pexecutable);
 		executable_at.executable.result = 0;
 		executable_at.executable.param = 0;
 		executable_at.tick = _tick_execute;
 
-		// 2) find position
-		if (this->m_queue_executable_at.empty())
+		// - find position (뒤에서부터 : 시각이 같으면 먼저 넣은 것이 먼저 실행된다)
+		auto iter = this->m_queue_executable_at.end();
+		while (iter != this->m_queue_executable_at.begin())
 		{
-			this->m_queue_executable_at.emplace_back(std::move(executable_at));
-		}
-		else
-		{
-			// - find position
-			auto iter = this->m_queue_executable_at.end();
-			auto iter_begin = this->m_queue_executable_at.begin();
+			auto iter_pre = std::prev(iter);
 
-			do
-			{
-				auto iter_pre = iter;
-				--iter_pre;
+			if (iter_pre->tick <= _tick_execute)
+				break;
 
-				if (iter_pre->tick < _tick_execute)
-					break;
-
-				iter = iter_pre;
-			} while (iter != iter_begin);
-
-			// - qeueing
-			this->m_queue_executable_at.emplace(iter, std::move(executable_at));
+			iter = iter_pre;
 		}
 
-		// 2) 비동기 걸기
-		system_executor::post(make_object<executor_post_at>(this), _tick_execute);
-	}
-	else
-	{
-		this->process_post(std::move(_pexecutable));
+		// - queueing
+		this->m_queue_executable_at.emplace(iter, std::move(executable_at));
 	}
 
-	// return) 
-	return false;
+	// 3) 그 시각에 실행되도록 건다.
+	return system_executor::post(make_object<executor_post_at>(this), _tick_execute);
 }
 
 bool executor::strand::process_execute(chrono::tick::duration /*_ticks_wait*/, intptr_t /*_option*/)
@@ -215,10 +211,13 @@ bool executor::strand::process_execute(chrono::tick::duration /*_ticks_wait*/, i
 	std::vector<EXECUTABLE> queue_executable;
 
 	// 1) get queued executable
-	scoped_lock(this->m_cs_queue_executable)
 	{
+		// lock)
+		std::lock_guard lock(this->m_cs_queue_executable);
+
 		// check) processing 중이면 queuing만하고 끝냄.
-		RETURN_IF(this->m_queue_executable.empty(), intptr_t(0));
+		if(this->m_queue_executable.empty())
+			return intptr_t(0);
 
 		// check)
 		CGASSERT_ERROR(this->m_is_processing == true)
@@ -227,7 +226,7 @@ bool executor::strand::process_execute(chrono::tick::duration /*_ticks_wait*/, i
 		queue_executable = std::move(this->m_queue_executable);
 	}
 
-	// 2) execute excutable
+	// 2) execute executable
 	for (auto& iter : queue_executable)
 	{
 		// - execute
@@ -257,26 +256,35 @@ bool executor::strand::process_execute(chrono::tick::duration /*_ticks_wait*/, i
 	 auto tick_now = chrono::tick::now();
 
 	 // 2) pop
-	 scoped_lock(this->m_cs_queue_executable)
 	 {
+		 // lock)
+		 std::lock_guard lock(this->m_cs_queue_executable);
+
 		 // check)
-		 RETURN_IF(this->get_object_state() != eOBJECT_STATE::RUNNING,);
+		 if(this->get_object_state() != eOBJECT_STATE::RUNNING)
+			 return;
 
 		// - get executable
 		if (this->m_is_processing)
 		{
-			// - queueing for immediately execute
-			for (auto iter = this->m_queue_executable_at.begin(), iter_end = this->m_queue_executable_at.end(); iter != iter_end && iter->tick > tick_now; ++iter, this->m_queue_executable_at.pop_front())
-				this->m_queue_executable.push_back(std::move(iter->executable));
+			// - queueing for immediately execute (시각이 된 것만 : 처리 중인 thread가 process_post_next()에서 이어서 실행한다)
+			while (this->m_queue_executable_at.empty() == false && this->m_queue_executable_at.front().tick <= tick_now)
+			{
+				this->m_queue_executable.push_back(std::move(this->m_queue_executable_at.front().executable));
+				this->m_queue_executable_at.pop_front();
+			}
 
 			// return)
 			return;
 		}
 		else
 		{
-			// - queuing to vector_execute
-			for (auto iter = this->m_queue_executable_at.begin(), iter_end = this->m_queue_executable_at.end(); iter!= iter_end && iter->tick > tick_now; ++iter, this->m_queue_executable_at.pop_front())
-				vector_executable.push_back(std::move(iter->executable));
+			// - queuing to vector_execute (시각이 된 것만)
+			while (this->m_queue_executable_at.empty() == false && this->m_queue_executable_at.front().tick <= tick_now)
+			{
+				vector_executable.push_back(std::move(this->m_queue_executable_at.front().executable));
+				this->m_queue_executable_at.pop_front();
+			}
 
 			// - set flag true
 			this->m_is_processing = true;
@@ -315,8 +323,10 @@ bool executor::strand::process_execute(chrono::tick::duration /*_ticks_wait*/, i
 void executor::strand::process_post_next()
 {
 	// 1) post next?
-	scoped_lock(this->m_cs_queue_executable)
 	{
+		// lock)
+		std::lock_guard lock(this->m_cs_queue_executable);
+
 		if (this->m_queue_executable.empty() || this->get_object_state() != eOBJECT_STATE::RUNNING)
 		{
 			// - set flag false
@@ -331,7 +341,7 @@ void executor::strand::process_post_next()
 	auto pexecutor = this->process_get_executor();
 
 	// check) 
-	CGASSERT_ERROR(pexecutor.exist());
+	CGASSERT_FATAL(pexecutor.exist());
 
 	// 3) 비동기 걸기
 	pexecutor->post(this);

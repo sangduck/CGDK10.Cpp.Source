@@ -30,11 +30,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\lockfree_self_stack_64.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\message_map.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\scoped_lock.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\string_functions.android.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\string_functions.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\string_functions.ios.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\string_functions.linux.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\string_functions.windows.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\..\..\include\cgdk\sdk10\common\read_me.txt" />

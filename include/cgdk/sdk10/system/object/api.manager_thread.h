@@ -33,7 +33,8 @@ class api::manager_thread :
 	virtual public				Nmessage_transmitter,
 	virtual public				object::Idestroyable,
 	virtual public				Ischedulable,
-	public						factory::_traits_system
+	public						factory::_traits_system,
+	private						non_copyable
 
 {
 public:
@@ -41,7 +42,7 @@ public:
 		using ITERATOR = TCONTAINER::iterator;
 		using CONST_ITERATOR = TCONTAINER::const_iterator;
 
-public:
+protected:
 			manager_thread() noexcept;
 	virtual ~manager_thread() noexcept;
 
@@ -57,6 +58,12 @@ public:
 			auto				observing_interval() const noexcept	{ return m_tick_differ_observing;}
 			void				observing_interval(chrono::tick::duration _tick) noexcept {	m_tick_differ_observing=_tick;}
 
+			// - when a thread seems to be deadlocked (once per deadlock)
+			bool				deadlock_dump() const noexcept { return m_enable_deadlock_dump; }
+			void				deadlock_dump(bool _enable) noexcept { m_enable_deadlock_dump = _enable; }
+			bool				deadlock_terminate() const noexcept { return m_enable_deadlock_terminate; }
+			void				deadlock_terminate(bool _enable) noexcept { m_enable_deadlock_terminate = _enable; }
+
 	[[nodiscard]] size_t		size() const noexcept { return m_list_thread.size(); }
 	[[nodiscard]] bool			empty() const noexcept { return m_list_thread.empty(); }
 	[[nodiscard]] bool			exist() const noexcept { return !empty(); }
@@ -69,7 +76,12 @@ public:
 	[[nodiscard]]				operator std::shared_mutex&() noexcept { return m_lockable_list_thread;}
 	[[nodiscard]]				operator const std::shared_mutex& () const noexcept { return m_lockable_list_thread; }
 
-	static 	auto				instance() { if (m_s_pinstance.empty()) { initialize_instance(); } return object_ptr<manager_thread>(m_s_pinstance); }
+	static 	auto				instance() { auto p = m_s_pinstance.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_s_pinstance.get_acquire(); }
+#if defined(__GNUC__) || defined(__clang__)
+			if (p == nullptr) __builtin_unreachable(); // instance() never returns null (initialize_instance creates or throws); hint drops -O3 false-positive null store
+#endif
+			return object_ptr<manager_thread>(p);
+		}
 	static	void				initialize_instance();
 	static	void				set_instance(own_ptr<manager_thread>&& _instance) noexcept;
 	static	void				reset_instance() noexcept;
@@ -95,6 +107,8 @@ private:
 			chrono::tick::duration m_tick_differ_observing;
 			chrono::tick::duration m_tick_diff_deadlock_threshold;
 			std::atomic<int>	m_enable_observing_deadlock;
+			std::atomic<bool>	m_enable_deadlock_dump{ true };
+			std::atomic<bool>	m_enable_deadlock_terminate{ false };
 
 	static std::mutex			m_s_lockable_create;
 	static own_ptr<manager_thread> m_s_pinstance;

@@ -29,7 +29,7 @@ namespace CGDK::net::ip
 //-----------------------------------------------------------------------------
 class address
 {
-// contructor) 
+// constructor) 
 public:
 	constexpr					address() noexcept : type_(ip_type::v4), ipv4_address_(), ipv6_address_() {}
 	constexpr					address(const address& _copy) noexcept : type_(_copy.type_), ipv4_address_(_copy.ipv4_address_), ipv6_address_(_copy.ipv6_address_) {}
@@ -49,15 +49,13 @@ public:
 public:
 	[[nodiscard]] constexpr bool is_v4() const noexcept { return type_ == ip_type::v4; }
 	[[nodiscard]] constexpr bool is_v6() const noexcept { return type_ == ip_type::v6; }
-	[[nodiscard]] constexpr auto to_v4() const { if (type_ != ip_type::v4) throw std::bad_cast(); return ipv4_address_; }
-	[[nodiscard]] constexpr auto to_v6() const { if (type_ != ip_type::v6) throw std::bad_cast(); return ipv6_address_; }
+	[[nodiscard]] constexpr auto& to_v4() const { if (type_ != ip_type::v4) throw std::bad_cast(); return ipv4_address_; }
+	[[nodiscard]] constexpr auto& to_v6() const { if (type_ != ip_type::v6) throw std::bad_cast(); return ipv6_address_; }
 	[[nodiscard]] constexpr bool is_unspecified() const noexcept { return (type_ == ip_type::v4) ? ipv4_address_.is_unspecified() : ((type_ == ip_type::v6) ? ipv6_address_.is_unspecified() : false); }
 	[[nodiscard]] constexpr bool is_loopback() const noexcept { return (type_ == ip_type::v4) ? ipv4_address_.is_loopback() : ((type_ == ip_type::v6) ? ipv6_address_.is_loopback() : false);}
 	[[nodiscard]] constexpr bool is_multicast() const noexcept { return (type_ == ip_type::v4) ? ipv4_address_.is_multicast() : ((type_ == ip_type::v6) ? ipv6_address_.is_multicast() : false); }
 
-	template<class T = char, class Allocator = allocator<T>>
-	[[nodiscard]] std::basic_string<T, std::char_traits<T>, Allocator> 
-								to_string(const Allocator& _allocator = Allocator()) const;
+	[[nodiscard]] std::string	to_string() const;
 
 public:
 			enum class ip_type {v4,v6};
@@ -120,17 +118,15 @@ public:
 template<class CharT, class Traits>
 std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os, const address& _addr);
 
-template<class T, class Allocator>
-std::basic_string<T, std::char_traits<T>, Allocator>
-address::to_string(const Allocator& _allocator) const
+inline std::string address::to_string() const
 {
 	switch(type_)
 	{
 	case	ip_type::v4:
-			return ipv4_address_.to_string<T, Allocator>(_allocator);
+			return ipv4_address_.to_string();
 
 	case	ip_type::v6:
-			return ipv6_address_.to_string<T, Allocator>(_allocator);
+			return ipv6_address_.to_string();
 
 	default:
 			throw throwable::failure(eRESULT::BAD_EXCEPTION);

@@ -55,7 +55,7 @@ public:
 					this->add(iter);
 			}
 
-			bool				empty() const noexcept { bool result; scoped_lock(this->m_cs_vector_updatable) { result = this->m_list_updatable_process.empty(); } return result; }
+			bool				empty() const noexcept { bool result; SCOPED_LOCK(this->m_lockable_vector_updatable) { result = this->m_list_updatable_process.empty(); } return result; }
 			bool				exist() const noexcept { return !empty(); }
 			void				clear() noexcept;
 
@@ -68,6 +68,11 @@ public:
 			auto				get_begin_time() const noexcept { return this->m_total_tick_begin; }
 			auto				get_end_time() const noexcept { return this->m_total_tick_end; }
 			float				get_period_bytes_per_second() const noexcept { return this->m_period_transfered_bytes_per_sec; }
+
+			// - send window: number of file blocks handed to the socket layer at once; the blocks are read ahead of the
+			//   send completions, so the socket always has data queued while the next block is being fetched
+			std::size_t			get_window_size() const noexcept { return this->m_window_size.load(std::memory_order_relaxed); }
+			void				set_window_size(std::size_t _count_block) noexcept { this->m_window_size.store((_count_block != 0) ? _count_block : 1, std::memory_order_relaxed); }
 
 protected:
 	virtual	void				on_update_begin(const sUPDATE_REQUEST_INFO& /*_info*/) {}
@@ -84,8 +89,9 @@ protected:
 			void				process_add_updatable(object_ptr<resource::Iupdatable>&& _updatable);
 			void				process_updatable_prepare();
 			void				process_updatable_begin(resource::Iupdatable* _pupdatable, UPDATABLE_ID _updatable_id, uint64_t _pos_begin);
-			void				process_updatable_next(resource::Iupdatable* _pupdatable);
-			void				process_updatable_end(resource::Iupdatable* _pupdatable, UPDATABLE_ID _updatable_id, eRESULT _result);
+			void				process_updatable_next(resource::Iupdatable* _pupdatable, uint64_t _generation);
+			void				process_updatable_sent(resource::Iupdatable* _pupdatable, uint64_t _generation);
+void				process_updatable_end(resource::Iupdatable* _pupdatable, UPDATABLE_ID _updatable_id, eRESULT _result);
 
 			void				process_update_end(eRESULT _result) noexcept;
 			void				process_cancel_all_updatable() noexcept;
@@ -96,14 +102,24 @@ protected:
 			result_code			on_message_UPDATE_UPDATABLE_RESPONSE(sMESSAGE_NETWORK& _msg);
 			result_code			on_message_UPDATE_UPDATABLE_END(sMESSAGE_NETWORK& _msg);
 protected:
-			lockable<> m_cs_vector_updatable;
+			lock_object			m_lockable_vector_updatable;
 			std::list<object_ptr<resource::Iupdatable>> m_list_updatable_process;
 
-			RECEIVER_ID			m_receiver_id;
-			SENDER_ID			m_sender_id;
+			RECEIVER_ID			m_receiver_id{ 0 };
+			SENDER_ID			m_sender_id{ 0 };
 
-			int					m_count_try;
-			size_t				m_bytes_now;
+			int					m_count_try{ 0 };
+			size_t				m_bytes_now{ 0 };
+
+			// - transfer generation: bumped whenever a (re)transfer begins or the update ends, so a send-completion
+			//   continuation queued for an older transfer can recognise it is stale and do nothing
+			lock_object			m_lockable_transfer;
+			std::atomic<uint64_t> m_generation{ 0 };
+			std::atomic<bool>	m_is_updating{ false };
+
+			// - send window (see set_window_size) and the number of blocks currently handed to the socket layer
+			std::atomic<std::size_t> m_window_size{ 4 };
+			std::size_t			m_count_inflight{ 0 };
 
 			// statistics)
 			std::atomic<uint64_t> m_total_required_bytes;
@@ -115,37 +131,24 @@ protected:
 			chrono::time::utc::time_point m_total_tick_begin;
 			chrono::time::utc::time_point m_total_tick_end;
 
-			std::atomic<uint64_t> m_period_transfered_bytes;
-			float				 m_period_transfered_bytes_per_sec;
-			chrono::time::utc::time_point m_period_tick_last;
+			std::atomic<uint64_t> m_period_transfered_bytes{ 0 };
+			std::atomic<float>	 m_period_transfered_bytes_per_sec{ 0.0f };
+			std::atomic<int64_t> m_period_tick_last_ms{ 0 };
 
-			class Nreferenceable_send_completor : virtual public Imemory
+			// - per-block send completor: keeps the block's original memory alive while the socket layer uses it and,
+			//   once the socket has released it, frees the window slot so the next block can be sent
+class Nreferenceable_send_completor : public Imemory
 			{
 			public:
-				object_ptr<Imemory> buf_original;
-				object_ptr<Nsender> psender;
-				object_ptr<resource::Iupdatable> pupdatable;
+				Nreferenceable_send_completor(object_ptr<Imemory>&& _buf_original, object_ptr<Nsender>&& _psender, object_ptr<resource::Iupdatable>&& _pupdatable, uint64_t _generation) noexcept;
+				virtual ~Nreferenceable_send_completor() noexcept {}
+
 			private:
-				virtual void process_dispose() noexcept override
-				{
-					// check)
-					CGASSERT_ERROR(buf_original.exist());
+				virtual void		on_final_release() noexcept override;
 
-					// check)
-					CGASSERT_ERROR(pupdatable.exist());
-
-					// 1) reset buf
-					buf_original.reset();
-
-					// 2) get sender
-					object_ptr<Nsender> p = psender;
-
-					// 3) call 'process_updatable_next'
-					if (p.exist())
-					{
-						system_executor::post(make_executable([=,this] {p->process_updatable_next( this->pupdatable); }));
-					}
-				}
+				object_ptr<Imemory>	m_buf_original;
+				object_ptr<Nsender>	m_psender;
+				object_ptr<resource::Iupdatable> m_pupdatable;
+				uint64_t			m_generation;
 			};
-			Nreferenceable_send_completor m_referenceable_send_completor;
 };

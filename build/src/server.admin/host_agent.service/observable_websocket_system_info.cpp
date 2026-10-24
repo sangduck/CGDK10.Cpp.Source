@@ -20,34 +20,30 @@ shared_buffer _make_webmessage_host_info(socket_websocket* _psocket)
 
 	// 3) title_host_info
 	{
-		std::string str_value = NFMT::format("<span class=\'top_bar_tag\'><i class=\'fa fa-server\'></i> {}</span> <span class=\'top_bar_value\'>{}</span>"
-			, server_admin::instance_manager::self()->m_instance.setting.name
-			, api::socket::instance().get_local_address_public_first().to_string<char>());
+		std::string str_value = CGDK::stream_string("<span class=\'top_bar_tag\'><i class=\'fa fa-server\'></i> ", server_system::instance_manager::self()->m_instance.info.setting.name, "</span> <span class=\'top_bar_value\'>", api::socket::instance().get_local_address_public_first().to_string(), "</span>");
 		::_append_key_value(buf_text, "title_host_info", str_value);
 	}
 
 	// 4) title_user_info
 	{
-		std::string str_value = NFMT::format("<span class=\'top_bar_tag\'><i class=\'fa fa-user-circle\'></i> {}</span> <span class=\'top_bar_value\'>{}</span>"
-			, "SANGDUCK"
-			, to_string<char>(_psocket->remote_endpoint()));
+		std::string str_value = CGDK::stream_string("<span class=\'top_bar_tag\'><i class=\'fa fa-user-circle\'></i> ", "SANGDUCK", "</span> <span class=\'top_bar_value\'>", to_string(_psocket->remote_endpoint()), "</span>");
 		::_append_key_value(buf_text, "title_user_info", str_value);
 	}
 
 	// 5) title_os_info
 	{
 		// - os info
-		auto& os_info = server_admin::instance_manager::self()->m_instance.info.os_info;
+		auto& os_info = server_system::instance_manager::self()->m_instance.info.info.os_info;
 
-		if (os_info.type == eOS_TYPE::WINDOWS_NAVTIVE
+		if (os_info.type == eOS_TYPE::WINDOWS_NATIVE
 			|| os_info.type == eOS_TYPE::WINDOWS_UNIVERSAL)
 		{
-			std::string str_value = NFMT::format("<i class=\'fa fa-windows\'></i> {}", os_info.version.str_version.to_string_view());
+			std::string str_value = CGDK::stream_string("<i class=\'fa fa-windows\'></i> ", os_info.version.str_version);
 			::_append_key_value(buf_text, "title_os_info", str_value);
 		}
 		else if (os_info.type == eOS_TYPE::LINUX)
 		{
-			std::string str_value = NFMT::format("<i class=\'fa fa-linux\'></i> {}.{}.{}", os_info.version.major, os_info.version.minor, os_info.version.build);
+			std::string str_value = CGDK::stream_string("<i class=\'fa fa-linux\'></i> ", os_info.version.major, ".", os_info.version.minor, ".", os_info.version.build);
 			::_append_key_value(buf_text, "title_os_info", str_value);
 		}
 		else
@@ -59,7 +55,7 @@ shared_buffer _make_webmessage_host_info(socket_websocket* _psocket)
 	// 6) processor_count_v
 	{
 		// - serialize
-		std::string str_value = NFMT::format("x{}", api::get_core_count());
+		std::string str_value = CGDK::stream_string("x", api::get_core_count());
 		::_append_key_value(buf_text, "processor_count_v", str_value);
 	}
 
@@ -84,7 +80,7 @@ shared_buffer _make_webmessage_host_system_status()
 	buf_text.append_text<char>(MESSAGE_WEB_SYSTEM_STATUS); // "ASST"
 
 	// 3) get host info
-	const auto& status = server_admin::instance_manager::self()->m_instance.status;
+	const auto& status = server_system::instance_manager::self()->m_instance.info.status;
 
 	// 4) get status
 	auto status_now = status.vector_status.back();
@@ -92,7 +88,11 @@ shared_buffer _make_webmessage_host_system_status()
 	// 4) processor_usage_v
 	{
 		// - text_value
-		std::string str_value = NFMT::format("{}.{:02}%\n", status_now.processor_usage / 1000, status_now.processor_usage % 1000);
+		std::string str_value = CGDK::stream_string(
+			status_now.processor_usage / 1000,
+			".",
+			CGDK::stream_width(status_now.processor_usage % 1000, 2, '0'),
+			"%\n");
 		buf_text.append_text<char>(str_value);
 
 		// - meter
@@ -102,8 +102,7 @@ shared_buffer _make_webmessage_host_system_status()
 	// 5) mem_status_v
 	{
 		// - value
-		char text[256];
-		buf_text.append_text<char>(to_string_scaled_byte(text, 256, status_now.bytes_memory_usage));
+		buf_text.append_text<char>(to_string_scaled_byte(status_now.bytes_memory_usage));
 		buf_text.append<char>('\n');
 	}
 	{
@@ -115,8 +114,7 @@ shared_buffer _make_webmessage_host_system_status()
 	// 6) network_staus_v
 	{
 		// - value
-		char text[256];
-		buf_text.append_text<char>(to_string_scaled_byte(text, 256, status_now.bytes_traffic));
+		buf_text.append_text<char>(to_string_scaled_byte(status_now.bytes_traffic));
 		buf_text.append<char>('\n');
 	}
 	{
@@ -129,8 +127,7 @@ shared_buffer _make_webmessage_host_system_status()
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_text.to_string<char>()));
 }
 
-observable_websocket_system_info::observable_websocket_system_info(const std::string_view _name) :
-	Nnameable(_name)
+observable_websocket_system_info::observable_websocket_system_info()
 {
 }
 
@@ -157,7 +154,7 @@ void observable_websocket_system_info::on_observer_registered(socket_websocket* 
 	shared_buffer buf_send_1;
 	shared_buffer buf_send_2;
 
-	scoped_lock(server_admin::instance_manager::self()->m_cs_instance)
+	SCOPED_LOCK(server_system::instance_manager::self()->m_lockable_instance)
 	{
 		buf_send_1 = _make_webmessage_host_info(_pobserver);
 		buf_send_2 = _make_webmessage_host_system_status();
@@ -200,7 +197,7 @@ void observable_websocket_system_info::on_execute()
 	shared_buffer buf_send;
 
 	// 1) make message
-	scoped_lock(server_admin::instance_manager::self()->m_cs_instance)
+	SCOPED_LOCK(server_system::instance_manager::self()->m_lockable_instance)
 	{
 		buf_send = _make_webmessage_host_system_status();
 	}

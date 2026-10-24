@@ -1,4 +1,4 @@
-﻿#include "asio.h"
+#include "asio.h"
 
 
 asio::Nacceptor::Nacceptor()
@@ -84,7 +84,7 @@ void asio::Nacceptor::process_accept()
 			try
 			{
 				// 2) connect
-				psocket_new->process_connect_complate();
+				psocket_new->process_connect_complete();
 
 				// statistics) 
 				++Nstatistics::statistics_connect_success;

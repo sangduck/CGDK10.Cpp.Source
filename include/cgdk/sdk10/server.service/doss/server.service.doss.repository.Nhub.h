@@ -33,7 +33,6 @@ class doss::repository::Nhub :
 // constructor/destructor)
 public:
 			Nhub();
-			Nhub(const std::string_view _name);
 	virtual ~Nhub() noexcept;
 
 // frameworks)
@@ -53,14 +52,15 @@ protected:
 
 // implementations)
 protected:
-	//! @brief 
-	virtual result_code			process_request_transaction	(Itransactable* _ptransactable) override;
+	//! @brief routes the transaction to the sub-repository (as a coroutine)
+	virtual coroutine::task<result_code> co_request_transaction (object_ptr<Itransactable> _ptransactable) override;
 
 	//! @brief 계정의 '_auth에 맞는 'Repository'를 되돌린다. @param _auth 인증정보 @return 'Repository'
 	[[nodiscard]] virtual object_ptr<doss::Nrepository<TENTITY>> process_find_repository(const shared_buffer& _buffer) PURE;
 
 	// 1) repository
-			lockable<circular_list<object_ptr<doss::Nrepository<TENTITY>>>> m_list_repository;
+			lock_object			m_lockable_list_repository;
+			circular_list<object_ptr<doss::Nrepository<TENTITY>>> m_list_repository;
 };
 
 

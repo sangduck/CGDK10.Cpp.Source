@@ -24,7 +24,7 @@
 // 
 // 이 파일은 MFC를 사용할 때 stdafx.h 파일의 "afxwin.h"를 include 하기전에
 // Include 해줘야 한다.
-// 이 파일의 include는 Microsof C++ Core Guide lines의 포함으로 필요한 설정이다.
+// 이 파일의 include는 Microsoft C++ Core Guide lines의 포함으로 필요한 설정이다.
 // 
 // afxwin.h의 매크로인 min()과 max()의 중첩으로 인한 문제를 해결하기 위한 것이다. 
 // 

@@ -91,29 +91,29 @@ result_code socket_tcp::on_message_UPDATE_RESPONSE(sMESSAGE_NETWORK& _msg)
 			// - set lambda functions
 			preceiver->set_function_update_begin([=](update::receiver_lambda* /*_preceiver*/, const update::sUPDATE_REQUEST_INFO& _update_request_info)
 				{
-					std::cout << " @ update begin  " << NFMT::format("{} files, {} bytes "sv, _update_request_info.total_count, _update_request_info.total_bytes) << std::endl;
+					std::cout << " @ update begin  " << _update_request_info.total_count << " files," << _update_request_info.total_bytes << " bytes " << std::endl;
 				});
 
 			preceiver->set_function_update_end([=](update::receiver_lambda* _preceiver, eRESULT _result)
 				{
 					if (_result != eRESULT::DONE)
 					{
-						std::cout << "  \x1b[31m (!) transfer failed ("sv << to_string<char>(_result) << ")\x1b[0m"sv << std::endl;
+						std::cout << "  \x1b[31m (!) transfer failed (" << to_string(_result) << ")\x1b[0m" << std::endl;
 					}
 
-					std::cout << "   total \x1b[33m"sv << NFMT::format("{}"sv, _preceiver->get_total_transfered_files()) << "\x1b[0m files"sv << std::endl;
-					std::cout << "   total \x1b[33m"sv << NFMT::format("{}"sv, _preceiver->get_total_transfered_bytes()) << "\x1b[0m bytes"sv << std::endl;
+					std::cout << "   total \x1b[33m" << _preceiver->get_total_transfered_files() << "\x1b[0m files" << std::endl;
+					std::cout << "   total \x1b[33m" << _preceiver->get_total_transfered_bytes() << "\x1b[0m bytes" << std::endl;
 
-					std::cout << " @ update complete"sv << std::endl;
+					std::cout << " @ update complete" << std::endl;
 				});
 
 			preceiver->set_function_updatable_prepare([=](update::receiver_lambda* /*_preceiver*/, update::Ireceivable* _preceivable)
 				{
 					const auto& updatable_file_info = _preceivable->m_meta_info;
 					if ((updatable_file_info.flag & CGDK::resource::eFILE_FLAG::RECREATE) != CGDK::resource::eFILE_FLAG::RECREATE)
-						std::cout << "   \x1b[92m[  0%]\x1b[0m "sv << updatable_file_info.path << "/"sv << updatable_file_info.filename;
+						std::cout << "   \x1b[92m[  0%]\x1b[0m " << updatable_file_info.path << "/" << updatable_file_info.filename;
 					else
-						std::cout << "\r   \x1b[92m[  0%]\x1b[0m "sv << updatable_file_info.path << "/"sv << updatable_file_info.filename;
+						std::cout << "\r   \x1b[92m[  0%]\x1b[0m " << updatable_file_info.path << "/" << updatable_file_info.filename;
 				});
 
 			preceiver->set_function_updatable_begin([=](update::receiver_lambda* /*_preceiver*/, update::Ireceivable* /*_preceivable*/, uint64_t /*_pos_begin*/)
@@ -126,24 +126,24 @@ result_code socket_tcp::on_message_UPDATE_RESPONSE(sMESSAGE_NETWORK& _msg)
 					auto bytes_now = _block_info.pos + _block_info.size;
 					auto bytes_end = updatable_file_info.size;
 					auto ratio = static_cast<int>(static_cast<float>(bytes_now) / static_cast<float>(bytes_end) * 100.0f);
-					std::cout << "\r   \x1b[92m["sv << NFMT::format("{:3}"sv, ratio) << "%]\x1b[0m "sv;
+					std::cout << "\r   \x1b[92m[" << std::setw(3) << ratio << "%]\x1b[0m ";
 				});
 
 			preceiver->set_function_updatable_end([=](update::receiver_lambda* /*_preceiver*/, update::Ireceivable* _preceivable, eRESULT _result)
 				{
 					const auto& updatable_file_info = _preceivable->m_meta_info;
 
-					if(_result == eRESULT::SUCCESS || _result == eRESULT::ALEADY_DONE)
-						std::cout << "\r   \x1b[92m[100%]\x1b[0m " << updatable_file_info.path << "/"sv << updatable_file_info.filename << std::endl;
+					if(_result == eRESULT::SUCCESS || _result == eRESULT::ALREADY_DONE)
+						std::cout << "\r   \x1b[92m[100%]\x1b[0m " << updatable_file_info.path << "/" << updatable_file_info.filename << std::endl;
 					else
-						std::cout << "\r   \x1b[31m[fail] " << updatable_file_info.path << "/"sv << updatable_file_info.filename << " ("sv <<  to_string<char>(_result) << ")\x1b[0m"sv << std::endl;
+						std::cout << "\r   \x1b[31m[fail] " << updatable_file_info.path << "/" << updatable_file_info.filename << " (" <<  to_string(_result) << ")\x1b[0m" << std::endl;
 				});
 
 			// - md5 캐싱 파일을 설정해 준다.
 			preceiver->set_md5_caching(g_pmd5_caching);
 
 			// - root 폴더를 설정해 준다.(이 폴더 이하에 생성될 것이다.)
-			preceiver->set_root_path("destination"sv);
+			preceiver->set_root_path("destination");
 
 			// - socket에 update sender를 등록한다.
 			this->m_pupdate_receiver = std::move(preceiver);
@@ -154,11 +154,11 @@ result_code socket_tcp::on_message_UPDATE_RESPONSE(sMESSAGE_NETWORK& _msg)
 	}
 	catch (throwable::failure& _e)
 	{
-		std::cout << " @ update request failure!!!  ("sv << to_string<char>(_e.reason<eRESULT>()) <<")"sv << std::endl;
+		std::cout << " @ update request failure!!!  (" << to_string(_e.reason<eRESULT>()) <<")" << std::endl;
 	}
 	catch (...)
 	{
-		std::cout << " @ update request failure!!!"sv << std::endl;
+		std::cout << " @ update request failure!!!" << std::endl;
 	}
 
 	// return)

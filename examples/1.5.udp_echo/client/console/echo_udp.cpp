@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "echo_udp.h"
 
 bool test_udp_echo_client::m_enable_relay_echo_test = false;
@@ -91,7 +91,7 @@ bool test_udp_echo_client::request_bind(socket_udp* _psocket_udp, net::sockaddr 
 	object_ptr<test_udp_echo_client> pthis = this;
 
 	// 1) bind
-	scoped_lock(this->m_cs_set_sockets)
+	SCOPED_LOCK(this->m_cs_set_sockets)
 	{
 		// - insert
 		auto iter_insert = this->m_set_sockets.insert(_psocket_udp);
@@ -110,7 +110,7 @@ bool test_udp_echo_client::request_bind(socket_udp* _psocket_udp, net::sockaddr 
 
 void test_udp_echo_client::request_closesocket(socket_udp* _psocket_udp)
 {
-	scoped_lock(this->m_cs_set_sockets)
+	SCOPED_LOCK(this->m_cs_set_sockets)
 	{
 		// - erase
 		this->m_set_sockets.erase(_psocket_udp);
@@ -129,7 +129,7 @@ void test_udp_echo_client::request_closesocket_all()
 		{
 			std::set<object_ptr<socket_udp>> set_sockets;
 
-			scoped_lock(this->m_cs_set_sockets)
+			SCOPED_LOCK(this->m_cs_set_sockets)
 			{
 				set_sockets = std::move(this->m_set_sockets);
 			}
@@ -146,7 +146,7 @@ void test_udp_echo_client::request_send()
 	// 1) ...
 	auto value = ++this->m_traffic_send_requested;
 
-	// check) iPreê°€ 1ì´ë©´ Interlockedê±¸ê¸°.
+	// check) iPre°¡ 1ÀÌ¸é Interlocked°É±â.
 	if (value == 1)
 	{
 		object_ptr<test_udp_echo_client> self(this);
@@ -158,7 +158,7 @@ void test_udp_echo_client::request_send()
 	}
 }
 
-void test_udp_echo_client::request_send_immidiately(int64_t _count)
+void test_udp_echo_client::request_send_immediately(int64_t _count)
 {
 	// 1) send
 	this->process_send_message(m_traffic_test_selected, _count);
@@ -262,7 +262,7 @@ void test_udp_echo_client::process_execute_send()
 	// 2) ...
 	auto value = --this->m_traffic_send_requested;
 
-	// check) 0ì´ ì•„ë‹ ê²½ìš° ë˜ ê±¸ê¸°...
+	// check) 0ÀÌ ¾Æ´Ò °æ¿ì ¶Ç °É±â...
 	if (value != 0)
 	{
 		object_ptr<test_udp_echo_client> pthis(this);
@@ -309,7 +309,7 @@ void test_udp_echo_client::process_send_message(std::size_t _index, int64_t _cou
 
 		std::vector<object_ptr< socket_udp>> vector_socket;
 
-		scoped_lock(this->m_cs_set_sockets)
+		SCOPED_LOCK(this->m_cs_set_sockets)
 		{
 			vector_socket.reserve(this->m_set_sockets.size());
 
@@ -334,7 +334,7 @@ void test_udp_echo_client::process_send_message(shared_buffer _buffer)
 {
 	try
 	{
-		scoped_lock(this->m_cs_set_sockets)
+		SCOPED_LOCK(this->m_cs_set_sockets)
 		{
 			for (auto& iter : this->m_set_sockets)
 			{

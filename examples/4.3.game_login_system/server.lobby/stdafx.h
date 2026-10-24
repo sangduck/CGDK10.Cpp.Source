@@ -116,5 +116,5 @@ const uint32_t	CGNOTIFY_USER_UPDATE			 = (CGMESSAGE::USER | 7);
 // 6. extern
 //-----------------------------------------------------------------
 // 1) ...
-extern	CGPTR<CService>		g_pService;
+extern	CGPTR<CService>		g_pservice;
 extern	CGPTR<CCGLogHub>	g_pLog;

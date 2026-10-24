@@ -44,6 +44,7 @@ public:
 	using observer_data_t = _TOBSERVER_DATA;
 	using observer_set_t = OBSERVER_SET_DATA<observer_t, observer_data_t>;
 	using container_t = std::map<key_t, observer_set_t>;
+	using observer_snapshot_t = group::member_snapshot_ptr<observer_t>;
 	using iterator_t = typename container_t::iterator;
 	using const_iterator_t = typename container_t::const_iterator;
 
@@ -58,19 +59,19 @@ public:
 	virtual	bool				unsubscribe(const _TKEY& _key) noexcept;
 	virtual	void				unsubscribe_all() noexcept override;
 
-	[[nodiscard]] static observer_data_t& get_observer_data(observer_t* _pobserver) { return *(observer_set_t*)Iobservable<_observer_base_t>::_get_object_data(_pobserver); }
+	[[nodiscard]] static observer_data_t& get_observer_data(observer_t* _pobserver) { return *static_cast<observer_data_t*>(Iobservable<_observer_base_t>::_get_observer_data(_pobserver)); }
 			bool				update_observer_data(observer_t* _pobserver, observer_data_t& _observer_data, observer_channel_t _ocid = 0);
 			bool				update_observer_data(const _TKEY& _key, observer_data_t& _observer_data, observer_channel_t _ocid = 0);
 
-	[[nodiscard]] size_t		count() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_observable)); return _get_observer_count(); }
-	[[nodiscard]] size_t		capacity() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_observable)); return _get_observer_capacity(); }
+	[[nodiscard]] size_t		count() const noexcept { std::lock_guard lock(this->m_lockable_observable); return _get_observer_count(); }
+	[[nodiscard]] size_t		capacity() const noexcept { std::lock_guard lock(this->m_lockable_observable); return _get_observer_capacity(); }
 			void				capacity(size_t _max_count);
-	[[nodiscard]] size_t		room_count() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_observable)); return _get_observer_room_count(); }
+	[[nodiscard]] size_t		room_count() const noexcept { std::lock_guard lock(this->m_lockable_observable); return _get_observer_room_count(); }
 
-	[[nodiscard]] bool			empty() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_observable)); return _is_observer_empty(); }
-	[[nodiscard]] bool			exist() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_observable)); return _is_observer_exist(); }
-	[[nodiscard]] bool			is_full() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_observable)); return _is_observer_full(); }
-	[[nodiscard]] bool			is_room() const noexcept { std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(this->m_lockable_observable)); return _is_observer_room(); }
+	[[nodiscard]] bool			empty() const noexcept { std::lock_guard lock(this->m_lockable_observable); return _is_observer_empty(); }
+	[[nodiscard]] bool			exist() const noexcept { std::lock_guard lock(this->m_lockable_observable); return _is_observer_exist(); }
+	[[nodiscard]] bool			is_full() const noexcept { std::lock_guard lock(this->m_lockable_observable); return _is_observer_full(); }
+	[[nodiscard]] bool			is_room() const noexcept { std::lock_guard lock(this->m_lockable_observable); return _is_observer_room(); }
 
 	[[nodiscard]] iterator_t	begin() noexcept { return m_container_observer.begin();}
 	[[nodiscard]] const_iterator_t begin() const noexcept { return m_container_observer.begin();}
@@ -78,11 +79,23 @@ public:
 	[[nodiscard]] const_iterator_t end() const noexcept { return m_container_observer.end();}
 
 	[[nodiscard]] object_ptr<observer_t> find_observer(const key_t& _key) const noexcept;
+	//! @brief returns the first observer _pred returned true for. _pred runs out of the lock over the observer snapshot (see for_each)
 	[[nodiscard]] object_ptr<observer_t> find_observer(const std::function<bool (observer_t*)>& _pred) const noexcept;
 
+	//! @brief calls _function for the observers of the snapshot out of the lock (same as for_each_snapshot) @return false _function returned false
+	// - an observer can be unsubscribed before or while _function runs.
 			bool				for_each(const std::function<bool (observer_t*)>& _function);
 
+	//! @brief observers as an immutable array (copy-on-write). no lock while the published one is valid. in on_observer_registered / on_observer_unregistering / on_observer_unregistered : the live observers
+	[[nodiscard]] observer_snapshot_t get_observer_snapshot() const;
+	//! @brief calls _function for the observers of the snapshot out of the lock. (observers may be registered / unregistered in _function) @return false _function returned false
+			bool				for_each_snapshot(const std::function<bool (observer_t*)>& _function) const;
+
 protected:
+	// - lock of the events (lock order : observer (m_lockable_vector_observable) -> m_lockable_observable_enter -> m_lockable_observable)
+	//   on_observer_registering : in the lock of the observer and m_lockable_observable_enter
+	//   on_observer_registered / on_observer_unregistering / on_observer_unregistered / on_observer_data_updating : in the lock of the observer and m_lockable_observable
+	//   do not lock another observer (or wait for a thread which locks one) in them (deadlock). the observer is held (object_ptr) while they run.
 	virtual	result_code			on_observer_registering(observer_t* /*_pobserver*/, observer_channel_t /*_ocid*/, observer_data_t& /*_observer_data*/){ return eRESULT::SUCCESS;}
 	virtual	void				on_observer_registered(observer_t* /*_pobserver*/, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/) {}
 	virtual	uintptr_t			on_observer_unregistering(observer_t* /*_pobserver*/, observer_channel_t /*_ocid*/) { return 0;}
@@ -99,10 +112,14 @@ private:
 	[[nodiscard]] bool			_is_observer_empty() const noexcept { return m_container_observer.empty();}
 	[[nodiscard]] bool			_is_observer_room() const noexcept { return m_container_observer.size()<m_count_max_observer;}
 	[[nodiscard]] bool			_is_observer_exist() const noexcept { return !m_container_observer.empty();}
+	[[nodiscard]] group::member_snapshot<observer_t>* _build_observer_snapshot() const;
 
 protected:
 			container_t			m_container_observer;
 			size_t				m_count_max_observer;
+
+	// - published observer snapshot (changed in m_lockable_observable, read without it)
+	mutable	group::member_snapshot_holder<observer_t> m_observer_snapshot;
 };
 
 template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
@@ -119,11 +136,11 @@ observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::~map() no
 template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
 result_code observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::subscribe(const _TKEY& _key, _TOBSERVER* _pobserver, observer_channel_t _ocid, const observer_data_t& _observer_data)
 {
-	// check) _pobserver가 nullptr이면 안됀다.
+	// check) _pobserver가 nullptr이면 안 된다.
 	RETURN_IF(_pobserver == nullptr, eRESULT::INVALID_ARGUMENT);
 	
-	scoped_lock(_pobserver->m_vector_observable)
-	scoped_lock(this->m_lockable_observable_enter)
+	SCOPED_LOCK(_pobserver->m_lockable_vector_observable)
+	SCOPED_LOCK(this->m_lockable_observable_enter)
 	{
 		// check) 꽉 찼는가?
 		RETURN_IF(is_full(), eRESULT::MEMBER_FULL);
@@ -131,13 +148,13 @@ result_code observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t
 		// declare) 
 		observer_set_t temp_observer_set(_pobserver, _ocid, _observer_data);
 
-		scoped_lock(this->m_lockable_observable)
+		SCOPED_LOCK(this->m_lockable_observable)
 		{
 			// 1) 이미 같은 Observer가 존재하는지 확인한다.
 			auto iter_find = m_container_observer.find(_key);
 
 			// check) 이미 붙어 있다면 끝낸다.
-			RETURN_IF(iter_find != m_container_observer.end(), eRESULT::NOT_EXIST);
+			RETURN_IF(iter_find != m_container_observer.end(), eRESULT::ALREADY_EXIST);
 		}
 
 		// 2) on_observer_registering()함수를 호출한다.
@@ -149,8 +166,10 @@ result_code observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t
 		// 3) 이전 ocid로 등록된 Observable을 찾는다.
 		_pobserver->_unsubscribe(_ocid);
 
-		scoped_lock(this->m_lockable_observable)
+		SCOPED_LOCK(this->m_lockable_observable)
 		{
+			typename group::member_snapshot_holder<observer_t>::write_scope scope_write(this->m_observer_snapshot);
+
 			// 4) 추가한다.
 			auto result_insert = m_container_observer.insert(std::make_pair(_key, temp_observer_set));
 
@@ -169,9 +188,9 @@ result_code observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t
 			catch(std::exception& e)
 			{
 				// log)
-				LOG_FATAL << "(excp) exception completeion[on_observer_registered]"sv;
+				LOG_FATAL << "(excp) exception completion[on_observer_registered]"sv;
 
-				// - exceeption complete
+				// - exception complete
 				auto is_executed = throwable::execute_exception_handler(this, e, __FUNCTION__);
 
 				// - 제거
@@ -192,27 +211,30 @@ result_code observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t
 		}
 	}
 
-	// return) 성공이닷!!!
+	// return) 성공이다!!!
 	return eRESULT::SUCCESS;
 }
 
 template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
 bool observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::unsubscribe(_TOBSERVER* _pobserver, observer_channel_t _ocid) noexcept
 {
-	// check) _pobserver가 nullptr이여서는 안됀다.
+	// check) _pobserver가 nullptr이여서는 안 된다.
 	CGASSERT_ERROR(_pobserver != nullptr);
 
-	// check) _pobserver가 nullptr이여서는 안됀다.
+	// check) _pobserver가 nullptr이여서는 안 된다.
 	RETURN_IF(_pobserver == nullptr, false);
 
-	scoped_lock(_pobserver->m_vector_observable)
-	scoped_lock(this->m_lockable_observable)
+	// declare) holds the observer till return (erase releases the reference of the observable)
+	object_ptr<observer_t> pobserver_hold;
+
+	SCOPED_LOCK(_pobserver->m_lockable_vector_observable)
+	SCOPED_LOCK(this->m_lockable_observable)
 	{
-		// declare) 
+		// declare)
 		uintptr_t result = 0;
 
-		// declare) 
-		typename container_t::iterator iter_find;
+		// declare)
+		auto iter_find = m_container_observer.begin();
 
 		// 1) 먼저 이미 등록되어 있는지 찾는다.
 		for(auto iter_end= m_container_observer.end(); iter_find !=iter_end; ++iter_find)
@@ -223,6 +245,11 @@ bool observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::unsu
 		// check) 찾지 못했으면 끝낸다.
 		RETURN_IF(iter_find==m_container_observer.end(), false);
 
+		typename group::member_snapshot_holder<observer_t>::write_scope scope_write(this->m_observer_snapshot);
+
+		// - holds the observer till on_observer_unregistered() and the return
+		pobserver_hold = iter_find->second.pobserver;
+
 		// 2) on_observer_unregistering()함수를 호출한다.
 		try
 		{
@@ -231,7 +258,7 @@ bool observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::unsu
 		// exception) 
 		catch(std::exception& /*_e*/)
 		{
-			LOG_FATAL << "(excp) occure exception in 'on_observer_unregistering' function on observer"sv;
+			LOG_FATAL << "(excp) exception occurred in 'on_observer_unregistering' function on observer"sv;
 		}
 
 		// 2) 제거한다.
@@ -251,7 +278,7 @@ bool observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::unsu
 		// exception) 
 		catch(std::exception& /*_e*/)
 		{
-			LOG_FATAL << "(excp) occure exception in 'on_observer_unregistered' function on observer"sv;
+			LOG_FATAL << "(excp) exception occurred in 'on_observer_unregistered' function on observer"sv;
 		}
 	}
 
@@ -262,58 +289,69 @@ bool observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::unsu
 template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
 bool observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::unsubscribe(const _TKEY& _key) noexcept
 {
-	// declare) 
-	auto	pobserver = find_observer(_key);
-
-	scoped_lock(pobserver->m_vector_observable)
-	scoped_lock(this->m_lockable_observable)
+	for(;;)
 	{
-		// declare) 
-		uintptr_t result = 0;
-
-		// 1) 먼저 이미 등록되어 있는지 찾는다.
-		auto iter_find = m_container_observer.find(_key);
-
-		// check) 찾지 못했으면 끝낸다.
-		RETURN_IF(iter_find==m_container_observer.end(), false);
-
 		// declare)
-		auto second = iter_find->second;
+		auto	pobserver = find_observer(_key);
 
-		// 2) on_observer_unregistering()함수를 호출한다.
-		try
+		// check) return if not found
+		RETURN_IF(pobserver.empty(), false);
+
+		SCOPED_LOCK(pobserver->m_lockable_vector_observable)
+		SCOPED_LOCK(this->m_lockable_observable)
 		{
-			result = this->on_observer_unregistering(second.pobserver, second.ocid);
-		}
-		// exception) 
-		catch(std::exception& /*_e*/)
-		{
-			LOG_FATAL << "(excp) occure exception in 'on_observer_unregistering' function on observer"sv;
+			// declare)
+			uintptr_t result = 0;
+
+			// 1) 먼저 이미 등록되어 있는지 찾는다.
+			auto iter_find = m_container_observer.find(_key);
+
+			// check) 찾지 못했으면 끝낸다.
+			RETURN_IF(iter_find==m_container_observer.end(), false);
+
+			// check) retry if the observer of _key was changed before locking (the observer locked must be the one erased)
+			CONTINUE_IF(iter_find->second.pobserver != pobserver);
+
+			typename group::member_snapshot_holder<observer_t>::write_scope scope_write(this->m_observer_snapshot);
+
+			// declare)
+			auto second = iter_find->second;
+
+			// 2) on_observer_unregistering()함수를 호출한다.
+			try
+			{
+				result = this->on_observer_unregistering(second.pobserver, second.ocid);
+			}
+			// exception)
+			catch(std::exception& /*_e*/)
+			{
+				LOG_FATAL << "(excp) exception occurred in 'on_observer_unregistering' function on observer"sv;
+			}
+
+			// 3) 제거한다.
+			m_container_observer.erase(iter_find);
+
+			// 4) 제거한다.
+			second.pobserver->_erase_observable(second.ocid);
+
+			// 5) observer_data 리셋
+			this->_reset_observer_data(second.pobserver);
+
+			// 6) on_observer_unregistered()함수를 호출한다.
+			try
+			{
+				this->on_observer_unregistered(second.pobserver, second.ocid, result);
+			}
+			// exception)
+			catch(std::exception& /*_e*/)
+			{
+				LOG_FATAL << "(excp) exception occurred in 'on_observer_unregistered' function on observer"sv;
+			}
 		}
 
-		// 3) 제거한다.
-		m_container_observer.erase(iter_find);
-
-		// 4) 제거한다.
-		second.pobserver->_erase_observable(second.ocid);
-
-		// 5) observer_data 리셋
-		this->_reset_observer_data(second.pobserver);
-
-		// 6) on_observer_unregistered()함수를 호출한다.
-		try
-		{
-			this->on_observer_unregistered(second.pobserver, second.ocid, result);
-		}
-		// exception) 
-		catch(std::exception& /*_e*/)
-		{
-			LOG_FATAL << "(excp) occure exception in 'on_observer_unregistered' function on observer"sv;
-		}
+		// return)
+		return true;
 	}
-
-	// return) 
-	return true;
 }
 
 template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
@@ -323,7 +361,7 @@ void observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::unsu
 	container_t	vectorObserver;
 
 	// 1) 복사한다.
-	scoped_lock(this->m_lockable_observable)
+	SCOPED_LOCK(this->m_lockable_observable)
 	{
 		vectorObserver = m_container_observer;
 	}
@@ -331,25 +369,25 @@ void observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::unsu
 	// 2) 모두 unregister한다.
 	for(auto& iter: vectorObserver)
 	{
-		unsubscribe(iter.ocid);
+		unsubscribe(iter.first);
 	}
 }
 
 template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
 bool observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::update_observer_data(observer_t* _pobserver, observer_data_t& _observer_data, observer_channel_t _ocid)
 {
-	// check) _pobserver가 nullptr이여서는 안됀다.
-	CGASSERT_ERROR(_pobserver != nullptr);
+	// check) _pobserver가 nullptr이여서는 안 된다.
+	CGASSERT_FATAL(_pobserver != nullptr);
 
 	// declare) 
 	uintptr_t	tempResult;
 
-	scoped_lock(_pobserver->m_vector_observable)
+	SCOPED_LOCK(_pobserver->m_lockable_vector_observable)
 	{
-		scoped_lock(this->m_lockable_observable)
+		SCOPED_LOCK(this->m_lockable_observable)
 		{
-			// declare) 
-			typename container_t::iterator	iter_find;
+			// declare)
+			auto	iter_find = m_container_observer.begin();
 
 			// 1) 먼저 이미 등록되어 있는지 찾는다.
 			for (auto iter_end = m_container_observer.end(); iter_find != iter_end; ++iter_find)
@@ -364,7 +402,7 @@ bool observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::upda
 			tempResult = this->on_observer_data_updating(_pobserver, _ocid, _observer_data);
 
 			// 3) observer_data를 Update한다.
-			iter_find->set_observer_data(_observer_data);
+			iter_find->second.set_observer_data(_observer_data);
 		}
 
 		// 3) Update...
@@ -378,41 +416,50 @@ bool observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::upda
 template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
 bool observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::update_observer_data(const _TKEY& _key, observer_data_t& _observer_data, observer_channel_t _ocid)
 {
-	// declare) 
-	auto	pobserver	 = find_observer(_key);
-
-	// declare) 
-	uintptr_t	tempResult;
-
-	scoped_lock(pobserver->m_vector_observable)
+	for(;;)
 	{
-		scoped_lock(this->m_lockable_observable)
+		// declare)
+		auto	pobserver	 = find_observer(_key);
+
+		// check) return if not found
+		RETURN_IF(pobserver.empty(), false);
+
+		// declare)
+		uintptr_t	tempResult;
+
+		SCOPED_LOCK(pobserver->m_lockable_vector_observable)
 		{
-			// 1) 먼저 이미 등록되어 있는지 찾는다.
-			auto	iter_find = m_container_observer.find(_key);
+			SCOPED_LOCK(this->m_lockable_observable)
+			{
+				// 1) 먼저 이미 등록되어 있는지 찾는다.
+				auto	iter_find = m_container_observer.find(_key);
 
-			// check) 찾지 못했으면 끝낸다.
-			RETURN_IF(iter_find == m_container_observer.end(), false);
+				// check) 찾지 못했으면 끝낸다.
+				RETURN_IF(iter_find == m_container_observer.end(), false);
 
-			// 2) on_observer_unregistering()함수를 호출한다.
-			tempResult = this->on_observer_data_updating(pobserver, _ocid, _observer_data);
+				// check) retry if the observer of _key was changed before locking
+				CONTINUE_IF(iter_find->second.pobserver != pobserver);
 
-			// 3) observer_data를 Update한다.
-			iter_find->set_observer_data(_observer_data);
+				// 2) on_observer_unregistering()함수를 호출한다.
+				tempResult = this->on_observer_data_updating(pobserver, _ocid, _observer_data);
+
+				// 3) observer_data를 Update한다.
+				iter_find->second.set_observer_data(_observer_data);
+			}
+
+			// 3) Update...
+			this->on_observer_data_update(pobserver, _ocid, tempResult);
 		}
 
-		// 3) Update...
-		this->on_observer_data_update(pobserver, _ocid, tempResult);
+		// return)
+		return true;
 	}
-
-	// return)
-	return true;
 }
 
 template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
 void observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::capacity(size_t _max_count)
 {
-	scoped_lock(this->m_lockable_observable)
+	SCOPED_LOCK(this->m_lockable_observable)
 	{
 		// 1) 최대 Observer수를 설정한다.
 		m_count_max_observer	 = _max_count;
@@ -430,7 +477,7 @@ void observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::capa
 template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
 object_ptr<_TOBSERVER> observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::find_observer(const key_t& _key) const noexcept
 {
-	scoped_lock(this->m_lockable_observable)
+	SCOPED_LOCK(this->m_lockable_observable)
 	{
 		// 1) 먼저 이미 등록되어 있는지 찾는다.
 		auto		iter_find = m_container_observer.find(_key);
@@ -441,45 +488,66 @@ object_ptr<_TOBSERVER> observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _obse
 		// 2) 찾은 Observer를 리턴한다.
 		return	iter_find->second.pobserver;
 	}
+
+	// return) not reached
+	return	object_ptr<_TOBSERVER>();
 }
 
 template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
 object_ptr<_TOBSERVER> observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::find_observer(const std::function<bool (_TOBSERVER*)>& _pred) const noexcept
 {
-	scoped_lock(this->m_lockable_observable)
-	{
-		for(auto& iter:m_container_observer)
-		{
-			// 1) execute함수를 실행한다.
-			bool	result	 = _pred(iter);
+	// 1) snapshot (_pred runs out of the lock)
+	auto snapshot = this->get_observer_snapshot();
 
-			// check) 
-			RETURN_IF(result==true, iter);
-		}
+	for (auto* iter : snapshot)
+	{
+		if (_pred(iter) == true)
+			return object_ptr<observer_t>(iter);
 	}
 
-	// return) 찾지 못했다..
-	return	object_ptr<_TOBSERVER>();
+	// return)
+	return object_ptr<observer_t>();
 }
 
 template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
 bool observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::for_each(const std::function<bool (_TOBSERVER*)>& _function)
 {
-	scoped_lock(this->m_lockable_observable)
-	{
-		for(auto& iter:m_container_observer)
-		{
-			// 1) execute함수를 실행한다.
-			bool	result	 = _function(*iter);
+	// 1) snapshot (_function runs out of the lock)
+	return this->for_each_snapshot(_function);
+}
 
-			// check) 
-			RETURN_IF(result==false, false);
-		}
+
+template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
+typename observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::observer_snapshot_t observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::get_observer_snapshot() const
+{
+	return this->m_observer_snapshot.get(this->m_lockable_observable, [this]() { return this->_build_observer_snapshot(); });
+}
+
+template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
+bool observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::for_each_snapshot(const std::function<bool (observer_t*)>& _function) const
+{
+	auto snapshot = this->get_observer_snapshot();
+
+	for (auto* iter : snapshot)
+	{
+		if (_function(iter) == false)
+			return false;
 	}
 
-	// return) 성공...
 	return true;
 }
 
+template <class _TOBSERVER, class _TKEY, class _TOBSERVER_DATA, class _observer_base_t>
+group::member_snapshot<typename observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::observer_t>* observable::map<_TOBSERVER, _TKEY, _TOBSERVER_DATA, _observer_base_t>::_build_observer_snapshot() const
+{
+	auto psnapshot = group::member_snapshot<observer_t>::create(this->m_container_observer.size());
+
+	for (const auto& iter : this->m_container_observer)
+	{
+		psnapshot->push_back(iter.second.pobserver.get());
+	}
+
+	return psnapshot;
+}
 
 }

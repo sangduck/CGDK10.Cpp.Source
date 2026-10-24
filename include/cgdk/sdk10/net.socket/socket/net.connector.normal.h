@@ -31,22 +31,15 @@ class net::connector<TSOCKET, typename std::enable_if<!std::is_base_of<net::io::
 	public						net::io::connectable_manager::list<TSOCKET>
 {
 public:
-			connector()
+			connector() 
 			{
-				// - 기본 이름을 설정한다.
-				this->set_name(NFMT::format("connector<{}>", typeid(TSOCKET).name()));
+				std::string temp_name("connector<");
+				temp_name += typeid(TSOCKET).name();
+				temp_name += ">"sv;
+
+				this->name(temp_name);
 			}
-			connector(std::string_view _name) : net::io::connective::connector::Ntcp{ _name }
-			{
-				// - Name이 없을 경우 connector의 Name을 설정한다.
-				if (_name.empty())
-				{
-					this->set_name(NFMT::format("connector<{}>", typeid(TSOCKET).name()));
-				}
-			}
-	virtual	~connector() noexcept
-			{
-			}
+	virtual	~connector() noexcept {}
 
 protected:
 	[[nodiscard]] virtual object_ptr<net::io::Iconnectable> process_alloc_connectable() override

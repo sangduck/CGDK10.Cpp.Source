@@ -14,7 +14,7 @@ bool net::io::sender::Nresp::process_send(shared_buffer&& _buffer, std::size_t _
 	// check) 버퍼가 Overflow되었는가?
 	CGASSERT(_buffer._is_buffer_overflow() == false, false);
 
-	// check) Socket이 Established상태가 아니라면 전송은 안됀다.
+	// check) Socket이 Established상태가 아니라면 전송은 안 된다.
 	RETURN_IF(socket_state() < eSOCKET_STATE::ESTABLISHED, false);
 
 	// declare)

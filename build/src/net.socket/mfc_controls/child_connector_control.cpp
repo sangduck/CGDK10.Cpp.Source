@@ -81,7 +81,7 @@ BOOL CChild_connector_control::OnInitDialog()
 	SetDlgItemInt(IDC_EDIT_PEER_PORT, m_port_default);
 
 	// 2) Connector가 nullptr이면 Disable한다.
-	scoped_lock(m_csConnector)
+	SCOPED_LOCK(m_csConnector)
 	{
 		OnEnable(m_pconnector.exist());
 	}
@@ -119,7 +119,7 @@ void CChild_connector_control::OnEnable(BOOL _flag_enable)
 void CChild_connector_control::OnDestroy()
 {
 	// 1) Connector 리셋~
-	scoped_lock(m_csConnector)
+	SCOPED_LOCK(m_csConnector)
 	{
 		m_pconnector.reset();
 	}
@@ -132,10 +132,10 @@ void CChild_connector_control::OnTimer(UINT_PTR nIDEvent)
 {
 	if(nIDEvent == 0)
 	{
-		// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+		// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowEnabled() == FALSE)
 
-		// check) WIndow가 보이지 않으면 더이상 진행하지 않는다.
+		// check) WIndow가 보이지 않으면 더 이상 진행하지 않는다.
 		RETURN_IF(IsWindowVisible() == FALSE)
 
 		// 1) Update한다.
@@ -196,7 +196,7 @@ LRESULT CChild_connector_control::OnCGMessageNotify(WPARAM _wparam, LPARAM /*_lp
 void CChild_connector_control::SetConnector(net::io::Iconnect_requestable* _pConnector)
 {
 	// 1) Connector를 설정한다.
-	scoped_lock(m_csConnector)
+	SCOPED_LOCK(m_csConnector)
 	{
 		m_pconnector	 = _pConnector;
 	}
@@ -217,7 +217,7 @@ void CChild_connector_control::SetConnector(net::io::Iconnect_requestable* _pCon
 
 void CChild_connector_control::UpdateConnectorStatus()
 {
-	// check) WIndow가 불능상태라면 더이상 진행하지 않는다.
+	// check) WIndow가 불능상태라면 더 이상 진행하지 않는다.
 	RETURN_IF(IsWindowEnabled() == FALSE)
 
 
@@ -228,7 +228,7 @@ void CChild_connector_control::UpdateConnectorStatus()
 	object_ptr<net::io::Iconnect_requestable>	pconnect_requestable;
 
 	// 1) Connective Manager를 설정한다.
-	scoped_lock(m_csConnector)
+	SCOPED_LOCK(m_csConnector)
 	{
 		pconnect_requestable = m_pconnector;
 	}
@@ -268,7 +268,7 @@ void CChild_connector_control::UpdateConnectorStatus()
 					GetDlgItem(IDC_EDIT_PEER_ADDRESS)->EnableWindow(FALSE);
 					GetDlgItem(IDC_EDIT_PEER_PORT)->EnableWindow(FALSE);
 
-					SetDlgItemText(IDC_EDIT_PEER_ADDRESS, to_string<TCHAR>(psocket->remote_endpoint()).c_str());
+					SetDlgItemTextA(this->m_hWnd, IDC_EDIT_PEER_ADDRESS, to_string(psocket->remote_endpoint()).c_str());
 					SetDlgItemInt(IDC_EDIT_PEER_PORT, psocket->remote_endpoint().port());
 				}
 				break;
@@ -298,7 +298,7 @@ void CChild_connector_control::OnBnClickedCheckConnect()
 	object_ptr<net::io::Iconnect_requestable>	pconnect_requestable;
 
 	// 1) Connective Manager를 설정한다.
-	scoped_lock(m_csConnector)
+	SCOPED_LOCK(m_csConnector)
 	{
 		pconnect_requestable = m_pconnector;
 	}

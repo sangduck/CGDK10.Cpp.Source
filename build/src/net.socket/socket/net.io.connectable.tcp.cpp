@@ -24,7 +24,7 @@ public:
 
 void net::io::connectable::Ntcp::executable_disconnect::set_connectable( net::io::connectable::Ntcp* _pconnectable)
 {
-	// check) connectable이 nullptr이면 안됀다.
+	// check) connectable이 nullptr이면 안 된다.
 	CGASSERT_ERROR(_pconnectable!=nullptr);
 
 	// 1) 설정
@@ -81,7 +81,14 @@ void net::io::connectable::Ntcp::process_reset_connectable() noexcept
 bool net::io::connectable::Ntcp::disconnect(uint64_t _disconnect_reason) noexcept
 {
 	// 1) set socket send_disconnect
-	auto result = this->set_socket_state_if(eSOCKET_STATE::ESTABLISHED, eSOCKET_STATE::SEND_DISCONNECTED);
+	//    (CERTIFIED / LOGINED too : the state before is kept for process_on_disconnect)
+	bool result = false;
+	for (const auto state_before : { eSOCKET_STATE::ESTABLISHED, eSOCKET_STATE::CERTIFIED, eSOCKET_STATE::LOGINED })
+	{
+		this->m_socket_state_disconnect.store(state_before);
+		result = this->set_socket_state_if(state_before, eSOCKET_STATE::SEND_DISCONNECTED);
+		BREAK_IF(result);
+	}
 
 	// check) 
 	RETURN_IF(result == false, false);
@@ -107,10 +114,17 @@ bool net::io::connectable::Ntcp::disconnect(uint64_t _disconnect_reason) noexcep
 	else
 	{
 		// - set linger option for graceful close
-		api::socket::set_linger_option(native_handle(), 0);
+		api::socket::set_linger_option(this->native_handle(), 0);
+
+		// - shutdown options
+	#if defined(_WINSOCK2API_)
+		int shutdown_how = ((DISCONNECT_REASON_NO_RECEIVE_SHUTDOWN & _disconnect_reason) == 0) ? SD_BOTH : SD_SEND;
+	#else
+		int shutdown_how = ((DISCONNECT_REASON_NO_RECEIVE_SHUTDOWN & _disconnect_reason) == 0) ? SHUT_RDWR : SHUT_WR;
+	#endif
 
 		// - shutdown socket
-		return api::socket::shutdown(native_handle(), SD_SEND);
+		return api::socket::shutdown(this->native_handle(), shutdown_how);
 	}
 
 	// return) 
@@ -130,18 +144,22 @@ bool net::io::connectable::Ntcp::process_complete_connect (uintptr_t _result)
 	// 1) _result가 0이 아니면 connect에 실패한 것이다.
 	if(_result != 0)
 	{
-		// - socket Status를 disconnect로
-		this->socket_state(eSOCKET_STATE::CLOSED);
-
 		// - on_fail_connect()함수를 호출한다.
 		try
 		{
-			this->on_fail_connect(DISCONNECT_REASON_FAIL);
+			// - process_on_fail_connect() (default: on_fail_connect()). the derived classes are notified (ex. Nhttp_client completes its request)
+			this->process_on_fail_connect(this->m_disconnect_reason | DISCONNECT_REASON_FAIL);	// - the reason of the close (ex. DISCONNECT_REASON_SUSTAIN_TIMEOUT : connect timeout)
+
+			// - socket Status를 disconnect로
+			this->socket_state(eSOCKET_STATE::CLOSED);
 		}
 		catch(std::exception& e)
 		{
 			// trace) prepare receive에 실패했다!
 			LOG_DEBUG << "(excp) CGDK.net.socket: exception complete " __CGFUNCTION__ ""sv; // static_cast<int64_t>(native_handle()));
+
+			// - socket Status를 disconnect로
+			this->socket_state(eSOCKET_STATE::CLOSED);
 
 			// - call 'exception handler'
 			throwable::execute_exception_handler(this, e, __FUNCTION__);
@@ -150,6 +168,9 @@ bool net::io::connectable::Ntcp::process_complete_connect (uintptr_t _result)
 		{
 			// trace) prepare receive에 실패했다!
 			LOG_DEBUG << "(excp) CGDK.net.socket: exception complete " __CGFUNCTION__ ""sv; // static_cast<int64_t>(native_handle()));
+
+			// - socket Status를 disconnect로
+			this->socket_state(eSOCKET_STATE::CLOSED);
 
 			// declare)
 			throwable::failure e(eRESULT::EXCEPTION);
@@ -179,14 +200,20 @@ bool net::io::connectable::Ntcp::process_complete_connect (uintptr_t _result)
 	//-----------------------------------------------------------------
 	// 3. socket Option설정.
 	//-----------------------------------------------------------------
-	// 1) Linger Option을 사용하지 않는다. 기본적인 Graceful shutdown을 
-	//    수행한다.
+	// 1) linger : off (graceful shutdown). linux : the default already => not set (one setsockopt less per connection)
+#if defined(_WINSOCK2API_)
 	api::socket::set_linger_option(this->native_handle(), 0);
+#endif
 
 	// 2) send shared_buffer Size와 receive BufferSize를  설정한다.
-	api::socket::set_send_buffer_size(this->native_handle(), maximum_send_buffer_size());
-	api::socket::set_receive_buffer_size(this->native_handle(), maximum_receive_buffer_size());
-	api::socket::set_tcp_nodelay(this->native_handle(), this->m_enable_tcp_nodelay);
+	//    (linux : not set by default. an explicit size turns the autotuning of the kernel off. net::io::socket::Ntcp::enable_explicit_socket_buffer_size())
+	if (net::io::socket::Ntcp::is_explicit_socket_buffer_size_enabled())
+	{
+		api::socket::set_send_buffer_size(this->native_handle(), maximum_send_buffer_size());
+		api::socket::set_receive_buffer_size(this->native_handle(), maximum_receive_buffer_size());
+	}
+	// 3) the tcp socket option (socket_option() : TCP_NODELAY, TCP_QUICKACK, SO_BUSY_POLL, TCP_NOTSENT_LOWAT. nothing but TCP_NODELAY by default. a UDS : skipped)
+	this->apply_socket_option();
 
 
 	//-----------------------------------------------------------------
@@ -194,8 +221,8 @@ bool net::io::connectable::Ntcp::process_complete_connect (uintptr_t _result)
 	//
 	// - prepare_receive()를 호출하여 Overlapped receive를 걸어주게 된다.
 	// - TCP의 경우 무조건 1번에 한번씩만 receive를 건다.
-	// - 접속후 바로 끊기는 경우나 접속 처리가 지연되는 경우 prepare_receive()
-	//   과정중에도 얼마든지 Error가 날수 있기 때문에 여기서 Error처리를 
+	// - 접속 후 바로 끊기는 경우나 접속 처리가 지연되는 경우 prepare_receive()
+	//   과정중에도 얼마든지 Error가 날 수 있기 때문에 여기서 Error처리를 
 	//   반드시 해주어야 한다.(아니면 Ghost처럼 남을 수 있다.)
 	//-----------------------------------------------------------------
 	// 1) reference count를 증가시킨다.
@@ -203,6 +230,9 @@ bool net::io::connectable::Ntcp::process_complete_connect (uintptr_t _result)
 	add_ref();
 #elif defined(_SYS_EPOLL_H)
 	this->m_pexecutable_socket->set_socket(this);
+
+	// - io_uring completion : the mode of this connection is decided here, before on_connect() (process_start_io posts the first RECV after)
+	this->process_decide_io_completion();
 
 	// check)
 	CGASSERT_ERROR(this->m_epoll_event_flag == 0);
@@ -224,19 +254,19 @@ bool net::io::connectable::Ntcp::process_complete_connect (uintptr_t _result)
 		// 주의1) 반드시 prepare_receive보다 먼저 수행해야 한다.
 		//   만약 process_on_connect를 prepare_receive이전에 호출하게 되면
 		//   Multi-Thread로 처리되므로 on_connect()수행 중 receive를 받아 처리할
-		//   수가 있기 때문에 순차성에 문제가 생길수 있으므로 이점을 반드시 
+		//   수가 있기 때문에 순차성에 문제가 생길 수 있으므로 이점을 반드시 
 		//   유의해야 한다.
 		//   (혹시 추후 Code 수정시 이점 정말 주의!!!)
 		//
-		// 주의2) on_connect함수 호출시 disconnect()를 호출할 수 있다. 이럴 경우
-		//   receive가 호출실패가 될수 있으므로 주의해야 한다.
+		// 주의2) on_connect함수 호출 시 disconnect()를 호출할 수 있다. 이럴 경우
+		//   receive가 호출실패가 될 수 있으므로 주의해야 한다.
 		//
 		this->process_on_connect();
 
 		// 3) prepare_receive함수를 호출한다.
 		//    - receive를 걸게 된다. 따라서 이 함수 호출 이후로 receive를 
 		//      받을 수 있게 된다. 
-		//    - 실질적으로 이후로는 접속종료시 disconnect를 수행해야 한다.
+		//    - 실질적으로 이후로는 접속종료 시 disconnect를 수행해야 한다.
 		if(this->prepare_receive() == false)
 		{
 			// - prepare단계에서 실패된 socket을 앗사리 닫아 버린다.
@@ -313,7 +343,7 @@ bool net::io::connectable::Ntcp::process_complete_disconnect()
 	//
 	//    - socket_state()가 atomic으로 동작을 하게 함으로써 동시에
 	//      두 개의 Thread가 접근더라도 하나의 Thread에서만 실행되게 함은
-	//      물론 두번 수행되는 것을 방지하기 위해 이전 State를 검사한다.
+	//      물론 두 번 수행되는 것을 방지하기 위해 이전 State를 검사한다.
 	//      socket_state()함수를 수행하게 되면 atomic함수를 사용
 	//      하여 해당 상태로 바꿈과 동시에 이전 상태 값을 돌려준다. 
 	//      만약 이전 상태 값이 eSOCKET_STATE::CLOSED라면 그것은 이미 
@@ -327,13 +357,21 @@ bool net::io::connectable::Ntcp::process_complete_disconnect()
 	// check) socket이 이미 Closed상태라면 돌려보낸다.
 	RETURN_IF(socket_state_old == eSOCKET_STATE::CLOSED, false);
 
+	// - disconnected by disconnect() from CERTIFIED / LOGINED : the state before (on_disconnect is called as it was)
+	if (socket_state_old == eSOCKET_STATE::SEND_DISCONNECTED)
+	{
+		const auto state_before = this->m_socket_state_disconnect.exchange(eSOCKET_STATE::CLOSED);
+		if (state_before == eSOCKET_STATE::CERTIFIED || state_before == eSOCKET_STATE::LOGINED)
+			socket_state_old = state_before;
+	}
+
 
 	//-----------------------------------------------------------------
 	// 2. process_complete_disconnect를 수행한다.
 	//    - 이 함수 내에서 통계처리와 on_disconnect()함수를 호출한다.
 	//-----------------------------------------------------------------
 	// declare) 
-	auto socket_disconnect_reason = this->m_disconnect_reason;
+	uint64_t socket_disconnect_reason = this->m_disconnect_reason;
 
 	//  debug)
 #if !defined(NDEBUG) || defined(_DEBUG)
@@ -439,7 +477,7 @@ bool net::io::connectable::Ntcp::process_complete_disconnect()
 			// - 바로 disconnect Completion을 처리해 준다.
 			this->process_disconnect();
 
-			// - disconnect처리시....
+			// - disconnect처리 시....
 			this->release();
 
 			// return) 
@@ -496,6 +534,15 @@ void net::io::connectable::Ntcp::process_complete_closesocket() noexcept
 {
 	// check)
 	CGASSERT_ERROR(native_handle() == INVALID_SOCKET);
+
+	// - io_uring completion : the handle was closed in process_close_socket() (after the cancel of its ops). the io_context is released
+	//   like the epoll branch does (detach_epoll_handle). the mode is decided again at the next process_start_io() (cleared when prepared)
+	if (this->is_io_completion())
+	{
+		CGASSERT_ERROR(this->get_epoll_handle() == INVALID_SOCKET);
+		this->reset_io_context();
+		return;
+	}
 
 	// 1) detach epoll handle
 	auto epoll_handle = detach_epoll_handle();

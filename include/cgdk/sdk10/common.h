@@ -151,8 +151,6 @@
 // 3) String
 #define		_USE_CHAR_STRING	// CP_949
 //#define		_USE_WCHAR_STRING
-//#define		_USE_CHAR16_STRING
-//#define	_USE_CHAR32_STRING
 
 // 5) Lock
 #define		_USE_NATIVE_LOCK

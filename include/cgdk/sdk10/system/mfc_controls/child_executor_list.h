@@ -54,7 +54,8 @@ private:
 	afx_msg void				OnEnable(BOOL _is_enable);
 	afx_msg	void				OnDestroy();
 	afx_msg void				OnActivate(UINT _nState, CWnd* _pwnd_other, BOOL _bMinimized);
-	//afx_msg	void				OnBnClickedForceException();
+	afx_msg	void				OnBnClickedForceException();
+	afx_msg	void				OnBnClickedSnapDump();
 	afx_msg	LRESULT				OnCGMessageNotify(WPARAM _wParam, LPARAM _lParam);
 
 // public) 
@@ -70,7 +71,7 @@ public:
 protected:
 			CListCtrl			m_listctrl_executor;
 			object_ptr<executor::manager> m_pmanager_executor;
-			lockable<>			m_lockable_manager_executor;
+			lock_object			m_lockable_manager_executor;
 			BOOL				m_is_enable_control;
 };
 

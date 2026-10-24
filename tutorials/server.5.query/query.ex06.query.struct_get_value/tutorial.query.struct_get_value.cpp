@@ -1,4 +1,4 @@
-ï»¿//*****************************************************************************
+//*****************************************************************************
 //*                                                                           *
 //*                      Cho sanghyun's Game Classes II                       *
 //*                      Ver 10.0 / Release 2019.12.01                        *
@@ -16,11 +16,10 @@
 //*                                                                           *
 //*****************************************************************************
 
-// option) Windowsì˜ ê²½ìš° Nativeë¥¼ ì‚¬ìš©í•  ê²ƒì¸ê°€ í˜¹ì€ ODBCë¥¼ ì‚¬ìš©í•  ê²ƒì¸ê°€ë¥¼ ê²°ì •í•  ìˆ˜ ìˆë‹¤.
-//         Linuxì˜ ê²½ìš° ê¸°ë³¸ìœ¼ë¡œ ODBCë¥¼ ì‚¬ìš©í•˜ë¯€ë¡œ ì´ ì˜µì…˜ì€ ë¬´ì‹œëœë‹¤.
-#define _USE_ODBC
+// option) WindowsÀÇ °æ¿ì Native¸¦ »ç¿ëÇÒ °ÍÀÎ°¡ È¤Àº ODBC¸¦ »ç¿ëÇÒ °ÍÀÎ°¡¸¦ °áÁ¤ÇÒ ¼ö ÀÖ´Ù.
+//         LinuxÀÇ °æ¿ì ±âº»À¸·Î ODBC¸¦ »ç¿ëÇÏ¹Ç·Î ÀÌ ¿É¼ÇÀº ¹«½ÃµÈ´Ù.
 
-// option) SQL Serverì— ì ‘ì†í•  ê²ƒì¸ê°€? MySQLì— ì ‘ì†í•  ê²ƒì¸ê°€? ì£¼ì„ì²˜ë¦¬í•˜ë©´ MySQLìš© ì„¤ì •ì´ëœë‹¤.
+// option) SQL Server¿¡ Á¢¼ÓÇÒ °ÍÀÎ°¡? MySQL¿¡ Á¢¼ÓÇÒ °ÍÀÎ°¡? ÁÖ¼®Ã³¸®ÇÏ¸é MySQL¿ë ¼³Á¤ÀÌµÈ´Ù.
 #define _SQL_SERVER
 
 #include <iostream>
@@ -35,7 +34,7 @@ using namespace CGDK;
 int main()
 {
 	// ------------------------------------------------------------------
-	// 1. querier ê°ì²´ì˜ ì´ˆê¸°í™”
+	// 1. querier °´Ã¼ÀÇ ÃÊ±âÈ­
 	// ------------------------------------------------------------------
 	own_ptr<query::rdb::querier_t> pquerier = make_own<query::rdb::querier_t>();
 
@@ -56,18 +55,18 @@ int main()
 
 	// ------------------------------------------------------------------
 	//
-	// 2. êµ¬ì¡°ì²´ get_value
+	// 2. ±¸Á¶Ã¼ get_value
 	//
-	//    1) êµ¬ì¡°ì²´ë¥¼ ì´ìš©í•´ í•œë²ˆì— í•˜ë‚˜ì˜ rowë¥¼ í†µìœ¼ë¡œ ì½ì–´ë‚¼ ìˆ˜ ìˆë‹¤.
-	//      ê·¸ëŸ¬ê¸° ìœ„í•´ì„œëŠ”    
+	//    1) ±¸Á¶Ã¼¸¦ ÀÌ¿ëÇØ ÇÑ¹ø¿¡ ÇÏ³ªÀÇ row¸¦ ÅëÀ¸·Î ÀĞ¾î³¾ ¼ö ÀÖ´Ù.
+	//      ±×·¯±â À§ÇØ¼­´Â    
 	// 
-	//      - ì½ì–´ë‚¼ ê° columeì— ë§ì¶° êµ¬ì¡°ì²´ë¥¼ ì •ì˜í•œë‹¤.
-	//      - êµ¬ì¡°ì²´ì— 'ENABLE_STRUCT_SERIALIZABLE'ë¥¼  ì¶”ê°€í•œë‹¤.
-	//      - get_valueì— í…œí”Œë¦¿ ì¸ìë¡œ ê·¸ êµ¬ì¡°ì²´ë¥¼ ë„£ì–´ rowë¥¼ ì½ì–´ë‚¸ë‹¤.
+	//      - ÀĞ¾î³¾ °¢ colume¿¡ ¸ÂÃç ±¸Á¶Ã¼¸¦ Á¤ÀÇÇÑ´Ù.
+	//      - ±¸Á¶Ã¼¿¡ 'ENABLE_STRUCT_SERIALIZABLE'¸¦  Ãß°¡ÇÑ´Ù.
+	//      - get_value¿¡ ÅÛÇÃ¸´ ÀÎÀÚ·Î ±× ±¸Á¶Ã¼¸¦ ³Ö¾î row¸¦ ÀĞ¾î³½´Ù.
 	//    
 	// ------------------------------------------------------------------
 
-	// @ query ê²°ê³¼ rowì— ë§ì¶° ì •ì˜í•œ êµ¬ì¡°ì²´!
+	// @ query °á°ú row¿¡ ¸ÂÃç Á¤ÀÇÇÑ ±¸Á¶Ã¼!
 	struct TEST_RESULT
 	{
 		ENABLE_STRUCT_SERIALIZABLE
@@ -85,37 +84,37 @@ int main()
 
 	try
 	{
-		// 1) ë™ê¸°ì‹ queryë¥¼ ìš”ì²­í•œë‹¤.
+		// 1) µ¿±â½Ä query¸¦ ¿äÃ»ÇÑ´Ù.
 		auto pquery = pquerier->execute_query("SELECT * FROM test_table"sv);
 
-		// 2) query ê²°ê³¼ë¥¼ ì½ì–´ ë“¤ì¸ë‹¤.
+		// 2) query °á°ú¸¦ ÀĞ¾î µéÀÎ´Ù.
 		auto result = pquery->move_first();
 
-		// 3) get_valueë¡œ ê²°ê³¼ë¥¼ ì½ì–´ë‚¸ë‹¤.
+		// 3) get_value·Î °á°ú¸¦ ÀĞ¾î³½´Ù.
 		while (result == eRESULT::SUCCESS)
 		{
-			// @ ê²°ê³¼ëŠ” get_value<TEST_RESULT>(1) ë¡œ ì½ì–´ë‚¸ë‹¤.
-			//   ordinal ê°’ì€ ì‹œì‘í•˜ëŠ” columeì˜ ìœ„ì¹˜ë¡œ 1ë¡œ ì„¤ì •í•˜ë©´ ì œì¼ ì•ì—ì„œ ë¶€í„° ì½ì–´ë‚¸ë‹¤.
+			// @ °á°ú´Â get_value<TEST_RESULT>(1) ·Î ÀĞ¾î³½´Ù.
+			//   ordinal °ªÀº ½ÃÀÛÇÏ´Â columeÀÇ À§Ä¡·Î 1·Î ¼³Á¤ÇÏ¸é Á¦ÀÏ ¾Õ¿¡¼­ ºÎÅÍ ÀĞ¾î³½´Ù.
 			auto value = pquery->result().get_value<TEST_RESULT>(1);
 
 			// - print~
 			std::cout << "value_01 "sv << value.v1 << '\n';
 			std::cout << "value_02 "sv << value.v2 << '\n';
-			std::wcout << L"value_03 "sv << value.v3 << L'\n'; // linuxì—ì„œëŠ” std::coutì™€ std::wcoutì„ ì©ì–´ ì‚¬ìš©í•˜ë©´ í•œê¸€ì´ ì œëŒ€ë¡œ ì¶œë ¥ ì•ˆë¨.
+			std::wcout << L"value_03 "sv << value.v3 << L'\n'; // linux¿¡¼­´Â std::cout¿Í std::wcoutÀ» ½â¾î »ç¿ëÇÏ¸é ÇÑ±ÛÀÌ Á¦´ë·Î Ãâ·Â ¾ÈµÊ.
 			std::cout << "value_04 "sv << value.v4 << '\n';
 			std::cout << "value_05 "sv << value.v5 << '\n';
 			std::cout << "value_06 "sv << value.v6 << '\n';
 			std::cout << "value_07 "sv << value.v7 << '\n';
-			std::cout << "value_08 "sv << to_string<char>(value.v8) << '\n';
-			std::cout << "value_09 "sv << to_string<char>(value.v9) << '\n';
+			std::cout << "value_08 "sv << to_string(value.v8) << '\n';
+			std::cout << "value_09 "sv << to_string(value.v9) << '\n';
 
-			// - ë‹¤ìŒ rowë¡œ...
+			// - ´ÙÀ½ row·Î...
 			result = pquery->move_next();
 		}
 	}
 	catch (throwable::failure_ex& _e)
 	{
-		// - error stringì„ ì¶œë ¥í•œë‹¤.
+		// - error stringÀ» Ãâ·ÂÇÑ´Ù.
 		_e >> std::cout;
 	}
 
@@ -123,16 +122,16 @@ int main()
 	//
 	// B. get_result
 	//
-	//    1) get_resultì™€ êµ¬ì¡°ì²´ë¥¼ ì‚¬ìš©í•´ ì „ì²´ rowë“¤ì„ í†µì±„ë¡œ ì½ì„ ìˆ˜ ìˆë‹¤.
-	//    2) ê²°ê³¼ëŠ” std;;vector<T>ë¡œ ë¦¬í„´ëœë‹¤.
+	//    1) get_result¿Í ±¸Á¶Ã¼¸¦ »ç¿ëÇØ ÀüÃ¼ rowµéÀ» ÅëÂ°·Î ÀĞÀ» ¼ö ÀÖ´Ù.
+	//    2) °á°ú´Â std;;vector<T>·Î ¸®ÅÏµÈ´Ù.
 	//
 	// ------------------------------------------------------------------
 	try
 	{
-		// 1) ë™ê¸°ì‹ queryë¥¼ ìš”ì²­í•œë‹¤.
+		// 1) µ¿±â½Ä query¸¦ ¿äÃ»ÇÑ´Ù.
 		auto pquery = pquerier->execute_query("SELECT * FROM test_table"sv);
 
-		// @2) rowë“¤ì€ std::vector<TEST_RESULT>ì— ë„£ì–´ì ¸ ë¦¬í„´í•œë‹¤.
+		// @2) rowµéÀº std::vector<TEST_RESULT>¿¡ ³Ö¾îÁ® ¸®ÅÏÇÑ´Ù.
 		auto values = pquery->get_result<TEST_RESULT>();
 
 		// - print
@@ -141,18 +140,18 @@ int main()
 			// - print~
 			std::cout << "value_01 "sv << iter.v1 << '\n';
 			std::cout << "value_02 "sv << iter.v2 << '\n';
-			std::wcout << L"value_03 "sv << iter.v3 << L'\n'; // linuxì—ì„œëŠ” std::coutì™€ std::wcoutì„ ì©ì–´ ì‚¬ìš©í•˜ë©´ í•œê¸€ì´ ì œëŒ€ë¡œ ì¶œë ¥ ì•ˆë¨.
+			std::wcout << L"value_03 "sv << iter.v3 << L'\n'; // linux¿¡¼­´Â std::cout¿Í std::wcoutÀ» ½â¾î »ç¿ëÇÏ¸é ÇÑ±ÛÀÌ Á¦´ë·Î Ãâ·Â ¾ÈµÊ.
 			std::cout << "value_04 "sv << iter.v4 << '\n';
 			std::cout << "value_05 "sv << iter.v5 << '\n';
 			std::cout << "value_06 "sv << iter.v6 << '\n';
 			std::cout << "value_07 "sv << iter.v7 << '\n';
-			std::cout << "value_08 "sv << to_string<char>(iter.v8) << '\n';
-			std::cout << "value_09 "sv << to_string<char>(iter.v9) << '\n';
+			std::cout << "value_08 "sv << to_string(iter.v8) << '\n';
+			std::cout << "value_09 "sv << to_string(iter.v9) << '\n';
 		}
 	}
 	catch (throwable::failure_ex& _e)
 	{
-		// - error stringì„ ì¶œë ¥í•œë‹¤.
+		// - error stringÀ» Ãâ·ÂÇÑ´Ù.
 		_e >> std::cout;
 	}
 

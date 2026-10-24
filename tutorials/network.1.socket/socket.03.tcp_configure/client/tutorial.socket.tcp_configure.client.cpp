@@ -1,4 +1,4 @@
-ï»¿#include "cgdk/sdk10/net.socket.h"
+#include "cgdk/sdk10/net.socket.h"
 #include "../../define_message.h"
 
 #include <iostream>
@@ -8,34 +8,34 @@
 
 using namespace CGDK;
 
-// 1) socket í´ë˜ìŠ¤ë¥¼ ì •ì˜í•œë‹¤.
+// 1) socket Å¬·¡½º¸¦ Á¤ÀÇÇÑ´Ù.
 class socket_tcp_client : public net::socket::tcp_client<>
 {
-	// (v) ì ‘ì† ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_connect() override
 	{
 		std::cout << " @ connected"sv << '\n';
 	}
 
-	// (v) ì ‘ì† ì‹¤íŒ¨ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó ½ÇÆĞ ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_fail_connect(uint64_t /*_disconnect_reason*/) override
 	{
 		std::cout << " @ fail to connecting"sv << '\n';
 	}
 
-	// (v) ì ‘ì† ì¢…ë£Œ ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	// (v) Á¢¼Ó Á¾·á ½Ã È£ÃâµÇ´Â ÇÔ¼ö
 	virtual void on_disconnect(uint64_t) override
 	{
 		std::cout << " @ disconnected"sv << '\n';
 	}
 
-	// (v) ë©”ì‹œì§€ë¥¼ ìˆ˜ì‹ í–ˆì„ ë•Œ í˜¸ì¶œ ë˜ëŠ” í•¨ìˆ˜.
+	// (v) ¸Ş½ÃÁö¸¦ ¼ö½ÅÇßÀ» ¶§ È£Ãâ µÇ´Â ÇÔ¼ö.
 	virtual result_code on_message(sMESSAGE_NETWORK& _msg) override
 	{
-		// 1) message headë¥¼ ì½ìŠµë‹ˆë‹¤.
+		// 1) message head¸¦ ÀĞ½À´Ï´Ù.
 		auto msg_header = _msg.buf_message.front<sMESSAGE_HEADER>();
 
-		// 2) message ì¢…ë¥˜ì— ë”°ë¥¸ ì²˜ë¦¬ë¥¼ í•œë‹¤.
+		// 2) message Á¾·ù¿¡ µû¸¥ Ã³¸®¸¦ ÇÑ´Ù.
 		switch (msg_header.type)
 		{
 		case	eMESSAGE_TYPE::SEND_A:
@@ -59,32 +59,32 @@ int main()
 	// trace) 
 	std::cout << "start client [tut.socket.03.tcp_configure.client]..."sv << '\n';
 
-	// 2) ì ‘ì†ì„ ì‹œë„í•  'socket_tcp_client' ì†Œì¼“ ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+	// 2) Á¢¼ÓÀ» ½ÃµµÇÒ 'socket_tcp_client' ¼ÒÄÏ °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 	auto psocket = make_own<socket_tcp_client>();
 
-	// 3) connectí•  ì •ë³´ë¥¼ ì„¤ì •í•œë‹¤.
+	// 3) connectÇÒ Á¤º¸¸¦ ¼³Á¤ÇÑ´Ù.
 	context	setting;
 	setting["remote_endpoint"sv]["address"sv] = "127.0.0.1"sv;
 	setting["remote_endpoint"sv]["port"sv] = 20000;
 
-	// 4) 20000ë²ˆ í¬íŠ¸ì—ì„œ ì ‘ì†ì„ ì‹œë„í•œë‹¤.
+	// 4) 20000¹ø Æ÷Æ®¿¡¼­ Á¢¼ÓÀ» ½ÃµµÇÑ´Ù.
 	psocket->start(setting);
 
-	// 5) ì…ë ¥ì¹˜ì— ë”°ë¼ ë©”ì‹œì§€ë¥¼ ì „ì†¡í•œë‹¤. (ESCí‚¤ë¥¼ ëˆ„ë¥´ë©´ ì¢…ë£Œí•œë‹¤.)
+	// 5) ÀÔ·ÂÄ¡¿¡ µû¶ó ¸Ş½ÃÁö¸¦ Àü¼ÛÇÑ´Ù. (ESCÅ°¸¦ ´©¸£¸é Á¾·áÇÑ´Ù.)
 	for(;;)
 	{
-		// - Keyë¥¼ ëˆŒë €ì„ ê²½ìš° keyê°’ì„ ì½ì–´ ì²˜ë¦¬í•œë‹¤.
+		// - Key¸¦ ´­·¶À» °æ¿ì key°ªÀ» ÀĞ¾î Ã³¸®ÇÑ´Ù.
 		if(_kbhit())
 		{
-			// - Keyë¥¼ ì½ëŠ”ë‹¤.
+			// - Key¸¦ ÀĞ´Â´Ù.
 			int	ch = _getch();
 
-			// - ESCí‚¤ë¥¼ ëˆ„ë¥´ë©´ ì ‘ì†ì„ ì¢…ë£Œí•œë‹¤.
+			// - ESCÅ°¸¦ ´©¸£¸é Á¢¼ÓÀ» Á¾·áÇÑ´Ù.
 			if (ch == 27)
 			{
 				break;
 			}
-			// - Aí‚¤ ëˆ„ë¥´ë©´ Message Bë¥¼ ì „ì†¡í•œë‹¤.
+			// - AÅ° ´©¸£¸é Message B¸¦ Àü¼ÛÇÑ´Ù.
 			else if(ch=='a' || ch=='A')
 			{
 				// - message
@@ -98,7 +98,7 @@ int main()
 				// - send
 				psocket->send(make_shared_buffer(message));
 			}
-			// - Bí‚¤ ëˆ„ë¥´ë©´ Message Bë¥¼ ì „ì†¡í•œë‹¤.
+			// - BÅ° ´©¸£¸é Message B¸¦ Àü¼ÛÇÑ´Ù.
 			else if(ch=='b' || ch=='B')
 			{
 				// - message
@@ -109,7 +109,7 @@ int main()
 				message.c = {1,3,4,5,7,9};
 				message.d = {{1, "pencil"s}, {2, "apple"s}, {3, "pineapple"s}};
 
-				// - set message length (ê°€ë³€ê¸¸ì´ ë©”ì‹œì§€ëŠ” ë°˜ë“œì‹œ ë©”ì‹œì§€ë¥¼ ë‹¤ ì‘ì„±í•œ í›„ì— ê¸¸ì´ë¥¼ ê³„ì‚°í•´ ì¨ë„£ì–´ì•¼ í•œë‹¤.)
+				// - set message length (°¡º¯±æÀÌ ¸Ş½ÃÁö´Â ¹İµå½Ã ¸Ş½ÃÁö¸¦ ´Ù ÀÛ¼ºÇÑ ÈÄ¿¡ ±æÀÌ¸¦ °è»êÇØ ½á³Ö¾î¾ß ÇÑ´Ù.)
 				message.size = get_size_of<uint32_t>(message);
 
 				// - send
@@ -117,13 +117,13 @@ int main()
 			}
 		}
 
-		// - 1ms ìŠ¬ë¦½í•œë‹¤. (CPUë¥¼ ë„ˆë¬´ ë§ì´ ë¨¹ìœ¼ë¯€ë¡œ...)
+		// - 1ms ½½¸³ÇÑ´Ù. (CPU¸¦ ³Ê¹« ¸¹ÀÌ ¸ÔÀ¸¹Ç·Î...)
 		std::this_thread::sleep_for(1ms);
 	}
 
 	// trace) 
 	std::cout << "stop server [tut.socket.03.tcp_configure.client]..."sv << '\n';
 
-	// end) ì¢…ë£Œ
+	// end) Á¾·á
 	return 0;
 }

@@ -1,8 +1,9 @@
-﻿#pragma once
+#pragma once
 
 class socket_tcp :
 	public						net::io::socket::tcp::Ndefault,
 	public						net::io::connectable::tcp::Ndefault,
+	public						net::io::connect_notify::tcp::Ndefault,
 	public						net::io::sendable::Ntcp_async_gather,
 	public				 		net::io::send_request::tcp::Ndefault,
 	public						net::io::sender::tcp::Ndefault<uint32_t>,
@@ -56,7 +57,7 @@ public:
 			void				request_disconnect_socket(int64_t _count);
 			void				request_disconnect_socket_all();
 			void				request_send();
-			void				request_send_immidiately(int64_t _count);
+			void				request_send_immediately(int64_t _count);
 			void				request_send_error_message_zero();
 
 public:

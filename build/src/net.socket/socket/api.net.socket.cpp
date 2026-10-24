@@ -1,530 +1,16 @@
 #include "pch.h"
+#include <charconv>
+#include <cstring>
 
 #if defined(_WIN32)
 	#include <Iphlpapi.h>
 #elif defined(__linux__)
+	#include <cstdio>
 	#include <linux/if.h>
+	#include <unistd.h>
 #endif
 
 using namespace CGDK;
-
-net::sockaddr CGDK::from_string(const std::string_view _address, uint16_t _port, ADDRESS_FAMILY _af_prefer) 
-{
-	// 1) 
-	api::socket::instance();
-
-	// check)
-	THROW_IF(_address.size() > 127, throwable::failure(eRESULT::LENGTH_ERROR));
-
-	// declare)
-	static_string<128> address = _address;
-
-	// 2) Hints
-	{
-	#if defined(_WIN32)
-		if(_strnicmp(address.c_str(), "localhost", 10)==0 || _strnicmp(address.c_str(), "loopback", 9) == 0)
-	#else
-		if(strncasecmp(address.c_str(), "localhost", 10)==0 || strncasecmp(address.c_str(), "loopback", 9) == 0)
-	#endif
-		{
-			switch (_af_prefer)
-			{
-			case	AF_INET:
-					return net::sockaddr(net::ip::address_v4::loopback(), _port);
-			case	AF_INET6:
-					return net::sockaddr(net::ip::address_v6::loopback(), _port);
-			default:
-					return net::sockaddr(net::ip::address_v6::loopback(), _port);
-			}
-		}
-	#if defined(_WIN32)
-		else if (_strnicmp(address.c_str(), "any", 4) == 0)
-	#else
-		else if (strncasecmp(address.c_str(), "any", 4) == 0)
-	#endif
-		{
-			switch (_af_prefer)
-			{
-			case	AF_INET:
-					return net::sockaddr(net::ip::address_v4::any(), _port);
-			case	AF_INET6:
-					return net::sockaddr(net::ip::address_v6::any(), _port);
-			default:
-					return net::sockaddr(net::ip::address_v6::any(), _port);
-			}
-		}
-	#if defined(_WIN32)
-		else if (_strnicmp(address.c_str(), "broadcast", 10) == 0)
-	#else
-		else if (strncasecmp(address.c_str(), "broadcast", 10) == 0)
-	#endif
-		{
-			switch (_af_prefer)
-			{
-			case	AF_INET:
-					return net::sockaddr(net::ip::address_v4::broadcast(), _port);
-			case	AF_INET6:
-					throw throwable::failure(eRESULT::LENGTH_ERROR);
-			default:
-					throw throwable::failure(eRESULT::LENGTH_ERROR);
-			}
-		}
-	}
-
-	// declare) 
-	net::sockaddr addr_result;
-	addrinfo* paddr_info_result = nullptr;
-
-	// 2) get address info
-	auto result = ::getaddrinfo(address.c_str(), nullptr, nullptr, &paddr_info_result);
-
-	// check)
-	ERROR_RETURN_IF(result != 0, addr_result, LOG_ERROR << log_level_t::important() << "(err ) 'GetAddrInfo' function[Error:"sv << api::get_last_error() << "]"sv);
-
-	// check)
-	ERROR_RETURN_IF(paddr_info_result == nullptr, addr_result, LOG_ERROR << log_level_t::important() << "(err ) 'GetAddrInfo' function[error_code:"sv << api::get_last_error() << "]"sv);
-
-	// declare) 
-	addrinfo* paddr_info_selected = nullptr;
-
-	// 3) _af_prefer와 동일한 AF가 있는지 찾는다.
-	for(auto* piter = paddr_info_result; piter != nullptr; piter = piter->ai_next)
-	{
-		if(piter->ai_family == _af_prefer)
-		{
-			paddr_info_selected = piter;
-			break;
-		}
-	}
-
-	// 3) _af_prefer와 동일한 AF가 없으면 그냥 제일 처음 것을 찾는다.
-	if(paddr_info_selected == nullptr)
-	{
-		paddr_info_selected = paddr_info_result;
-	}
-
-	// 4) socket Family설정.
-	switch (paddr_info_selected->ai_family)
-	{
-	case	AF_INET:
-			{
-				CGASSERT_ERROR(paddr_info_selected->ai_addrlen == sizeof(sockaddr_in));
-
-				addr_result.sockaddr_v4 = *reinterpret_cast<sockaddr_in*>(paddr_info_selected->ai_addr);
-				addr_result.u_v4.sin_port = htons(_port);
-				addr_result.length = static_cast<int>(paddr_info_selected->ai_addrlen);
-
-				// check) 
-				CGASSERT_ERROR(addr_result.u_v4.sin_family == AF_INET);
-			}
-			break;
-
-	case	AF_INET6:
-			{
-				CGASSERT_ERROR(paddr_info_selected->ai_addrlen == sizeof(sockaddr_in6));
-
-				addr_result.sockaddr_v6 = *reinterpret_cast<sockaddr_in6*>(paddr_info_selected->ai_addr);
-				addr_result.u_v6.sin_port = htons(_port);
-				addr_result.length = static_cast<int>(paddr_info_selected->ai_addrlen);
-
-				// check) 
-				CGASSERT_ERROR(addr_result.u_v6.sin_family== AF_INET6);
-			}
-			break;
-
-	default:
-			if (paddr_info_selected->ai_addrlen <= sizeof(net::sockaddr))
-			{
-				memcpy(reinterpret_cast<void*>(&addr_result), reinterpret_cast<void*>(paddr_info_selected->ai_addr), paddr_info_selected->ai_addrlen);
-				addr_result.u_v6.sin_port = htons(_port);
-				addr_result.length = static_cast<int>(paddr_info_selected->ai_addrlen);
-			}
-			else
-			{
-			}
-			break;
-	}
-
-	// 4) 할당해제해준다.
-	::freeaddrinfo(paddr_info_selected);
-
-	// return) 
-	return	addr_result;
-}
-
-net::sockaddr CGDK::from_string( std::wstring_view _wstr_address, uint16_t _port, ADDRESS_FAMILY _af_prefer)
-{
-	// 1) 
-	api::socket::instance();
-
-	// declare) 
-	char str_address[MAX_STRING_LENGTH]{};
-
-	// 2) String을 Convert한다.
-	encode_string(str_address, _wstr_address);
-
-	// return)
-	return from_string(str_address, _port, _af_prefer);
-}
-
-net::sockaddr CGDK::from_string( std::u16string_view _wstr_address, uint16_t _port, ADDRESS_FAMILY _af_prefer)
-{
-	// 1) 
-	api::socket::instance();
-
-	// declare) 
-	char str_address[MAX_STRING_LENGTH]{};
-
-	// 2) String을 Convert한다.
-	encode_string(str_address, _wstr_address);
-
-	// return)
-	return from_string(str_address, _port, _af_prefer);
-}
-
-net::sockaddr CGDK::from_string( std::u32string_view _wstr_address, uint16_t _port, ADDRESS_FAMILY _af_prefer)
-{
-	// 1) 
-	api::socket::instance();
-
-	// declare) 
-	char str_address[MAX_STRING_LENGTH]{};
-
-	// 2) String을 Convert한다.
-	encode_string(str_address, _wstr_address);
-
-	// return)
-	return from_string(str_address, _port, _af_prefer);
-}
-
-net::sockaddr CGDK::from_string(const std::string_view _address, uint16_t _port, const addrinfo* _hints)
-{
-	// check) 
-	api::socket::instance();
-
-	// check)
-	THROW_IF(_address.size() > 127, throwable::failure(eRESULT::LENGTH_ERROR));
-
-	// declare) 
-	addrinfo tempHints;
-
-	// declare)
-	static_string<128> address = _address;
-
-	// 1) Hints
-	if(_hints == nullptr)
-	{
-	#if defined(_WIN32)
-		if(_strnicmp(address.c_str(), "localhost", 10)==0)
-	#else
-		if(strncasecmp(address.c_str(), "localhost", 10)==0)
-	#endif
-		{
-			__zero_memory(&tempHints, sizeof(tempHints));
-			tempHints.ai_family = AF_INET;
-			_hints = &tempHints;
-		}
-	#if defined(_WIN32)
-		else if(_strnicmp(address.c_str(), "localhost6", 11)==0)
-	#else
-		else if(strncasecmp(address.c_str(), "localhost6", 11)==0)
-	#endif
-		{
-			__zero_memory(&tempHints, sizeof(tempHints));
-			tempHints.ai_family = AF_INET6;
-			_hints = &tempHints;
-		}
-	#if defined(_WIN32)
-		else if (_strnicmp(address.c_str(), "any", 9) == 0)
-	#else
-		else if (strncasecmp(address.c_str(), "any", 9) == 0)
-	#endif
-		{
-			return net::sockaddr{ net::ip::address_v6::any(), 0 };
-		}
-	}
-
-	// declare) 
-	net::sockaddr addr_result;
-	addrinfo* paddr_info_result = nullptr;
-
-	// 2) Address Info르 얻는다.
-	auto result = ::getaddrinfo(address.c_str(), nullptr, _hints, &paddr_info_result);
-
-	// check) tempHostEnt가 nullptr이면 대략 낭패닷!
-	ERROR_RETURN_IF(result != 0, addr_result, LOG_ERROR << log_level_t::important() << "(err ) 'GetAddrInfo' function[error:"sv << api::get_last_error() << "]"sv);
-
-	// check) tempHostEnt가 nullptr이면 대략 낭패닷!
-	ERROR_RETURN_IF(paddr_info_result == nullptr, addr_result, LOG_ERROR << log_level_t::important() << "(err ) 'GetAddrInfo' function[error_code:"sv << api::get_last_error() << "]"sv);
-
-	// 3) socket Family설정.
-	switch(paddr_info_result->ai_family)
-	{
-	case	AF_INET:
-			{
-				CGASSERT_ERROR(paddr_info_result->ai_addrlen == sizeof(sockaddr_in));
-
-				addr_result.sockaddr_v4 = *(sockaddr_in*)paddr_info_result->ai_addr;
-				addr_result.u_v6.sin_port = htons(_port);
-				addr_result.length = static_cast<int>(paddr_info_result->ai_addrlen);
-			}
-			break;
-
-	case	AF_INET6:
-			{
-				CGASSERT_ERROR(paddr_info_result->ai_addrlen == sizeof(sockaddr_in6));
-
-				addr_result.sockaddr_v6 = *(sockaddr_in6*)paddr_info_result->ai_addr;
-				addr_result.u_v6.sin_port = htons(_port);
-				addr_result.length = static_cast<int>(paddr_info_result->ai_addrlen);
-			}
-			break;
-
-	default:
-			if(paddr_info_result->ai_addrlen<=sizeof(net::sockaddr))
-			{
-				memcpy(reinterpret_cast<void*>(&addr_result), reinterpret_cast<void*>(paddr_info_result->ai_addr), paddr_info_result->ai_addrlen);
-				addr_result.u_v6.sin_port = htons(_port);
-				addr_result.length = static_cast<int>(paddr_info_result->ai_addrlen);
-			}
-			else
-			{
-				addr_result.length = 0;
-			}
-			break;
-	}
-
-	// 4) 할당해제해준다.
-	::freeaddrinfo(paddr_info_result);
-
-	// return) 
-	return addr_result;
-}
-
-net::sockaddr CGDK::from_string( std::wstring_view _wstr_address, uint16_t _port, const addrinfo* _hints)
-{
-	// 1) initialize socket
-	api::socket::instance();
-
-	// declare) 
-	char str_address[MAX_STRING_LENGTH]{};
-
-	// 2) String을 Convert한다.
-	encode_string(str_address, _wstr_address);
-
-	// return)
-	return from_string(str_address, _port, _hints);
-}
-
-net::sockaddr CGDK::from_string (std::u16string_view _wstr_address, uint16_t _port, const addrinfo* _hints)
-{
-	// 1) initialize socket
-	api::socket::instance();
-
-	// declare) 
-	char str_address[MAX_STRING_LENGTH]{};
-
-	// 2) encoding string
-	encode_string(str_address, _wstr_address);
-
-	// return)
-	return from_string(str_address, _port, _hints);
-}
-
-net::sockaddr CGDK::from_string (std::u32string_view _wstr_address, uint16_t _port, const addrinfo* _hints)
-{
-	// 1) initialize socket
-	api::socket::instance();
-
-	// declare) 
-	char str_address[MAX_STRING_LENGTH]{};
-
-	// 2) encoding string
-	encode_string(str_address, _wstr_address);
-
-	// return)
-	return from_string(str_address, _port, _hints);
-}
-
-net::sockaddr CGDK::from_string (const std::string_view _address, const std::string_view _service, int _socket_type, int _protocol)
-{
-	// 1) 혹시 초기화가 안되었으면 초기화한다.
-	api::socket::instance();
-
-	// check)
-	THROW_IF(_address.size() > 127, throwable::failure(eRESULT::LENGTH_ERROR));
-
-	// declare) 
-	addrinfo addrinfoHints;
-    addrinfoHints.ai_family = AF_UNSPEC;
-    addrinfoHints.ai_socktype = _socket_type;
-    addrinfoHints.ai_protocol = _protocol;
-
-	// declare) 
-	std::string str_address{ _address };
-	std::string str_service{ _service };
-
-	// declare) 
-	addrinfo* paddr_info_result;
-
-	// 2) Address Info르 얻는다.
-	auto result = ::getaddrinfo(str_address.c_str(), str_service.c_str(), &addrinfoHints, &paddr_info_result);
-
-	// declare) 
-	net::sockaddr addr_result;
-
-	// check) tempHostEnt가 nullptr이면 대략 낭패닷!
-	ERROR_RETURN_IF(result != 0, addr_result, LOG_ERROR << log_level_t::important() << "(err ) 'GetAddrInfo' function[error:"sv << api::get_last_error() << "]"sv);
-
-	// check) tempHostEnt가 nullptr이면 대략 낭패닷!
-	ERROR_RETURN_IF(paddr_info_result == nullptr, addr_result, LOG_ERROR << log_level_t::important() << "(err ) 'GetAddrInfo' function[error_code:"sv << api::get_last_error() << "]"sv);
-
-	// 3) socket Family설정.
-	switch(addrinfoHints.ai_family)
-	{
-	case	AF_INET:
-			addr_result = *(sockaddr_in*)paddr_info_result->ai_addr;
-			addr_result.length = sizeof(sockaddr_in);
-			break;
-
-	case	AF_INET6:
-			addr_result = *(sockaddr_in6*)paddr_info_result->ai_addr;
-			addr_result.length = sizeof(sockaddr_in6);
-			break;
-
-	default:
-			addr_result.length = 0;
-			break;
-	}
-
-	// 4) 할당해제해준다.
-	::freeaddrinfo(paddr_info_result);
-
-	// return) 
-	return addr_result;
-}
-
-net::sockaddr CGDK::from_string (std::wstring_view _wstr_address, std::wstring_view _str_service, int _socket_type, int _protocol)
-{
-	// 1) 
-	api::socket::instance();
-
-	// declare) 
-	char str_address[MAX_STRING_LENGTH]{};
-	char str_service[MAX_STRING_LENGTH]{};
-
-	// 2) String을 Convert한다.
-	encode_string(str_address, _wstr_address);
-	encode_string(str_service, _str_service);
-
-	// return)
-	return from_string(str_address, str_service, _socket_type, _protocol);
-}
-
-net::sockaddr from_string (std::u16string_view _wstr_address, std::u16string_view _str_service, int _socket_type, int _protocol)
-{
-	// 1) 
-	api::socket::instance();
-
-	// declare) 
-	char str_address[MAX_STRING_LENGTH]{};
-	char str_service[MAX_STRING_LENGTH]{};
-
-	// 2) String을 Convert한다.
-	encode_string(str_address, _wstr_address);
-	encode_string(str_service, _str_service);
-
-	// return)
-	return from_string(str_address, str_service, _socket_type, _protocol);
-}
-
-net::sockaddr CGDK::from_string (std::u32string_view _wstr_address, std::u32string_view _str_service, int _socket_type, int _protocol)
-{
-	// 1) 
-	api::socket::instance();
-
-	// declare) 
-	char str_address[MAX_STRING_LENGTH]{};
-	char str_service[MAX_STRING_LENGTH]{};
-
-	// 2) String을 Convert한다.
-	encode_string(str_address, _wstr_address);
-	encode_string(str_service, _str_service);
-
-	// return)
-	return from_string(str_address, str_service, _socket_type, _protocol);
-}
-
-template<>
-std::string_view CGDK::to_string<char>(char* _str_address, size_t _max_length, const net::sockaddr& _socket_address)
-{
-	// declare)
-	std::string_view result;
-
-	if (_socket_address.is_loopback())
-	{
-		result = "localhost";
-	}
-	else if(_socket_address.is_bind_any())
-	{
-		result = "any";
-	}
-	else
-	{
-	#if defined(_WINSOCK2API_)
-		auto temp = InetNtopA(_socket_address.u_v6.sin_family, const_cast<void*>(_socket_address.get_paddr()), _str_address, _max_length);
-	#else
-		auto temp = inet_ntop(_socket_address.u_v6.sin_family, const_cast<void*>(_socket_address.get_paddr()), _str_address, _max_length);
-	#endif
-		if (temp != nullptr)
-		{
-			result = temp;;
-		}
-	}
-
-	// return)
-	return result;
-}
-
-template<>
-std::wstring_view CGDK::to_string<wchar_t>(wchar_t* _str_address, size_t _max_length, const net::sockaddr& _socket_address)
-{
-	// declare)
-	std::wstring_view result;
-
-	if (_socket_address.is_loopback())
-	{
-		result = L"localhost";
-	}
-	else if (_socket_address.is_bind_any())
-	{
-		result = L"any";
-	}
-	else
-	{
-#if defined(_WINSOCK2API_)
-		auto temp = InetNtopW(_socket_address.u_v6.sin_family, const_cast<void*>(_socket_address.get_paddr()), _str_address, _max_length);
-
-		// check)
-		if (temp != nullptr)
-		{
-			result = std::wstring_view(_str_address);
-		}
-#else
-		char temp_buffer[256];
-		auto temp = inet_ntop(_socket_address.u_v6.sin_family, const_cast<void*>(_socket_address.get_paddr()), temp_buffer, _max_length);
-
-		// check)
-		if (temp != nullptr)
-		{
-			result = encode_string(_str_address, temp, _max_length);
-		}
-#endif
-	}
-
-	// return) 
-	return result;
-}
 
 std::string api::get_host_name()
 {
@@ -538,7 +24,7 @@ std::string api::get_host_name()
 	// 1) Computer 이름을 얻어낸다.
 	GetComputerNameA(str_value, &nSize);
 #else
-
+	::gethostname(str_value, sizeof(str_value)-1);
 #endif
 
 	// return) 
@@ -621,7 +107,11 @@ std::vector<sMAC_ADDRESS> api::get_mac_address()
 	auto result = ioctl(sock, SIOCGIFCONF, &ifc);
 
 	// check) 
-	RETURN_IF(result == -1, vector_MAC);
+	if (result == -1)
+	{
+		::close(sock);
+		return vector_MAC;
+	}
 
     auto* iter = ifc.ifc_req;
     auto* iter_end = iter + (ifc.ifc_len / sizeof(struct ifreq));
@@ -632,7 +122,7 @@ std::vector<sMAC_ADDRESS> api::get_mac_address()
 		struct ifreq ifr;
 
 		// - copy ifr_name
-        strcpy(ifr.ifr_name, iter->ifr_name);
+		std::snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", iter->ifr_name);
 
 		// - get... SIOCGIFFLAGS
 		result = ioctl(sock, SIOCGIFFLAGS, &ifr);
@@ -663,6 +153,8 @@ std::vector<sMAC_ADDRESS> api::get_mac_address()
 		// - MAC Address를 추가한다.
 		vector_MAC.push_back(temp);
 	}
+
+	::close(sock);
 #endif
 
 	// return)
@@ -692,7 +184,7 @@ bool api::socket::init_socket()
 	if (WSAStartup(MAKEWORD(2, 2), &temp_wsa_data) != 0)
 	{
 		// trace) 
-		LOG_ERROR << log_level_t::important() << "(err ) CGDK.net.socket: fail to WSAStartup![Winsocke 2.2]"sv;
+		LOG_ERROR << log_level_t::important() << "(err ) CGDK.net.socket: fail to WSAStartup![Winsock 2.2]"sv;
 
 		// m_socket_count를 SIZE_MAX로 설정한다.(초기화 되지 않을 것으로 처리한다.)
 		m_socket_count = SIZE_MAX;
@@ -721,7 +213,7 @@ bool api::socket::init_socket()
 	// log) 초기화 시작
 	LOG_SYSTEM << log_level_t::important() << " [api.net] system info"sv;
 
-	// 1) reverve max open files as possible as it can
+	// 1) reserve max open files as possible as it can
 	api::reserve_max_open_files();
 
 	// 2) get cpu_id and max_open_files
@@ -737,10 +229,14 @@ bool api::socket::init_socket()
 #endif
 
 	// 4) ...
-	LOG_SYSTEM << "  - cpu id: "sv << NFMT::format("{:08X}:{:08X}:{:08X}:{:08X}", cpu_id[0], cpu_id[1], cpu_id[2], cpu_id[3]);
+	LOG_SYSTEM << "  - cpu id: "sv
+		<< CGDK::stream_hex(cpu_id[0], 8, true) << ":"
+		<< CGDK::stream_hex(cpu_id[1], 8, true) << ":"
+		<< CGDK::stream_hex(cpu_id[2], 8, true) << ":"
+		<< CGDK::stream_hex(cpu_id[3], 8, true);
 	LOG_SYSTEM << "  - os id: x"sv << get_os_unique_id();
 	LOG_SYSTEM << "  - core: x"sv << get_core_count();
-	LOG_SYSTEM << "  - system memory: "sv << to_string_scaled<char>(api::get_physical_memory_max()) << "bytes"sv;
+	LOG_SYSTEM << "  - system memory: "sv << to_string_scaled(api::get_physical_memory_max()) << "bytes"sv;
 #if defined(_WINSOCK2API_)
 	if(m_socket_count_max > (SIZE_MAX - 64))
 		LOG_SYSTEM << "  - maximum socket limits: INFINITE"sv;
@@ -770,7 +266,7 @@ bool api::socket::init_socket()
 	RETURN_IF(result == SOCKET_ERROR, false);
 
 	struct addrinfo hints;
-	__zero_memory(&hints, sizeof(hints));
+	std::memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = AI_PASSIVE;
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
@@ -858,7 +354,7 @@ void api::socket::cleanup_socket() noexcept
 	size_t new_value = 0;
 
 	// check) socket의 숫자가 0일 경우만 SIZE_MAX로 변경하며 clean-up한다.
-	RETURN_IF(m_socket_count.compare_exchange_weak(new_value, SIZE_MAX) == false);
+	RETURN_IF(m_socket_count.compare_exchange_strong(new_value, SIZE_MAX) == false);
 
 #if defined(_WINSOCK2API_)
 	// 1) Clean UP한다.
@@ -879,8 +375,8 @@ void api::socket::get_extension_function() noexcept
 	CGSOCKET handle_socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
 #endif
 
-	// check) handle_socket이 INVALID_SOCKET이어서는 안된다.(더이상 진행을 할 수 없음.)
-	ERROR_RETURN_IF(handle_socket == INVALID_SOCKET, , LOG_ERROR << log_level_t::important() << "(err ) CGDK.net.socket: fail to craete socket[error_code:"sv << api::get_last_error() << "]"sv);
+	// check) handle_socket이 INVALID_SOCKET이어서는 안된다.(더 이상 진행을 할 수 없음.)
+	ERROR_RETURN_IF(handle_socket == INVALID_SOCKET, , LOG_ERROR << log_level_t::important() << "(err ) CGDK.net.socket: fail to create socket[error_code:"sv << api::get_last_error() << "]"sv);
 
 	// 2) accept_async를 얻는다.
 	{
@@ -986,6 +482,147 @@ bool api::socket::io_ctrl(
 }
 #endif
 
+//-----------------------------------------------------------------------------
+// tcp socket options (sSOCKET_OPTION_TCP / Isocket::apply_socket_option())
+//-----------------------------------------------------------------------------
+#if defined(_WINSOCK2API_)
+bool api::socket::set_tcp_quickack(CGSOCKET _handle_socket, bool _enable) noexcept
+{
+	// - SIO_TCP_SET_ACK_FREQUENCY : the segments per ACK (1 : an ACK for every segment = delayed ACK off, 2 : the default of windows)
+	int frequency = (_enable) ? 1 : 2;
+	uint32_t bytes_returned = 0;
+
+	return api::socket::io_ctrl(_handle_socket, SIO_TCP_SET_ACK_FREQUENCY, &frequency, sizeof(frequency), nullptr, 0, &bytes_returned);
+}
+
+bool api::socket::set_busy_poll(CGSOCKET /*_handle_socket*/, uint32_t /*_usec*/) noexcept
+{
+	// - linux only (SO_BUSY_POLL)
+	WSASetLastError(WSAEOPNOTSUPP);
+	return false;
+}
+
+bool api::socket::set_tcp_notsent_lowat(CGSOCKET /*_handle_socket*/, uint32_t /*_bytes*/) noexcept
+{
+	// - linux/macos only (TCP_NOTSENT_LOWAT)
+	WSASetLastError(WSAEOPNOTSUPP);
+	return false;
+}
+
+bool api::socket::set_tcp_fastopen(CGSOCKET _handle_socket, int _queue_length) noexcept
+{
+#if defined(TCP_FASTOPEN)
+	// - windows 10 1607+ : enable (the queue length is not a parameter)
+	int enable = (_queue_length > 0) ? 1 : 0;
+	return set_sock_opt(_handle_socket, IPPROTO_TCP, TCP_FASTOPEN, &enable, sizeof(enable));
+#else
+	(void)_handle_socket; (void)_queue_length;
+	WSASetLastError(WSAEOPNOTSUPP);
+	return false;
+#endif
+}
+
+bool api::socket::set_tcp_fastopen_connect(CGSOCKET _handle_socket, bool _enable) noexcept
+{
+#if defined(TCP_FASTOPEN)
+	// - the same option on a connecting socket : set before ConnectEx
+	int enable = (_enable) ? 1 : 0;
+	return set_sock_opt(_handle_socket, IPPROTO_TCP, TCP_FASTOPEN, &enable, sizeof(enable));
+#else
+	(void)_handle_socket; (void)_enable;
+	WSASetLastError(WSAEOPNOTSUPP);
+	return false;
+#endif
+}
+
+int api::socket::get_sysctl_tcp_fastopen() noexcept
+{
+	// - linux only
+	return -1;
+}
+#else
+bool api::socket::set_tcp_quickack(CGSOCKET _handle_socket, bool _enable) noexcept
+{
+#if defined(TCP_QUICKACK)
+	int value = (_enable) ? 1 : 0;
+	return set_sock_opt(_handle_socket, IPPROTO_TCP, TCP_QUICKACK, &value, sizeof(value));
+#else
+	(void)_handle_socket; (void)_enable;
+	errno = ENOPROTOOPT;
+	return false;
+#endif
+}
+
+bool api::socket::set_busy_poll(CGSOCKET _handle_socket, uint32_t _usec) noexcept
+{
+#if defined(SO_BUSY_POLL)
+	int value = static_cast<int>(_usec);
+	return set_sock_opt(_handle_socket, SOL_SOCKET, SO_BUSY_POLL, &value, sizeof(value));
+#else
+	(void)_handle_socket; (void)_usec;
+	errno = ENOPROTOOPT;
+	return false;
+#endif
+}
+
+bool api::socket::set_tcp_notsent_lowat(CGSOCKET _handle_socket, uint32_t _bytes) noexcept
+{
+#if defined(TCP_NOTSENT_LOWAT)
+	int value = static_cast<int>(_bytes);
+	return set_sock_opt(_handle_socket, IPPROTO_TCP, TCP_NOTSENT_LOWAT, &value, sizeof(value));
+#else
+	(void)_handle_socket; (void)_bytes;
+	errno = ENOPROTOOPT;
+	return false;
+#endif
+}
+
+bool api::socket::set_tcp_fastopen(CGSOCKET _handle_socket, int _queue_length) noexcept
+{
+#if defined(TCP_FASTOPEN)
+	// - the max pending TFO connections of the listen socket (capped by somaxconn). the server side needs sysctl net.ipv4.tcp_fastopen & 2 too
+	return set_sock_opt(_handle_socket, IPPROTO_TCP, TCP_FASTOPEN, &_queue_length, sizeof(_queue_length));
+#else
+	(void)_handle_socket; (void)_queue_length;
+	errno = ENOPROTOOPT;
+	return false;
+#endif
+}
+
+bool api::socket::set_tcp_fastopen_connect(CGSOCKET _handle_socket, bool _enable) noexcept
+{
+#if defined(TCP_FASTOPEN_CONNECT)
+	// - kernel 4.11+ : connect() returns 0 at once and the first send() sends the SYN (with the data when a cookie is cached)
+	int value = (_enable) ? 1 : 0;
+	return set_sock_opt(_handle_socket, IPPROTO_TCP, TCP_FASTOPEN_CONNECT, &value, sizeof(value));
+#else
+	(void)_handle_socket; (void)_enable;
+	errno = ENOPROTOOPT;
+	return false;
+#endif
+}
+
+int api::socket::get_sysctl_tcp_fastopen() noexcept
+{
+#if defined(__linux__)
+	// - /proc/sys/net/ipv4/tcp_fastopen (bit 1 : client, bit 2 : server, 0x200 : no cookie on the client, 0x400 : no cookie on the server)
+	FILE* pfile = ::fopen("/proc/sys/net/ipv4/tcp_fastopen", "r");
+
+	// check)
+	RETURN_IF(pfile == nullptr, -1);
+
+	int value = -1;
+	if (::fscanf(pfile, "%d", &value) != 1)
+		value = -1;
+	::fclose(pfile);
+
+	return value;
+#else
+	return -1;
+#endif
+}
+#endif
+
 bool api::socket::connect(
 			CGSOCKET _handle_socket,
 	 const ::sockaddr* _address,
@@ -1018,7 +655,7 @@ std::vector<api::socket::resolver_entry> api::socket::resolve(int _protocol_fami
 
 	// 1) set hints values
 	addrinfo hints;
-	__zero_memory(&hints, sizeof(hints));
+	std::memset(&hints, 0, sizeof(hints));
 	hints.ai_flags		 = static_cast<int>(_flag);
 	hints.ai_family		 = _protocol_family;
 	hints.ai_socktype	 = _protocol_type;
@@ -1091,7 +728,7 @@ std::vector<api::socket::resolver_entry> api::socket::resolve(int _protocol_fami
 	{
 		// 2) set hints values
 		addrinfo hints;
-		__zero_memory(&hints, sizeof(hints));
+		std::memset(&hints, 0, sizeof(hints));
 		hints.ai_flags = static_cast<int>(_flag);
 		hints.ai_family = _protocol_family;
 		hints.ai_socktype = _protocol_type;
@@ -1149,11 +786,13 @@ std::vector<api::socket::resolver_entry> api::socket::resolve(int _protocol_fami
 				{
 					api::socket::resolver_entry temp_address;
 
-					temp_address.addr = net::sockaddr(net::ip::address_v6::any(), __from_string<uint16_t>(_service_name));
+					uint16_t service_port = 0;
+					std::from_chars(_service_name.data(), _service_name.data() + _service_name.size(), service_port);
+					temp_address.addr = net::sockaddr(net::ip::address_v6::any(), service_port);
 					temp_address.hostname = "any";
 					temp_address.servicename = service_name;
 
-					result_addr.push_back(temp_address);
+					result_addr.push_back(std::move(temp_address));
 				}
 				break;
 
@@ -1161,11 +800,13 @@ std::vector<api::socket::resolver_entry> api::socket::resolve(int _protocol_fami
 				{
 					api::socket::resolver_entry temp_address;
 
-					temp_address.addr = net::sockaddr(net::ip::address_v4::any(), __from_string<uint16_t>(_service_name));
+					uint16_t service_port = 0;
+					std::from_chars(_service_name.data(), _service_name.data() + _service_name.size(), service_port);
+					temp_address.addr = net::sockaddr(net::ip::address_v4::any(), service_port);
 					temp_address.hostname = "any";
 					temp_address.servicename = service_name;
 
-					result_addr.push_back(temp_address);
+					result_addr.push_back(std::move(temp_address));
 				}
 				break;
 
@@ -1173,11 +814,13 @@ std::vector<api::socket::resolver_entry> api::socket::resolve(int _protocol_fami
 				{
 					api::socket::resolver_entry temp_address;
 
-					temp_address.addr = net::sockaddr(net::ip::address_v6::any(), __from_string<uint16_t>(_service_name));
+					uint16_t service_port = 0;
+					std::from_chars(_service_name.data(), _service_name.data() + _service_name.size(), service_port);
+					temp_address.addr = net::sockaddr(net::ip::address_v6::any(), service_port);
 					temp_address.hostname = "any";
 					temp_address.servicename = service_name;
 
-					result_addr.push_back(temp_address);
+					result_addr.push_back(std::move(temp_address));
 				}
 				break;
 
@@ -1253,7 +896,7 @@ CGSOCKET api::socket::create_socket(
 	// check) INVALID_SOCKET이면 실패한 것이다. 그럼 끝낸다.
 	ERROR_RETURN_IF(handle_socket == INVALID_SOCKET, INVALID_SOCKET, LOG_DEBUG << "(err ) CGDK.net.socket: fail to call' socket()' error_code:" << api::get_last_error() << " " __CGFUNCTION__);
 
-	// 2) socket 갯수를 증가시킨다.
+	// 2) socket 개수를 증가시킨다.
 	++m_socket_count;
 
 	// return) 성공!!!!
@@ -1273,17 +916,20 @@ CGSOCKET api::socket::create_socket(
 		// - error
 		errno = EMFILE;
 
+		// log)
+		LOG_DEBUG << "(err ) CGDK.net.socket: fail to call' socket()' error_code:" << api::get_last_error() << " " __CGFUNCTION__;
+
 		// return)
 		return INVALID_SOCKET;
 	}
 
 	// 1) listen을 할 socket을 생성한다.
-	CGSOCKET handle_socket = ::socket (_address_family, _socket_type, _protocol_info); 
+	CGSOCKET handle_socket = ::socket (_address_family, _socket_type | SOCK_CLOEXEC | SOCK_NONBLOCK, _protocol_info);		// - SOCK_CLOEXEC : not inherited by fork/exec. SOCK_NONBLOCK : no fcntl after (every CGDK socket is nonblocking)
 
 	// check) INVALID_SOCKET이면 실패한 것이다. 그럼 끝낸다.
 	ERROR_RETURN_IF(handle_socket == INVALID_SOCKET, INVALID_SOCKET, LOG_DEBUG << "(err ) CGDK.net.socket: fail to call' socket()' error_code:" << api::get_last_error() << " " __CGFUNCTION__);
 
-	// 2) socket 갯수를 증가시킨다.
+	// 2) socket 개수를 증가시킨다.
 	++m_socket_count;
 
 	// return) 성공!!!!
@@ -1303,7 +949,7 @@ bool api::socket::closesocket( CGSOCKET _handle_socket) noexcept
 		// declare)
 		[[maybe_unused]] size_t socket_count;
 		
-		// - socket 갯수를 감소시킨다.
+		// - socket 개수를 감소시킨다.
 		socket_count = --m_socket_count;
 
 		// check) 
@@ -1321,7 +967,7 @@ bool api::socket::closesocket( CGSOCKET _handle_socket) noexcept
 		// declare)
 		[[maybe_unused]] size_t socket_count;
 
-		// - socket 갯수를 감소시킨다.
+		// - socket 개수를 감소시킨다.
 		socket_count = --m_socket_count;
 
 		// check) 
@@ -1359,7 +1005,11 @@ bool api::socket::abortive_closesocket( CGSOCKET _handle_socket) noexcept
 CGSOCKET api::socket::accept(CGSOCKET _handle_socket, ::sockaddr* _paddress, socklen_t* _psocket_address_length) noexcept
 {
 	// 1) accept
+#if defined(_WINSOCK2API_)
 	auto handle_socket_accepted = ::accept(_handle_socket, _paddress, _psocket_address_length);
+#else
+	auto handle_socket_accepted = ::accept4(_handle_socket, _paddress, _psocket_address_length, SOCK_CLOEXEC | SOCK_NONBLOCK);		// - SOCK_CLOEXEC : not inherited by fork/exec. SOCK_NONBLOCK : no fcntl after
+#endif
 
 	// check) 
 	if (handle_socket_accepted != INVALID_SOCKET)
@@ -1426,7 +1076,7 @@ int api::socket::recv(
 	uint32_t				_flags) noexcept
 {
 	// check)
-	CGASSERT_ERROR(_pbuffer != nullptr)
+	CGASSERT_FATAL(_pbuffer != nullptr)
 
 	// check)
 	CGASSERT_ERROR(_pbuffer->data() != nullptr)
@@ -1621,7 +1271,7 @@ bool api::socket::disconnect_async(
 		uint32_t						_flags) noexcept
 {
 	// check)
-	CGASSERT_ERROR(WSDisconnectEx != nullptr);
+	CGASSERT_FATAL(WSDisconnectEx != nullptr);
 
 	// 1) request disconnect_async
 	auto result = WSDisconnectEx(_handle_socket, _poverlapped, _flags | TF_REUSE_SOCKET, 0);
@@ -1661,10 +1311,10 @@ bool api::socket::recv_async(
 		LPWSAOVERLAPPED						_poverlapped) noexcept
 {
 	// check)
-	CGASSERT_ERROR(_pwsabuf != nullptr)
+	CGASSERT_FATAL(_pwsabuf != nullptr);
 
 	// check)
-	CGASSERT_ERROR(_pwsabuf->buf != nullptr)
+	CGASSERT_FATAL(_pwsabuf->buf != nullptr);
 
 	// check)
 	CGASSERT_ERROR(_pwsabuf->len != 0)
@@ -1686,16 +1336,16 @@ bool api::socket::send_to_async(
 		LPWSAOVERLAPPED		_poverlapped) noexcept
 {
 	// check)
-	CGASSERT(_array_wsabuf != nullptr, false);
+	CGASSERT_FATAL(_array_wsabuf != nullptr);
 
 	// check)
-	CGASSERT(_array_wsabuf->buf != nullptr, false);
+	CGASSERT_FATAL(_array_wsabuf->buf != nullptr);
 
 	// check)
-	CGASSERT(_count_buffer != 0, false);
+	CGASSERT_ERROR(_count_buffer != 0);
 
 	// check)
-	CGASSERT(_pto != nullptr, false);
+	CGASSERT_ERROR(_pto != nullptr);
 	
 	// 1) send한다.
 	auto result = WSASendTo(_handle_socket, _array_wsabuf, _count_buffer, _pbytes_send, 0, _pto, _to_length, _poverlapped, nullptr);
@@ -1715,13 +1365,13 @@ bool api::socket::recv_from_async(
 		LPWSAOVERLAPPED		_poverlapped) noexcept
 {
 	// check)
-	CGASSERT(_array_wsabuf != nullptr, false);
+	CGASSERT_FATAL(_array_wsabuf != nullptr);
 
 	// check)
-	CGASSERT(_array_wsabuf->buf != nullptr, false);
+	CGASSERT_FATAL(_array_wsabuf->buf != nullptr);
 
 	// check)
-	CGASSERT(_count_buffer != 0, false);
+	CGASSERT_FATAL(_count_buffer != 0);
 
 	// check)
 	CGASSERT(_pfrom != nullptr, false);
@@ -1733,12 +1383,13 @@ bool api::socket::recv_from_async(
 	CGASSERT(_pbytes_received != nullptr, false);
 
 	// check)
-	RETURN_IF(_pbytes_received == nullptr, false);
+	if(_pbytes_received == nullptr)
+		return false;
 
 
 	//-----------------------------------------------------------------
 	// 1. recv_from을 수행한다.
-	//    - 여기서 Error가 발생시 Error를 p_lpBytesReceive에 넣는다.
+	//    - 여기서 Error가 발생 시 Error를 p_lpBytesReceive에 넣는다.
 	//    - 이유는 receive시 connect reset으로 Error가 발생할 수 있다.
 	//      이 때 적절한 처리를 위해 이런 처리를 수행한다.
 	//-----------------------------------------------------------------
@@ -1749,9 +1400,7 @@ bool api::socket::recv_from_async(
 	if(result == SOCKET_ERROR && api::get_last_error() != WSA_IO_PENDING)
 	{
 		if(_pbytes_received != nullptr)
-		{
 			*_pbytes_received = api::get_last_error();
-		}
 
 		// return) 
 		return false;
@@ -1766,9 +1415,7 @@ bool api::socket::recv_from_async(
 bool api::socket::get_local_address_local(net::sockaddr & _socket_address) noexcept
 {
 	if(_socket_address.u_v4.sin_family == AF_UNSPEC)
-	{
 		_socket_address.u_v4.sin_family = AF_INET;;
-	}
 
 	for(int i=0; i<m_naddress_local; ++i)
 	{
@@ -1788,9 +1435,7 @@ bool api::socket::get_local_address_local(net::sockaddr & _socket_address) noexc
 bool api::socket::get_local_address_public(net::sockaddr & _socket_address) noexcept
 {
 	if (_socket_address.u_v4.sin_family == AF_UNSPEC)
-	{
 		_socket_address.u_v4.sin_family = AF_INET;;
-	}
 
 	for (int i=0; i<m_naddress_local; ++i)
 	{
@@ -1814,9 +1459,7 @@ bool api::socket::get_local_address_public_first(net::sockaddr & _socket_address
 
 	// 2) Public IP가 없으면 Local IP를 얻는다.
 	if(result == false)
-	{
 		result = get_local_address_local(_socket_address);
-	}
 
 	// return) 결과값을 리턴한다.
 	return result;

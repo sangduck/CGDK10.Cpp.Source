@@ -58,7 +58,7 @@ public:
 	[[nodiscard]]				operator bool () const noexcept { return this->exist();}
 
 protected:
-	[[nodiscard]] static uint64_t generate_tid() noexcept { static std::atomic<uint64_t> tid(0); uint64_t temp = ++tid; if (temp == 0) temp = ++tid; return temp; }
+	[[nodiscard]] static uint64_t generate_tid() noexcept { static std::atomic<uint64_t> tid(0); uint64_t temp = (tid.fetch_add(1, std::memory_order_relaxed) + 1); if (temp == 0) temp = (tid.fetch_add(1, std::memory_order_relaxed) + 1); return temp; }
 };
 
 
@@ -67,7 +67,7 @@ protected:
 // depository 
 //
 //-----------------------------------------------------------------------------
-template <class TOBJECT, class TKEY = TOKEN_INDEX>
+template <class T, class TKEY = TOKEN_INDEX>
 class depository
 {
 public:
@@ -76,21 +76,23 @@ public:
 
 // publics)
 public:
-			TKEY				put(const TOBJECT& _object) { scoped_lock(this->m_map_registery) { return _put_object(_object);}}
-			TKEY				put(TOBJECT&& _object) { scoped_lock(this->m_map_registery) { return _put_object(std::forward<TOBJECT>(_object));}}
-			void				put(const TOBJECT& _object, const TKEY& _key) { scoped_lock(this->m_map_registery) { _put_object(_object, _key);}}
-			void				put(const TOBJECT& _object, TKEY&& _key) { scoped_lock(this->m_map_registery) { _put_object(_object, _key);}}
-	[[nodiscard]] TOBJECT		get(const TKEY& _key) noexcept { scoped_lock(this->m_map_registery) { TOBJECT temp; _get_object(_key, temp); return temp;}}
-	[[nodiscard]] TOBJECT		get(TKEY&& _key) noexcept { scoped_lock(this->m_map_registery) { TOBJECT temp; _get_object(_key, temp); return temp;}}
-	[[nodiscard]] bool			get(const TKEY& _key, TOBJECT& _object) noexcept { scoped_lock(this->m_map_registery) { return _get_object(_key, _object);}}
-	[[nodiscard]] bool			get(TKEY&& _key, TOBJECT& _object) noexcept { scoped_lock(this->m_map_registery) { return _get_object(_key, _object);}}
-	[[nodiscard]] std::unordered_map<TKEY, TOBJECT> get_all() noexcept
+			TKEY				put(const T& _object) { std::lock_guard lock(this->m_lockable_map_registery); return _put_object(_object);}
+			TKEY				put(T&& _object) { std::lock_guard lock(this->m_lockable_map_registery); return _put_object(std::forward<T>(_object));}
+			void				put(const T& _object, const TKEY& _key) { std::lock_guard lock(this->m_lockable_map_registery); _put_object(_object, _key);}
+			void				put(const T& _object, TKEY&& _key) { std::lock_guard lock(this->m_lockable_map_registery); _put_object(_object, _key);}
+	[[nodiscard]] T				get(const TKEY& _key) noexcept { std::lock_guard lock(this->m_lockable_map_registery); T temp; _get_object(_key, temp); return temp;}
+	[[nodiscard]] T				get(TKEY&& _key) noexcept { std::lock_guard lock(this->m_lockable_map_registery); T temp; _get_object(_key, temp); return temp;}
+	[[nodiscard]] bool			get(const TKEY& _key, T& _object) noexcept { std::lock_guard lock(this->m_lockable_map_registery); return _get_object(_key, _object); }
+	[[nodiscard]] bool			get(TKEY&& _key, T& _object) noexcept { std::lock_guard lock(this->m_lockable_map_registery); return _get_object(_key, _object); }
+	[[nodiscard]] std::unordered_map<TKEY, T> get_all() noexcept
 			{
 				// declare) 
-				std::unordered_map<TKEY, TOBJECT> map_registery;
+				std::unordered_map<TKEY, T> map_registery;
 
-				scoped_lock(this->m_map_registery)
 				{
+					// lock)
+					std::lock_guard lock(this->m_lockable_map_registery);
+
 					// 1) 모든 Request의 on_get를 호출한다.
 					for(auto& iter: this->m_map_registery)
 					{
@@ -98,33 +100,31 @@ public:
 						on_get(iter.second, iter.first);
 					}
 
-					// 2) 클리어한다.
-					this->m_map_registery.clear();
-
-					// 3) 이동
+					// 2) 이동
 					map_registery = std::move(this->m_map_registery);
+
+					// 3) 클리어한다.
+					this->m_map_registery.clear();
 				}
 
 				// return)
 				return	map_registery;
 			}
-	[[nodiscard]] TOBJECT		peek(const TKEY& _key) const { scoped_lock(this->m_map_registery) { return _peek(_key);}}
-	[[nodiscard]] TOBJECT		peek(TKEY&& _key) const { scoped_lock(this->m_map_registery) { return _peek(_key);}}
-
-	[[nodiscard]] size_t		count() const noexcept { scoped_lock(this->m_map_registery) { return static_cast<int>(this->m_map_registery.size()); }}
-
-	[[nodiscard]] lock_object&	get_lockable() noexcept { return this->m_map_registery;}
-	[[nodiscard]] const lock_object& get_lockable() const noexcept { return this->m_map_registery;}
-	[[nodiscard]] 				operator lock_object&() noexcept { return this->m_map_registery;}
-	[[nodiscard]] 				operator const lock_object&() const noexcept { return this->m_map_registery;}
+	[[nodiscard]] T				peek(const TKEY& _key) const { std::lock_guard lock(this->m_lockable_map_registery); return _peek(_key);}
+	[[nodiscard]] T				peek(TKEY&& _key) const { std::lock_guard lock(this->m_lockable_map_registery); return _peek(_key);}
+	[[nodiscard]] size_t		count() const noexcept { std::lock_guard lock(this->m_lockable_map_registery); return static_cast<int>(this->m_map_registery.size());}
+	[[nodiscard]] lock_object&	get_lockable() noexcept { return this->m_lockable_map_registery;}
+	[[nodiscard]] const lock_object& get_lockable() const noexcept { return this->m_lockable_map_registery;}
+	[[nodiscard]] 				operator lock_object&() noexcept { return this->m_lockable_map_registery;}
+	[[nodiscard]] 				operator const lock_object&() const noexcept { return this->m_lockable_map_registery;}
 
 // framework)
 protected:
-	virtual void				on_register(const TOBJECT& /*_object*/, const TKEY& /*_key*/) {}
-	virtual	void				on_get(const TOBJECT& /*_object*/, const TKEY& /*_key*/) {}
+	virtual void				on_register(const T& /*_object*/, const TKEY& /*_key*/) {}
+	virtual	void				on_get(const T& /*_object*/, const TKEY& /*_key*/) {}
 
 public:
-			TKEY				_put_object(const TOBJECT& _object)
+			TKEY				_put_object(const T& _object)
 			{
 				// declare) RequestID을 얻는다.
 				TKEY key = (this->m_key_last != 0) ? this->m_key_last++ : (++this->m_key_last)++;
@@ -136,7 +136,7 @@ public:
 				auto result = this->m_map_registery.emplace(key, _object);
 
 				// check) 삽입하지 못했다면 Exception을 던진다.
-				THROW_IF(result.second == false, throwable::failure(eRESULT::ALEADY_EXIST));
+				THROW_IF(result.second == false, throwable::failure(eRESULT::ALREADY_EXIST));
 
 				// 2) Hook함수 호출
 				this->on_register(_object, key);
@@ -144,24 +144,24 @@ public:
 				// return) 
 				return key;
 			}
-			TKEY				_put_object(TOBJECT&& _object)
+			TKEY				_put_object(T&& _object)
 			{
 				// declare) RequestID을 얻는다.
 				TKEY key = (this->m_key_last) ? this->m_key_last++ : (++this->m_key_last)++;
 
 				// 1) Insert한다.
-				auto result = this->m_map_registery.emplace(key, std::forward<TOBJECT>(_object));
+				auto result = this->m_map_registery.emplace(key, std::forward<T>(_object));
 
 				// check) 삽입하지 못했다면 Exception을 던진다.
-				THROW_IF(result.second == false, throwable::failure(eRESULT::ALEADY_EXIST));
+				THROW_IF(result.second == false, throwable::failure(eRESULT::ALREADY_EXIST));
 
 				// 2) Hook함수 호출
-				this->on_register(_object, key);
+				this->on_register(result.first->second, key);
 
 				// return) 
 				return key;
 			}
-			void				_put_object(const TOBJECT& _object, const TKEY& _key)
+			void				_put_object(const T& _object, const TKEY& _key)
 			{
 				// check)
 				CGASSERT_ERROR(_key);
@@ -173,12 +173,12 @@ public:
 				auto result = this->m_map_registery.emplace(_key, _object);
 
 				// check) 삽입하지 못했다면 Exception을 던진다.
-				THROW_IF(result.second == false, throwable::failure(eRESULT::ALEADY_EXIST));
+				THROW_IF(result.second == false, throwable::failure(eRESULT::ALREADY_EXIST));
 
 				// 2) Hook함수 호출
 				this->on_register(_object, _key);
 			}
-			void				_put_object(TOBJECT&& _object, const TKEY& _key)
+			void				_put_object(T&& _object, const TKEY& _key)
 			{
 				// check)
 				CGASSERT_ERROR(_key);
@@ -187,18 +187,18 @@ public:
 				THROW_IF(!_key, throwable::failure(eRESULT::INVALID_ARGUMENT));
 
 				// 1) Insert한다.
-				auto result = this->m_map_registery.emplace(_key, std::forward<TOBJECT>(_object));
+				auto result = this->m_map_registery.emplace(_key, std::forward<T>(_object));
 
 				// check) 삽입하지 못했다면 Exception을 던진다.
-				THROW_IF(result.second == false, throwable::failure(eRESULT::ALEADY_EXIST));
+				THROW_IF(result.second == false, throwable::failure(eRESULT::ALREADY_EXIST));
 
 				// 2) Hook함수 호출
-				this->on_register(_object, _key);
+				this->on_register(result.first->second, _key);
 			}
-			TOBJECT				_get_object(TKEY _key) noexcept
+			T					_get_object(TKEY _key) noexcept
 			{
 				// declare) 
-				TOBJECT pobject;
+				T pobject;
 
 				// check)
 				RETURN_IF(!_key, pobject);
@@ -221,7 +221,7 @@ public:
 				// return) 
 				return pobject;
 			}
-			bool				_get_object(const TKEY& _key, TOBJECT& _object) noexcept
+			bool				_get_object(const TKEY& _key, T& _object) noexcept
 			{
 				// check)
 				RETURN_IF(!_key, false);
@@ -244,13 +244,13 @@ public:
 				// return) 
 				return true;
 			}
-			bool				_get_object_if(const TKEY& _key, const TOBJECT& _compare) noexcept
+			bool				_get_object_if(const TKEY& _key, const T& _compare) noexcept
 			{
 				// check) 
 				RETURN_IF(!_key, false);
 
 				// declare) 
-				TOBJECT	pobject;
+				T	pobject;
 
 				// 1) Object ID에 해당하는 Request정보를 얻는다.
 				auto iter_find = this->m_map_registery.find(_key);
@@ -270,7 +270,7 @@ public:
 				// return) 
 				return true;
 			}
-	[[nodiscard]] const TOBJECT& _peek(const TKEY& _key) const
+	[[nodiscard]] const T& _peek(const TKEY& _key) const
 			{
 				// check) 찾지 못했다면 exception을 던진다.
 				THROW_IF(!_key, throwable::failure(eRESULT::INVALID_ARGUMENT));
@@ -288,7 +288,7 @@ public:
 			{
 				return	this->m_map_registery.find(_key) != this->m_map_registery.end();
 			}
-	[[nodiscard]] bool			_find_object(const TKEY& _key, TOBJECT& _result) const noexcept
+	[[nodiscard]] bool			_find_object(const TKEY& _key, T& _result) const noexcept
 			{
 				// check) 
 				RETURN_IF(!_key, false);
@@ -305,9 +305,18 @@ public:
 				// return) 
 				return true;
 			}
+			void				_remove_object(TKEY _key) noexcept
+			{
+				// check)
+				RETURN_IF(!_key, );
+
+				// 1) 제거한다.
+				this->m_map_registery.erase(_key);
+			}
 
 public:
-			lockable<std::unordered_map<TKEY, TOBJECT>>	m_map_registery;
+	mutable	lock_object			m_lockable_map_registery;
+			std::unordered_map<TKEY, T> m_map_registery;
 			TKEY				m_key_last;
 };
 

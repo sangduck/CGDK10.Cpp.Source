@@ -1,4 +1,4 @@
-ï»¿#include "asio.h"
+#include "asio.h"
 
 
 asio::Nconnector::Nconnector()
@@ -78,7 +78,7 @@ void asio::Nconnector::process_connect_completion(std::shared_ptr<Isocket_tcp> _
 {
 	try
 	{
-		// check) ì‹¤íŒ¨í–ˆì„ ê²½ìš° ë“±ë¡í•´ì œí•˜ê³  ì†Œì¼“ì„ ë‹«ê³  ëë‚¸ë‹¤.
+		// check) ½ÇÆĞÇßÀ» °æ¿ì µî·ÏÇØÁ¦ÇÏ°í ¼ÒÄÏÀ» ´İ°í ³¡³½´Ù.
 		if (_error)
 			throw std::runtime_error("connection failure");
 

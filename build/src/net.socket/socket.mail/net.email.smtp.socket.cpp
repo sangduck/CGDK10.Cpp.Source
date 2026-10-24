@@ -1,68 +1,263 @@
-Ôªø#include "pch.h"
+#include "pch.h"
+#include <ctime>
+#include <cstring>
+#include <cctype>
+#include <algorithm>
+#include <random>
 
 using namespace CGDK;
 
-
-void net::email::smtp::socket::request_send(net::email::sREQUEST&& _email_send_request)
+//-----------------------------------------------------------------------------
+// helper
+//-----------------------------------------------------------------------------
+namespace
 {
-	// check) sender & receiver
-	CGASSERT_ERROR(_email_send_request.to.empty() == false);
+	// - ¿¿¥‰ «— ¡Ÿ¿« √÷¥Î ±Ê¿Ã (RFC 5321: 512. ≥À≥À«œ∞‘ ¿‚¥¬¥Ÿ.)
+	constexpr std::size_t MAX_REPLY_LINE_LENGTH = 4096;
+	// - ¿¿¥‰ ¡Ÿ ∫∏∞¸ ∞≥ºˆ (EHLO ¿¿¥‰ µÓ. ¥ı ∏π¿∏∏È æ’¿« ∞Õ¿∫ πˆ∏∞¥Ÿ.)
+	constexpr std::size_t MAX_REPLY_LINES = 256;
 
-	// check)
-	CGASSERT_ERROR(m_email_smtp_result.state == eSTATE::NONE);
-
-	// 1) store email info
-	scoped_lock(m_cs_email_smtp_result)
+	// 1) base64 (RFC 4648)
+	std::string _encode_base64(std::string_view _source)
 	{
-		// check) Ï≤òÎ¶¨ Ï§ëÏù¥Î©¥... ÏòàÏô∏Î•º ÎçòÏßÑÎã§.
-		THROW_IF(m_email_smtp_result.state != eSTATE::NONE, throwable::failure(eRESULT::ACCESS_DENIED, 0, "sending is processing. cancel first"sv));
+		static constexpr char TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-		// 1) set emal_info
-		m_email_smtp_result.request = std::move(_email_send_request);
-		m_email_smtp_result.state = eSTATE::REQUESTED;
-		m_email_smtp_result.vector_result.clear();
+		std::string result;
+		result.reserve((_source.size() + 2) / 3 * 4);
+
+		std::size_t i = 0;
+		for (; i + 3 <= _source.size(); i += 3)
+		{
+			uint32_t value = (static_cast<uint8_t>(_source[i]) << 16) | (static_cast<uint8_t>(_source[i + 1]) << 8) | static_cast<uint8_t>(_source[i + 2]);
+			result += TABLE[(value >> 18) & 0x3f];
+			result += TABLE[(value >> 12) & 0x3f];
+			result += TABLE[(value >> 6) & 0x3f];
+			result += TABLE[value & 0x3f];
+		}
+
+		if (auto remained = _source.size() - i; remained == 1)
+		{
+			uint32_t value = static_cast<uint8_t>(_source[i]) << 16;
+			result += TABLE[(value >> 18) & 0x3f];
+			result += TABLE[(value >> 12) & 0x3f];
+			result += "==";
+		}
+		else if (remained == 2)
+		{
+			uint32_t value = (static_cast<uint8_t>(_source[i]) << 16) | (static_cast<uint8_t>(_source[i + 1]) << 8);
+			result += TABLE[(value >> 18) & 0x3f];
+			result += TABLE[(value >> 12) & 0x3f];
+			result += TABLE[(value >> 6) & 0x3f];
+			result += '=';
+		}
+
+		return result;
 	}
 
-	// 2) on~ Ìï®Ïàò Ìò∏Ï∂ú
-	on_email_sending(m_email_smtp_result.request);
+	// 2) «Ï¥ı ∞™ø°º≠ CR/LF∏¶ ¡ˆøÓ¥Ÿ. («Ï¥ı ¡÷¿‘ πÊ¡ˆ)
+	std::string _strip_crlf(std::string_view _value)
+	{
+		std::string result;
+		result.reserve(_value.size());
+		for (auto iter : _value)
+		{
+			if (iter != '\r' && iter != '\n')
+				result += iter;
+		}
+		return result;
+	}
 
-	// 3) ...
+	// 3) RFC 2047 encoded-word (UTF-8, base64). ASCII∏∏ ¿÷¿∏∏È ±◊¥Î∑Œ µ–¥Ÿ.
+	//    - encoded-word «œ≥™¥¬ 75¿⁄ ¿Ã«œø©æﬂ «œπ«∑Œ UTF-8 πÆ¿⁄ ∞Ê∞Ëø°º≠ ≥™¥´¥Ÿ. (45 bytes -> base64 60¿⁄)
+	std::string _encode_header_word(std::string_view _value)
+	{
+		auto value = _strip_crlf(_value);
 
+		bool is_ascii = std::all_of(value.begin(), value.end(), [](unsigned char _ch) { return _ch >= 0x20 && _ch < 0x7f; });
+		if (is_ascii && value.find("=?") == std::string::npos)
+			return value;
+
+		std::string result;
+		std::size_t pos = 0;
+		while (pos < value.size())
+		{
+			std::size_t length = std::min<std::size_t>(45, value.size() - pos);
+
+			// - UTF-8 ø¨º” byte(10xxxxxx)ø°º≠ ≤˜¡ˆ æ ¥¬¥Ÿ.
+			while (length > 0 && pos + length < value.size() && (static_cast<uint8_t>(value[pos + length]) & 0xc0) == 0x80)
+				--length;
+			if (length == 0)
+				length = std::min<std::size_t>(45, value.size() - pos);
+
+			if (!result.empty())
+				result += "\r\n ";
+			result += "=?UTF-8?B?";
+			result += _encode_base64(std::string_view(value).substr(pos, length));
+			result += "?=";
+
+			pos += length;
+		}
+		return result;
+	}
+
+	// 4) Date (RFC 5322, UTC)
+	std::string _make_date()
+	{
+		static constexpr const char* DAYS[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+		static constexpr const char* MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+		std::time_t now = std::time(nullptr);
+		std::tm tm_now{};
+	#if defined(_WIN32)
+		gmtime_s(&tm_now, &now);
+	#else
+		gmtime_r(&now, &tm_now);
+	#endif
+
+		return std::format("{}, {:02} {} {} {:02}:{:02}:{:02} +0000", DAYS[tm_now.tm_wday % 7], tm_now.tm_mday, MONTHS[tm_now.tm_mon % 12], tm_now.tm_year + 1900, tm_now.tm_hour, tm_now.tm_min, tm_now.tm_sec);
+	}
+
+	// 5) Message-ID
+	std::string _make_message_id(std::string_view _domain)
+	{
+		static std::atomic<uint64_t> s_serial{ 0 };
+		std::random_device random;
+		uint64_t value = (static_cast<uint64_t>(random()) << 32) | random();
+		return std::format("<{:016x}.{:x}.{:x}@{}>", value, static_cast<uint64_t>(std::time(nullptr)), ++s_serial, _domain);
+	}
+
+	// 6) ¿¿¥‰ ¡Ÿø°º≠ code µ⁄¿« ≥ªøÎ ("250-SIZE 1000" -> "SIZE 1000")
+	std::string_view _get_reply_text(std::string_view _line) noexcept
+	{
+		return (_line.size() > 4) ? _line.substr(4) : std::string_view();
+	}
+
+	// 7) ¥ÎπÆ¿⁄∑Œ ∫Ò±≥
+	bool _starts_with_nocase(std::string_view _text, std::string_view _prefix) noexcept
+	{
+		if (_text.size() < _prefix.size())
+			return false;
+		for (std::size_t i = 0; i < _prefix.size(); ++i)
+		{
+			if (std::toupper(static_cast<unsigned char>(_text[i])) != std::toupper(static_cast<unsigned char>(_prefix[i])))
+				return false;
+		}
+		return true;
+	}
+}
+
+
+//-----------------------------------------------------------------------------
+// net::email::smtp::socket
+//-----------------------------------------------------------------------------
+net::email::smtp::socket::socket() noexcept
+{
+}
+
+net::email::smtp::socket::~socket() noexcept
+{
+}
+
+void net::email::smtp::socket::start_send(object_ptr<smtp>&& _psmtp, net::email::sREQUEST&& _email_send_request)
+{
+	// check)
+	CGASSERT_ERROR(_psmtp.exist());
+
+	// declare)
+	auto security = _psmtp->m_security;
+	auto host_name = _psmtp->m_host_name;
+
+	// 1) store email info
+	SCOPED_LOCK(this->m_cs_email_smtp_result)
+	{
+		this->m_psmtp = std::move(_psmtp);
+		this->m_email_smtp_result.clear();
+		this->m_email_smtp_result.request = std::move(_email_send_request);
+		this->m_email_smtp_result.state = eSTATE::REQUESTED;
+		this->m_capability.clear();
+		this->m_vector_reply_lines.clear();
+		this->m_index_recipient = 0;
+		this->m_is_tls = (security == eSECURITY::SSL);
+		this->m_is_completed = false;
+		this->m_is_closed_notified = false;
+
+		// - πﬁ¥¬ ªÁ∂˜ (To + Cc + Bcc)
+		const auto& request = this->m_email_smtp_result.request;
+		this->m_vector_recipient.clear();
+		this->m_vector_recipient.push_back(request.to);
+		this->m_vector_recipient.insert(this->m_vector_recipient.end(), request.cc_list.begin(), request.cc_list.end());
+		this->m_vector_recipient.insert(this->m_vector_recipient.end(), request.bcc_list.begin(), request.bcc_list.end());
+	}
+
+	// 2) ssl (implicit TLS∏∏ ¡¢º”«“ ∂ß Ω√¿€«—¥Ÿ. STARTTLS¥¬ ¿¿¥‰¿ª πﬁ¿∫ »ƒ Ω√¿€«—¥Ÿ.)
+	this->prepare_ssl(security == eSECURITY::SSL, host_name);
+
+	// 3) ¡¢º” (connect + º≠πˆ ¿ŒªÁ(220) ¥Î±‚ Ω√∞£)
+	try
+	{
+		this->process_start_timer();
+		this->start(this->m_psmtp->m_connect_parameter);
+	}
+	catch (throwable::failure& _e)
+	{
+		this->process_complete(eRESULT::FAIL_TO_CONNECT, _e.description());
+		this->process_notify_closed();
+	}
+	catch (...)
+	{
+		this->process_complete(eRESULT::FAIL_TO_CONNECT, "fail to connect to email server"sv);
+		this->process_notify_closed();
+	}
 }
 
 bool net::email::smtp::socket::cancel_sending() noexcept
 {
-	// lock) 
-	std::lock_guard<lockable<>> cs(m_cs_email_smtp_result);
+	// 1) √Îº“ (æ∆¡˜ ≥°≥™¡ˆ æ æ“¿∏∏È CANCEL∑Œ æÀ∏∞¥Ÿ.)
+	this->process_fail(eRESULT::CANCEL, "canceled"sv);
 
-	// 1) clear smtp
-	m_email_smtp_result.clear();
-
-	// return) 
+	// return)
 	return true;
 }
 
 bool net::email::smtp::socket::is_exist() const noexcept
 {
-	// lock) 
-	std::lock_guard<lockable<>> cs(const_cast<lockable<>&>(m_cs_email_smtp_result));
+	// lock)
+	std::lock_guard cs(this->m_cs_email_smtp_result);
 
-	return m_email_smtp_result.request.to.empty() == false;
+	return !this->m_email_smtp_result.request.to.empty() && !this->m_is_completed;
 }
 
 void net::email::smtp::socket::on_connect()
 {
-	// check)
-	CGASSERT_ERROR(m_email_smtp_result.state == eSTATE::REQUESTED);
+	// 1) º≠πˆ ¿ŒªÁ(220)∏¶ ±‚¥Ÿ∏∞¥Ÿ. (implicit TLS∏È handshake »ƒø° πﬁ¥¬¥Ÿ.)
+	SCOPED_LOCK(this->m_cs_email_smtp_result)
+	{
+		if (this->m_email_smtp_result.state == eSTATE::REQUESTED)
+			this->m_email_smtp_result.state = eSTATE::GREETING;
+	}
 }
+
+void net::email::smtp::socket::on_fail_connect(uint64_t /*_reason*/)
+{
+	this->process_complete(eRESULT::FAIL_TO_CONNECT, "fail to connect to email server"sv);
+	this->process_notify_closed();
+}
+
 void net::email::smtp::socket::on_disconnect(uint64_t /*_reason*/)
 {
-	object_ptr<smtp> psmtp = m_psmtp;
+	// declare)
+	eSTATE state;
 
-	if (psmtp.exist())
+	SCOPED_LOCK(this->m_cs_email_smtp_result)
 	{
-		psmtp->process_socket_closed(this);
+		state = this->m_email_smtp_result.state;
 	}
+
+	// 1) ≥°≥™±‚ ¿¸ø° ≤˜æÓ¡≥¿∏∏È Ω«∆–∑Œ æÀ∏∞¥Ÿ.
+	this->process_complete((state <= eSTATE::GREETING) ? eRESULT::FAIL_TO_CONNECT : eRESULT::FAIL, "disconnected from email server"sv);
+
+	// 2) smtpø° æÀ∏∞¥Ÿ. (¥Ÿ¿Ω ∏ﬁ¿œ¿ª ∫∏≥Ω¥Ÿ.)
+	this->process_notify_closed();
 }
 
 result_code net::email::smtp::socket::process_message(sMESSAGE& /*_msg*/)
@@ -72,428 +267,544 @@ result_code net::email::smtp::socket::process_message(sMESSAGE& /*_msg*/)
 
 std::size_t net::email::smtp::socket::process_packet(shared_buffer& _buffer, const net::sockaddr& /*_address_peer*/)
 {
-	auto buf_recv = _buffer;
-
-	// check) 
-	RETURN_IF(_buffer.back<char>(-1) != '\n', 1024);
+	// declare)
+	const char* pdata = reinterpret_cast<const char*>(_buffer.data());
+	const std::size_t size = _buffer.size();
+	std::size_t pos = 0;
 
 	try
 	{
-		// declare)
-		std::vector<std::string> vector_result;
-
-		while (buf_recv.size() != 0)
+		// 1) ¡Ÿ ¥‹¿ß∑Œ ¿¿¥‰¿ª ∏¿∫¥Ÿ. ("250-..." ¿∫ ¥Ÿ¿Ω ¡Ÿ¿Ã ¿÷∞Ì "250 ..." ¿Ã ∏∂¡ˆ∏∑ ¡Ÿ)
+		while (pos < size)
 		{
-			std::string_view str_temp = buf_recv.extract_text<char>('\r');
-			vector_result.emplace_back(str_temp);
-			buf_recv.extract<char>();
-			buf_recv.extract<char>();
+			// - ¡Ÿ ≥°
+			const void* pfind = std::memchr(pdata + pos, '\n', size - pos);
+			if (pfind == nullptr)
+				break;
+
+			std::size_t pos_end = static_cast<const char*>(pfind) - pdata;
+			std::string_view line(pdata + pos, pos_end - pos);
+			pos = pos_end + 1;
+
+			if (!line.empty() && line.back() == '\r')
+				line.remove_suffix(1);
+
+			// check) ≥°≥µ∞≈≥™ ¥›¥¬ ¡ﬂ¿Ã∏È π´Ω√«—¥Ÿ.
+			{
+				std::lock_guard cs(this->m_cs_email_smtp_result);
+				if (this->m_is_completed && this->m_email_smtp_result.state != eSTATE::SEND_QUIT)
+					continue;
+			}
+
+			// check) "ddd" + (' ' ∂«¥¬ '-')
+			if (line.size() < 3 || !std::isdigit(static_cast<unsigned char>(line[0])) || !std::isdigit(static_cast<unsigned char>(line[1])) || !std::isdigit(static_cast<unsigned char>(line[2])) || (line.size() > 3 && line[3] != ' ' && line[3] != '-'))
+				throw throwable::failure(eRESULT::FAIL, 0, std::format("invalid reply from email server '{}'", _strip_crlf(line.substr(0, 64))));
+
+			// - ∫∏∞¸
+			if (this->m_vector_reply_lines.size() < MAX_REPLY_LINES)
+				this->m_vector_reply_lines.emplace_back(line);
+
+			// - ∏∂¡ˆ∏∑ ¡Ÿ¿Ã∏È ¿¿¥‰¿ª √≥∏Æ«—¥Ÿ.
+			if (line.size() == 3 || line[3] == ' ')
+			{
+				int code = (line[0] - '0') * 100 + (line[1] - '0') * 10 + (line[2] - '0');
+
+				this->process_reply(code);
+				this->m_vector_reply_lines.clear();
+			}
 		}
 
-		// check)
-		THROW_IF(vector_result.empty(), throwable::failure(eRESULT::FAIL, 0, "invalid email server"sv));
-
-		// 1) 
-		object_ptr<smtp> psmtp = m_psmtp;
-
-		// check)
-		RETURN_IF(psmtp.empty(), 1024);
-
-		// declare) 
-		net::sockaddr temp_sockaddr;
-
-		// check)
-		CGASSERT_ERROR(m_email_smtp_result.state != eSTATE::NONE);
-
-		switch(m_email_smtp_result.state)
-		{
-		// STEP.1.send 'HELO' command
-		case	eSTATE::REQUESTED:
-				{
-					// - 220 cgcii.co.kr
-					//   success => 220
-					//   error => 554
-					auto temp_string = vector_result.front();
-
-					// - get result code
-					auto result_code = __from_string<int>(temp_string.substr(0, temp_string.find_first_of(" "sv)));
-
-					// check) code == 220
-					THROW_IF(result_code >= 300, throwable::failure(eRESULT::FAIL, 0, "(excp) 'fail to send message('HELO') to email server."sv));
-
-					// - set state as 1
-					m_email_smtp_result.state = eSTATE::SEND_HELLO;
-
-					// - send 'HELO'
-					auto result = process_sendable(psmtp->m_buf_EHLO, psmtp->m_buf_EHLO.get_source(), 1, temp_sockaddr);
-
-					// check)
-					THROW_IF(result == false, throwable::failure(eRESULT::NOT_READY, 0, "(excp) 'fail to send message('HELO') to email server."sv));
-				}
-				break;
-
-		// STEP.2.send 'MAIL FROM'
-		case	eSTATE::SEND_HELLO:
-				{
-					// - ...
-					auto iter = vector_result.begin();
-					
-					// - 250 www.cgcii.co.kr 
-					//   success => 250
-					//   error => 504,550
-					auto result_code = __from_string<int>(iter->substr(0, iter->find_first_of(" "sv)));
-
-					// check) code == 250
-					THROW_IF(result_code >= 300, throwable::failure(eRESULT::FAIL, 0, "(excp) 'fail to send message('HELO') to email server."sv));
-
-					// explain) 
-					// S: 220 smtp.mailtrap.io SMTP ready
-					// C: EHLO client.railsware.com
-					// S: 250 smtp.mailtrap.io Hello client.railsware.com
-					// 
-					// S: 250 AUTH LOGIN PLAIN CRAM-MD5 => eLOGIN_TYPE::PLAIN_CRAM_MD5
-					// S: 250 AUTH LOGIN PLAIN XOAUTH XOAUTH2 => eLOGIN_TYPE::XOAUTH_XOAUTH2
-					// S: 250 AUTH LOGIN GSSAPI NTLM => eLOGIN_TYPE::GSSAPI_NTLM
-					// S: 250 AUTH LOGIN GSSAPI PLAIN => eLOGIN_TYPE::GSSAPI_PLAIN
-
-					while(iter != vector_result.end())
-					{
-						// - 50 ETRN
-						// - 50 STARTTLS
-
-						// - get result code
-						result_code = __from_string<int>(iter->substr(0, iter->find_first_of(" "sv)));
-
-						// - get auth type
-
-						// - 
-						++iter;
-					}
-
-					// - 
-					if (this->m_email_smtp_result.auth_type == eAUTH_TYPE::NONE)
-					{
-						// - set state 2;
-						m_email_smtp_result.state = eSTATE::SEND_MAIL_FROM;
-
-						// - send mail
-						auto buf_send = alloc_shared_buffer(1024);
-						buf_send.append_text<char>("MAIL FROM:"sv);
-						buf_send.append_text<char>(m_email_smtp_result.request.from);
-						buf_send.append_text<char>("\r\n"sv);
-						process_sendable(buf_send, buf_send.move_out_source(), 1, temp_sockaddr);
-					}
-					// - 
-					else
-					{
-						// check) auth info exist?
-
-						switch(this->m_email_smtp_result.auth_type)
-						{
-						case	eAUTH_TYPE::PLAIN_CRAM_MD5:
-								{
-
-								}
-								break;
-
-						case	eAUTH_TYPE::XOAUTH_XOAUTH2:
-								break;
-
-						case	eAUTH_TYPE::GSSAPI_NTLM:
-								break;
-
-						case	eAUTH_TYPE::GSSAPI_PLAIN:
-								break;
-
-						default:
-								CGASSERT_ERROR(false);
-								break;
-						};
-					}
-				}
-				break;
-
-		// STEP.3.1.AUTH - SEND_AUTH
-		case	eSTATE::SEND_AUTH:
-				{
-					switch(this->m_email_smtp_result.auth_type)
-					{
-					case	eAUTH_TYPE::PLAIN_CRAM_MD5:
-							break;
-
-					case	eAUTH_TYPE::XOAUTH_XOAUTH2:
-							break;
-
-					case	eAUTH_TYPE::GSSAPI_NTLM:
-							break;
-
-					case	eAUTH_TYPE::GSSAPI_PLAIN:
-							break;
-
-					default:
-							CGASSERT_ERROR(false);
-							break;
-					};
-
-					// - set state 2;
-					m_email_smtp_result.state = eSTATE::SEND_NAME;
-				}
-				break;
-
-		// STEP.3.2.AUTH - SEND_NAME
-		case	eSTATE::SEND_NAME:
-				{
-					// explain) 
-					// S: 250 AUTH LOGIN PLAIN CRAM-MD5
-					// C: AUTH LOGIN
-					// S: 334 DYT3jf4sdDR5
-					// C: TXktVXNlcm5hbWU=
-					// S: 334 LIRdf2pekwW3
-					// C: TXktUGFzc3dvcmQ=
-					// S: 235 Authentication successful
-
-					switch(this->m_email_smtp_result.auth_type)
-					{
-					case	eAUTH_TYPE::PLAIN_CRAM_MD5:
-							break;
-
-					case	eAUTH_TYPE::XOAUTH_XOAUTH2:
-							break;
-
-					case	eAUTH_TYPE::GSSAPI_NTLM:
-							break;
-
-					case	eAUTH_TYPE::GSSAPI_PLAIN:
-							break;
-
-					default:
-							CGASSERT_ERROR(false);
-							break;
-					};
-
-					// - set state 2;
-					m_email_smtp_result.state = eSTATE::SEND_PASSWORD;
-				}
-				break;
-
-		// STEP.3.3.AUTH - SEND_PASSWORD
-		case	eSTATE::SEND_PASSWORD:
-				{
-					// result
-					// 334 ‚Äì the requested security mechanism is accepted
-					// 235 ‚Äì authentication is successful
-					// 
-					// 530 ‚Äì authentication problem that mostly requires the STARTTLS command to run 
-					// 535 - Authentication failed
-					// 538 ‚Äì encryption required for a requested authentication mechanism
-					// 538 ‚Äì encryption required for a requested authentication mechanism
-					// 550 - denotes that your email server requires SMTP authentication.It‚Äôs mostly a response to the attempt to send a message.
-
-					// - set state 2;
-					m_email_smtp_result.state = eSTATE::SEND_MAIL_FROM;
-				}
-				break;
-
-		// STEP.3.send 'RCPT TO'
-		case	eSTATE::SEND_MAIL_FROM:
-				{
-					// - 250 2.1.0 Ok
-					//   success => 250
-					//   error => 552, 451,452,550,553,503
-					auto temp_string = vector_result.front();
-
-					// - get result code
-					auto result_code = __from_string<int>(temp_string.substr(0, temp_string.find_first_of(" "sv)));
-
-					// check) code == 250
-					THROW_IF(result_code >= 300, throwable::failure(eRESULT::FAIL, 0, "(excp) 'fail to send message('HELO') to email server."sv));
-
-					// - set state 3;
-					m_email_smtp_result.state = eSTATE::SEND_RCPT_TO;
-
-					// - send mail
-					auto buf_send = alloc_shared_buffer(1024);
-					buf_send.append_text<char>("RCPT TO:"sv);
-					buf_send.append_text<char>(m_email_smtp_result.request.to);
-					buf_send.append_text<char>("\r\n"sv);
- 					process_sendable(buf_send, buf_send.move_out_source(), 1, temp_sockaddr);
-				}
-				break;
-
-		// STEP.4.send 'DATA'
-		case	eSTATE::SEND_RCPT_TO:
-				{
-					// - 250 2.1.5 Ok
-					//   success => 250
-					//   error => 550, 551, 552,553,450,451,503
-					auto temp_string = vector_result.front();
-
-					// - get result code
-					auto result_code = __from_string<int>(temp_string.substr(0, temp_string.find_first_of(" "sv)));
-
-					// check) code == 250
-					THROW_IF(result_code >= 300, throwable::failure(eRESULT::FAIL, 0, "(excp) 'fail to send message('HELO') to email server."sv));
-
-					// - set state 4;
-					m_email_smtp_result.state = eSTATE::REQUEST_DATA;
-
-					// - send 'DATA\r\n'
-					process_sendable(net::email::smtp::m_s_buf_DATA, net::email::smtp::m_s_buf_DATA.get_source(), 1, temp_sockaddr);
-				}
-				break;
-
-		// STEP.5.send email text
-		case	eSTATE::REQUEST_DATA:
-				{
-					// - 250 2.1.5 Ok
-					//   success => 250
-					//   error => 552,451,452,550,553,503
-					//   error => 451,554,503
-
-					// - 354 End data with <CR><LF>.<CR><LF>
-					auto temp_string = vector_result.front();
-
-					// - get result code
-					auto result_code = __from_string<int>(temp_string.substr(0, temp_string.find_first_of(" "sv)));
-
-					// check) code == 354
-					THROW_IF(result_code >= 400, throwable::failure(eRESULT::FAIL, 0, "(excp) 'fail to send message('HELO') to email server."sv));
-
-					// - set state 5;
-					m_email_smtp_result.state = eSTATE::SEND_DATA;
-					m_email_smtp_result.send_time = chrono::time::utc::now();
-
-					// - make mail header
-					auto buf_send = alloc_shared_buffer(8192);
-					buf_send.append_text<char>("From: <"sv);
-					buf_send.append_text<char>(m_email_smtp_result.request.from);
-					buf_send.append_text<char>(">\r\n"sv);
-
-					buf_send.append_text<char>("To: <"sv);
-					buf_send.append_text<char>(m_email_smtp_result.request.to);
-					buf_send.append_text<char>(">\r\n"sv);
-
-					if (m_email_smtp_result.request.cc_list.empty() == false)
-					{
-						buf_send.append_text<char>("Cc: "sv);
-						for (auto& iter : m_email_smtp_result.request.cc_list)
-						{
-							buf_send.append_text<char>("<"sv);
-							buf_send.append_text<char>(iter);
-							buf_send.append_text<char>(">,"sv);
-						}
-					}
-					buf_send.sub_size(1);
-					buf_send.append_text<char>("\r\n"sv);
-					buf_send.append_text<char>("Date: "sv);
-					buf_send.append_text<char>(to_string2<char>(chrono::to_date_time(chrono::time::local::now())));
-					buf_send.append_text<char>(" -0500\r\n"sv);
-					buf_send.append_text<char>("Subject: "sv);
-					buf_send.append_text<char>(m_email_smtp_result.request.subject);
-					buf_send.append_text<char>("\r\n"sv);
-					buf_send.append_text<char>("\r\n"sv);
-
-					process_sendable(buf_send, buf_send.move_out_source(), 1, temp_sockaddr);
-					process_sendable(m_email_smtp_result.request.text, m_email_smtp_result.request.text.get_source(), 1, temp_sockaddr);
-					process_sendable(net::email::smtp::m_s_buf_email_DATA_tail, net::email::smtp::m_s_buf_email_DATA_tail.get_source(), 1, temp_sockaddr);
-				}
-				break;
-
-		// STEP.6.send 'QUIT' command
-		case	eSTATE::SEND_DATA:
-				{
-					// - 250 2.0.0 Ok: queued as XXXXXXXx
-					auto temp_string = vector_result.front();
-
-					// - get result code
-					auto result_code = __from_string<int>(temp_string.substr(0, temp_string.find_first_of(" "sv)));
-
-					// check) code == 250
-					THROW_IF(result_code >= 300, throwable::failure(eRESULT::FAIL, 0, "(excp) 'fail to send message('HELO') to email server."sv));
-
-					// - set state 6;
-					m_email_smtp_result.state = eSTATE::SEND_QUIT;
-
-					// - send 'QUIT\r\n'		//
-					process_sendable(m_s_buf_QUIT, m_s_buf_QUIT.get_source(), 1, temp_sockaddr);
-				}
-				break;
-
-		case	eSTATE::SEND_QUIT:
-				{
-					// - 
-					auto temp_string = vector_result.front();
-
-					// - get result code
-					auto result_code = __from_string<int>(temp_string.substr(0, temp_string.find_first_of(" "sv)));
-
-					// check) code == 221
-					THROW_IF(result_code >= 300, throwable::failure(eRESULT::FAIL, 0, "(excp) 'fail to send message('HELO') to email server."sv));
-
-					// - connected
-					m_email_smtp_result.state = eSTATE::DONE;
-
-					// - email complete
-					process_email_complete();
-				}
-				break;
-
-		default:
-				throw throwable::failure(eRESULT::INVALID_STATE, 0, "invalid state"sv);
-		};
-
-		// 3) append result
-		m_email_smtp_result.vector_result.insert(m_email_smtp_result.vector_result.end(), vector_result.begin(), vector_result.end());
-
-		// 4) set ...
-		_buffer = buf_recv;
+		// check) ¡Ÿ ≥°¿Ã æ¯¿Ã ≥ π´ ±Ê∏È ¿ﬂ∏¯µ» º≠πˆ¥Ÿ.
+		if (size - pos > MAX_REPLY_LINE_LENGTH)
+			throw throwable::failure(eRESULT::FAIL, 0, "too long reply line from email server"sv);
 	}
 	catch (throwable::failure& _e)
 	{
-		// - reasonÏùÑ ÏÑ§Ï†ïÌïúÎã§.
-		m_email_smtp_result.result = _e.reason();
-
-		// - call 'process_complete send'
-		try
-		{
-			m_psmtp->process_complete_send(this);
-		}
-		catch (...)
-		{
-		}
+		this->process_fail(_e.reason<eRESULT>(), _e.description());
+		pos = size;
+	}
+	catch (const std::exception& _e)
+	{
+		this->process_fail(eRESULT::EXCEPTION, _e.what());
+		pos = size;
 	}
 	catch (...)
 	{
-		// - reasonÏùÑ ÏÑ§Ï†ïÌïúÎã§.
-		m_email_smtp_result.result = eRESULT::EXCEPTION;
-
-		// - call 'process_complete send'
-		try
-		{
-			m_psmtp->process_complete_send(this);
-		}
-		catch (...)
-		{
-		}
+		this->process_fail(eRESULT::EXCEPTION, "exception"sv);
+		pos = size;
 	}
 
-	// return)
-	return 1024;
+	// 2) √≥∏Æ«— ∏∏≈≠ πˆ∏∞¥Ÿ.
+	_buffer = buffer_view(_buffer.data() + pos, size - pos);
+
+	// return) ¥Ÿ¿Ω ¿¿¥‰¿ª πﬁ¿ª ≈©±‚
+	return __select_max<std::size_t>(1024, (size - pos) + 512);
 }
 
 void net::email::smtp::socket::process_reset_packetable() noexcept
 {
-	// lock) 
-	std::lock_guard<lockable<>> cs(m_cs_email_smtp_result);
-
-	m_email_smtp_result.clear();
+	this->m_vector_reply_lines.clear();
 }
 
-void net::email::smtp::socket::process_email_complete()
+void net::email::smtp::socket::process_reply(int _code)
 {
-	// - 
-	on_email_sended(m_email_smtp_result);
+	// declare)
+	eSTATE state;
 
-	// - call 'process_complete send'
-	m_psmtp->process_complete_send(this);
+	SCOPED_LOCK(this->m_cs_email_smtp_result)
+	{
+		state = this->m_email_smtp_result.state;
+		this->m_email_smtp_result.reply_code = _code;
+
+		// - º≠πˆ ¿¿¥‰¿ª ≥≤±‰¥Ÿ. (¿Œ¡ı challenge(334)¥¬ ≥≤±‚¡ˆ æ ¥¬¥Ÿ.)
+		if (_code != 334)
+		{
+			for (auto& iter : this->m_vector_reply_lines)
+				this->m_email_smtp_result.vector_result.push_back(iter);
+		}
+	}
+
+	// - Ω«∆– ¿¿¥‰¿« ≥ªøÎ (∏∂¡ˆ∏∑ ¡Ÿ)
+	auto reply_text = this->m_vector_reply_lines.empty() ? std::string() : std::string(this->m_vector_reply_lines.back());
+
+	switch (state)
+	{
+	// 1) º≠πˆ ¿ŒªÁ -> EHLO
+	case	eSTATE::GREETING:
+			if (_code != 220)
+				throw throwable::failure(eRESULT::FAIL, 0, std::format("email server refused connection: {}", reply_text));
+
+			this->process_send_command(std::format("EHLO {}", this->m_psmtp->m_email_server_domain), eSTATE::SEND_EHLO);
+			break;
+
+	// 2) EHLO ¿¿¥‰ -> (STARTTLS) / AUTH / MAIL FROM
+	case	eSTATE::SEND_EHLO:
+	case	eSTATE::SEND_EHLO_TLS:
+			this->process_reply_ehlo(_code);
+			break;
+
+	// 3) STARTTLS ¿¿¥‰ -> TLS Ω√¿€ -> EHLO (handshake∞° ≥°≥™∏È ¿¸º€µ»¥Ÿ.)
+	case	eSTATE::SEND_STARTTLS:
+			if (_code != 220)
+				throw throwable::failure(eRESULT::NOT_SUPPORT, 0, std::format("email server refused STARTTLS: {}", reply_text));
+
+			this->process_start_tls();
+			this->process_send_command(std::format("EHLO {}", this->m_psmtp->m_email_server_domain), eSTATE::SEND_EHLO_TLS);
+			break;
+
+	// 4) AUTH LOGIN: ªÁøÎ¿⁄ ¿Ã∏ß ø‰√ª(334)
+	case	eSTATE::SEND_NAME:
+			if (_code != 334)
+				throw throwable::failure(eRESULT::INVALID_PASSWORD, 0, std::format("email authentication failed: {}", reply_text));
+
+			this->process_send_command(_encode_base64(this->m_email_smtp_result.request.auth.name), eSTATE::SEND_PASSWORD, true);
+			break;
+
+	// 5) AUTH LOGIN: ∫Òπ–π¯»£ ø‰√ª(334)
+	case	eSTATE::SEND_PASSWORD:
+			if (_code != 334)
+				throw throwable::failure(eRESULT::INVALID_PASSWORD, 0, std::format("email authentication failed: {}", reply_text));
+
+			this->process_send_command(_encode_base64(this->m_email_smtp_result.request.auth.password), eSTATE::SEND_AUTH, true);
+			break;
+
+	// 6) ¿Œ¡ı ∞·∞˙(235) -> MAIL FROM
+	case	eSTATE::SEND_AUTH:
+			if (_code == 334)
+			{
+				// - XOAUTH2 Ω«∆–¥¬ ø¿∑˘ ≥ªøÎ(334)¿ª ∫∏≥Ω »ƒ ∫Û ¡Ÿ¿ª πﬁ¿∏∏È 535∏¶ ∫∏≥Ω¥Ÿ.
+				this->process_send_command(""sv, eSTATE::SEND_AUTH, true);
+				break;
+			}
+
+			if (_code != 235)
+				throw throwable::failure(eRESULT::INVALID_PASSWORD, 0, std::format("email authentication failed: {}", reply_text));
+
+			this->process_send_mail_from();
+			break;
+
+	// 7) MAIL FROM ¿¿¥‰ -> RCPT TO
+	case	eSTATE::SEND_MAIL_FROM:
+			if (_code != 250)
+				throw throwable::failure(eRESULT::FAIL, 0, std::format("email server refused sender: {}", reply_text));
+
+			this->m_index_recipient = 0;
+			this->process_send_command(std::format("RCPT TO:<{}>", this->m_vector_recipient.at(0)), eSTATE::SEND_RCPT_TO);
+			break;
+
+	// 8) RCPT TO ¿¿¥‰ -> ¥Ÿ¿Ω πﬁ¥¬ ªÁ∂˜ / DATA
+	case	eSTATE::SEND_RCPT_TO:
+			if (_code != 250 && _code != 251)
+				throw throwable::failure(eRESULT::FAIL, 0, std::format("email server refused receiver '{}': {}", this->m_vector_recipient.at(this->m_index_recipient), reply_text));
+
+			if (++this->m_index_recipient < this->m_vector_recipient.size())
+				this->process_send_command(std::format("RCPT TO:<{}>", this->m_vector_recipient.at(this->m_index_recipient)), eSTATE::SEND_RCPT_TO);
+			else
+				this->process_send_command("DATA"sv, eSTATE::REQUEST_DATA);
+			break;
+
+	// 9) DATA ¿¿¥‰(354) -> ∫ªπÆ
+	case	eSTATE::REQUEST_DATA:
+			if (_code != 354)
+				throw throwable::failure(eRESULT::FAIL, 0, std::format("email server refused data: {}", reply_text));
+
+			this->process_send_data();
+			break;
+
+	// 10) ∫ªπÆ ¿¿¥‰(250) -> º∫∞¯ -> QUIT
+	case	eSTATE::SEND_DATA:
+			if (_code != 250)
+				throw throwable::failure(eRESULT::FAIL, 0, std::format("email server refused message: {}", reply_text));
+
+			this->process_complete(eRESULT::SUCCESS, reply_text);
+			this->process_send_command("QUIT"sv, eSTATE::SEND_QUIT);
+			break;
+
+	// 11) QUIT ¿¿¥‰ -> ¡¢º” ¡æ∑·
+	case	eSTATE::SEND_QUIT:
+			SCOPED_LOCK(this->m_cs_email_smtp_result)
+			{
+				this->m_email_smtp_result.state = eSTATE::DONE;
+			}
+			this->process_close();
+			break;
+
+	default:
+			throw throwable::failure(eRESULT::INVALID_STATE, 0, std::format("unexpected reply from email server ({})", _code));
+	}
+}
+
+void net::email::smtp::socket::process_reply_ehlo(int _code)
+{
+	// check)
+	if (_code != 250)
+		throw throwable::failure(eRESULT::FAIL, 0, std::format("email server refused EHLO ({})", _code));
+
+	// 1) capabilities (√π ¡Ÿ¿∫ º≠πˆ ¿Ã∏ß)
+	this->m_capability.clear();
+	for (std::size_t i = 1; i < this->m_vector_reply_lines.size(); ++i)
+	{
+		auto text = _get_reply_text(this->m_vector_reply_lines[i]);
+
+		if (_starts_with_nocase(text, "STARTTLS"sv))
+		{
+			this->m_capability.starttls = true;
+		}
+		else if (_starts_with_nocase(text, "AUTH"sv) && text.size() > 4 && (text[4] == ' ' || text[4] == '='))
+		{
+			// - "AUTH PLAIN LOGIN XOAUTH2" / "AUTH=PLAIN LOGIN"
+			std::string mechanisms(text.substr(5));
+			std::transform(mechanisms.begin(), mechanisms.end(), mechanisms.begin(), [](unsigned char _ch) { return static_cast<char>(std::toupper(_ch)); });
+			mechanisms = " " + mechanisms + " ";
+
+			this->m_capability.auth_plain |= (mechanisms.find(" PLAIN ") != std::string::npos);
+			this->m_capability.auth_login |= (mechanisms.find(" LOGIN ") != std::string::npos);
+			this->m_capability.auth_xoauth2 |= (mechanisms.find(" XOAUTH2 ") != std::string::npos);
+		}
+		else if (_starts_with_nocase(text, "SMTPUTF8"sv))
+		{
+			this->m_capability.smtputf8 = true;
+		}
+		else if (_starts_with_nocase(text, "SIZE"sv) && text.size() > 5)
+		{
+			std::size_t value = 0;
+			for (auto iter : text.substr(5))
+			{
+				if (!std::isdigit(static_cast<unsigned char>(iter)))
+					break;
+				value = value * 10 + (iter - '0');
+			}
+			this->m_capability.size_max = value;
+		}
+	}
+
+	// 2) STARTTLS (æ∆¡˜ TLS∞° æ∆¥œ∏È)
+	if (this->m_psmtp->m_security == eSECURITY::STARTTLS && !this->m_is_tls)
+	{
+		// check) STARTTLS∏¶ ¡ˆø¯«œ¡ˆ æ ¥¬ º≠πˆø°¥¬ ∆ÚπÆ¿∏∑Œ ∫∏≥ª¡ˆ æ ¥¬¥Ÿ.
+		if (!this->m_capability.starttls)
+			throw throwable::failure(eRESULT::NOT_SUPPORT, 0, "email server does not support STARTTLS"sv);
+
+		this->process_send_command("STARTTLS"sv, eSTATE::SEND_STARTTLS);
+		return;
+	}
+
+	// 3) ¿Œ¡ı / MAIL FROM
+	if (!this->m_email_smtp_result.request.auth.empty())
+		this->process_start_auth();
+	else
+		this->process_send_mail_from();
+}
+
+void net::email::smtp::socket::process_start_auth()
+{
+	// check) ¿Œ¡ı ¡§∫∏¥¬ TLS∑Œ∏∏ ∫∏≥Ω¥Ÿ.
+	if (!this->m_is_tls)
+		throw throwable::failure(eRESULT::NOT_ALLOWED, 0, "authentication is not allowed without TLS"sv);
+
+	const auto& auth = this->m_email_smtp_result.request.auth;
+
+	// 1) XOAUTH2 (token¿Ã ¿÷¿∏∏È)
+	if (!auth.oauth2_token.empty())
+	{
+		// check)
+		if (!this->m_capability.auth_xoauth2)
+			throw throwable::failure(eRESULT::NOT_SUPPORT, 0, "email server does not support AUTH XOAUTH2"sv);
+
+		this->m_email_smtp_result.auth_type = eAUTH_TYPE::XOAUTH2;
+
+		std::string value = "user=" + auth.name + "\x01" "auth=Bearer " + auth.oauth2_token + "\x01\x01";
+		this->process_send_command("AUTH XOAUTH2 " + _encode_base64(value), eSTATE::SEND_AUTH, true);
+		return;
+	}
+
+	// 2) PLAIN ("\0name\0password")
+	if (this->m_capability.auth_plain)
+	{
+		this->m_email_smtp_result.auth_type = eAUTH_TYPE::PLAIN;
+
+		std::string value;
+		value += '\0';
+		value += auth.name;
+		value += '\0';
+		value += auth.password;
+		this->process_send_command("AUTH PLAIN " + _encode_base64(value), eSTATE::SEND_AUTH, true);
+		return;
+	}
+
+	// 3) LOGIN (¿Ã∏ß∞˙ ∫Òπ–π¯»£∏¶ ¬˜∑ ∑Œ ∫∏≥Ω¥Ÿ.)
+	if (this->m_capability.auth_login)
+	{
+		this->m_email_smtp_result.auth_type = eAUTH_TYPE::LOGIN;
+
+		this->process_send_command("AUTH LOGIN"sv, eSTATE::SEND_NAME);
+		return;
+	}
+
+	// raise)
+	throw throwable::failure(eRESULT::NOT_SUPPORT, 0, "email server does not support AUTH PLAIN/LOGIN"sv);
+}
+
+void net::email::smtp::socket::process_send_mail_from()
+{
+	this->process_send_command(std::format("MAIL FROM:<{}>", this->m_email_smtp_result.request.from), eSTATE::SEND_MAIL_FROM);
+}
+
+void net::email::smtp::socket::process_send_data()
+{
+	// declare)
+	const auto& request = this->m_email_smtp_result.request;
+	std::string_view text(reinterpret_cast<const char*>(request.text.data()), request.text.size());
+
+	// 1) header
+	std::string message;
+	message.reserve(1024 + text.size() * 4 / 3 + text.size() / 38);
+
+	message += "Date: " + _make_date() + "\r\n";
+
+	if (request.from_name.empty())
+		message += "From: " + request.from + "\r\n";
+	else
+		message += "From: " + _encode_header_word(request.from_name) + " <" + request.from + ">\r\n";
+
+	message += "To: " + request.to + "\r\n";
+
+	if (!request.cc_list.empty())
+	{
+		message += "Cc: ";
+		for (std::size_t i = 0; i < request.cc_list.size(); ++i)
+		{
+			if (i != 0)
+				message += ",\r\n ";
+			message += request.cc_list[i];
+		}
+		message += "\r\n";
+	}
+
+	message += "Subject: " + _encode_header_word(request.subject) + "\r\n";
+	message += "Message-ID: " + _make_message_id(this->m_psmtp->m_email_server_domain) + "\r\n";
+	message += "MIME-Version: 1.0\r\n";
+	message += "Content-Type: " + request.content_type + "; charset=UTF-8\r\n";
+	message += "Content-Transfer-Encoding: base64\r\n";
+	message += "\r\n";
+
+	// 2) body (base64, 76¿⁄∏∂¥Ÿ ¡ŸπŸ≤ﬁ. '.'¿∏∑Œ Ω√¿€«œ¥¬ ¡Ÿ¿Ã ª˝±‚¡ˆ æ ¥¬¥Ÿ.)
+	auto body = _encode_base64(text);
+	for (std::size_t pos = 0; pos < body.size(); pos += 76)
+	{
+		message.append(body, pos, 76);
+		message += "\r\n";
+	}
+
+	// check) º≠πˆ¿« √÷¥Î ≈©±‚
+	if (this->m_capability.size_max != 0 && message.size() > this->m_capability.size_max)
+		throw throwable::failure(eRESULT::INVALID_MESSAGE_TOO_LONG_LENGTH, 0, std::format("email is too large ({} bytes, max {} bytes)", message.size(), this->m_capability.size_max));
+
+	// 3) ≥° (".")
+	message += ".";
+
+	SCOPED_LOCK(this->m_cs_email_smtp_result)
+	{
+		this->m_email_smtp_result.send_time = chrono::time::utc::now();
+	}
+
+	// 4) send
+	this->process_send_command(message, eSTATE::SEND_DATA, true);
+}
+
+void net::email::smtp::socket::process_send_command(std::string_view _command, eSTATE _state_next, bool _is_secret)
+{
+	// 1) ªÛ≈¬ (¿¿¥‰¿Ã º€Ω≈ øœ∑·∫∏¥Ÿ ∏’¿˙ ø√ ºˆ ¿÷¿∏π«∑Œ ∫∏≥ª±‚ ¿¸ø° πŸ≤€¥Ÿ.)
+	SCOPED_LOCK(this->m_cs_email_smtp_result)
+	{
+		this->m_email_smtp_result.state = _state_next;
+
+		// - ∫∏≥Ω ∏Ì∑…¿ª ≥≤±‰¥Ÿ. (¿Œ¡ı ¡§∫∏, ∫ªπÆ¿∫ ≥≤±‚¡ˆ æ ¥¬¥Ÿ.)
+		if (!_is_secret && this->m_email_smtp_result.vector_result.size() < MAX_REPLY_LINES)
+			this->m_email_smtp_result.vector_result.push_back(std::format("> {}", _command));
+	}
+
+	// 2) send (∏Ì∑… + CRLF)
+	auto buf_send = alloc_shared_buffer(_command.size() + 2);
+	buf_send.append_text<char>(_command);
+	buf_send.append_text<char>("\r\n"sv);
+
+	net::sockaddr temp_sockaddr;
+	if (!this->process_sendable(buf_send, buf_send.move_out_source(), 1, temp_sockaddr))
+		throw throwable::failure(eRESULT::NOT_READY, 0, "fail to send command to email server"sv);
+
+	// 3) ¿¿¥‰ ¥Î±‚ Ω√∞£
+	this->process_start_timer();
+}
+
+void net::email::smtp::socket::process_start_tls()
+{
+	// 1) TLS ∞¥√º∏¶ ∏∏µÁ¥Ÿ. (clientøÎ ∞¯¿Ø context: system CA ¿˙¿Âº“∑Œ º≠πˆ ¿Œ¡ıº≠∏¶ »Æ¿Œ«—¥Ÿ.)
+	auto pssl_context = crypt::ssl_context::get_default_client();
+	auto pcrypt = pssl_context->alloc_ssl(static_cast<int>(this->native_handle()));
+
+	// 2) º≠πˆ ¿Ã∏ß (SNI + ¿Œ¡ıº≠ ¿Ã∏ß »Æ¿Œ)
+	pcrypt->set_host_name(this->m_psmtp->m_host_name);
+
+	// 3) ¿Ã ¡¢º”ø° º≥¡§«œ∞Ì handshake∏¶ Ω√¿€«—¥Ÿ. (ClientHello. ¿Ã»ƒ ºˆΩ≈¿∫ ∫π»£»≠«ÿº≠ √≥∏Æµ»¥Ÿ.)
+	pcrypt->initialize_handshake_client(this);
+	this->ssl_start_handshake();
+	this->start_ssl_handshake_timer(this->m_psmtp->m_timeout);
+
+	// 4) TLS ¿Ã»ƒø°¥¬ EHLO∏¶ ¥ŸΩ√ ∫∏≥ª∞Ì capability∏¶ ¥ŸΩ√ πﬁ¥¬¥Ÿ.
+	this->m_is_tls = true;
+	this->m_capability.clear();
+}
+
+void net::email::smtp::socket::process_start_timer()
+{
+	// declare)
+	auto serial = ++this->m_step_serial;
+	auto psmtp = this->m_psmtp;
+
+	// check)
+	if (psmtp.empty())
+		return;
+
+	// 1) Ω√∞£¿Ã ¡ˆ≥™µµ ∞∞¿∫ ¥‹∞Ë∏È Ω«∆–∑Œ √≥∏Æ«—¥Ÿ.
+	auto pexecutable = make_executable([psocket = object_ptr<socket>(this), serial]()
+	{
+		// check) ¥Ÿ¿Ω ¥‹∞Ë∑Œ ≥—æÓ∞¨¿∏∏È «“ ∞Õ¿Ã æ¯¥Ÿ.
+		if (psocket->m_step_serial.load() != serial)
+			return;
+
+		// - QUIT ¿¿¥‰¿ª ±‚¥Ÿ∏Æ¥¬ ¡ﬂ¿Ã∏È ±◊≥… ≤˜¥¬¥Ÿ.
+		bool is_quit = false;
+		{
+			std::lock_guard cs(psocket->m_cs_email_smtp_result);
+			is_quit = psocket->m_is_completed;
+		}
+
+		if (is_quit)
+			psocket->process_close();
+		else
+			psocket->process_fail(eRESULT::TIME_OUT, "no reply from email server"sv);
+	});
+
+	// 2) post
+	system_executor::post(std::move(pexecutable), chrono::tick::now() + psmtp->m_timeout);
+}
+
+void net::email::smtp::socket::process_complete(eRESULT _result, std::string_view _message) noexcept
+{
+	// declare)
+	sRESULT result;
+	object_ptr<smtp> psmtp;
+
+	try
+	{
+		SCOPED_LOCK(this->m_cs_email_smtp_result)
+		{
+			// check) «— π¯∏∏ æÀ∏∞¥Ÿ.
+			if (this->m_is_completed || this->m_email_smtp_result.request.to.empty())
+				return;
+
+			this->m_is_completed = true;
+			this->m_email_smtp_result.result = _result;
+			this->m_email_smtp_result.message = _message;
+
+			result = this->m_email_smtp_result;
+			psmtp = this->m_psmtp;
+		}
+
+		// - ¿Œ¡ı ¡§∫∏¥¬ ∞·∞˙ø° ≥÷¡ˆ æ ¥¬¥Ÿ.
+		result.request.auth.clear();
+
+		// log)
+		if (_result != eRESULT::SUCCESS)
+			LOG_INFO << "(info) CGDK.net.email: fail to send email to '"sv << result.request.to << "' ("sv << static_cast<uint32_t>(_result) << ", "sv << result.reply_code << ") "sv << _message;
+
+		// 1) ∞·∞˙∏¶ æÀ∏∞¥Ÿ.
+		if (psmtp.exist())
+			psmtp->process_complete_send(result);
+	}
+	catch (...)
+	{
+	}
+}
+
+void net::email::smtp::socket::process_fail(eRESULT _result, std::string_view _message) noexcept
+{
+	// 1) Ω«∆–∑Œ æÀ∏∞¥Ÿ. (¿ÃπÃ ≥°≥µ¿∏∏È π´Ω√µ»¥Ÿ.)
+	this->process_complete(_result, _message);
+
+	// 2) ¡¢º”¿ª ≤˜¥¬¥Ÿ.
+	this->process_close();
+}
+
+void net::email::smtp::socket::process_close() noexcept
+{
+	// 1) ¥Ÿ¿Ω timer∞° µø¿€«œ¡ˆ æ ∞‘ «—¥Ÿ.
+	++this->m_step_serial;
+
+	// 2) ¡¢º”¿ª ≤˜¥¬¥Ÿ. (on_disconnect / on_fail_connectø°º≠ smtpø° æÀ∏∞¥Ÿ.)
+	if (this->socket_state() != eSOCKET_STATE::CLOSED)
+		this->closesocket();
+	else
+		this->process_notify_closed();
+}
+
+void net::email::smtp::socket::process_notify_closed() noexcept
+{
+	// declare)
+	object_ptr<smtp> psmtp;
+
+	SCOPED_LOCK(this->m_cs_email_smtp_result)
+	{
+		// check) «— π¯∏∏ æÀ∏∞¥Ÿ.
+		if (this->m_is_closed_notified)
+			return;
+
+		this->m_is_closed_notified = true;
+		psmtp = std::move(this->m_psmtp);
+	}
+
+	// 1) smtp ∏Ò∑œø°º≠ ª´¥Ÿ. (queueø° ¿÷¥¬ ¥Ÿ¿Ω ∏ﬁ¿œ¿ª ∫∏≥Ω¥Ÿ.)
+	if (psmtp.exist())
+		psmtp->process_socket_closed(this);
 }

@@ -1,0 +1,21 @@
+{
+  "system_executor": {
+    "thread_count": 4,
+    "enable_thread_observer": true,
+    "dump": {
+      "enable": true,
+      "path": "dumps/setting",
+      "count_limit": 10,
+      "dump_type": "mini"
+    }
+  },
+
+  "executor": {
+    "thread_count": 2
+  },
+
+  "schedulable": {
+    "interval": 300,
+    "overrun": "catch_up"
+  }
+}

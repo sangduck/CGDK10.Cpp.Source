@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                           Server Query Classes                            *
+//*                               server.query                                *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -17,6 +17,8 @@
 //*****************************************************************************
 
 #pragma once
+
+#include "cgdk/sdk10/lib_path.h"
 //-----------------------------------------------------------------------------
 //
 // CGDK10.server.query
@@ -49,13 +51,6 @@ namespace CGDK
 // ----------------------------------------------------------------------------
 // head File
 // ----------------------------------------------------------------------------
-// 1) ...
-#include <math.h>
-
-
-// ----------------------------------------------------------------------------
-// head File
-// ----------------------------------------------------------------------------
 // 1) CGDK base header files
 #include "cgdk/sdk10/system.object.h"
 
@@ -73,6 +68,7 @@ namespace CGDK
 #include "cgdk/sdk10/server.query/query/server.query.Irequestor.h"
 #include "cgdk/sdk10/server.query/query/server.Iquery.h"
 #include "cgdk/sdk10/server.query/query/server.query_functions.h"
+#include "cgdk/sdk10/server.query/query/server.query.execute_result.h"
 
 // 6) querier
 #include "cgdk/sdk10/server.query/query/server.query.querier_manager.h"
@@ -129,15 +125,13 @@ namespace CGDK
 		// WinSDK 10
 		#if WDK_NTDDI_VERSION >= NTDDI_WIN10
 			#ifdef NDEBUG
-				#pragma message("[CGDK10] 'CGDK10.server.query_Windows10.0_x64_Release.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.server.query_Windows10.0_x64_Release.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.server.query_Windows10.0_x64_Release.lib")
 			#else
-				#pragma message("[CGDK10] 'CGDK10.server.query_Windows10.0_x64_Debug.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.server.query_Windows10.0_x64_Debug.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.server.query_Windows10.0_x64_Debug.lib")
 			#endif
 		// Error - No supported
 		#else
-			#error "[CGDK10] Not supported Windonws SDK version (Need Windows SDK 10.0 or higher)"
+			#error "[CGDK10] Not supported Windows SDK version (Need Windows SDK 10.0 or higher)"
 		#endif
 
 	#else

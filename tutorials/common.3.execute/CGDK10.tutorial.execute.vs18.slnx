@@ -1,0 +1,15 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="execute.01.time\tutorial.execute.time.vs18.vcxproj" Id="4435a883-a619-4440-a2ea-da77e970e141" />
+  <Project Path="execute.02.lock\tutorial.execute.lock.vs18.vcxproj" Id="23de4c02-37e2-4c22-a737-eba8e76c4b62" />
+  <Project Path="execute.03.executor\tutorial.execute.executor.vs18.vcxproj" Id="538fb5b2-ced0-419e-b0d7-c8b5abff5827" />
+  <Project Path="execute.04.schedulable\tutorial.execute.schedulable.vs18.vcxproj" Id="4d8627f2-199b-4ed5-bde5-239206cde07f" />
+  <Project Path="execute.05.strand\tutorial.execute.strand.vs18.vcxproj" Id="86e42b28-f37a-4c68-a95f-776d0020b738" />
+  <Project Path="execute.06.coroutine\tutorial.execute.coroutine.vs18.vcxproj" Id="13db1c7d-4bbd-4477-b08b-a806fd74a347" />
+  <Project Path="execute.ex01.force_raise\tutorial.execute.ex.force_raise.vs18.vcxproj" Id="d6e30dc6-1608-4e1b-8bf7-d32c00ea1617" />
+  <Project Path="execute.ex02.crash_dump\tutorial.execute.ex.crash_dump.vs18.vcxproj" Id="9c1337e6-5c7c-4739-ad6e-794b96c2c28a" />
+  <Project Path="execute.ex03.snap_dump\tutorial.execute.ex.snap_dump.vs18.vcxproj" Id="45228b78-6a0b-4c1f-bd37-84059cba2eaa" />
+  <Project Path="execute.ex04.setting\tutorial.execute.ex.setting.vs18.vcxproj" Id="e0e99a30-a31e-4799-9387-a5696752f223" />
+</Solution>

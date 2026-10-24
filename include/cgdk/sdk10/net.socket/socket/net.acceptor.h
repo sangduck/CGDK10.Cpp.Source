@@ -43,7 +43,7 @@ namespace CGDK
 //	    "[Name]/must prepare"
 //
 //-----------------------------------------------------------------------------
-template <class TSOCKET, class FLAG = void>
+template <class TSOCKET = net::io::socket::Ntcp, class FLAG = void>
 class net::acceptor
 {
 };

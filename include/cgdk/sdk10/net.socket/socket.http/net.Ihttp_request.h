@@ -38,11 +38,11 @@ public:
 	// 1) Request
 	virtual	result_code			request() { return process_request();}
 			
-	// 2) process functioin
+	// 2) process function
 			void				set_process_function(const RESPONSE_FUNCTION& _function) noexcept { m_function_on_process = _function; }
 			void				set_process_function(RESPONSE_FUNCTION&& _function) noexcept { m_function_on_process = std::move(_function); }
 
-	// 3) response functioin
+	// 3) response function
 			void				set_request(const ip::tcp::endpoint& _address) noexcept { m_address_host = _address; }
 			void				set_request(const shared_buffer& _buffer) noexcept { m_buffer_request = _buffer; }
 			void				set_function(const RESPONSE_FUNCTION& _function) noexcept { m_function_on_response = _function; }
@@ -67,6 +67,7 @@ public:
 			RESPONSE_FUNCTION	m_function_on_response;
 			static_string<24>	m_keys;
 			bool				m_is_crypt = false;
+			std::string			m_host_name;		// ssl: SNI + 서버 인증서 hostname 검증
 };
 
 

@@ -1,0 +1,13 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/windows/" Id="fcd63edf-bcbf-4a85-80ac-72f561be5aba">
+    <Project Path="doss\CGDK10.server.service.doss.vs18.vcxproj" Id="19add403-9984-4bdf-b526-2d25f943a12c" />
+  </Folder>
+  <Folder Name="/unit_test/" Id="c2a7f41e-9b3d-4a2e-9c6f-7d1e2f3a4b5c">
+    <Project Path="unit_test\unit_test.server_service.doss\unit_test.server_service.doss.vs18.vcxproj" Id="8b8a4d9a-dcd4-4ebf-8808-a1df20372f99" />
+  </Folder>
+  <Project Path="doss\CGDK10.server.service.doss.vcxitems" Id="44376a03-d13d-4fa2-bf33-afde63366174" />
+  <Project Path="..\common\cgdk_info.shared.vcxitems" Id="f2b5df8c-26a7-4f26-bd80-933bb4870b0a" />
+</Solution>

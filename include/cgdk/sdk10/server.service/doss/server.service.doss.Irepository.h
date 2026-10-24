@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 9.0 / release 2017.01.03                        *
 //*                                                                           *
-//*                              Account Classes                              *
+//*                 Distributed Object Storage System Classes                 *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -18,7 +18,13 @@
 
 #pragma once
 //-----------------------------------------------------------------------------
-// doss::CAccount
+// doss::Irepository
+//
+//  - every transaction of this repository runs as a single coroutine.
+//    (co_request_transaction. started by the entity on the system_executor)
+//  - the user hooks (on_request_checkin/checkout/command/update) are coroutines:
+//    'co_await' the db queries, the other servers, ... inside them.
+//    set the result with _ptransactable->set_result() and co_return it.
 //-----------------------------------------------------------------------------
 namespace CGDK
 {
@@ -42,46 +48,49 @@ public:
 
 // framework)
 protected:
-	virtual	result_code			on_request_checkin (Itransactable* _ptransactable) { _ptransactable->set_result(eRESULT::SUCCESS); return eRESULT::SUCCESS; }
-	virtual	result_code			on_request_checkout (Itransactable* _ptransactable) { _ptransactable->set_result(eRESULT::SUCCESS); return eRESULT::SUCCESS; }
-	virtual	result_code			on_request_command (Itransactable* _ptransactable) { _ptransactable->set_result(eRESULT::SUCCESS); return eRESULT::SUCCESS; }
-	virtual	result_code			on_request_update (Itransactable* _ptransactable) { _ptransactable->set_result(eRESULT::SUCCESS); return eRESULT::SUCCESS; }
-	                          
+	// - the user hooks of a transaction (coroutines : 'co_await' inside them)
+	virtual	coroutine::task<result_code> on_request_checkin (object_ptr<Itransactable> _ptransactable) { _ptransactable->set_result(eRESULT::SUCCESS); co_return eRESULT::SUCCESS; }
+	virtual	coroutine::task<result_code> on_request_checkout (object_ptr<Itransactable> _ptransactable) { _ptransactable->set_result(eRESULT::SUCCESS); co_return eRESULT::SUCCESS; }
+	virtual	coroutine::task<result_code> on_request_command (object_ptr<Itransactable> _ptransactable) { _ptransactable->set_result(eRESULT::SUCCESS); co_return eRESULT::SUCCESS; }
+	virtual	coroutine::task<result_code> on_request_update (object_ptr<Itransactable> _ptransactable) { _ptransactable->set_result(eRESULT::SUCCESS); co_return eRESULT::SUCCESS; }
+
 // framework)
 public:
 	virtual object_ptr<Ientity> process_entity_get (sENTITY_ID _entity_id) PURE;
 	virtual object_ptr<Ientity> process_entity_find (sENTITY_ID _entity_id) const noexcept PURE;
+	//! @brief removes the entity from this repository (REMOVE transaction) @return false if not supported or not removed
+	virtual bool				process_entity_remove (Ientity* /*_pentity*/) noexcept { return false; }
 
-	virtual	result_code			process_request_transaction (Itransactable* _ptransactable);
-			result_code			process_transaction (Itransactable* _ptransactable);
+	// - the transaction coroutine (the only coroutine frame of a transaction)
+	virtual	coroutine::task<result_code> co_request_transaction (object_ptr<Itransactable> _ptransactable);
 	virtual bool				process_complete_transaction (Itransactable* _ptransactable) noexcept;
 	virtual void				process_fail_transaction (Itransactable* _ptransactable) noexcept;
 	virtual void				process_cancel_checkin (Ientity* _pentity, sCHECKIN_ID _cid) noexcept;
 
-			result_code			process_request_transaction_checkin	(Itransactable* _ptransactable);
+			coroutine::task<result_code> co_request_transaction_checkin (object_ptr<Itransactable> _ptransactable);
 			bool				process_complete_transaction_checkin (Itransactable* _ptransactable) noexcept;
 
-			result_code			process_request_transaction_command	(Itransactable* _ptransactable);
+			coroutine::task<result_code> co_request_transaction_command (object_ptr<Itransactable> _ptransactable);
 			bool				process_complete_transaction_command (Itransactable* _ptransactable) noexcept;
 
-			result_code			process_request_transaction_update (Itransactable* _ptransactable);
+			coroutine::task<result_code> co_request_transaction_update (object_ptr<Itransactable> _ptransactable);
 			bool				process_complete_transaction_update	(Itransactable* _ptransactable) noexcept;
 
-			result_code			process_request_transaction_checkout (Itransactable* _ptransactable);
+			coroutine::task<result_code> co_request_transaction_checkout (object_ptr<Itransactable> _ptransactable);
 			bool				process_complete_transaction_checkout (Itransactable* _ptransactable) noexcept;
 
-			result_code			process_request_transaction_create (Itransactable* _ptransactable);
+			coroutine::task<result_code> co_request_transaction_create (object_ptr<Itransactable> _ptransactable);
 			bool				process_complete_transaction_create	(Itransactable* _ptransactable) noexcept;
 
-			result_code			process_request_transaction_remove (Itransactable* _ptransactable);
+			coroutine::task<result_code> co_request_transaction_remove (object_ptr<Itransactable> _ptransactable);
 			bool				process_complete_transaction_remove	(Itransactable* _ptransactable) noexcept;
 
 			sCHECKIN_ID			process_generate_new_cid (sCHECKIN_ID& _cid_request) noexcept;
 
 public:
 			sREPOSITORY_ID		m_id_repository;
-			lockable<>			m_lockable_wait;
-			lockable<>			m_lockable_map_entity;
+			lock_object			m_lockable_wait;
+			lock_object			m_lockable_map_entity;
 			std::condition_variable_any m_cv_complete;
 
 protected:

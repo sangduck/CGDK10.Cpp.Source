@@ -63,6 +63,8 @@ public:
 	[[nodiscard]] static size_t	get_socket_count() noexcept { return m_socket_count; }
 	[[nodiscard]] static size_t	get_max_socket_count() noexcept { return m_socket_count_max; }
 	[[nodiscard]] static bool	is_socket_count_overflowed() noexcept;
+	//! @brief counts a socket accepted without accept() (the io_uring multishot accept op gives the fd). closesocket() counts it down
+	static	void				increase_socket_count() noexcept { ++m_socket_count; }
 
 	static	bool				closesocket(CGSOCKET _handle_socket) noexcept;
 	static	bool				graceful_closesocket(CGSOCKET _handle_socket) noexcept;
@@ -82,6 +84,8 @@ public:
 																															  
 	static	bool				set_nonblock(CGSOCKET _handle_socket, bool _enable=true) noexcept { u_long value=(_enable) ? 1: 0; return ::ioctlsocket(_handle_socket, FIONBIO, &value)!=SOCKET_ERROR;}
 	static	bool				set_loopback_fast_path(CGSOCKET _handle_socket, bool _enable = true) { int32_t option_value = (_enable) ? 1 : 0; uint32_t bytes_returned = 0;  return api::socket::io_ctrl(_handle_socket, SIO_LOOPBACK_FAST_PATH, &option_value, sizeof(option_value), nullptr, 0, &bytes_returned);}
+	static	int					get_incoming_cpu([[maybe_unused]] CGSOCKET _handle_socket) noexcept { return -1; }		// - linux only (SO_INCOMING_CPU)
+	static	bool				set_tcp_defer_accept([[maybe_unused]] CGSOCKET _handle_socket, [[maybe_unused]] int _seconds) noexcept { return false; }	// - linux only (TCP_DEFER_ACCEPT)
 #else
 	static	bool				get_peer_address(CGSOCKET _handle_socket, ::sockaddr* _paddress, int* _psocket_address_length) noexcept { RETURN_IF(_paddress == nullptr || _psocket_address_length == nullptr,false); return ::getpeername(_handle_socket, reinterpret_cast<sockaddr*>(_paddress), reinterpret_cast<socklen_t*>(_psocket_address_length)) != SOCKET_ERROR;}
 	static	bool				get_socket_address(CGSOCKET _handle_socket, ::sockaddr* _paddress, int* _psocket_address_length) noexcept { RETURN_IF(_paddress == nullptr || _psocket_address_length == nullptr,false); return ::getsockname(_handle_socket, reinterpret_cast<sockaddr*>(_paddress), reinterpret_cast<socklen_t*>(_psocket_address_length)) != SOCKET_ERROR;}
@@ -90,12 +94,42 @@ public:
 	static	size_t				get_pending_read_buffer(CGSOCKET _handle_socket) noexcept { uint32_t bytes=0; ::ioctl(_handle_socket, FIONREAD, &bytes); return bytes;}
 	static	int					get_max_message_size(CGSOCKET) noexcept { return (1024 * 1024 * 1024); }
 																															  
-	static	bool				set_nonblock(CGSOCKET _handle_socket, bool _enable=true) noexcept { int flags = ::fcntl (_handle_socket, F_GETFL); if(flags == -1) return false; if(_enable) flags|=(O_NONBLOCK); else flags&=(~O_NONBLOCK); return ::fcntl (_handle_socket, F_SETFL, flags)>=0;}
+	//! @brief nonblocking (one ioctl : fcntl F_GETFL + F_SETFL were two). the sockets of create_socket()/accept() are nonblocking already (SOCK_NONBLOCK)
+	static	bool				set_nonblock(CGSOCKET _handle_socket, bool _enable=true) noexcept { int value = (_enable) ? 1 : 0; return ::ioctl(_handle_socket, FIONBIO, &value) == 0;}
 	static	bool				set_loopback_fast_path([[maybe_unused]] CGSOCKET _handle_socket, [[maybe_unused]] bool _enable = true) { return false; }
+	//! @brief the CPU that handled the last packet of the socket (SO_INCOMING_CPU). -1 : unknown. (the acceptor gives the socket to the io_context of that CPU : enable_cpu_affinity)
+	static	int					get_incoming_cpu(CGSOCKET _handle_socket) noexcept { int cpu = -1; socklen_t length = sizeof(cpu); if (::getsockopt(_handle_socket, SOL_SOCKET, SO_INCOMING_CPU, &cpu, &length) != 0) return -1; return cpu; }
+	//! @brief TCP_DEFER_ACCEPT : the listen socket wakes up when the first data of a connection arrives (or _seconds passed). 0 : off
+	static	bool				set_tcp_defer_accept(CGSOCKET _handle_socket, int _seconds) noexcept { return set_sock_opt(_handle_socket, IPPROTO_TCP, TCP_DEFER_ACCEPT, &_seconds, sizeof(_seconds)); }
+	//! @brief the UDS (Unix domain socket) address of a TCP port on this host : abstract namespace "\0cgdk.tcp.<port>" (no file)
+	//!        (an acceptor with enable_uds listens on it. connect_requestable to a loopback address of the port tries it first)
+	static	void				make_uds_address(uint16_t _port, ::sockaddr_un& _address, socklen_t& _length) noexcept
+	{
+		memset(&_address, 0, sizeof(_address));
+		_address.sun_family = AF_UNIX;
+
+		// - abstract namespace : sun_path[0] is 0 and the name is not terminated by 0
+		const auto length_name = snprintf(_address.sun_path + 1, sizeof(_address.sun_path) - 1, "cgdk.tcp.%u", static_cast<unsigned>(_port));
+		_length = static_cast<socklen_t>(offsetof(::sockaddr_un, sun_path) + 1 + length_name);
+	}
 #endif																														  
 	static	bool				set_linger_option(CGSOCKET _handle_socket, uint16_t _enable, uint16_t _time_out=0) noexcept	{ linger temp_linger={_enable, _time_out};return set_sock_opt(_handle_socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&temp_linger), sizeof(linger));}
 	static	bool				set_reuse_address(CGSOCKET _handle_socket, bool _enable) noexcept { int enable = (_enable) ? 1 : 0; return set_sock_opt(_handle_socket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&enable), sizeof(enable)) != 0;}
 	static	bool				set_tcp_nodelay(CGSOCKET _handle_socket, bool _enable = true) noexcept { int option_value = (_enable) ? 1 : 0; return set_sock_opt(_handle_socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char*>(&option_value), sizeof(option_value)); }
+
+	// - tcp socket options (sSOCKET_OPTION_TCP / Isocket::apply_socket_option())
+	//   delayed ACK off. linux : TCP_QUICKACK (not permanent : set it again after every recv), windows : SIO_TCP_SET_ACK_FREQUENCY (1 : an ACK for every segment. persistent)
+	static	bool				set_tcp_quickack(CGSOCKET _handle_socket, bool _enable = true) noexcept;
+	//   linux : SO_BUSY_POLL (microseconds. CAP_NET_ADMIN to raise it over the current value). windows : false (WSAEOPNOTSUPP)
+	static	bool				set_busy_poll(CGSOCKET _handle_socket, uint32_t _usec) noexcept;
+	//   linux/macos : TCP_NOTSENT_LOWAT (bytes). windows : false (WSAEOPNOTSUPP)
+	static	bool				set_tcp_notsent_lowat(CGSOCKET _handle_socket, uint32_t _bytes) noexcept;
+	//   TCP Fast Open (RFC 7413) of a listen socket. linux : _queue_length = the max pending TFO connections (sysctl net.ipv4.tcp_fastopen & 2 is required too), windows : enable (> 0)
+	static	bool				set_tcp_fastopen(CGSOCKET _handle_socket, int _queue_length) noexcept;
+	//   TCP Fast Open of a connecting socket. windows : TCP_FASTOPEN before ConnectEx, linux : TCP_FASTOPEN_CONNECT (connect() returns at once. the first send() sends the SYN)
+	static	bool				set_tcp_fastopen_connect(CGSOCKET _handle_socket, bool _enable = true) noexcept;
+	//   linux : the value of sysctl net.ipv4.tcp_fastopen (bit 1 : client, bit 2 : server). -1 : unknown (windows)
+	static	int					get_sysctl_tcp_fastopen() noexcept;
 
 	static	bool				set_send_buffer_size(CGSOCKET _handle_socket, size_t _size) noexcept { int value = static_cast<int>(_size); return set_sock_opt(_handle_socket, SOL_SOCKET, SO_SNDBUF, reinterpret_cast<char*>(&value), sizeof(value));}
 	static	bool				set_receive_buffer_size(CGSOCKET _handle_socket, size_t _size) noexcept { int value = static_cast<int>(_size); return set_sock_opt(_handle_socket, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<char*>(&value), sizeof(value));}
@@ -125,7 +159,7 @@ public:
 									CGSOCKET			_handle_socket,
 									int					_how = SD_SEND) noexcept { return ::shutdown(_handle_socket, _how) != SOCKET_ERROR;}
 
-	// 5) Extention functions(For overlapped)
+	// 5) Extension functions(For overlapped)
 	static	CGSOCKET			accept(
 									CGSOCKET			_handle_socket,
 									::sockaddr*			_paddress,
@@ -323,14 +357,14 @@ private:
 #if defined(_WINSOCK2API_)
 	// 1) bind & connect
 	static	int					(PASCAL FAR* WSAcceptEx)(IN CGSOCKET _sListenSocket, IN CGSOCKET _sAcceptSocket, IN PVOID _lpOutputBuffer, IN uint32_t _dwReceivedDataLength, IN uint32_t _dwLocalAddressLength, IN uint32_t _dwRemoteAddressLength, OUT uint32_t* _lpdwBytesReceived, IN LPOVERLAPPED _lpOverlapped);
-	static	int					(PASCAL FAR* WSConnectEx)(IN CGSOCKET _s, IN const struct sockaddr FAR* _name, IN int _namelen, IN void* _lpSendBuffer OPTIONAL, IN uint32_t _dwSendedDataLength, OUT uint32_t* _lpdwBytesSent, IN LPOVERLAPPED _lpOverlapped);
+	static	int					(PASCAL FAR* WSConnectEx)(IN CGSOCKET _s, IN const struct sockaddr FAR* _name, IN int _namelen, IN void* _lpSendBuffer OPTIONAL, IN uint32_t _dwSentDataLength, OUT uint32_t* _lpdwBytesSent, IN LPOVERLAPPED _lpOverlapped);
 	static	int					(PASCAL FAR* WSDisconnectEx)(IN CGSOCKET _s, IN LPOVERLAPPED _lpOverlapped, IN uint32_t _dwFlags, IN uint32_t _dwReserved);
 
 	// 2) RIO Functions
 	static	RIO_EXTENSION_FUNCTION_TABLE m_rio_functions;
 #endif
 
-	// 3) Extention Function을 얻는 함수.
+	// 3) Extension Function을 얻는 함수.
 	static	void				get_extension_function() noexcept;
 
 	// 4) socket초기화 함수.
@@ -349,16 +383,9 @@ inline bool socket::is_socket_count_overflowed() noexcept
 
 }
 
-
-template<class T, class Allocator>
-std::basic_string<T> net::sockaddr::to_string(const Allocator& /*_allocator*/) const noexcept
+inline std::string net::sockaddr::to_string() const
 {
-	return CGDK::to_string<T>(*this);
-}
-template<class T>
-std::basic_string_view<T> net::sockaddr::to_string(T* _output, size_t _length) const noexcept
-{
-	return CGDK::to_string<T>(_output, _length, *this);
+	return CGDK::to_string(*this);
 }
 
 template<class InternetProtocol>

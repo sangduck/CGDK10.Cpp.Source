@@ -56,22 +56,22 @@ void server::web::entity::application::on_initializing(context& _context)
 	{
 		// - 추가...
 		PARTIAL	tempData;
-		tempData.buffer_text = buf_read;
+		tempData.buffer_text = std::move(buf_read);
 		//tempData.pParser	 = nullptr;
 
 		// - 추가
-		vector_data.push_back(tempData);
+		vector_data.push_back(std::move(tempData));
 	}
 
 	// 4) 최종 저장
-	m_vector_data.swap(vector_data);
+	this->m_vector_data.swap(vector_data);
 
 	// 5) set entity
-	m_entity_type = entity_type;
+	this->m_entity_type = entity_type;
 
 	// 6) set path...
-	set_name(path_full.filename().string());
-	m_path_source = path_full.string();
+	this->name(path_full.filename().string());
+	this->m_path_source = path_full.string();
 }
 
 void server::web::entity::application::on_initialize(context& /*_context*/)
@@ -207,7 +207,7 @@ shared_buffer server::web::entity::application::process_encode(shared_buffer& _b
 	//return	bufferDecoded;
 
 
-	return	_buffer;
+	return	std::move(_buffer);
 }
 
 result_code server::web::entity::application::process_update(context& /*_context*/)
@@ -217,10 +217,10 @@ result_code server::web::entity::application::process_update(context& /*_context
 
 std::size_t server::web::entity::application::process_build_body(sMESSAGE_HTTP_REQUEST& /*_msg*/, std::vector<shared_buffer>& _vector_buffer)
 {
-	// Decalre)
+	// Declare)
 	std::size_t size = 0;
 
-	for(auto iter:m_vector_data)
+	for(const auto& iter:m_vector_data)
 	{
 		_vector_buffer.push_back(iter.buffer_text);
 		size  += iter.buffer_text.size();
@@ -270,7 +270,7 @@ int server::web::entity::application::process_request(sMESSAGE_HTTP_REQUEST& _ms
 	// 3) make http header
 	{
 		// - response head 만들기
-		buf_head.append_text("HTTP/{}.{} {} {}\r\n"sv, 1, 1, "OK"sv, 200);
+		buf_head.append_text(CGDK::stream_string("HTTP/", 1, ".", 1, " ", "OK"sv, " ", 200, "\r\n"));
 
 		// - Date (예: "Date: Fri, 08 Jul 2011 00:59:41 GMT\r\n")
 		buf_head.append_text("Date: "sv);
@@ -282,9 +282,9 @@ int server::web::entity::application::process_request(sMESSAGE_HTTP_REQUEST& _ms
 		// - 나머지 head를 작성한다.
 		buf_head.append_text("Cache-control: no-store, no-cache, must-revalidate\r\n"sv);
 		buf_head.append_text("Connection: close\r\n"sv);
-		buf_head.append_text("Content-Type: {}\r\n"sv, get_context_type(m_entity_type)); // ; charset=UTF-8
-		buf_head.append_text("Content-length:{}\r\n"sv, bytes_body);
-		buf_head.append_text("Server:{}/{}.{}\r\n"sv, _webserver_parameters.server_name.data(), _webserver_parameters.server_version_high, _webserver_parameters.server_version_low);
+		buf_head.append_text(CGDK::stream_string("Content-Type: ", get_context_type(m_entity_type), "\r\n")); // ; charset=UTF-8
+		buf_head.append_text(CGDK::stream_string("Content-length:", bytes_body, "\r\n"));
+		buf_head.append_text(CGDK::stream_string("Server:", _webserver_parameters.server_name.data(), "/", _webserver_parameters.server_version_high, ".", _webserver_parameters.server_version_low, "\r\n"));
 		//buf_head.append_text("x-frame-options: SAMEORIGIN\r\n"sv);
 		//buf_head.append_text("x-xss-protection:0\r\n"sv);
 		buf_head.append_text("\r\n"sv);
@@ -318,14 +318,14 @@ int server::web::entity::application::process_request(sMESSAGE_HTTP_REQUEST& _ms
 //	② 프로토콜과 응답코드: 3개의 필드로 구성되었으며, 첫출에 위치한다.
 //	  A. 응답 프로토콜과 버전
 //	  B. 응답 코드 (http://en.wikipedia.org/wiki/List_of_HTTP_status_codes)
-//	     - 100  계속 (요청자는 요청을 계속한다. 서버는 요청의 첫번재 부분을 받았으며 나머지를 기다리고 있음을 나타낸다.)
+//	     - 100  계속 (요청자는 요청을 계속한다. 서버는 요청의 첫 번째 부분을 받았으며 나머지를 기다리고 있음을 나타낸다.)
 //         101	Protocol 전환 (요청자가 서버에 프로토콜 전환을 요청했으며 서버는 이를 승인하는 중임)
 //
 //	     - 200  성공 (서버가 요청을 제대로 처리했다.
 //         201	생성됨 (요청이 성공했으며 새로운 리소스를 만들었다.)
 //         202	허용됨 (요청을 받았으나 아직 처리하지 못했다.)
-//         204	컨텐츠 없음 (요청을 받았으나 컨텐츠를 제공하지는 않는다.)
-//         205	컨텐츠 재설정 (요청을 받았으나 컨텐츠를 제공하지는 않는다. 그리고 문서를 재 설정할 것을 요구한다.)
+//         204	콘텐츠 없음 (요청을 받았으나 콘텐츠를 제공하지는 않는다.)
+//         205	콘텐츠 재설정 (요청을 받았으나 콘텐츠를 제공하지는 않는다. 그리고 문서를 재 설정할 것을 요구한다.)
 //         206	일부 성공 (요청의 일부만 성공적으로 처리)
 //         207	다중 상태
 //
@@ -344,11 +344,11 @@ int server::web::entity::application::process_request(sMESSAGE_HTTP_REQUEST& _ms
 //	       406	허용되지 않음 (요청한 페이지를 콘텐츠 특성 때문에 응답할 수 없다.)
 //	       408	요청 시간 초과 (서버의 요청대기가 시간을 초과)
 //	       410	사라짐 (요청한 자원이 삭제되었음, 404와 비슷하지만 410은 과거에 있었으나 지금은 없는 자원이다. 에컨데 게시판에서 삭제한 포스트에 접근하는 경우)
-//	       411	길이필요 (유효한 컨텐츠 길이를 명시해야 한다.)
+//	       411	길이필요 (유효한 콘텐츠 길이를 명시해야 한다.)
 //
 //	     - 500	내부 서버 오류 (서버에 오류 발생)
 //	       501	구현되지 않음 (서버에 요청을 수행할 기능이 없다.)
-//	       503	서비스를 사용할수 없다. (관리 목적 등으로 서버를 다운했다.)
+//	       503	서비스를 사용할 수 없다. (관리 목적 등으로 서버를 다운했다.)
 //	       505	HTTP 버전 지원이 안됨 (서버가 요청에 사용된 HTTP 프로토콜 버전을 지원하지 않는다.)
 //
 //	  C. 응답 메시지
@@ -356,12 +356,12 @@ int server::web::entity::application::process_request(sMESSAGE_HTTP_REQUEST& _ms
 //	④ Server: 서버 프로그램 및 스크립트 정보
 //	⑤ X-Powered-By: 웹 애플리케이션을 지원하는 기술 명세 (필요없이 트레픽을 증가시켜 제거하기도 한다.)
 //	⑥ Expires: 데이터 보관일시
-//	⑦ Last-Modified: 컨텐츠의 마지막 수정일
+//	⑦ Last-Modified: 콘텐츠의 마지막 수정일
 //	⑧ Cache-control: 캐시 제어 방식
-//	⑨ Content-Length: 컨텐츠 길이
+//	⑨ Content-Length: 콘텐츠 길이
 //	⑩ Keep-Alive: Keep Alive 기능 설정 (HTTP 1.1부터 사용 가능)
 //	⑪ Connection: Keep Alive 기능 설정
-//	⑫ Content-Type: 컨텐츠 타입
+//	⑫ Content-Type: 콘텐츠 타입
 //
 // 
 // 예)	② HTTP/1.1 200 OK\r\n

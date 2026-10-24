@@ -85,6 +85,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)webpage_time_event_info_htm.cpp">
       <Filter>client\web\webpage\converted to cpp</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)webpage_login_htm.cpp">
+      <Filter>client\web\webpage\converted to cpp</Filter>
+    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)webpage_server_executor_info_htm.cpp">
       <Filter>client\web\webpage\converted to cpp</Filter>
     </ClCompile>
@@ -133,20 +136,20 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_service_remote.cpp">
       <Filter>service_instance</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_Iservice.cpp">
-      <Filter>service_instance</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)group_server.cpp">
-      <Filter>server</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)group_client.cpp">
-      <Filter>client</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)socket_peer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)group_peer_immigration.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Igroup.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_manager.cpp">
       <Filter>service_instance\manager</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)server_admin.instance_service.cpp">
+      <Filter>service_instance</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_peer_server.cpp">
+      <Filter>server</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)group_peer_client.cpp">
+      <Filter>client</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -198,9 +201,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)socket_admin_server.h">
       <Filter>admin server</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)group_server.h">
-      <Filter>server</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.Iinstance.h">
       <Filter>service_instance</Filter>
     </ClInclude>
@@ -213,17 +213,20 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_service_remote.h">
       <Filter>service_instance</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_Iservice.h">
-      <Filter>service_instance</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)group_client.h">
-      <Filter>client</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)socket_peer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)group_peer_immigration.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Igroup.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_manager.h">
       <Filter>service_instance\manager</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)server_admin.instance_service.h">
+      <Filter>service_instance</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_peer_server.h">
+      <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)group_peer_client.h">
+      <Filter>client</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

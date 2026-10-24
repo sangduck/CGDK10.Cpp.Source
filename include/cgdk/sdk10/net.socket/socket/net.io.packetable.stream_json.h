@@ -31,13 +31,11 @@ namespace CGDK
  */
  //-----------------------------------------------------------------------------
 class net::io::packetable::Nstream_json :
-// inherited classes)
 	virtual public				net::io::Isocket,
 	virtual public				net::io::Ipacketable,
-	virtual public				Imessageable,
+	virtual public				CGDK::Imessageable,
 	virtual public				net::io::statistics::Nsocket
 {
-// implementation)
 protected:
 	virtual	void				process_pre_message(sMESSAGE_NETWORK& /*_msg*/) {}
 	virtual	std::size_t			process_packet(shared_buffer& _buffer, const net::sockaddr& _address) override;

@@ -43,6 +43,7 @@ namespace CGDK
 // ----------------------------------------------------------------------------
 // 1) container data
 #include "cgdk/sdk10/server.system/group/server.container_data.h"
+#include "cgdk/sdk10/server.system/group/server.group.member_snapshot.h"
 
 // 2) container
 #include "cgdk/sdk10/server.system/group/server.Icontainer.h"

@@ -59,12 +59,16 @@ protected:
 inline bool net::io::sender::Ndatagram_proxy::process_send(const shared_buffer& _buffer, const net::sockaddr& _address, uint64_t _option)
 {
 	// check) _array_buffer->data_가 nullptr이 아닌가?
-	CGASSERT(_buffer.data() != nullptr, false)
+	CGASSERT_FATAL(_buffer.data() != nullptr);
 
 	// check) _array_buffer->size_이 0이 아닌가?
-	CGASSERT(_buffer.size() != 0, false)
+	CGASSERT_FATAL(_buffer.size() != 0);
 
-	// check) sender가 nullptr이면 안됀다.
+	// check) data가 nullptr이거나 size가 0이면 보내지 않는다. (Release)
+	if(_buffer.data() == nullptr || _buffer.size() == 0)
+		return false;
+
+	// check) sender가 nullptr이면 안 된다.
 	CGASSERT(m_psender.exist(), false);
 
 	// 1) send to

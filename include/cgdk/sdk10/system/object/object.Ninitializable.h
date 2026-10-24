@@ -25,12 +25,13 @@
 
 */
 //-----------------------------------------------------------------------------
-class CGDK::object::Ninitializable : virtual	public object::Istate, virtual public object::Iinitializable
+class CGDK::object::Ninitializable : virtual public object::Istate, virtual public object::Iinitializable
 {
 public:
 			result_code			initialize() { context _context; return this->initialize(_context); }
 			template<class TPARAMETER>
 			result_code			initialize(const TPARAMETER& _parameter) { context temp{ buffer_view((char*)&_parameter, sizeof(TPARAMETER)) }; return this->initialize(temp); }
+			result_code			initialize(context&& _context) { return this->initialize(_context); }
 	virtual	result_code			initialize(context& _context) override;
 	virtual	result_code			destroy() noexcept override;
 
@@ -55,15 +56,15 @@ public:
 	virtual result_code			_process_destroy() noexcept { try { this->on_destroy(); } catch (...) { CGASSERT_ERROR(false); } return result_code(eRESULT::SUCCESS); }
 
 protected:
-			result_code			_process_initializing_child(context& _context);
-			result_code			_process_initializing_child_complete(context& _context);
-			void				_process_initialize_complete(context& _context);
+	virtual	result_code			_process_initializing_child(context& _context);
+	virtual	result_code			_process_initializing_child_complete(context& _context);
+	virtual	void				_process_initialize_complete(context& _context);
 
-			result_code			_process_destroying_child() noexcept;
-			result_code			_process_destroying_child_complete() noexcept;
-			void				_process_destroy_complete() noexcept;
+	virtual	result_code			_process_destroying_child() noexcept;
+	virtual	result_code			_process_destroying_child_complete() noexcept;
+	virtual	void				_process_destroy_complete() noexcept;
 
-			lockable<>			m_cs_map_applied_initialization_param;
+			lock_object			m_lockable_map_applied_initialization_param;
 			std::map<std::string, std::string> m_map_applied_initialization_param;
 			void				_process_add_applied_initialization_param(const std::string& _key, const std::string_view _value);
 			void				_process_reset_applied_initialization_param() noexcept;

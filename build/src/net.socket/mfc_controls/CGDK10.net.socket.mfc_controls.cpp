@@ -18,7 +18,7 @@ CGNETSOCKETMFCCONTROL_EXT_API CChild_acceptor_control* WINAPI create_child_accep
 	// 3) Show茄促.
 	pWnd->ShowWindow(SW_SHOW);
 
-	// Retrun) 积己等 扩档快 府畔~
+	// Return) 积己等 扩档快 府畔~
 	return	pWnd;
 }
 
@@ -33,7 +33,7 @@ CGNETSOCKETMFCCONTROL_EXT_API CChild_connective_list* WINAPI create_child_connec
 	// 3) Show茄促.
 	pWnd->ShowWindow(SW_SHOW);
 
-	// Retrun) 积己等 扩档快 府畔~
+	// Return) 积己等 扩档快 府畔~
 	return	pWnd;
 }
 
@@ -48,7 +48,7 @@ CGNETSOCKETMFCCONTROL_EXT_API CChild_connective_info* WINAPI create_child_connec
 	// 3) Show茄促.
 	pWnd->ShowWindow(SW_SHOW);
 
-	// Retrun) 积己等 扩档快 府畔~
+	// Return) 积己等 扩档快 府畔~
 	return	pWnd;
 }
 
@@ -63,7 +63,7 @@ CGNETSOCKETMFCCONTROL_EXT_API CChild_connector_control_ex* WINAPI create_child_c
 	// 3) Show茄促.
 	pWnd->ShowWindow(SW_SHOW);
 
-	// Retrun) 积己等 扩档快 府畔~
+	// Return) 积己等 扩档快 府畔~
 	return	pWnd;
 }
 
@@ -78,7 +78,7 @@ CGNETSOCKETMFCCONTROL_EXT_API CChild_traffic_info* WINAPI create_child_traffic_i
 	// 3) Show茄促.
 	pWnd->ShowWindow(SW_SHOW);
 
-	// Retrun) 积己等 扩档快 府畔~
+	// Return) 积己等 扩档快 府畔~
 	return	pWnd;
 }
 
@@ -93,7 +93,7 @@ CGNETSOCKETMFCCONTROL_EXT_API CChild_traffic_info_brief_receive* WINAPI create_c
 	// 3) Show茄促.
 	pWnd->ShowWindow(SW_SHOW);
 
-	// Retrun) 积己等 扩档快 府畔~
+	// Return) 积己等 扩档快 府畔~
 	return	pWnd;
 }
 
@@ -108,7 +108,7 @@ CGNETSOCKETMFCCONTROL_EXT_API CChild_traffic_info_brief_send* WINAPI create_chil
 	// 3) Show茄促.
 	pWnd->ShowWindow(SW_SHOW);
 
-	// Retrun) 积己等 扩档快 府畔~
+	// Return) 积己等 扩档快 府畔~
 	return	pWnd;
 }
 

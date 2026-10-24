@@ -34,7 +34,6 @@ class doss::Ndepot :
 // constructor/destructor) 
 public:
 			Ndepot();
-			Ndepot(const std::string_view _name);
 	virtual	~Ndepot() noexcept;
 
 public:
@@ -57,10 +56,10 @@ protected:
 	virtual	void				on_stop () override;
 
 	// 3) Member Enter/Leave
-	virtual	result_code			on_member_entering (socket* _pmember, sMESSAGE& _msg);
-	virtual	void				on_member_entered (socket* _pmember, sMESSAGE& _msg);
-	virtual	uintptr_t			on_member_leaving (socket* _pmember);
-	virtual	void				on_member_leaved (socket* _pmember, uintptr_t _result);
+	virtual	result_code			on_member_entering (socket* _pmember, sMESSAGE& _msg) override;
+	virtual	void				on_member_entered (socket* _pmember, sMESSAGE& _msg) override;
+	virtual	uintptr_t			on_member_leaving(socket* _pmember, uintptr_t _param) override;
+	virtual	void				on_member_leaved (socket* _pmember, uintptr_t _result) override;
 
 // implementation) 
 protected:
@@ -84,19 +83,17 @@ protected:
 
 protected:
 	// 1) acceptor/socket
-			own_ptr<net::acceptor<socket>>	m_pacceptor_remository;
+			own_ptr<net::acceptor<socket>>	m_pacceptor_repository;
 			own_ptr<group_immigration>		m_pgroup_socket_immigration;
 			std::vector<object_ptr<restore>> m_vector_restore;
 
 	// 2) checkins
-			lockable<>			m_lockable_map_cid;
+			lock_object			m_lockable_map_cid;
 			std::map<sCHECKIN_ID, sSESSION_ID> m_map_cid;
 
 	// 3) Repository ID
 			sREPOSITORY_ID		m_id_repository;
 
-	// 4) statistics
-			statistics::entity	m_statistics;
 };
 
 

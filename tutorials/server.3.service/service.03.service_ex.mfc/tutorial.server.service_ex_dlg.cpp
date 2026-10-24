@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "framework.h"
 #include "tutorial.server.service_ex_dlg.h"
 #include "tutorial.server.service_ex_dlg.h"
@@ -47,59 +47,59 @@ BOOL Ctutorial_server_service_ex_dlg::OnInitDialog()
 	//-----------------------------------------------------------------
 	// 1. MFC Default
 	//-----------------------------------------------------------------
-	CDialogEx::OnInitDialog();
+	this->CDialogEx::OnInitDialog();
 
-	SetIcon(m_hIcon, TRUE);
-	SetIcon(m_hIcon, FALSE);
+	this->SetIcon(m_hIcon, TRUE);
+	this->SetIcon(m_hIcon, FALSE);
 
 
 	//-----------------------------------------------------------------
-	// 2. Log ì„¤ì •
+	// 2. Log ¼³Á¤
 	//-----------------------------------------------------------------
 	// 1) Log View
-	m_child_logger_view.CreateChild(nullptr, this);
-	m_child_logger_view.Resize(94, 20);
-	m_child_logger_view.Move(0, 15, ORIGIN_LEFT | ORIGIN_BELOW, GetDlgItem(IDC_STATIC_FRAME_TRAFFIC_INFO));
-	m_child_logger_view.Initialize();
+	this->m_child_logger_view.CreateChild(nullptr, this);
+	this->m_child_logger_view.Resize(94, 20);
+	this->m_child_logger_view.Move(0, 15, ORIGIN_LEFT | ORIGIN_BELOW, GetDlgItem(IDC_STATIC_FRAME_TRAFFIC_INFO));
+	this->m_child_logger_view.Initialize();
 
-	// 2) mfc log controlì„ ì—°ê²°í•œë‹¤.
+	// 2) mfc log controlÀ» ¿¬°áÇÑ´Ù.
 	service::get_logger()->register_log_targetable(&m_child_logger_view);
 
 
 	//-----------------------------------------------------------------
-	// 3. ì´ˆê¸°í™”.
+	// 3. ÃÊ±âÈ­.
 	//-----------------------------------------------------------------
-	// 1) Serviceë¥¼ ìƒì„±í•œë‹¤.
+	// 1) Service¸¦ »ı¼ºÇÑ´Ù.
 	g_pservice = make_own<service>();
 
-	// 2) unregisterí•œë‹¤.
+	// 2) unregisterÇÑ´Ù.
 	g_pservice->register_messageable(this);
 
-	// 3) Serviceë¥¼ initializeí•œë‹¤.
-	request_service_initialize();
+	// 3) Service¸¦ initializeÇÑ´Ù.
+	this->request_service_initialize();
 
 
 	//-----------------------------------------------------------------
-	// 4. Control ì„¤ì •.
+	// 4. Control ¼³Á¤.
 	//-----------------------------------------------------------------
 	// 1) Control Server Connector
-	m_child_socket.CreateChild(g_pservice->m_psocket_tcp, htons(0), this);
-	m_child_socket.Move(5, 0, ORIGIN_REAR | ORIGIN_CENTER_Y, GetDlgItem(IDC_STATIC_TAG_SOCKET_TCP_SERVER));
+	this->m_child_socket.CreateChild(g_pservice->psocket_tcp, htons(0), this);
+	this->m_child_socket.Move(5, 0, ORIGIN_REAR | ORIGIN_CENTER_Y, GetDlgItem(IDC_STATIC_TAG_SOCKET_TCP_SERVER));
 
 	// 2) user Acceptor Control
-	m_child_acceptor_user.CreateChild(g_pservice->m_pacceptor_user, this); 
-	m_child_acceptor_user.Move(5, 0, ORIGIN_REAR | ORIGIN_CENTER_Y, GetDlgItem(IDC_STATIC_TAG_ACCEPTOR_USER));
+	this->m_child_acceptor_user.CreateChild(g_pservice->pacceptor_user, this); 
+	this->m_child_acceptor_user.Move(5, 0, ORIGIN_REAR | ORIGIN_CENTER_Y, GetDlgItem(IDC_STATIC_TAG_ACCEPTOR_USER));
 
 	// 3) Connection Info
-	m_child_traffic_info.CreateChild(&net::io::statistics::Nsocket::statistics_get_traffic_info_total(), this);
-	m_child_traffic_info.Move(0, 30, ORIGIN_CENTER_X | ORIGIN_TOP, GetDlgItem(IDC_STATIC_FRAME_TRAFFIC_INFO));
+	this->m_child_traffic_info.CreateChild(&net::io::statistics::Nsocket::statistics_get_traffic_info_total(), this);
+	this->m_child_traffic_info.Move(0, 30, ORIGIN_CENTER_X | ORIGIN_TOP, GetDlgItem(IDC_STATIC_FRAME_TRAFFIC_INFO));
 
 	// 4) Pool/Thread/CGDKInfo Status Dialog
-	m_dlg_factory_status.CreateModaless(CGDK::factory::manager::instance(), this);
-	m_dlg_thread_status.CreateModaless(api::manager_thread::instance(), executor::manager::instance(), system_executor::instance(), this);
+	this->m_dlg_factory_status.CreateModaless(CGDK::factory::manager::instance(), this);
+	this->m_dlg_thread_status.CreateModaless(api::manager_thread::instance(), executor::manager::instance(), system_executor::instance(), this);
 
-	// 5) Controlì„ ëª¨ë‘ Disableí•œë‹¤.
-	enable_server_controls(FALSE);
+	// 5) ControlÀ» ¸ğµÎ DisableÇÑ´Ù.
+	this->enable_server_controls(FALSE);
 
 
 	//-----------------------------------------------------------------
@@ -108,7 +108,7 @@ BOOL Ctutorial_server_service_ex_dlg::OnInitDialog()
 	// 1) auto start
 	if (g_b_auto_start == true)
 	{
-		request_service_start();
+		this->request_service_start();
 	}
 
 	// return) 
@@ -117,26 +117,26 @@ BOOL Ctutorial_server_service_ex_dlg::OnInitDialog()
 
 void Ctutorial_server_service_ex_dlg::OnPaint()
 {
-	if (IsIconic())
+	if (this->IsIconic())
 	{
-		CPaintDC dc(this); // ê·¸ë¦¬ê¸°ë¥¼ ìœ„í•œ ë””ë°”ì´ìŠ¤ ì»¨í…ìŠ¤íŠ¸ì…ë‹ˆë‹¤.
+		CPaintDC dc(this); // ±×¸®±â¸¦ À§ÇÑ µğ¹ÙÀÌ½º ÄÁÅØ½ºÆ®ÀÔ´Ï´Ù.
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		// í´ë¼ì´ì–¸íŠ¸ ì‚¬ê°í˜•ì—ì„œ ì•„ì´ì½˜ì„ ê°€ìš´ë°ì— ë§ì¶¥ë‹ˆë‹¤.
+		// Å¬¶óÀÌ¾ğÆ® »ç°¢Çü¿¡¼­ ¾ÆÀÌÄÜÀ» °¡¿îµ¥¿¡ ¸ÂÃä´Ï´Ù.
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
-		GetClientRect(&rect);
+		this->GetClientRect(&rect);
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
 
-		// ì•„ì´ì½˜ì„ ê·¸ë¦½ë‹ˆë‹¤.
+		// ¾ÆÀÌÄÜÀ» ±×¸³´Ï´Ù.
 		dc.DrawIcon(x, y, m_hIcon);
 	}
 	else
 	{
-		CDialogEx::OnPaint();
+		this->CDialogEx::OnPaint();
 	}
 }
 
@@ -155,12 +155,12 @@ void Ctutorial_server_service_ex_dlg::OnBnClickedCancel()
 
 void Ctutorial_server_service_ex_dlg::OnBnClickedButtonPoolStatus()
 {
-	m_dlg_factory_status.ShowWindow(SW_SHOW);
+	this->m_dlg_factory_status.ShowWindow(SW_SHOW);
 }
 
 void Ctutorial_server_service_ex_dlg::OnBnClickedButtonThreadInfo()
 {
-	m_dlg_thread_status.ShowWindow(SW_SHOW);
+	this->m_dlg_thread_status.ShowWindow(SW_SHOW);
 }
 
 void Ctutorial_server_service_ex_dlg::OnBnClickedButtonLicenseInfo()
@@ -169,29 +169,29 @@ void Ctutorial_server_service_ex_dlg::OnBnClickedButtonLicenseInfo()
 
 void Ctutorial_server_service_ex_dlg::OnSystemStart()
 {
-	request_service_start();
+	this->request_service_start();
 }
 
 void Ctutorial_server_service_ex_dlg::OnSystemCancel()
 {
-	request_service_cancel();
+	this->request_service_cancel();
 }
 
 void Ctutorial_server_service_ex_dlg::OnSystemStop()
 {
-	request_service_stop();
+	this->request_service_stop();
 }
 
 void Ctutorial_server_service_ex_dlg::OnSystemExit()
 {
-	// 1) ì¢…ë£Œì˜ì‚¬ë¥¼ í™•ì¸ì„ í•œë‹¤.
+	// 1) Á¾·áÀÇ»ç¸¦ È®ÀÎÀ» ÇÑ´Ù.
 	int result = AfxMessageBox(TEXT("Do you want to EXIT?"), MB_OKCANCEL);
 
-	// check) OKê°€ ì•„ë‹ˆë©´ ì·¨ì†Œí•œë‹¤.
+	// check) OK°¡ ¾Æ´Ï¸é Ãë¼ÒÇÑ´Ù.
 	RETURN_IF(result != IDOK);
 
-	// 2) Server destroyë¥¼ ìš”ì²­í•œë‹¤.
-	request_service_destroy();
+	// 2) Server destroy¸¦ ¿äÃ»ÇÑ´Ù.
+	this->request_service_destroy();
 }
 
 result_code Ctutorial_server_service_ex_dlg::process_message(sMESSAGE& _msg)
@@ -216,10 +216,10 @@ result_code Ctutorial_server_service_ex_dlg::process_message(sMESSAGE& _msg)
 				break;
 		};
 
-		PostMessage(eMESSAGE::WINDOWS::NOTIFY_UPDATE, msg.command, msg.wParam);
+		this->PostMessage(eMESSAGE::WINDOWS::NOTIFY_UPDATE, msg.command, msg.wParam);
 
 		// Return) 
-		return	TRUE;
+		return TRUE;
 	}
 
 	// Return) 
@@ -236,38 +236,38 @@ void Ctutorial_server_service_ex_dlg::OnServicedestroyingPending()
 
 void Ctutorial_server_service_ex_dlg::OnServiceRunning()
 {
-	GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_ENABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_ENABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
 
-	enable_server_controls(TRUE);
+	this->enable_server_controls(TRUE);
 
-	SetTimer(0, 1000, nullptr);
+	this->SetTimer(0, 1000, nullptr);
 }
 
 void Ctutorial_server_service_ex_dlg::OnServiceStartPending()
 {
-	GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_DISABLED);
 }
 
 void Ctutorial_server_service_ex_dlg::OnServiceStopPending()
 {
-	GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_DISABLED);
 }
 
 void Ctutorial_server_service_ex_dlg::OnServiceStopped()
 {
-	KillTimer(0);
+	this->KillTimer(0);
 
-	GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_ENABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_ENABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
 
-	enable_server_controls(FALSE);
+	this->enable_server_controls(FALSE);
 }
 
 void Ctutorial_server_service_ex_dlg::OnServiceUpdate()
@@ -283,56 +283,56 @@ LRESULT Ctutorial_server_service_ex_dlg::OnNotifymessage_Update(WPARAM _wParam, 
 			switch ((eOBJECT_STATE)_lParam)
 			{
 			case	eOBJECT_STATE::STOPPED:
-					OnServiceStopped();
+					this->OnServiceStopped();
 					break;
 
 			case	eOBJECT_STATE::START_PENDING:
-					OnServiceStartPending();
+					this->OnServiceStartPending();
 					break;
 
 			case	eOBJECT_STATE::RUNNING:
-					OnServiceRunning();
+					this->OnServiceRunning();
 					break;
 
 			case	eOBJECT_STATE::STOP_PENDING:
-					OnServiceStopPending();
+					this->OnServiceStopPending();
 					break;
 
 			case	eOBJECT_STATE::INITIALIZING_PENDING:
-					OnServiceInitializingPending();
+					this->OnServiceInitializingPending();
 					break;
 
 			case	eOBJECT_STATE::DESTROYING_PENDING:
-					OnServicedestroyingPending();
+					this->OnServicedestroyingPending();
 					break;
 
 			case	eOBJECT_STATE::UPDATE:
-					OnServiceUpdate();
+					this->OnServiceUpdate();
 					break;
 			};
 			break;
 
 	case	eMESSAGE::SERVER::ADMIN::REQUEST_INIT_SERVICE:
 			{
-				request_service_initialize();
+				this->request_service_initialize();
 			}
 			break;
 
 	case	eMESSAGE::SERVER::ADMIN::REQUEST_DESTROY_SERVICE:
 			{
-				request_service_destroy();
+				this->request_service_destroy();
 			}
 			break;
 
 	case	eMESSAGE::SERVER::ADMIN::REQUEST_START_SERVICE:
 			{
-				request_service_start();
+				this->request_service_start();
 			}
 			break;
 
 	case	eMESSAGE::SERVER::ADMIN::REQUEST_STOP_SERVICE:
 			{
-				request_service_stop();
+				this->request_service_stop();
 			}
 			break;
 
@@ -347,21 +347,21 @@ LRESULT Ctutorial_server_service_ex_dlg::OnNotifymessage_Update(WPARAM _wParam, 
 
 	case	MESSAGE_NOTIFY_SOCKET_CONNECT:
 			{
-				OnSocketConnect(reinterpret_cast<socket_tcp_user*>(_lParam));
+				this->OnSocketConnect(reinterpret_cast<socket_tcp_user*>(_lParam));
 				reinterpret_cast<socket_tcp_user*>(_lParam)->release();
 			}
 			break;
 
 	case	MESSAGE_NOTIFY_SOCKET_DISCONNECT:
 			{
-				OnSocketDisconnect(reinterpret_cast<socket_tcp_user*>(_lParam));
+				this->OnSocketDisconnect(reinterpret_cast<socket_tcp_user*>(_lParam));
 				reinterpret_cast<socket_tcp_user*>(_lParam)->release();
 			}
 			break;
 
 	case	MESSAGE_NOTIFY_SOCKET_UPDATE:
 			{
-				OnSocketUpdate(reinterpret_cast<socket_tcp_user*>(_lParam));
+				this->OnSocketUpdate(reinterpret_cast<socket_tcp_user*>(_lParam));
 				reinterpret_cast<socket_tcp_user*>(_lParam)->release();
 			}
 			break;
@@ -392,12 +392,12 @@ void Ctutorial_server_service_ex_dlg::request_service_start()
 	RETURN_IF(g_pservice.empty());
 
 	// 1) Menu Control
-	GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_CANCEL, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_ENABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_CANCEL, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_ENABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
 
-	// 2) Openì˜ ì‹¤í–‰ì„ ìš”ì²­í•œë‹¤.
+	// 2) OpenÀÇ ½ÇÇàÀ» ¿äÃ»ÇÑ´Ù.
 	system_executor::post(make_executable([]()
 	{
 		g_pservice->start();
@@ -414,12 +414,12 @@ void Ctutorial_server_service_ex_dlg::request_service_stop()
 	RETURN_IF(g_pservice.empty());
 
 	// 1) Menu Control
-	GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_ENABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_CANCEL, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_ENABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_CANCEL, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
 
-	// 2) stopì˜ ì‹¤í–‰ì„ ìš”ì²­í•œë‹¤.
+	// 2) stopÀÇ ½ÇÇàÀ» ¿äÃ»ÇÑ´Ù.
 	system_executor::post(make_executable([]()
 	{
 		g_pservice->stop();
@@ -428,28 +428,28 @@ void Ctutorial_server_service_ex_dlg::request_service_stop()
 
 void Ctutorial_server_service_ex_dlg::request_service_destroy()
 {
-	// 1) í˜„ì¬ ThreadIDë¥¼ êµ¬í•œë‹¤.(WM_QUIT messageëŠ” í˜„ì¬ Threadê°€ ë°›ì•„ì•¼ ì²˜ë¦¬ëœë‹¤.)
+	// 1) ÇöÀç ThreadID¸¦ ±¸ÇÑ´Ù.(WM_QUIT message´Â ÇöÀç Thread°¡ ¹Ş¾Æ¾ß Ã³¸®µÈ´Ù.)
 	auto thread_id = GetCurrentThreadId();
 
 	// 2) Menu Control
-	GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_CANCEL, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
-	GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_START, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_CANCEL, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_STOP, MF_DISABLED);
+	this->GetMenu()->EnableMenuItem(ID_SYSTEM_EXIT, MF_ENABLED);
 
-	// 3) destroyì˜ ì‹¤í–‰ì„ ìš”ì²­í•œë‹¤.
+	// 3) destroyÀÇ ½ÇÇàÀ» ¿äÃ»ÇÑ´Ù.
 	system_executor::post(make_executable([=]
 	{
-		// - Serverë¥¼ ë‹«ëŠ”ë‹¤.
+		// - Server¸¦ ´İ´Â´Ù.
 		g_pservice->destroy();
 
-		// - Traceë¥¼ ë“±ë¡í•´ì œí•œë‹¤.
+		// - Trace¸¦ µî·ÏÇØÁ¦ÇÑ´Ù.
 		service::get_logger()->unregister_log_targetable(&m_child_logger_view);
 
-		// - unregisterí•œë‹¤.
+		// - unregisterÇÑ´Ù.
 		g_pservice->unregister_messageable(this);
 
-		// - QUIT Messageë¥¼ í˜„ì¬ì˜ Threadì— ë‚ ë¦°ë‹¤.(ì´ê²ƒìœ¼ë¡œ ì–´í”Œë¦¬ì¼€ì´ì…˜ì€ ì¢…ë£Œëœë‹¤.)
+		// - QUIT Message¸¦ ÇöÀçÀÇ Thread¿¡ ³¯¸°´Ù.(ÀÌ°ÍÀ¸·Î ¾ÖÇÃ¸®ÄÉÀÌ¼ÇÀº Á¾·áµÈ´Ù.)
 		PostThreadMessage(thread_id, WM_QUIT, (WPARAM)-1, 0);
 	}));
 }
@@ -457,13 +457,13 @@ void Ctutorial_server_service_ex_dlg::request_service_destroy()
 void Ctutorial_server_service_ex_dlg::enable_server_controls(BOOL _bEnable)
 {
 	// 1) connector & acceptor info
-	GetDlgItem(IDC_STATIC_TAG_ACCEPTOR_USER)->EnableWindow(_bEnable);
-	m_child_acceptor_user.EnableWindow(_bEnable);
-	GetDlgItem(IDC_STATIC_TAG_SOCKET_TCP_SERVER)->EnableWindow(_bEnable);
-	m_child_socket.EnableWindow(_bEnable);
+	this->GetDlgItem(IDC_STATIC_TAG_ACCEPTOR_USER)->EnableWindow(_bEnable);
+	this->m_child_acceptor_user.EnableWindow(_bEnable);
+	this->GetDlgItem(IDC_STATIC_TAG_SOCKET_TCP_SERVER)->EnableWindow(_bEnable);
+	this->m_child_socket.EnableWindow(_bEnable);
 
 	// 2) traffic info
-	GetDlgItem(IDC_STATIC_FRAME_TRAFFIC_INFO)->EnableWindow(_bEnable);
-	m_child_traffic_info.EnableWindow(_bEnable);
+	this->GetDlgItem(IDC_STATIC_FRAME_TRAFFIC_INFO)->EnableWindow(_bEnable);
+	this->m_child_traffic_info.EnableWindow(_bEnable);
 }
 

@@ -55,4 +55,11 @@ protected:
 			uint64_t			m_md5_pos = 0;
 			edc::md5			m_md5_file;
 			std::vector<shared_buffer> m_vector_buffer;
+
+			// - cached file handle for streaming (avoid repeated open/close)
+			FILE_HANDLE			m_cached_file_handle{ INVALID_FILE_HANDLE };
+			lock_object			m_lock_file_handle;
+			void				_open_cached_file();
+			void				_close_cached_file() noexcept;
+			shared_buffer		m_compression_buffer;  // - reusable compression buffer
 };

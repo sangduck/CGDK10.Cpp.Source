@@ -1,0 +1,24 @@
+#-----------------------------------------------------------------------------
+# prometheus scrape example (admin server control api : GET /metrics)
+#
+#  - the control api listens on 127.0.0.1:21888 by default.
+#    to scrape from another host, set "acceptor_control" : address 0.0.0.0, "certify_key" and "allowed_addresses".
+#  - the key is sent as 'Authorization: Bearer <key>' (GET /metrics accepts the key even with "require_signature".
+#    set "metrics_require_signature": true to refuse it)
+#  - the key file : 'certify_key' of "acceptor_control" only (chmod 600)
+#-----------------------------------------------------------------------------
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - cgdk_alerts.yml
+
+scrape_configs:
+  - job_name: cgdk_admin
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/cgdk_control.key
+    static_configs:
+      - targets: [ "127.0.0.1:21888" ]

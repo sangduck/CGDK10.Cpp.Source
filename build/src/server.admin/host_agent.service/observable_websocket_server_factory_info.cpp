@@ -1,7 +1,7 @@
 #include "pch.h"
 
 
-void _append_factory_info_add(buffer& _buf_dest, const server_admin::factory_snap& _factory_info)
+void _append_factory_info_add(buffer& _buf_dest, const server_system::factory_snap& _factory_info)
 {
 	// 1) NAME
 	_buf_dest.append_text<char>("<td style='overflow-x:hidden;' title=\"");
@@ -99,7 +99,7 @@ void _append_factory_info_add(buffer& _buf_dest, const server_admin::factory_sna
 
 		if (fallocated_total)
 		{
-			_buf_dest.append_text<char>("<td align='right'>{:6.3f}%</td>", ((float)_factory_info.updatable.now.alloc_stack + _factory_info.updatable.now.alloc_stack_tls) / (float)fallocated_total * 100.0f);
+			_buf_dest.append_text<char>(CGDK::stream_string("<td align='right'>", CGDK::stream_fixed(((float)_factory_info.updatable.now.alloc_stack + _factory_info.updatable.now.alloc_stack_tls) / (float)fallocated_total * 100.0f, 3, 6), "%</td>"));
 		}
 		else
 		{
@@ -111,7 +111,7 @@ void _append_factory_info_add(buffer& _buf_dest, const server_admin::factory_sna
 
 		if (fallocated_create != 0)
 		{
-			_buf_dest.append_text<char>("<td align='right'>{:6.3f}%</td>", (float)_factory_info.updatable.now.free_delete / fallocated_create * 100.0f);
+			_buf_dest.append_text<char>(CGDK::stream_string("<td align='right'>", CGDK::stream_fixed((float)_factory_info.updatable.now.free_delete / fallocated_create * 100.0f, 3, 6), "%</td>"));
 		}
 		else
 		{
@@ -128,7 +128,7 @@ void _append_factory_info_add(buffer& _buf_dest, const server_admin::factory_sna
 	}
 }
 
-void _append_factory_info_update(buffer& _buf_dest, const server_admin::factory_snap& _factory_info)
+void _append_factory_info_update(buffer& _buf_dest, const server_system::factory_snap& _factory_info)
 {
 	// 0) NAME
 	// 1) ID
@@ -180,7 +180,7 @@ void _append_factory_info_update(buffer& _buf_dest, const server_admin::factory_
 
 		if (fallocated_total)
 		{
-			_buf_dest.append_text<char>("{:6.3f}%\n", ((float)_factory_info.updatable.now.alloc_stack + _factory_info.updatable.now.alloc_stack_tls) / (float)fallocated_total * 100.0f);
+			_buf_dest.append_text<char>(CGDK::stream_string(CGDK::stream_fixed(((float)_factory_info.updatable.now.alloc_stack + _factory_info.updatable.now.alloc_stack_tls) / (float)fallocated_total * 100.0f, 3, 6), "%\n"));
 		}
 		else
 		{
@@ -192,7 +192,7 @@ void _append_factory_info_update(buffer& _buf_dest, const server_admin::factory_
 
 		if (fallocated_create != 0)
 		{
-			_buf_dest.append_text<char>("{:6.3f}%\n", (float)_factory_info.updatable.now.free_delete / fallocated_create * 100.0f);
+			_buf_dest.append_text<char>(CGDK::stream_string(CGDK::stream_fixed((float)_factory_info.updatable.now.free_delete / fallocated_create * 100.0f, 3, 6), "%\n"));
 		}
 		else
 		{
@@ -209,7 +209,7 @@ void _append_factory_info_update(buffer& _buf_dest, const server_admin::factory_
 	}
 }
 
-shared_buffer make_webmessage_factory_list_add(const std::vector<server_admin::factory_snap>& _vector_factory_info, uint64_t _flag)
+shared_buffer make_webmessage_factory_list_add(const std::vector<server_system::factory_snap>& _vector_factory_info, uint64_t _flag)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(65536);
@@ -243,7 +243,7 @@ shared_buffer make_webmessage_factory_list_add(const std::vector<server_admin::f
 		_append_factory_info_add(buf_text, iter);
 
 		// - tr node name
-		auto tr_element_id = NFMT::format("tr{}", iter.updatable.id);
+		auto tr_element_id = CGDK::stream_string("tr", iter.updatable.id);
 
 		// - append element id
 		buf_result.append_text<char>(tr_element_id);
@@ -261,7 +261,7 @@ shared_buffer make_webmessage_factory_list_add(const std::vector<server_admin::f
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-shared_buffer make_webmessage_factory_list_update(const std::vector<server_admin::factory_snap>& _vector_factory_info, uint64_t _flag)
+shared_buffer make_webmessage_factory_list_update(const std::vector<server_system::factory_snap>& _vector_factory_info, uint64_t _flag)
 {
 	// 1) buffer
 	auto buf_result = alloc_shared_buffer(65536);
@@ -284,7 +284,7 @@ shared_buffer make_webmessage_factory_list_update(const std::vector<server_admin
 		CONTINUE_IF((iter.type == eFACTORY_TYPE::ALLOCATOR_USER || iter.type == eFACTORY_TYPE::POOL_USER) && is_visiable_user == false);
 
 		// - tr node name
-		auto tr_element_id = NFMT::format("tr{}", iter.updatable.id);
+		auto tr_element_id = CGDK::stream_string("tr", iter.updatable.id);
 
 		// - append element id
 		buf_result.append_text<char>(tr_element_id);
@@ -298,12 +298,10 @@ shared_buffer make_webmessage_factory_list_update(const std::vector<server_admin
 	return make_shared_buffer(sWEBSOCKET_MESSAGE(buf_result.to_string<char>()));
 }
 
-observable_websocket_peer_factory_info::observable_websocket_peer_factory_info(const std::string_view _name)
+observable_websocket_peer_factory_info::observable_websocket_peer_factory_info()
 {
-	set_name(_name);
-
-	m_webpage_str_target = "webpage_server_factory_info.htm";
-	m_webpage_index = 'B';
+	this->m_webpage_str_target = "webpage_server_factory_info.htm";
+	this->m_webpage_index = 'B';
 }
 
 observable_websocket_peer_factory_info::~observable_websocket_peer_factory_info()
@@ -313,19 +311,19 @@ observable_websocket_peer_factory_info::~observable_websocket_peer_factory_info(
 void observable_websocket_peer_factory_info::request_update_webpage_factory()
 {
 	// check)
-	CGASSERT_ERROR(m_pservice_entity != nullptr);
+	CGASSERT_FATAL(m_pservice_entity != nullptr);
 
 	// declare)
 	net::local_send_queue send_queue;
 
 	// 1) 모두에게 전송한다.
-	scoped_lock(this->m_lockable_observable)
+	SCOPED_LOCK(this->m_lockable_observable)
 	{
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
 			for (auto& iter : this->m_container_observer)
 			{
-				send_queue.enqueue({ iter.pobserver, make_webmessage_factory_list_update(this->m_pservice_entity->m_instance.status.vector_factory, iter.pobserver->m_flag_set) });
+				send_queue.enqueue({ iter.pobserver, make_webmessage_factory_list_update(this->m_pservice_entity->m_instance.info.status.vector_factory, iter.pobserver->m_flag_set) });
 			}
 		}
 	}
@@ -343,7 +341,7 @@ result_code observable_websocket_peer_factory_info::on_observer_registering(sock
 void observable_websocket_peer_factory_info::on_observer_registered(socket_websocket* _pobserver, observer_channel_t /*_ocid*/, const observer_data_t& /*_observer_data*/)
 {
 	// check)
-	CGASSERT_ERROR(m_pservice_entity != nullptr);
+	CGASSERT_FATAL(m_pservice_entity != nullptr);
 
 	// 1) register mediator
 	_pobserver->register_messageable(this);
@@ -351,9 +349,9 @@ void observable_websocket_peer_factory_info::on_observer_registered(socket_webso
 	// declare) 
 	shared_buffer buf_send;
 
-	scoped_lock(this->m_pservice_entity->m_cs_instance)
+	SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 	{
-		buf_send = make_webmessage_factory_list_add(this->m_pservice_entity->m_instance.status.vector_factory, _pobserver->m_flag_set);
+		buf_send = make_webmessage_factory_list_add(this->m_pservice_entity->m_instance.info.status.vector_factory, _pobserver->m_flag_set);
 	}
 
 	// 2) send factory list
@@ -365,7 +363,7 @@ uintptr_t observable_websocket_peer_factory_info::on_observer_unregistering(sock
 	// 1) unregister to observable
 	_pobserver->unsubscribe(OCID_FRAME3);
 
-	// 2) uregister _pmenber
+	// 2) unregister _pmenber
 	_pobserver->unregister_messageable(this);
 
 	// return) 
@@ -401,9 +399,9 @@ result_code observable_websocket_peer_factory_info::on_message(sMESSAGE_NETWORK&
 	if (message_type == MESSAGE_WEB_FACTORY_FILTER_MEMORY) // "CFGA"
 	{
 		// check)
-		CGASSERT_ERROR(m_pservice_entity != nullptr);
+		CGASSERT_FATAL(m_pservice_entity != nullptr);
 
-		// - get commnad
+		// - get command
 		auto command = msg.buf_message[4];
 
 		if (command == 'C')
@@ -418,18 +416,18 @@ result_code observable_websocket_peer_factory_info::on_message(sMESSAGE_NETWORK&
 
 		// - send message
 		shared_buffer buf_send;
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
-			buf_send = make_webmessage_factory_list_add(this->m_pservice_entity->m_instance.status.vector_factory, pmember->m_flag_set);
+			buf_send = make_webmessage_factory_list_add(this->m_pservice_entity->m_instance.info.status.vector_factory, pmember->m_flag_set);
 		}
 		pmember->send(buf_send);
 	}
 	else if (message_type == MESSAGE_WEB_FACTORY_FILTER_SYSTEM) // "CFGB"
 	{
 		// check)
-		CGASSERT_ERROR(m_pservice_entity != nullptr);
+		CGASSERT_FATAL(m_pservice_entity != nullptr);
 
-		// - get commnad
+		// - get command
 		auto command = msg.buf_message[4];
 
 		if (command == 'C')
@@ -446,18 +444,18 @@ result_code observable_websocket_peer_factory_info::on_message(sMESSAGE_NETWORK&
 		shared_buffer buf_send;
 
 		// - send message
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
-			buf_send = make_webmessage_factory_list_add(this->m_pservice_entity->m_instance.status.vector_factory, pmember->m_flag_set);
+			buf_send = make_webmessage_factory_list_add(this->m_pservice_entity->m_instance.info.status.vector_factory, pmember->m_flag_set);
 		}
 		pmember->send(buf_send);
 	}
 	else if (message_type == MESSAGE_WEB_FACTORY_FILTER_USER) // "CFGC"
 	{
 		// check)
-		CGASSERT_ERROR(m_pservice_entity != nullptr);
+		CGASSERT_FATAL(m_pservice_entity != nullptr);
 
-		// - get commnad
+		// - get command
 		auto command = msg.buf_message[4];
 
 		if (command == 'C')
@@ -475,9 +473,9 @@ result_code observable_websocket_peer_factory_info::on_message(sMESSAGE_NETWORK&
 		shared_buffer buf_send;
 
 		// - send message
-		scoped_lock(this->m_pservice_entity->m_cs_instance)
+		SCOPED_LOCK(this->m_pservice_entity->m_lockable_instance)
 		{
-			buf_send = make_webmessage_factory_list_add(this->m_pservice_entity->m_instance.status.vector_factory, pmember->m_flag_set);
+			buf_send = make_webmessage_factory_list_add(this->m_pservice_entity->m_instance.info.status.vector_factory, pmember->m_flag_set);
 		}
 		pmember->send(buf_send);
 	}

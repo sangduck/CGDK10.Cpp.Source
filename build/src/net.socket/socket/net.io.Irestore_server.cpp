@@ -28,18 +28,18 @@ result_code net::io::Irestore_server::process_message(sMESSAGE& _msg)
 
 	if (is_network_message(_msg.message))
 	{
-		// 1) caseting
+		// 1) casting
 		sMESSAGE_NETWORK& msg_network = (sMESSAGE_NETWORK&)_msg;
 
 		// 2) eMESSAGE::NETWORK::SOCKET::RESTORE일 경우 그에 대한 처리를 수행한다.
-		//      Clinet측에서 RequestIORestre()을 요청하면 Server에 이 메시지를 전달된다.
+		//      Client측에서 RequestIORestre()을 요청하면 Server에 이 메시지를 전달된다.
 		//      Server 측은 다음과 같은 처리를 한다.
-		//      - [RESTORE_SERVER_ID]를 읽어 이 Server에 대한 요청이 맞는가를 확인한다.
-		//      - [RESTORE_SERVER_ID]를 읽어 이에 해당하는 Restorable을 회복한다.
+		//      - [restore_server_id_t]를 읽어 이 Server에 대한 요청이 맞는가를 확인한다.
+		//      - [restore_server_id_t]를 읽어 이에 해당하는 Restorable을 회복한다.
 		//         해당 Restorable이 존재하지 않을 경우 신규 생성한다.
-		//      - ackReceived와 ack_sended를 읽어 회복[Restore]가능한지 여부를 확인한다.
+		//      - ackReceived와 ack_sent를 읽어 회복[Restore]가능한지 여부를 확인한다.
 		//      - 회복[Restore]가 가능하다면 필요한 정보를 재송신한다.
-		//      - 필요한 정보의 재송신이 끝나면 Cleint측에서 필요한 정보를 재송신을 대기한다.
+		//      - 필요한 정보의 재송신이 끝나면 Client측에서 필요한 정보를 재송신을 대기한다.
 		if(msg_network.buf_message.front<uint32_t>(4) == eMESSAGE::NETWORK::SOCKET::REQUEST_IO_RESTORE)
 		{
 			// check)
@@ -51,7 +51,7 @@ result_code net::io::Irestore_server::process_message(sMESSAGE& _msg)
 				this->m_prestore_manager = restore_manager::instance();
 			}
 
-			// - prestorable_server을 얻는다. (여기서 새로운 [RESTORE_CLIENT_ID]를 발급받는다.)
+			// - prestorable_server을 얻는다. (여기서 새로운 [restore_client_io_t]를 발급받는다.)
 			this->m_prestore_manager->restore_restorable(this, msg_network.buf_message);
 
 			// return)

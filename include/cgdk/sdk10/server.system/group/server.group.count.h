@@ -43,9 +43,14 @@ public:
 public:
 			void				lock_member_enter() noexcept { this->Ireferenceable::add_ref(); this->m_lockable_enter.lock();}
 			void				unlock_member_enter() noexcept { this->m_lockable_enter.unlock(); this->Ireferenceable::release();}
-	[[nodiscard]] lockable<>&	member_enter_lock() noexcept { return this->m_lockable_enter;}
+	[[nodiscard]] lock_object&	member_enter_lock() noexcept { return this->m_lockable_enter;}
 
 protected:
+	// - lock of the events (lock order : member lock -> enter lock -> group lock)
+	//   on_member_entering : in the lock of the member and the enter lock
+	//   on_member_entered / on_member_leaving : in the lock of the member and the group lock
+	//   on_member_leaved : in the lock of the member (out of the group lock)
+	//   do not lock another member (or wait for a thread which locks one) in these events. it deadlocks with the enter / leave of other threads.
 	virtual	void				on_enable_enter() {}
 	virtual	void				on_disable_enter() {}
 
@@ -72,7 +77,7 @@ private:
 
 private:
 			bool				m_enable_enter;
-			lockable<>			m_lockable_enter;
+	mutable	lock_object			m_lockable_enter;
 
 			size_t				m_count_member;
 			size_t				m_count_max_member;

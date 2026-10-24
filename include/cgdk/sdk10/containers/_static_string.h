@@ -36,7 +36,7 @@ class basic_static_string
 //     4) X:iterator			순회할 때 사용되는 반복자.
 //     5) X:const_iterator		순회할 때 사용되는 반복자(const형)
 //     6) X:difference_type		두 iterator에 담김 값의 거리를 나타내는 타입.
-//     7) X:size_type			X의 크기를 나타낼때 사용되는 형.
+//     7) X:size_type			X의 크기를 나타낼 때 사용되는 형.
 //
 //  * Reversible Requirement
 //     1) X::reverse_iterator	역순환 때 사용되는 반복자.
@@ -64,7 +64,7 @@ public:
 	typedef std::reverse_iterator<iterator> reverse_iterator;
 	typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-	// Self) 자기자신(표준 아님.)
+	// Self) 자기 자신(표준 아님.)
 	typedef	basic_static_string<TDATA, TSIZE>	_mytype;
 
 	// Rebinder) 
@@ -80,13 +80,13 @@ public:
 //
 //  * Common Container Requirement
 //     1) X();			Default Constructor
-//     2) X(a);			Copy Constrctor.(소요시간은 선형적)
+//     2) X(a);			Copy Constructor.(소요시간은 선형적)
 //		  X u(a);
 //     3) (&a)->~X();	Destructor.(소요시간은 선형적)
 //     4) a.begin(); 	Container 순회에 사용할 시작과 끝 iterator 
 //		  a.end();
 //     5) a==b; a!=b;	Container 모든 원소 같으면 true.(소요시간 선형적)
-//     6) a.size();		Container에 담김 원소의 갯수를 리턴한다.
+//     6) a.size();		Container에 담김 원소의 개수를 리턴한다.
 //     7) a.max_size();	Container가 담을 수 있는 최대 원소 개수를 리턴한다.
 //     8) a.empty();	Container가 비어 있는 경우라면 true를 리턴한다.
 //     9) a<b; a>b; 	비교 연산(소요시간 선형적)
@@ -132,12 +132,12 @@ public:
 	iterator				end() noexcept								{ return iterator(m_ptr_first + m_size);}
 	const_iterator			end() const noexcept						{ return const_iterator(m_ptr_first + m_size);}
 	const_iterator			cend() const noexcept						{ return const_iterator(m_ptr_first + m_size);}
-	reverse_iterator		rbegin() noexcept							{ return reverse_iterator(iterator(m_ptr_first + m_size - 1));}
-	const_reverse_iterator	rbegin() const noexcept						{ return const_reverse_iterator(const_iterator(m_ptr_first + m_size - 1));}
-	const_reverse_iterator	crbegin() const noexcept					{ return const_reverse_iterator(const_iterator(m_ptr_first + m_size - 1));}
-	reverse_iterator		rend() noexcept								{ return reverse_iterator(iterator(m_ptr_first - 1));}
-	const_reverse_iterator	rend() const noexcept						{ return const_reverse_iterator(const_iterator(m_ptr_first + m_size - 1));}
-	const_reverse_iterator	crend() const noexcept						{ return const_reverse_iterator(const_iterator(m_ptr_first + m_size - 1));}
+	reverse_iterator		rbegin() noexcept							{ return reverse_iterator(iterator(m_ptr_first + m_size));}
+	const_reverse_iterator	rbegin() const noexcept						{ return const_reverse_iterator(const_iterator(m_ptr_first + m_size));}
+	const_reverse_iterator	crbegin() const noexcept					{ return const_reverse_iterator(const_iterator(m_ptr_first + m_size));}
+	reverse_iterator		rend() noexcept								{ return reverse_iterator(iterator(m_ptr_first));}
+	const_reverse_iterator	rend() const noexcept						{ return const_reverse_iterator(const_iterator(m_ptr_first));}
+	const_reverse_iterator	crend() const noexcept						{ return const_reverse_iterator(const_iterator(m_ptr_first));}
 
 	// Common Standard 3) 
 	void					swap(_mytype& _rhs) noexcept;
@@ -907,7 +907,7 @@ bool operator <= (const std::basic_string_view<TDATA>& _lhs, const basic_static_
 template <class TDATA, size_t TSIZE>
 TDATA& basic_static_string<TDATA, TSIZE>::at(size_type _pos)
 {
-	// check) p_iPosition의 값이 0보다는 크고 _capacity보다는 작어야 한다.
+	// check) p_iPosition의 값이 0보다는 크고 _capacity보다는 작아야 한다.
 	CGD_THROW_IF(_pos<0 || _pos>=size(), std::out_of_range("CGDK exception:: Out of range."))
 
 	// 1) 값을 읽어서 되돌린다.
@@ -917,7 +917,7 @@ TDATA& basic_static_string<TDATA, TSIZE>::at(size_type _pos)
 template <class TDATA, size_t TSIZE>
 const TDATA& basic_static_string<TDATA, TSIZE>::at(size_type _pos) const
 {
-	// check) p_iPosition의 값이 0보다는 크고 _capacity보다는 작어야 한다.
+	// check) p_iPosition의 값이 0보다는 크고 _capacity보다는 작아야 한다.
 	CGD_THROW_IF(_pos<0 || _pos>=size(), std::out_of_range("CGDK exception:: out of range."))
 
 	// 1) 값을 읽어서 되돌린다.
@@ -1140,8 +1140,8 @@ template <class TDATA, size_t TSIZE>
 void basic_static_string<TDATA, TSIZE>::pop_back()
 {
 	#ifdef _CGD_NOCHECK_EMPTY_POP
-	// * Empty를 Check를 하지 않을 경우에 Debug 모드일때 Assert를 띄워준다.
-	//   (Release Mode일 때는 아무일도 동작하지 않는다.)
+	// * Empty를 Check를 하지 않을 경우에 Debug 모드일 때 Assert를 띄워준다.
+	//   (Release Mode일 때는 아무 일도 동작하지 않는다.)
 	CGDASSERT_ERROR(!empty());
 	#else
 	// Empty를 Check를 할 경우 Empty를 Check하고 비어 있을 경우 아무동작하지 않고 그냥 끝낸다.
@@ -1209,7 +1209,7 @@ void basic_static_string<TDATA, TSIZE>::assign(ITERATOR _first, ITERATOR _last)
 		// 2) 값을 넣는다.
 		for(; _first != _last; ++_first, ++ptrNow)
 		{
-			// check) Remained가 0이면 안됀다.
+			// check) Remained가 0이면 안 된다.
 			CGD_THROW_IF(remained()!=0, std::length_error("CGDK exception:: Invalid Size."));
 
 		#pragma push_macro("new")
@@ -1421,7 +1421,7 @@ typename basic_static_string<TDATA, TSIZE>::iterator basic_static_string<TDATA, 
 		// 2) 비운 자리에 Constructor를 호출해 값을 복사한다.
 	#pragma push_macro("new")
 	#undef new
-		new (_where.m_ptr) value_type(_val);
+		new (const_cast<value_type*>(_where.m_ptr)) value_type(_val);
 	#pragma pop_macro("new")
 	}
 	catch(...)
@@ -1481,7 +1481,7 @@ typename basic_static_string<TDATA, TSIZE>::iterator basic_static_string<TDATA, 
 		// 2) 비운 자리에 Constructor를 호출해 값을 복사한다.
 	#pragma push_macro("new")
 	#undef new
-		new (_where.m_ptr) value_type(std::move(_val));
+		new (const_cast<value_type*>(_where.m_ptr)) value_type(std::move(_val));
 	#pragma pop_macro("new")
 	}
 	catch(...)
@@ -1592,15 +1592,13 @@ void basic_static_string<TDATA, TSIZE>::swap(_mytype& _rhs) noexcept
 	// check) 같은 거라면 그냥 되돌린다.
 	CGD_RETURN_IF(this == &_rhs);
 
-	// 1) 무조건 통채로 바꾼다.(Allocator란 존재치 않는다. 단지 복사...)
+	// 1) 무조건 통째로 바꾼다.(Allocator란 존재치 않는다. 단지 복사...)
 	CGD_SWAP(*this, _rhs);
 }
 
 template<size_t I> using static_string	  = basic_static_string<char, I>;
 template<size_t I> using static_wstring	  = basic_static_string<wchar_t, I>;
 template<size_t I> using static_u8string  = basic_static_string<char8_t, I>;
-template<size_t I> using static_u16string = basic_static_string<char16_t, I>;
-template<size_t I> using static_u32string = basic_static_string<char32_t, I>;
 
 
 

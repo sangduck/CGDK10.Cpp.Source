@@ -14,7 +14,7 @@
 namespace CGDK
 {
 	// 1) DBRepository Manager
-	lockable<>							__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL4 + 0)	doss::manager_repository::m_lockable_create;
+	lock_object							__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL4 + 0)	doss::manager_repository::m_lockable_create;
 	own_ptr<doss::manager_repository>	__ATTRIBUTE_PRIORITY(__STATIC_PRIORITY_LEVEL4 + 0)	doss::manager_repository::m_pinstance;
 }
 

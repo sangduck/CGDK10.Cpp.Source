@@ -12,7 +12,7 @@ bool net::io::Irestorable_server::process_send( shared_buffer&& _buffer, std::si
 	RETURN_IF(prestore_server.empty(), false)
 
 	// 2) send한다.
-		return prestore_server->send({ std::move(_buffer), _count_message }, _option);
+	return prestore_server->send({ std::move(_buffer), _count_message }, _option);
 }
 
 bool net::io::Irestorable_server::disconnect(uint64_t _disconnect_reason) noexcept
@@ -91,7 +91,7 @@ bool net::io::Irestorable_server::process_complete_connect (uintptr_t _result)
 		// - on_fail_connect()함수를 호출한다.
 		try
 		{
-			this->process_on_fail_connect(DISCONNECT_REASON_FAIL);
+			this->process_on_fail_connect(this->m_disconnect_reason | DISCONNECT_REASON_FAIL);	// - the reason of the close (ex. DISCONNECT_REASON_SUSTAIN_TIMEOUT : connect timeout)
 		}
 		catch (std::exception& e)
 		{
@@ -181,12 +181,12 @@ bool net::io::Irestorable_server::process_complete_disconnect()
 	// 1) Closed상태로 socket State를 바꾸고 이전 State를 얻어온다.
 	eSOCKET_STATE socket_state_old = socket_state(eSOCKET_STATE::CLOSED);
 
-	// check) socket이 이미 Closed상태라면 돌려보낸다.
+	// check) socket이 이미 Clozed상태라면 돌려보낸다.
 	RETURN_IF(socket_state_old == eSOCKET_STATE::CLOSED, false);
 
 	try
 	{
-		this->process_on_disconnect(m_disconnect_reason, socket_state_old);
+		this->process_on_disconnect(this->m_disconnect_reason, socket_state_old);
 	}
 	catch (std::exception& e)
 	{
@@ -230,7 +230,7 @@ bool net::io::Irestorable_server::process_close_socket(uint64_t _disconnect_reas
 	return prestore_server->process_close_socket(_disconnect_reason);
 }
 
-void net::io::Irestorable_server::process_request_io_restore(result_code _result, SEQUENCE_ID _ack_received)
+void net::io::Irestorable_server::process_request_io_restore(result_code _result, sequence_id_t _ack_received)
 {
 	// 1) set socket state
 	this->socket_state(eSOCKET_STATE::SYN);
@@ -240,7 +240,7 @@ void net::io::Irestorable_server::process_request_io_restore(result_code _result
 	// case RESTORE] Restore일 경우에만 Restore 처리를 수행한다.
 	case	eRESULT::RESTORE:
 			{
-				scoped_lock(this->m_list_sending)
+				SCOPED_LOCK(this->m_lockable_list_sending)
 				{
 					// check)
 					CGASSERT_ERROR(_ack_received != 0);
@@ -248,18 +248,18 @@ void net::io::Irestorable_server::process_request_io_restore(result_code _result
 					// - _ack_received를 1줄인다.
 					--_ack_received;
 
-					// - Pop할 갯수를 계산한다.
-					auto count = _ack_received - this->m_ack_sended;
+					// - Pop할 개수를 계산한다.
+					auto count = _ack_received - this->m_ack_sent;
 
-					// check) Queuing된 갯수보다 많으면 잘못된 것이다.
+					// check) Queuing된 개수보다 많으면 잘못된 것이다.
 					CGASSERT_ERROR(count <= this->m_list_sending.size());
 
-					// - Pop할 갯수만큼 메시지를 제거한다.
+					// - Pop할 개수만큼 메시지를 제거한다.
 					for (; count>0; --count)
 					{
 						this->m_list_sending.pop_front();
 					}
-					this->m_ack_sended = _ack_received;
+					this->m_ack_sent = _ack_received;
 				}
 
 				// - 먼저 IORESTORE의 Response message를 전송한다.
@@ -268,12 +268,12 @@ void net::io::Irestorable_server::process_request_io_restore(result_code _result
 				// - process_on_restoring
 				this->process_on_restoring();
 
-				scoped_lock(this->m_list_sending)
+				SCOPED_LOCK(this->m_lockable_list_sending)
 				{
 					for (auto& iter : this->m_list_sending)
 					{
-						// - RESTORE_CLIENT_ID를 변경된 값으로 교체한다.
-						iter.front<RESTORE_CLIENT_ID>(sizeof(uint32_t) * 3 + sizeof(RESTORE_SERVER_ID)) = this->m_id_restore_client;
+						// - restore_client_io_t를 변경된 값으로 교체한다.
+						iter.front<restore_client_io_t>(sizeof(uint32_t) * 3 + sizeof(restore_server_id_t)) = this->m_id_restore_client;
 
 						// - 전송한다.
 						this->send(iter);
@@ -286,10 +286,10 @@ void net::io::Irestorable_server::process_request_io_restore(result_code _result
 	case	eRESULT::RESET:
 	default:
 			{
-				scoped_lock(this->m_list_sending)
+				SCOPED_LOCK(this->m_lockable_list_sending)
 				{
 					this->m_ack_received = 1;
-					this->m_ack_sended = 0;
+					this->m_ack_sent = 0;
 					this->m_list_sending.clear();
 				}
 
@@ -299,11 +299,11 @@ void net::io::Irestorable_server::process_request_io_restore(result_code _result
 			break;
 	}
 
-	// 3) Restore message의 마지막을 전송한다. (ack_sended가 0이면 최초 접속이다.)
+	// 3) Restore message의 마지막을 전송한다. (ack_sent가 0이면 최초 접속이다.)
 	this->send(message_RESTORE_COMPLETE(_result));
 }
 
-void net::io::Irestorable_server::process_response_io_restore(result_code /*_result*/, SEQUENCE_ID /*_ack_received*/)
+void net::io::Irestorable_server::process_response_io_restore(result_code /*_result*/, sequence_id_t /*_ack_received*/)
 {
 	// check)
 	CGASSERT_ERROR(false);

@@ -1,4 +1,4 @@
-﻿#ifndef PCH_H
+#ifndef PCH_H
 #define PCH_H
 
 // 1) CGDK header files
@@ -16,7 +16,7 @@ using namespace CGDK;
 // 4) message heaser
 struct PACKET_HEADER_BASE
 {
-	short seperator_ = 0;
+	short separator_ = 0;
 	short size_ = 0;
 
 	operator size_t() const noexcept { return (size_t)size_; }

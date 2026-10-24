@@ -1,4 +1,4 @@
-﻿#include "cgdk/sdk10/server.service.doss.h"
+#include "cgdk/sdk10/server.service.doss.h"
 
 #include <iostream>
 #if defined(_WIN32)

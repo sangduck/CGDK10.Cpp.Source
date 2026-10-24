@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "net.io.connectable.disconnect_manager.h"
 #include "net.io.add_on.manager_socket_sustain.h"
 #include "net.io.connect_requestable.tcp_reconnect.manager_reconnector.h"
@@ -29,7 +29,7 @@ namespace CGDK
 #if defined(_WINSOCK2API_)
 	RIO_EXTENSION_FUNCTION_TABLE			api::socket::m_rio_functions;
 	int										(PASCAL FAR* api::socket::WSAcceptEx)(IN CGSOCKET _sListenSocket, IN CGSOCKET _sAcceptSocket, IN PVOID _lpOutputBuffer, IN uint32_t _dwReceivedDataLength, IN uint32_t _dwLocalAddressLength, IN uint32_t _dwRemoteAddressLength, OUT uint32_t* _lpdwBytesReceived, IN LPOVERLAPPED _lpOverlapped);
-	int										(PASCAL FAR* api::socket::WSConnectEx)(IN CGSOCKET _s, IN const struct sockaddr FAR* _name, IN int _namelen, IN void* _lpSendBuffer OPTIONAL, IN uint32_t _dwSendedDataLength, OUT uint32_t* _lpdwBytesSent, IN LPOVERLAPPED _lpOverlapped);
+	int										(PASCAL FAR* api::socket::WSConnectEx)(IN CGSOCKET _s, IN const struct sockaddr FAR* _name, IN int _namelen, IN void* _lpSendBuffer OPTIONAL, IN uint32_t _dwSentDataLength, OUT uint32_t* _lpdwBytesSent, IN LPOVERLAPPED _lpOverlapped);
 	int										(PASCAL FAR* api::socket::WSDisconnectEx)(IN CGSOCKET _s, IN LPOVERLAPPED _lpOverlapped, IN uint32_t _dwFlags, IN uint32_t _dwReserved);
 #endif
 

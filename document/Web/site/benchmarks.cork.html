@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>send cork · 서버 push · CGDK10 기술 문서</title>
+<meta name="description" content="CGDK10 Linux epoll 송신 묶기 벤치 - send cork(echo) 와 send_defer::scope(tick push), 원본 r11340 대비 HEAD r11478">
+<link rel="icon" href="assets/CGCII_logo.PNG">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
+  <div class="ver">Game Server Engine</div>
+  <ul>
+    <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
+    <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
+    <li class="sub"><a href="pool.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Pool system</a></li>
+    <li class="sub"><a href="object.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l6 3v7l-6 3-6-3v-7z"/><path d="M2 4.5l6 3 6-3M8 7.5v7"/></svg>Object system</a></li>
+    <li class="sub"><a href="log.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h6l3 3v10H4z"/><path d="M6.5 8h4M6.5 10.5h4M6.5 5.5h2"/></svg>Log system</a></li>
+    <li class="sub"><a href="socket.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1.5v3.5M10 1.5v3.5"/><path d="M3.5 5h9v3.5a4.5 4.5 0 0 1-9 0z"/><path d="M8 13v1.5"/></svg>Socket system</a></li>
+    <li class="sub"><a href="socket.io_uring.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 1.5L3.5 9h4.5l-1 5.5L12.5 7H8z"/></svg>io_uring</a></li>
+    <li class="sub"><a href="socket.uds.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.6-1.6a2.8 2.8 0 0 1 4 4L11 8.5"/><path d="M9 11.5l-1.6 1.6a2.8 2.8 0 0 1-4-4L5 7.5"/></svg>UDS (같은 host 접속)</a></li>
+    <li class="sub"><a href="socket.send.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 1.5L7 9"/><path d="M14.5 1.5l-4.5 13-2.2-5.3L2.5 6z"/></svg>send 최적화</a></li>
+    <li class="sub"><a href="socket.recv.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9.5v4h12v-4"/><path d="M8 2v8M5 7.5l3 3 3-3"/></svg>Receive 최적화</a></li>
+    <li class="sub"><a href="p2p.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="8" cy="12" r="2"/><path d="M5.6 5.2l1.6 5.2M10.4 5.2l-1.6 5.2M6 4h4"/></svg>P2P system</a></li>
+    <li class="sub"><a href="update.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5V5.2h-2.7"/></svg>Update system</a></li>
+    <li class="sub"><a href="server.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="4.5" rx="1"/><rect x="2" y="9.5" width="12" height="4.5" rx="1"/><path d="M4.5 4.25h.01M4.5 11.75h.01"/></svg>Server system</a></li>
+    <li class="sub"><a href="group.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 2.8a2.3 2.3 0 0 1 0 4.4M13.5 14c0-1.8-1-3.1-2.5-3.6"/></svg>Group system</a></li>
+    <li class="sub"><a href="query.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Query system</a></li>
+    <li class="head"><a href="build.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-3.8 3.8L2.8 12.2a1.4 1.4 0 0 0 2 2l5.9-3.9a3 3 0 0 0 3.8-3.8l-2 2-2-2z"/></svg>빌드 · 플랫폼</a></li>
+    <li class="head"><a href="tests.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5.5 8.2l2 2 3.2-4"/></svg>단위 테스트 · CI</a></li>
+    <li class="head"><a href="benchmarks.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V9M8 13.5V4M13 13.5V7"/><path d="M1.5 13.5h13"/></svg>벤치마크</a></li>
+    <li class="sub"><a href="benchmarks.push.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4 3 3 6-6"/><path d="M10.5 5.5h4v4"/></svg>큰 묶음 push 처리량</a></li>
+    <li class="sub"><a href="benchmarks.cork.html" class="cur"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h8M2 11.5h5"/><path d="M12 9.5l2 2-2 2"/></svg>send cork · 서버 push</a></li>
+    <li class="head"><a href="samples.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4"/></svg>예제 · 튜토리얼</a></li>
+    <li class="head"><a href="releases.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h5.5l6.5 6.5-5.5 5.5L2 8z"/><circle cx="5.2" cy="5.2" r=".9"/></svg>릴리즈 노트</a></li>
+    <li class="head"><a href="status.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3M8 11.5h.01"/></svg>미구현 · 알려진 문제</a></li>
+  </ul>
+</aside>
+<main>
+<h1 id="cork">send cork · 서버 push <small>Linux epoll · echo 와 tick push · 원본 r11340 대비 HEAD r11478</small></h1>
+<p>epoll 송신을 묶어 보내는 두 장치를 원본(r11340, epoll 최적화 전)과 비교했다. <b>send cork</b> 는 수신 처리 중 같은 소켓에 보내는 응답을 모은다(자동). <b><code>send_defer::scope</code></b> 는 수신 handler 밖, 예를 들어 tick 스레드의 송신을 모은다(호출하는 쪽이 범위를 연다). 알고리즘은 <a href="socket.send.html">send 최적화</a> 에 있다.</p>
+
+<div class="note"><b>요약</b>
+<ul>
+  <li><b>echo 파이프라인(64 연결 × 16 개)</b> : HEAD 에서 cork 를 켜면 2,435만 ~ 2,559만 msg/s, 0.31 ~ 0.33 µs/msg. 끄면 270만 ~ 299만, 원본 buffered 는 1,013만 · 0.79 µs. syscall 은 메시지당 0.25(끄면 1.19).</li>
+  <li><b>ping-pong · 64 KB</b> : 모을 것이 없어 cork 를 켜도 꺼도 같다. 원본 대비 ping-pong 처리량 +24 ~ 27 %, CPU −20 % 는 수신 경로 개선에서 온다.</li>
+  <li><b>handler 가 send 뒤에 일할 때</b> : 네 시나리오 모두 cork 켬이 처리량 · p50 · p99 가 가장 좋다. 200 µs 상한(r11471) 의 손해는 보이지 않았다.</li>
+  <li><b>tick push(handler 밖)</b> : cork 대상이 아니다. scope 없이 보내면 소켓당 16 개 이상에서 원본 buffered 보다 CPU 1.7 ~ 4.5 배, 410만/s 요청에 55 % 만 전달한다. <b>소켓별 <code>send_defer::scope</code></b> 면 원본보다도 CPU 2 ~ 5 배 적고 서버 쪽 지연은 그대로다.</li>
+</ul></div>
+
+<h4 class="sec">측정 구성</h4>
+<ul>
+  <li><b>장비</b> : Linux 32 코어 서버 A(Ubuntu 26.04, kernel 7.0, g++ 15.2 <code>-O3 -DNDEBUG</code>). 서버 8 thread 를 논리 CPU 0-7, 클라이언트 8 thread 를 16-31 에 고정. 0-7 은 물리 코어 4개다.</li>
+  <li><b>소스</b> : r11340 · r11461 · r11478 을 각각 svn export 해 따로 빌드했다. g = <code>net::socket::tcp&lt;&gt;</code>, b = <code>tcp_buffered&lt;&gt;</code>. cork 끔 / 켬은 같은 바이너리에서 <code>net::io::send_cork::enable()</code> 만 바꿨다.</li>
+  <li><b>클라이언트</b> : CGDK 와 무관한 plain epoll 프로그램(echo 는 연결마다 depth 개를 띄워 두고 echo 가 오면 하나 더 보냄, push 는 받기만 함). 지연은 메시지에 찍힌 CLOCK_MONOTONIC 기준.</li>
+  <li><b>반복과 간섭 거르기</b> : 구성을 번갈아 돌리고 셀마다 깨끗한 3회의 중앙값을 쓴다. 깨끗한 회차 = 결과가 나왔고, 서버가 일했고, 측정 중 다른 프로세스가 1 코어 미만. 아니면 같은 회차를 최대 6번 다시 돌린다. 시작 전에는 다른 벤치와 컴파일이 끝날 때까지 기다린다.</li>
+  <li><b>서버 CPU/msg</b> : 측정 구간의 서버 프로세스 CPU 시간 ÷ 받은 메시지 수.</li>
+</ul>
+
+<h4 class="sec">echo : 기본 시나리오</h4>
+<p>2026-10-24, HEAD r11478. 칸은 msg/s · 서버 µs/msg · p50 / p99 µs. HEAD 칸은 gather / buffered.</p>
+<table class="bench wrap">
+<tr><th>시나리오</th><th>원본 gather</th><th>원본 buffered</th><th>HEAD cork 끔</th><th class="hl">HEAD cork 켬</th></tr>
+<tr><td>파이프라인 64 × 16 (64 B)</td><td>296만 · 2.71 · 341 / 1,022</td><td>1,013만 · 0.79 · 106 / 119</td><td>299만 / 270만 · 2.67 / 2.96 · 322 ~ 353 / 917 ~ 973</td><td class="hl"><b>2,559만 / 2,435만</b> · 0.31 / 0.33 · 39 ~ 41 / 47 ~ 49</td></tr>
+<tr><td>ping-pong 256 연결</td><td>147만 · 5.45 · 174 / 183</td><td>139만 · 5.75 · 184 / 194</td><td>184만 / 180만 · 4.36 / 4.45 · 139 ~ 142 / 175 ~ 178</td><td class="hl">182만 / 177만 · 4.40 / 4.51 · 140 ~ 145 / 157 ~ 173</td></tr>
+<tr><td>ping-pong 32 연결</td><td>148만 · 5.41 · 22 / 25</td><td>143만 · 5.60 · 22 / 29</td><td>173만 / 172만 · 4.60 · 18 / 28 ~ 29</td><td class="hl">174만 / 174만 · 4.58 · 18 / 28</td></tr>
+<tr><td>64 KB 대용량(16 × 2)</td><td>37.1만 · 20.8</td><td>35.1만 · 22.0</td><td>37.5만 / 37.3만 · 17.2 / 16.8</td><td class="hl">37.3만 / 37.3만 · 17.0 / 16.7</td></tr>
+</table>
+<p>메시지당 syscall (strace, 원본 gather / 원본 buffered / HEAD 끔 / HEAD 켬)</p>
+<table class="bench">
+<tr><th>시나리오</th><th>원본 g</th><th>원본 b</th><th>HEAD 끔</th><th class="hl">HEAD 켬</th></tr>
+<tr><td>파이프라인</td><td>1.25</td><td>0.375</td><td>1.19</td><td class="hl">0.25</td></tr>
+<tr><td>ping-pong</td><td>5.01</td><td>5.01</td><td>4.00</td><td class="hl">4.00</td></tr>
+<tr><td>64 KB</td><td>3.00</td><td>3.65</td><td>2.98</td><td class="hl">2.90 ~ 2.99</td></tr>
+</table>
+<ul>
+  <li>파이프라인에서 cork 켬의 send 는 메시지 16 개당 1 번(0.063/msg)이다. 같은 수신 버퍼의 연속 구간이라 iovec 하나로 합쳐져 <code>sendmsg</code> 가 아니라 <code>send</code> 한 번으로 나간다.</li>
+  <li>원본 buffered 도 파이프라인에서 모았다(EPOLLOUT 을 항상 걸고 그 사이 쌓인 것을 보냄). 그래서 원본 buffered 대비 향상은 처리량 2.4 ~ 2.5 배, CPU −60 % 다.</li>
+  <li>ping-pong 은 모을 것이 1 개라 바로 <code>send</code> 한다. 원본의 <code>ioctl</code>(FIONREAD) 1회가 없어져 syscall 이 5 → 4 다.</li>
+</ul>
+
+<h4 class="sec">echo : handler 가 send 뒤에 일할 때</h4>
+<p>on_message 에서 echo 를 send 한 뒤 바쁜 대기를 한다. 칸은 msg/s · p50 / p99 µs. HEAD 는 gather 와 buffered 가 거의 같아 범위로 적었다.</p>
+<table class="bench wrap">
+<tr><th>시나리오</th><th>원본 gather</th><th>원본 buffered</th><th>HEAD cork 끔</th><th class="hl">HEAD cork 켬</th></tr>
+<tr><td>8 연결 × 16, 작업 없음</td><td>295만 · 43 / 52</td><td>745만 · 17 / 24</td><td>299만 ~ 306만 · 42 / 50</td><td class="hl"><b>951만 ~ 954만</b> · 12 / 20</td></tr>
+<tr><td>64 연결 × 16, 메시지마다 2 µs</td><td>171만 · 600 / 633</td><td>289만 · 373 / 409</td><td>173만 ~ 175만 · 570 ~ 599 / 615 ~ 622</td><td class="hl"><b>338만 ~ 340만</b> · 301 / 309</td></tr>
+<tr><td>64 연결 × 16, 16 번째마다 100 µs</td><td>89만 · 1,155 / 1,176</td><td>115만 · 922 / 1,138</td><td>92만 · 1,116 / 1,134</td><td class="hl"><b>122만</b> · 840 / 848</td></tr>
+<tr><td>8 연결 × 16, 16 번째마다 100 µs</td><td>90만 · 142 / 151</td><td>110만 · 117 / 219</td><td>91만 · 140 / 147</td><td class="hl"><b>114만</b> · 112 / 115</td></tr>
+</table>
+<ul>
+  <li>cork 는 같은 recv 로 받은 앞 응답들을 느린 handler 가 끝날 때까지 묶는다(상한 = <code>SEND_CORK_DURATION</code> + handler 하나).</li>
+  <li>2026-10-21(r11359, 상한 20 µs) 측정에서는 "64 연결, 16 번째마다 100 µs" 의 p50 이 cork 끔 140 → 켬 843 µs 로 cork 의 유일한 손해였다. 이번(r11478) 은 cork 끔의 p50 이 1,116 µs 로 나와 cork 켬(840 µs)이 더 짧았다. cork 끔 쪽이 왜 길어졌는지는 따로 확인하지 않았다.</li>
+</ul>
+
+<h4 class="sec">tick push : 수신 handler 밖의 송신</h4>
+<p>2026-10-23, r11461. tick 스레드 4 개가 1 ms 마다 담당 소켓에 64 B 메시지 K 개를 보낸다(메시지마다 버퍼 할당). cork 는 동작하지 않는다. scope 는 <code>send_defer::scope</code> 를 소켓 하나의 K 개 송신(소켓별) 또는 tick 전체에 건 것이다.</p>
+<div class="note"><b>루프백 측정의 함정</b> : 받는 쪽 스레드가 잠들어 있으면 그 스레드를 깨우는 비용이 보내는 쪽(서버)의 send 에 잡힌다. 묶어 보내면 덩어리 사이에 클라이언트가 잠들어, 서버 CPU 가 2 ~ 5 배 비싸 보이고 p50 에 깨어나는 시간(+29 ~ 40 µs)이 들어간다. 그래서 서버 자신의 비용과 지연은 클라이언트를 바쁜 대기(<code>epoll_wait</code> 타임아웃 0)로 돌려 따로 쟀다.</div>
+<p>서버 쪽 CPU · 지연 (바쁜 대기 클라이언트, 초당 102만 요청, µs/msg · p50 / p99 µs)</p>
+<table class="bench wrap">
+<tr><th>연결 × K</th><th>원본 buffered</th><th>HEAD buffered</th><th>HEAD gather</th><th class="hl">HEAD 소켓별 scope (b / g)</th><th>HEAD tick scope</th></tr>
+<tr><td>256 × 4</td><td>2.49 · 7.6 / 38</td><td>2.07 · 6.3 / 12.8</td><td>1.81 · 6.5 / 12.6</td><td class="hl"><b>0.53 / 0.61</b> · 4.7 ~ 5.5 / 10 ~ 15</td><td>0.66 · 87 / 166</td></tr>
+<tr><td>64 × 16</td><td>0.98 · 10.6 / 39</td><td>1.70 · 6.2 / 12.7</td><td>1.86 · 6.0 / 12.7</td><td class="hl"><b>0.21 / 0.20</b> · 5.5 / 10</td><td>0.23 · 33 / 54</td></tr>
+<tr><td>16 × 64</td><td>0.50 · 9.9 / 27</td><td>2.26 · 5.9 / 12.5</td><td>2.02 · 5.9 / 12.0</td><td class="hl"><b>0.105 / 0.110</b> · 7.4 ~ 7.6 / 11 ~ 12</td><td>0.117 · 18 / 28</td></tr>
+</table>
+<p>감당 한계 (64 연결 × 64 개 = 초당 410만 요청, 일반 클라이언트)</p>
+<table class="bench">
+<tr><th>구성</th><th>전달 msg/s</th><th>µs/msg (코어)</th><th>p50 / p99 µs</th></tr>
+<tr><td>원본 buffered</td><td>410만</td><td>0.71 (2.9)</td><td>23 / 106</td></tr>
+<tr><td>HEAD buffered / gather</td><td><b>225만 / 215만</b></td><td>1.78 / 1.86 (4.0, tick 스레드 한계)</td><td>6 / 15</td></tr>
+<tr><td class="hl">HEAD 소켓별 scope</td><td class="hl">410만</td><td class="hl">0.36 ~ 0.39 (1.5)</td><td class="hl">31 ~ 34 / 47 ~ 53</td></tr>
+<tr><td>HEAD tick scope</td><td>410만</td><td>0.43</td><td>248 / 280</td></tr>
+</table>
+<ul>
+  <li>메시지당 syscall(64 × 16) : 원본 buffered 0.41, HEAD 1.00, scope(소켓별 · tick) 0.067. 256 × 1 은 원본 buffered 3.96(EPOLLOUT 등록과 이벤트가 매번 붙음), 나머지 1.02.</li>
+  <li>소켓당 1 개(256 × 1)면 묶을 것이 없어 scope 는 효과도 손해도 없다. tick scope 는 지연이 담당 소켓 수에 비례해 늘어 권장하지 않는다.</li>
+  <li>송신 거부(<code>send()</code> false)는 측정 끝에 클라이언트가 연결을 끊는 구간에서만 났다. 서버를 먼저 멈추면 모든 구성에서 0 이다.</li>
+  <li>그룹 브로드캐스트는 그룹 락이 send_defer 를 자동으로 걸어 해당 없다. 영향을 받는 것은 그룹 락 밖에서 한 소켓에 여러 메시지를 연달아 보내는 tick · 타이머 코드다.</li>
+</ul>
+<pre>// tick 스레드 : 소켓마다 그 소켓의 송신만 묶는다
+for (auto&amp; psocket : sockets)
+{
+    send_defer::scope scope;          // 범위가 끝나면 이 소켓에 모은 것을 send/sendmsg 1회로
+    for (auto&amp; msg : pending_of(psocket))
+        psocket-&gt;send(msg);
+}</pre>
+
+<h4 class="sec">재현</h4>
+<ul>
+  <li>벤치 소스 : <code>bench_echo_server_slow.cpp</code>(echo, 인자 <code>&lt;port&gt; &lt;threads&gt; &lt;work_us&gt; &lt;every_n&gt; [cork 0|1]</code>, <code>-DBENCH_BUFFERED</code> 면 tcp_buffered), <code>bench_echo_client.cpp</code>, <code>bench_push_server.cpp</code>(인자 6 scope 0 / 1 tick / 2 소켓별), <code>bench_push_client.cpp</code>(인자 7 spin).</li>
+  <li>실행 : <code>run_echo_retry.sh &lt;rep&gt; &lt;sec&gt; main|slow 이름:바이너리[:인자]...</code>, <code>run_push.sh &lt;rep&gt; &lt;sec&gt; 이름:바이너리[:scope]...</code>(env <code>PUSH_CLIENT_SPIN=1</code>), syscall 은 <code>strace -c -f</code> 로 세어 받은 메시지 수로 나눴다.</li>
+</ul>
+<p>관련 문서 : <a href="socket.send.html">send 최적화</a>, <a href="benchmarks.push.html">큰 묶음 push 처리량</a>, <a href="group.html">Group system</a>, <a href="benchmarks.html">벤치마크</a>.</p>
+
+<footer>CGDK10 · 소스 기준 정리 (r11478, 2026-10-24) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+</main>
+</div>
+</body>
+</html>

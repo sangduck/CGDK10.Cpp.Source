@@ -3,7 +3,7 @@
 //*                      Cho sanghyun's Game Classes II                       *
 //*                       Ver 10.0 / Release 2019.12.11                       *
 //*                                                                           *
-//*                              object Classes                               *
+//*                          Utinity.Crypto Classes                           *
 //*                                                                           *
 //*                                                                           *
 //*                                                                           *
@@ -17,6 +17,8 @@
 //*****************************************************************************
 
 #pragma once
+
+#include "cgdk/sdk10/lib_path.h"
 //----------------------------------------------------------------------------
 //
 // definitions
@@ -36,16 +38,16 @@ namespace CGDK
 		class ssl_manager;
 		class ssl_context;
 		class ssl;
+		class ssl2;
+		class ssl3;
 	}
+
+	class Issl_cryptable;
 }
 
-struct ssl_method_st;
 using SSL_METHOD = struct ssl_method_st;
-struct ssl_st;
 using SSL = struct ssl_st;
-struct ssl_ctx_st;
 using SSL_CTX = struct ssl_ctx_st;
-struct bio_st;
 using BIO = struct bio_st;
 
 
@@ -57,17 +59,18 @@ using BIO = struct bio_st;
 // 1) CGDK base header files
 #include "cgdk/sdk10/system.object.h"
 
-// 2) definitions
-#include "cgdk/sdk10/system/util.crypt/definitions.util.h"
-
-// 3) cryto
+// 2) crypto
 #include "cgdk/sdk10/system/util.crypt/util.crypt.pn_code.h"
 #include "cgdk/sdk10/system/util.crypt/util.crypt.rsa.h"
 #include "cgdk/sdk10/system/util.crypt/util.crypt.bcrypt.h"
+#include "cgdk/sdk10/system/util.crypt/util.crypt.sha.h"
+#include "cgdk/sdk10/system/util.crypt/util.crypt.sha_buffer_serializable.h"
+#include "cgdk/sdk10/system/util.crypt/util.crypt.aes.h"
+#include "cgdk/sdk10/system/util.crypt/util.crypt.hmac.h"
 
-// 4) open ssl
-#include "cgdk/sdk10/system/util.crypt/util.crypt.ssl.h"
+// 3) open ssl
 #include "cgdk/sdk10/system/util.crypt/util.crypt.ssl.context.h"
+#include "cgdk/sdk10/system/util.crypt/util.crypt.ssl.h"
 #include "cgdk/sdk10/system/util.crypt/util.crypt.ssl.manager.h"
 
 
@@ -102,13 +105,13 @@ using BIO = struct bio_st;
 
 	#if !defined(_LIB) || defined(_CONSOLE)
 
-	#pragma comment(lib, "openssl/libcrypto.lib")
-	#pragma comment(lib, "openssl/libssl.lib")
-	//#pragma comment(lib, "openssl/libeay32.lib")
-	//#pragma comment(lib, "openssl/ssleay32.lib")
+	// - OpenSSL from vcpkg ('CGDK10.Cpp/vcpkg.json'. the path is relative to the CGDK lib directory 'CGDK10.Cpp/lib')
+	//   the dlls (libcrypto-3-x64.dll, libssl-3-x64.dll) are in 'CGDK10.Cpp/vcpkg_installed/x64-windows/bin'
+	#pragma comment(lib, "../vcpkg_installed/x64-windows/lib/libcrypto.lib")
+	#pragma comment(lib, "../vcpkg_installed/x64-windows/lib/libssl.lib")
 
 	//----------------------------------------------------------------------------
-	// * Windws
+	// * Windows
 	//----------------------------------------------------------------------------
 	#if defined(WDK_NTDDI_VERSION)
 
@@ -125,15 +128,13 @@ using BIO = struct bio_st;
 		// WinSDK 10
 		#if WDK_NTDDI_VERSION >= NTDDI_WIN10
 			#ifdef NDEBUG
-				#pragma message("[CGDK10] 'CGDK10.system.util.crypt_Windows10.0_x64_Release.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.system.util.crypt_Windows10.0_x64_Release.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.system.util.crypt_Windows10.0_x64_Release.lib")
 			#else
-				#pragma message("[CGDK10] 'CGDK10.system.util.crypt_Windows10.0_x64_Debug.lib' will be linked")
-				#pragma comment(lib, "cgdk/sdk10/windows/CGDK10.system.util.crypt_Windows10.0_x64_Debug.lib")
+				#pragma comment(lib, CGDK_LIB_DIR_WINDOWS "CGDK10.system.util.crypt_Windows10.0_x64_Debug.lib")
 			#endif
 		// Error - No supported
 		#else
-			#error "[CGDK10] Not supported Windonws SDK version (Need Windows SDK 10.0 or higher)"
+			#error "[CGDK10] Not supported Windows SDK version (Need Windows SDK 10.0 or higher)"
 		#endif
 	#endif
 

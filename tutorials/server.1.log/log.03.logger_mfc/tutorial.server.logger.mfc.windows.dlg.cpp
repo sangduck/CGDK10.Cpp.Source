@@ -1,5 +1,5 @@
-ï»¿
-// tutorial.server.log.mfc.windows.dlg.cpp: êµ¬í˜„ íŒŒì¼
+
+// tutorial.server.log.mfc.windows.dlg.cpp: ±¸Çö ÆÄÀÏ
 //
 
 #include "pch.h"
@@ -18,12 +18,12 @@
 	using fmt::format;
 #endif
 
-// CtutorialserverloggermfcwindowsDlg ëŒ€í™” ìƒì
+// CtutorialserverloggermfcwindowsDlg ´ëÈ­ »óÀÚ
 own_ptr<logger_hub>	g_plogger;
 own_ptr<logger_file> g_plogger_file;
 
 CtutorialserverloggermfcwindowsDlg::CtutorialserverloggermfcwindowsDlg(CWnd* pParent /*=nullptr*/)
-	: CDialogEx(IDD_TUTORIALSERVERLOGMFCWINDOWSVS16_DIALOG, pParent)
+	: CDialogEx(IDD_TUTORIALSERVERLOGMFCWINDOWS_DIALOG, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -50,33 +50,33 @@ BOOL CtutorialserverloggermfcwindowsDlg::OnInitDialog()
 	ShowWindow(SW_SHOW);
 
 	//-----------------------------------------------------------------
-	// 1. Log Viewë¥¼ ìƒì„±í•˜ì—¬ ì—°ê²°í•˜ê¸°
+	// 1. Log View¸¦ »ı¼ºÇÏ¿© ¿¬°áÇÏ±â
 	//-----------------------------------------------------------------
-	// 1) Log Viewìƒì„±
+	// 1) Log View»ı¼º
 	m_child_logger_view.CreateChild(nullptr, this);
 
-	// 2) í¬ê¸° ì¡°ì •
+	// 2) Å©±â Á¶Á¤
 	m_child_logger_view.Resize(82, 100);
 
-	// 3) ìœ„ì¹˜ ì¡°ì •
+	// 3) À§Ä¡ Á¶Á¤
 	m_child_logger_view.Move(5, 50, ORIGIN_LEFT | ORIGIN_BELOW, GetDlgItem(IDC_STATIC_LOG));
 
 
 	//-----------------------------------------------------------------
-	// 2. Log Fileì„ ìƒì„±í•´ ì—°ê²°í•˜ê¸°
+	// 2. Log FileÀ» »ı¼ºÇØ ¿¬°áÇÏ±â
 	//-----------------------------------------------------------------
 	// Declare) 
 	own_ptr<logger_file> plogger_file;
 
 	try
 	{
-		// 1) ìƒì„±
+		// 1) »ı¼º
 		plogger_file = make_own<logger_file>();
 
 		// 2) initialize
 		plogger_file->initialize({ "test_log_mfc.log"sv });
 
-		// 3) ì €ì¥
+		// 3) ÀúÀå
 		g_plogger_file = std::move(plogger_file);
 	}
 	catch(...)
@@ -91,20 +91,20 @@ BOOL CtutorialserverloggermfcwindowsDlg::OnInitDialog()
 
 
 	//-----------------------------------------------------------------
-	// 3. Log ì—°ê²°í•˜ê¸°
+	// 3. Log ¿¬°áÇÏ±â
 	//-----------------------------------------------------------------
-	// 1) Tracer ìƒì„±
+	// 1) Tracer »ı¼º
 	g_plogger = make_own<logger_hub>();
 
-	// 2) LogViewì— ì—°ê²°í•œë‹¤.
+	// 2) LogView¿¡ ¿¬°áÇÑ´Ù.
 	g_plogger->register_log_targetable(&m_child_logger_view);
 
-	// 3) Log Fileì—ë„ ì—°ê²°í•œë‹¤.
+	// 3) Log File¿¡µµ ¿¬°áÇÑ´Ù.
 	g_plogger->register_log_targetable(g_plogger_file);
 	
 
 	//-----------------------------------------------------------------
-	// 4. Log ë‚¨ê¸°ê¸°
+	// 4. Log ³²±â±â
 	//-----------------------------------------------------------------
 	LOG(g_plogger, log_type_t::info) << log_level_t::normal() << "INFO Important Log"sv;
 	LOG(g_plogger, log_type_t::info) << log_level_t::higher() << "Important INFO Important Log"sv;
@@ -117,19 +117,19 @@ BOOL CtutorialserverloggermfcwindowsDlg::OnInitDialog()
 	LOG(g_plogger, log_type_t::debug) << log_level_t::normal() << "DEBUG Log"sv;
 	LOG(g_plogger, log_type_t::user) << log_level_t::normal() << "USER Log"sv;
 	LOG(g_plogger, log_type_t::system) << log_level_t::normal() << "SYSTEM Log"sv;
-	LOG(g_plogger, log_type_t::info) << log_level_t::normal() << "ì´ ë¬¸ì¥ì€ ë©€í‹°ë°”ì´íŠ¸ í•œê¸€ ë¬¸ìì—´ ë¡œê·¸ "sv, "STRING";
-	LOG(g_plogger, log_type_t::info) << log_level_t::normal() << L"ì´ ë¬¸ì¥ì€ ìœ ë‹ˆì½”ë“œ í•œê¸€ ë¬¸ìì—´ ë¡œê·¸ "sv, L"STRING";
+	LOG(g_plogger, log_type_t::info) << log_level_t::normal() << "ÀÌ ¹®ÀåÀº ¸ÖÆ¼¹ÙÀÌÆ® ÇÑ±Û ¹®ÀÚ¿­ ·Î±× "sv, "STRING";
+	LOG(g_plogger, log_type_t::info) << log_level_t::normal() << L"ÀÌ ¹®ÀåÀº À¯´ÏÄÚµå ÇÑ±Û ¹®ÀÚ¿­ ·Î±× "sv, L"STRING";
 
 	// declar) 
-	std::string_view temp_string("í…ŒìŠ¤íŠ¸ ë¬¸ìì—´");
+	std::string_view temp_string("Å×½ºÆ® ¹®ÀÚ¿­.");
 
-	// LOG_MESSAGE ê°ì²´ë¥¼ ì‚¬ìš©í•œ ë°©ë²•
+	// LOG_MESSAGE °´Ã¼¸¦ »ç¿ëÇÑ ¹æ¹ı
 	LOG(g_plogger, log_type_t::debug) << "This is log"sv << " X: "sv << 10 << " Y: "sv << float(10.0f) << L" Z: "sv << temp_string;
 
-	LOG(g_plogger, log_type_t::debug) << format("This is fmt_log  X: {} Y: {} Z: {}"sv, 10, float(10.0f), temp_string);
-	LOG(g_plogger, log_type_t::info)  << L"ì²«ì§¸ì¤„ ["sv << L"STRING"sv << "]"sv << log_endl
-								   << L"ë‘ì§¸ì¤„ "sv << 10 << log_endl
-								   << L"ë§ˆì§€ë§‰ì¤„"sv;
+	LOG(g_plogger, log_type_t::debug) << CGDK::format("This is fmt_log  X: {} Y: {} Z: {}"sv, 10, float(10.0f), temp_string);
+	LOG(g_plogger, log_type_t::info)  << L"Ã¹Â°ÁÙ ["sv << L"STRING"sv << "]"sv << log_endl
+								   << L"µÎÂ°ÁÙ "sv << 10 << log_endl
+								   << L"¸¶Áö¸·ÁÙ"sv;
 
 	// return) 
 	return TRUE;
@@ -139,11 +139,11 @@ void CtutorialserverloggermfcwindowsDlg::OnPaint()
 {
 	if (IsIconic())
 	{
-		CPaintDC dc(this); // ê·¸ë¦¬ê¸°ë¥¼ ìœ„í•œ ë””ë°”ì´ìŠ¤ ì»¨í…ìŠ¤íŠ¸ì…ë‹ˆë‹¤.
+		CPaintDC dc(this); // ±×¸®±â¸¦ À§ÇÑ µğ¹ÙÀÌ½º ÄÁÅØ½ºÆ®ÀÔ´Ï´Ù.
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		// í´ë¼ì´ì–¸íŠ¸ ì‚¬ê°í˜•ì—ì„œ ì•„ì´ì½˜ì„ ê°€ìš´ë°ì— ë§ì¶¥ë‹ˆë‹¤.
+		// Å¬¶óÀÌ¾ğÆ® »ç°¢Çü¿¡¼­ ¾ÆÀÌÄÜÀ» °¡¿îµ¥¿¡ ¸ÂÃä´Ï´Ù.
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
@@ -151,7 +151,7 @@ void CtutorialserverloggermfcwindowsDlg::OnPaint()
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
 
-		// ì•„ì´ì½˜ì„ ê·¸ë¦½ë‹ˆë‹¤.
+		// ¾ÆÀÌÄÜÀ» ±×¸³´Ï´Ù.
 		dc.DrawIcon(x, y, m_hIcon);
 	}
 	else
@@ -171,14 +171,14 @@ void CtutorialserverloggermfcwindowsDlg::OnBnClickedOk()
 
 void CtutorialserverloggermfcwindowsDlg::OnBnClickedCancel()
 {
-	// 1) ì—°ê²° í•´ì²´
+	// 1) ¿¬°á ÇØÃ¼
 	g_plogger->unregister_log_targetable(g_plogger_file);
 	g_plogger->unregister_log_targetable(&m_child_logger_view);
 
-	// 2) Log File ë‹«ê¸°
+	// 2) Log File ´İ±â
 	g_plogger_file->destroy();
 
-	// 3) ì™„ë£Œ
+	// 3) ¿Ï·á
 	g_plogger.reset();
 	g_plogger_file.reset();
 

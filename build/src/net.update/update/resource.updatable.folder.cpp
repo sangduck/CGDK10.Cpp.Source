@@ -1,4 +1,5 @@
-﻿#include "pch.h"
+#include "pch.h"
+#include <charconv>
 
 CGDK::update::UPDATABLE_ID _get_unique_updatable_id() noexcept;
 
@@ -45,14 +46,14 @@ CGDK::resource::eTYPE _get_updatable_resource_type(CGDK::context & _context)
 			{
 				type = CGDK::resource::eTYPE::FILE;
 			}
-			else if (CGDK::__stricmp(str_find, "folder"sv) == 0
-				|| CGDK::__stricmp(str_find, "directory"sv) == 0
-				|| CGDK::__stricmp(str_find, "dir"sv) == 0)
+			else if (CGDK::__stricmp(str_find, "folder") == 0
+				|| CGDK::__stricmp(str_find, "directory") == 0
+				|| CGDK::__stricmp(str_find, "dir") == 0)
 			{
 				type = CGDK::resource::eTYPE::FOLDER;
 			}
-			else if (CGDK::__stricmp(str_find, "ref"sv) == 0
-				|| CGDK::__stricmp(str_find, "reference"sv) == 0)
+			else if (CGDK::__stricmp(str_find, "ref") == 0
+				|| CGDK::__stricmp(str_find, "reference") == 0)
 			{
 				type = CGDK::resource::eTYPE::REFERENCE;
 			}
@@ -67,150 +68,78 @@ CGDK::resource::eTYPE _get_updatable_resource_type(CGDK::context & _context)
 	return type;
 }
 
+namespace
+{
+	// std::filesystem::path -> UTF-8 std::string with '/' separators (what the receiver expects on every platform)
+	std::string _to_utf8(const std::filesystem::path& _path)
+	{
+		const auto u8 = _path.generic_u8string();
+		return std::string(reinterpret_cast<const char*>(u8.data()), u8.size());
+	}
+}
+
 void _process_resource_load_folder(std::vector<CGDK::object_ptr<CGDK::resource::Iupdatable>>& _vector_updatable_process, const CGDK::sINITIALIZE_INFO_UPDATABLE_RESOURCE& _parameter)
 {
 	// check)
 	RETURN_IF(_parameter.src.path.empty(), );
 
-	// 1) make full path
+	// 1) make full path (path_base and path are UTF-8, like every resource string)
+	std::filesystem::path path_base;
 	std::filesystem::path full_file_path;
 
-#if _WIN32
-	{
-		// declare) 
-		wchar_t temp_dest[256];
-
-		if (_parameter.src.path_base.empty() == false)
-		{
-			full_file_path += CGDK::encode_string(temp_dest, reinterpret_cast<const char8_t*>(_parameter.src.path_base.c_str()));
-			full_file_path += "/";
-		}
-		if (_parameter.src.path.empty() == false)
-		{
-			full_file_path += CGDK::encode_string(temp_dest, reinterpret_cast<const char8_t*>(_parameter.src.path.c_str()));
-			full_file_path += "/";
-		}
-		if (_parameter.src.filename.empty() == false)
-		{
-			//full_file_path += CGDK::encode_string(temp_dest, reinterpret_cast<const char8_t*>(_parameter.src.filename.c_str()));
-			//full_file_path += "/";
-		}
-	}
-#else
 	if (_parameter.src.path_base.empty() == false)
 	{
-		full_file_path += _parameter.src.path_base;
-		full_file_path += "/";
+		path_base = std::filesystem::path(std::u8string_view(reinterpret_cast<const char8_t*>(_parameter.src.path_base.data()), _parameter.src.path_base.size()));
+		full_file_path = path_base;
 	}
-	if (_parameter.src.path.empty() == false)
-	{
-		full_file_path += _parameter.src.path;
-		full_file_path += "/";
-	}
-	if (_parameter.src.filename.empty() == false)
-	{
-		//full_file_path += _parameter.src.filename;
-		//full_file_path += "/";
-	}
-#endif
 
-	// log) 
+	full_file_path /= std::filesystem::path(std::u8string_view(reinterpret_cast<const char8_t*>(_parameter.src.path.data()), _parameter.src.path.size()));
+
+	// log)
 	LOG_INFO << "     folder " << full_file_path.string();
 
-	// 2) path만 골라내기 위해 patah_base의 길이를 얻어 놓는다.
-	auto path_base_size = _parameter.src.path_base.size() + 1; // '/'도 제거해야하기 때문에 +!을 한다.
+	// 2) path_base as the file resources expect it (UTF-8)
+	const std::string& path_base_utf8 = _parameter.src.path_base;
 
-	// 3) 재귀적 옵션이 설정되어 있을 경우 => folger를 읽어들인다.
+	// 3) one file resource per regular file; its path is relative to path_base (the receiver recreates it below its root)
+	auto process_entry = [&](const std::filesystem::directory_entry& _entry)
+	{
+		// check)
+		RETURN_IF(_entry.is_regular_file() == false, );
+
+		// - get entry path
+		const auto& entry_path = _entry.path();
+
+		// - initialize parameter
+		CGDK::resource::Iupdatable::INITIALIZE_PARAMETER temp_initialize_parameter;
+		temp_initialize_parameter.src.path_base = path_base_utf8;
+		temp_initialize_parameter.src.path = _to_utf8(path_base.empty() ? entry_path.parent_path() : entry_path.parent_path().lexically_relative(path_base));
+		temp_initialize_parameter.src.filename = _to_utf8(entry_path.filename());
+		temp_initialize_parameter.options = _parameter.options;
+
+		// - create file resource
+		auto presource_file = make_object<CGDK::resource::updatable::file>();
+
+		// - initialize
+		presource_file->initialize(temp_initialize_parameter);
+
+		// - add
+		_vector_updatable_process.push_back(presource_file);
+	};
+
+	// 4) recursive or not
 	if ((_parameter.options & CGDK::resource::eOPTION::RECURSIVE) == CGDK::resource::eOPTION::RECURSIVE)
 	{
-		for (const std::filesystem::directory_entry& entry : std::filesystem::recursive_directory_iterator(full_file_path))
+		for (const auto& entry : std::filesystem::recursive_directory_iterator(full_file_path))
 		{
-			if (std::filesystem::is_regular_file(entry.path()))
-			{
-				// - get entry path
-				auto entry_path = entry.path();
-
-				// - path를 구한다.(path에서 path_base만큼을 제거한 문자열)
-				CGDK::resource::Iupdatable::INITIALIZE_PARAMETER temp_initialize_prarameter;
-				temp_initialize_prarameter.src.path_base = _parameter.src.path_base;
-				temp_initialize_prarameter.src.path = entry_path.parent_path().string().substr(path_base_size);
-				temp_initialize_prarameter.src.filename = entry_path.filename().string();
-				temp_initialize_prarameter.options = _parameter.options;
-
-				// - windows일 경우 ucs8로 변환해서 저장한다.
-			#if defined(_WIN32)
-				{
-					char temp_dest[1024];
-					{
-						[[maybe_unused]]auto result = CGDK::encode_string(reinterpret_cast<char8_t*>(temp_dest), reinterpret_cast<const char*>(temp_initialize_prarameter.src.path_base.c_str()));
-						temp_initialize_prarameter.src.path_base = std::string(temp_dest);
-					}
-					{
-						[[maybe_unused]] auto result = CGDK::encode_string(reinterpret_cast<char8_t*>(temp_dest), reinterpret_cast<const char*>(temp_initialize_prarameter.src.path.c_str()));
-						temp_initialize_prarameter.src.path = std::string(temp_dest);
-					}
-					{
-						[[maybe_unused]] auto result = CGDK::encode_string(reinterpret_cast<char8_t*>(temp_dest), reinterpret_cast<const char*>(temp_initialize_prarameter.src.filename.c_str()));
-						temp_initialize_prarameter.src.filename = std::string(temp_dest);
-					}
-				}
-			#endif
-
-				// - 객체를 생성한다.
-				auto presource_file = make_object<CGDK::resource::updatable::file>();
-
-				// - initlaizie
-				presource_file->initialize(temp_initialize_prarameter);
-
-				// - add 
-				_vector_updatable_process.push_back(presource_file);
-			}
+			process_entry(entry);
 		}
 	}
-	// 4) 재귀적 옵션이 설정되지 않은 경우 => file만 읽어들인다.
 	else
 	{
-		for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(full_file_path))
+		for (const auto& entry : std::filesystem::directory_iterator(full_file_path))
 		{
-			if (std::filesystem::is_regular_file(entry.path()))
-			{
-				// - get entry path
-				auto entry_path = entry.path();
-
-				// - path를 구한다.(path에서 path_base만큼을 제거한 문자열)
-				CGDK::resource::Iupdatable::INITIALIZE_PARAMETER temp_initialize_prarameter;
-				temp_initialize_prarameter.src.path_base = _parameter.src.path_base;
-				temp_initialize_prarameter.src.path = entry_path.parent_path().string().substr(path_base_size);
-				temp_initialize_prarameter.src.filename = entry_path.filename().string();
-				temp_initialize_prarameter.options = _parameter.options;
-
-			#if defined(_WIN32)
-				{
-					char temp_dest[1024];
-					{
-						[[maybe_unused]] auto result = CGDK::encode_string(reinterpret_cast<char8_t*>(temp_dest), reinterpret_cast<const char*>(temp_initialize_prarameter.src.path_base.c_str()));
-						temp_initialize_prarameter.src.path_base = std::string(temp_dest);
-					}
-					{
-						[[maybe_unused]] auto result = CGDK::encode_string(reinterpret_cast<char8_t*>(temp_dest), reinterpret_cast<const char*>(temp_initialize_prarameter.src.path.c_str()));
-						temp_initialize_prarameter.src.path = std::string(temp_dest);
-					}
-					{
-						[[maybe_unused]] auto result = CGDK::encode_string(reinterpret_cast<char8_t*>(temp_dest), reinterpret_cast<const char*>(temp_initialize_prarameter.src.filename.c_str()));
-						temp_initialize_prarameter.src.filename = std::string(temp_dest);
-					}
-				}
-			#endif
-
-				// - 객체를 생성한다.
-				auto presource_file = make_object<CGDK::resource::updatable::file>();
-
-				// - initlaizie
-				presource_file->initialize(temp_initialize_prarameter);
-
-				// - add 
-				_vector_updatable_process.push_back(presource_file);
-			}
+			process_entry(entry);
 		}
 	}
 }
@@ -227,13 +156,21 @@ void _process_resource_load_index(std::vector<CGDK::object_ptr<CGDK::resource::I
 	LOG_INFO << "     reference index " << str_find;
 
 	// 2) get ..
-	auto pmap_updatable_resource = static_cast<std::map<CGDK::update::UPDATE_RESOURCE_ID, CGDK::object_ptr<CGDK::resource::Iupdatable>>*>(_context["resource_manager"sv]);
+	// - the resource manager stores its resource map as a pointer value
+	auto pcontext_resource_manager = _context.try_find("resource_manager"sv);
+
+	// check)
+	THROW_IF(pcontext_resource_manager == nullptr || pcontext_resource_manager->type() != CGDK::context::value_type_t::ptr_, CGDK::throwable::failure(eRESULT::NOT_READY, 0, "'resource_manager' not exist"sv), LOG_ERROR << "     (!) resource manager not exist ");
+
+	auto pmap_updatable_resource = &pcontext_resource_manager->ref_value<std::map<CGDK::update::UPDATE_RESOURCE_ID, CGDK::object_ptr<CGDK::resource::Iupdatable>>>();
 
 	// check)
 	THROW_IF(pmap_updatable_resource == nullptr, CGDK::throwable::failure(eRESULT::NOT_READY, 0, "'resource_manager' not exist"sv), LOG_ERROR << "     (!) resource manager not exist ");
 
 	// 3) find resource
-	auto iter_find = pmap_updatable_resource->find(CGDK::__from_string<char>(str_find));
+	int64_t resource_id = 0;
+	std::from_chars(str_find.data(), str_find.data() + str_find.size(), resource_id);
+	auto iter_find = pmap_updatable_resource->find(static_cast<CGDK::update::UPDATE_RESOURCE_ID>(resource_id));
 
 	// check)
 	THROW_IF(iter_find == pmap_updatable_resource->end(), CGDK::throwable::failure(eRESULT::NOT_EXIST, 0, "'resource' not exist"sv), LOG_ERROR << "     (!) resource not exist ");
@@ -259,20 +196,20 @@ void _process_resource_load_list(
 		{
 		case	CGDK::resource::eTYPE::FILE:
 				{
-					// - 객체를 생성한다.
+					// - ��ü�� �����Ѵ�.
 					pupdatable_resource = make_object<CGDK::resource::updatable::file>();
 
-					// - initlaize
+					// - initialize
 					pupdatable_resource->initialize(iter.second);
 				}
 				break;
 
 		case	CGDK::resource::eTYPE::FOLDER:
 				{
-					// - 객체를 생성한다.
+					// - ��ü�� �����Ѵ�.
 					pupdatable_resource = make_object<CGDK::resource::updatable::folder>();
 
-					// - initlaize
+					// - initialize
 					pupdatable_resource->initialize(iter.second);
 				}
 				break;
@@ -280,7 +217,13 @@ void _process_resource_load_list(
 		case	CGDK::resource::eTYPE::REFERENCE:
 				{
 					// - get ..
-					auto pmap_updatable_resource = static_cast<std::map<CGDK::update::UPDATE_RESOURCE_ID, CGDK::object_ptr<CGDK::resource::Iupdatable>>*>(_context["resource_manager"sv]);
+					// - the resource manager stores its resource map as a pointer value
+					auto pcontext_resource_manager = _context.try_find("resource_manager"sv);
+
+					// check)
+					THROW_IF(pcontext_resource_manager == nullptr || pcontext_resource_manager->type() != CGDK::context::value_type_t::ptr_, CGDK::throwable::failure(eRESULT::NOT_READY, 0, "'resource_manager' not exist"sv), LOG_ERROR << "     (!) resource manager not exist ");
+
+					auto pmap_updatable_resource = &pcontext_resource_manager->ref_value<std::map<CGDK::update::UPDATE_RESOURCE_ID, CGDK::object_ptr<CGDK::resource::Iupdatable>>>();
 
 					// check)
 					THROW_IF(pmap_updatable_resource == nullptr, CGDK::throwable::failure(eRESULT::NOT_READY, 0, "'resource_manager' not exist"sv), LOG_ERROR << "     (!) 'reference' index not exist");
@@ -292,7 +235,9 @@ void _process_resource_load_list(
 					THROW_IF(str_find.empty(), CGDK::throwable::failure(eRESULT::INVALID_ARGUMENT, 0, "'ref' index not exist"sv), LOG_ERROR << "     (!) 'reference' index not exist");
 
 					// - find resource
-					auto iter_find = pmap_updatable_resource->find(CGDK::__from_string<char>(str_find));
+					int64_t resource_id = 0;
+					std::from_chars(str_find.data(), str_find.data() + str_find.size(), resource_id);
+					auto iter_find = pmap_updatable_resource->find(static_cast<CGDK::update::UPDATE_RESOURCE_ID>(resource_id));
 
 					// check)
 					THROW_IF(iter_find == pmap_updatable_resource->end(), CGDK::throwable::failure(eRESULT::NOT_EXIST, 0, "'resource' not exist"sv), LOG_ERROR << "     (!) resource not exist ");
@@ -325,7 +270,7 @@ CGDK::result_code CGDK::resource::updatable::folder::_process_initializing(conte
 		CGDK::resource::Iupdatable::INITIALIZE_PARAMETER parameter;
 
 		// 2) parsing socket setting options
-		if (_context.type() == eCONTEXT_VALUE_TYPE::BUFFER_)
+		if (_context.type() == context::value_type_t::buffer_)
 		{
 			parameter = _context.v.value_buffer.front<CGDK::resource::Iupdatable::INITIALIZE_PARAMETER>();
 		}
@@ -379,7 +324,7 @@ CGDK::result_code CGDK::resource::updatable::folder::_process_initializing(conte
 		}
 
 		// 4) setting
-		scoped_lock(this->m_cs_info)
+		SCOPED_LOCK(this->m_lockable_info)
 		{
 			this->m_meta_info = std::move(file_meta_info);
 			this->m_meta_completion = std::move(file_meta_completion);
@@ -396,7 +341,7 @@ CGDK::result_code CGDK::resource::updatable::folder::_process_initializing(conte
 		auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string_view();
 
 		// log) 
-		LOG_DEBUG << "(excp) exception occure on '_process_starting' ['"sv << pname << "']"sv;
+		LOG_DEBUG << "(excp) exception occurred on '_process_starting' ['"sv << pname << "']"sv;
 
 		// reraise)
 		throw;
@@ -408,7 +353,7 @@ CGDK::result_code CGDK::resource::updatable::folder::_process_initializing(conte
 		auto pname = (pnameable != nullptr && pnameable->name().empty() == false) ? pnameable->name() : std::string_view();
 
 		// log) 
-		LOG_DEBUG << "(excp) exception occure on '_process_starting' ['"sv << pname << "']"sv;
+		LOG_DEBUG << "(excp) exception occurred on '_process_starting' ['"sv << pname << "']"sv;
 
 		// reraise)
 		throw;
@@ -459,7 +404,7 @@ void CGDK::resource::updatable::folder::process_resource_clear() noexcept
 	std::vector<object_ptr<resource::Iupdatable>> vector_updatable_process;
 
 	// 1) reset info
-	scoped_lock(this->m_cs_info)
+	SCOPED_LOCK(this->m_lockable_info)
 	{
 		this->m_meta_info = sUPDATABLE_FILE_META_INFO();
 		this->m_meta_completion = sUPDATABLE_FILE_COMPLETION_INFO();

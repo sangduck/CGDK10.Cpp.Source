@@ -41,55 +41,50 @@ receive의 완료가 0Byte 혹은 Error로 되면 접속 종료처리를 한다.
 */
 //-----------------------------------------------------------------------------
 class net::io::receivable::Nstream :
-// inherited classes)
 	virtual public				net::io::Isocket,
 	virtual public				net::io::Ireceivable_stream,
 	virtual public				net::io::Iconnectable,
 	virtual public				net::io::Ipacketable
 {
-// constructor/destructor)
 protected:
 			Nstream();
 	virtual	~Nstream() noexcept;
 
-// public)
 public:
-	//! @brief '소켓별 최소 메시지 버퍼'를 설정한다.
 			std::size_t			minimum_message_buffer_size(std::size_t _size) noexcept;
 	[[nodiscard]] std::size_t	minimum_message_buffer_size() noexcept;
-
 			std::size_t			maximum_message_buffer_size(std::size_t _size) noexcept;
 	[[nodiscard]] std::size_t	maximum_message_buffer_size() noexcept;
-
-	//! @brief 받아 놓은 데이터 중 처리되지 않은 데이트 Byte수.
 	[[nodiscard]] std::size_t	queued_receive_bytes() const noexcept { return m_buffer_received.size(); }
+	#if defined(_SYS_EPOLL_H)
+	//! @brief io_uring completion : the receive mode (true : the multishot RECV into the provided buffers, false : a RECV into the receive buffer that grows like the IOCP one)
+	[[nodiscard]] bool			is_receive_multishot_mode() const noexcept { return this->m_receive_mode == RECEIVE_MODE_MULTISHOT; }
+	#endif
 
-// frameworks)
 protected:
-	//! @brief 데이터를 수신 했을 때 호출되는 함수.
 	virtual	void				on_receive( const buffer_view& /*_buffer*/, const net::sockaddr& /*_address*/)	{}
 
-// implementation)
-protected:
-	//! @brief receive를 거는 함수. @return true true 성공 @return true false 실패
 	#if defined(_WINSOCK2API_)
 			bool				receive();
 	#elif defined(_SYS_EPOLL_H)
+	// - io_uring completion (net.io.receivable.stream.uring.cpp) : one receive op in flight, posted by receive() under the receiving lock
+	//   (the handle is read and the op is submitted under it : a close swaps the handle under the same lock and cancels the ops after).
+	//   a multishot RECV into the provided buffers of the io_context (the data copied into m_buffer_received, the buffer given back),
+	//   else (_is_multishot false : after -ENOBUFS, or not available) a RECV into m_buffer_received. its completions
+	//   (process_complete_receivable_cq) process the bytes, the end of the op posts the next one. 0 bytes / an error : the disconnect
+	virtual	bool				is_io_completion_supported() const noexcept override { return true; }
+	virtual	bool				process_start_receive() noexcept override;
+			bool				receive(bool _is_multishot = true);
+			void				process_complete_receivable_cq(intptr_t _result, std::size_t _flags);
 	#endif
 
-	//! @brief receivable을 초기화한다.
 	virtual	void				process_reset_receivable() override;
-
-	//! @brief 최초 접속 시 receive를 준비한다.
 	virtual	bool				prepare_receive() override;
-
-	//! @brief receive를 받았을 때 호출된다. @return 0 성공 @return !0 실패
 	virtual void				process_on_receive( const buffer_view& _buffer, const net::sockaddr& _address) { on_receive (_buffer, _address);}
 	virtual	intptr_t			process_complete_receivable( intptr_t _result, std::size_t _transferred) override;
 			void				process_clear_buffer() noexcept;
 
-protected:
-			std::size_t			m_minimum_mesage_buffer_size;
+			std::size_t			m_minimum_message_buffer_size;
 			std::size_t			m_maximum_message_buffer_size;
 
 		#if defined(_WINSOCK2API_)
@@ -113,8 +108,40 @@ protected:
 
 			object_ptr<executable_receiving> m_pexecutable_receiving; //! @brief receive를 처리할 Iexecutable 객체
 		#elif defined(_SYS_EPOLL_H)
-			shared_buffer		m_buffer_received; // 수신 후 처리되지 않은 남은 데이터
+			shared_buffer		m_buffer_received; // 수신 후 처리되지 않은 남은 데이터 (그 뒤의 빈 공간에 이어서 받는다)
 			int					m_bytes_buffer_receive; // 현재 수신 버퍼의 크기
+
+			void				_process_prepare_receive_buffer(std::size_t _bytes_received, bool _is_window_filled, std::size_t _required_bytes);
+	static	constexpr int		MAX_RECEIVE_PER_EVENT = 8; // 한 event에서 recv하는 최대 횟수
+	static	constexpr std::size_t MAX_BYTES_RECEIVE_WINDOW_GROWN = 64 * 1024; // 창을 다 채워 받았을 때 늘리는 수신 버퍼의 최대 크기 (더 큰 버퍼는 message가 그만큼 클 때만)
+	static	constexpr uint32_t	COUNT_SMALL_RECEIVES_TO_SHRINK = 64; // the buffer shrinks only after this many consecutive small receives (hysteresis : with variable arrivals it shrank to the minimum at the first small receive and grew again at the next burst : a reallocation per event, ~700B per recv)
+			uint32_t			m_count_receive_small = 0; // consecutive receives smaller than the shrink size (reset by a larger one or a filled window)
+
+			// - io_uring completion : the executable of the receive op (pooled. holds the socket (add_ref) while an op is in flight).
+			//   m_pio_context : the io_context the op was submitted to (its provided buffers go back there : the socket releases its
+			//   io_context at the disconnect. alive while it delivers the completions)
+			class executable_receiving : virtual public Iexecutable, public Npoolable<executable_receiving>, public factory::_traits_system
+			{
+			public:
+				virtual ~executable_receiving() noexcept {}
+				virtual	intptr_t process_execute(intptr_t _result, std::size_t _param) override;
+				virtual	void on_final_release() noexcept override { this->m_preceivable_stream = nullptr; this->m_pio_context = nullptr; }
+				Nstream*		m_preceivable_stream = nullptr;
+				executor::Iio_context* m_pio_context = nullptr;
+			};
+			// - the zero copy receive : the data of a provided buffer processed in place (net.io.receivable.stream.uring.cpp)
+			void				_process_receive_in_place(executor::Iio_context* _pio_context, const void* _pdata, std::size_t _bytes, std::size_t _flags, bool _is_more);
+
+			// - io_uring completion : the receive mode (_process_select_receive_mode). the multishot into the provided buffers while the
+			//   arrivals fit in one, a RECV into m_buffer_received (the IOCP sizing of _process_prepare_receive_buffer) when they outgrow it
+	static	constexpr uint8_t	RECEIVE_MODE_MULTISHOT = 0;
+	static	constexpr uint8_t	RECEIVE_MODE_RECV = 1;
+	static	constexpr uint32_t	COUNT_SMALL_RECEIVES_TO_MULTISHOT = 16; // RECVs in a row smaller than half a provided buffer => the multishot again
+			uint8_t				m_receive_mode = RECEIVE_MODE_MULTISHOT;
+			bool				m_is_receive_mode_switching = false; // the multishot was cancelled for the RECV mode (once : its final completion posts the RECV)
+			uint32_t			m_count_receive_small_recv = 0;
+			void				_process_select_receive_mode(std::size_t _bytes, std::size_t _required_bytes, bool _is_provided, bool _is_more);
+			object_ptr<executable_receiving> m_pexecutable_receiving;
 		#endif
 };
 

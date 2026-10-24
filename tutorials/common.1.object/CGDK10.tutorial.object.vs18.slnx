@@ -1,0 +1,17 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/Solution Items/" Id="436dace3-5cc8-4c4e-8758-e933e5cb3f57">
+  </Folder>
+  <Project Path="object.01.pointer\tutorial.common.object_pointer.vs18.vcxproj" Id="c79dccc0-d7c6-4016-8fa3-289e76a23b39" />
+  <Project Path="object.02.contexts\tutorial.common.contexts.vs18.vcxproj" Id="dafac522-84fa-4073-9716-5de8ac520066" />
+  <Project Path="object.03.object_interfaces.1\tutorial.common.object_interfaces.1.vs18.vcxproj" Id="e942d82b-6cf5-458e-a636-8cf4f0c98289" />
+  <Project Path="object.04.object_interfaces.2\tutorial.common.object_interfaces.2.vs18.vcxproj" Id="1a2cf48d-2568-4353-8d0d-085c99fbbf6b" />
+  <Project Path="object.05.object_interfaces.3\tutorial.common.object_interfaces.3.vs18.vcxproj" Id="ebc97364-6e69-42d9-b841-420972428e2c" />
+  <Project Path="object.ex01.file_io\tutorial.common.ex.file_io.vs18.vcxproj" Id="509f281d-217b-4f71-a698-7c832080c986" />
+  <Project Path="object.ex02.encoding_decoding\tutorial.common.ex.encoding_decoding.vs18.vcxproj" Id="837f13aa-4bf0-4d7a-a032-11ee36822941" />
+  <Project Path="object.ex04.memory_leak\tutorial.common.ex04.memory_leak.vs18.vcxproj" Id="9dcdc11d-f716-4be8-b14a-8c37de49ec66" />
+  <Project Path="object.ex03.cgdk_info.console\tutorial.common.ex.cgdk_info.console.vs18.vcxproj" Id="b779513b-ec08-4cf0-a4c8-b04fb553f249" />
+  <Project Path="object.ex03.cgdk_info.mfc\tutorial.common.ex.cgdk_info.mfc.vs18.vcxproj" Id="437f8014-e411-411b-a26d-908a92c634af" />
+</Solution>

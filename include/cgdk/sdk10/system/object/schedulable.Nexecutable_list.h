@@ -53,8 +53,8 @@ protected:
 	virtual intptr_t			process_execute(intptr_t _return, size_t _param) override;
 
 private:
-			std::shared_mutex	m_lockable_list_executable;
-			CONTAINER			m_list_executable;
+	mutable	std::shared_mutex	m_lockable_list_executable;
+	mutable	CONTAINER			m_list_executable;
 			typename CONTAINER::iterator m_iter_now;
 };
 

@@ -1,19 +1,33 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 
+// - CGDK: enable rapidjson SSE4.2 SIMD on x86-64 (skip whitespace/scan strings with _mm_cmpestri)
+#if (defined(_M_X64) || defined(__x86_64__)) && !defined(RAPIDJSON_SSE42) && !defined(RAPIDJSON_SSE2) && !defined(RAPIDJSON_NEON)
+	#if defined(_MSC_VER) || defined(__SSE4_2__)
+		#define RAPIDJSON_SSE42		// msvc compiles sse4.2 intrinsics without a flag; gcc needs -msse4.2 (__SSE4_2__)
+	#else
+		#define RAPIDJSON_SSE2		// sse2 is baseline on x86-64 (gcc enables it without a flag)
+	#endif
+#endif
+
+#ifdef _MSC_VER
+	#pragma warning(disable:6102)
+	#pragma warning(disable:6313)
+	#pragma warning(disable:6385)
+	#pragma warning(disable:4996)
+	#pragma warning(disable:5054)
+	#pragma warning(disable:26495)
+	#pragma warning(disable:33010)
+#endif
 
 #if !defined(__linux__)
-	#pragma warning (disable:5054)
-	#pragma warning (disable:6340)
-	#pragma warning (disable:6313)
-	//#pragma diag_suppress 177 // supress #177-D function  was declared but never referenced
-	#include "../../common/rapidjson/document.h"
-	#include "../../common/rapidjson/writer.h"
-	#include "../../common/rapidjson/stringbuffer.h"
-	#include "../../common/rapidjson/filereadstream.h"
-	#include "../../common/rapidjson/filewritestream.h"
-	#pragma warning (default:6340)
-	#pragma warning (default:6313)
-	#pragma warning (default:5054)
+	#pragma warning(disable:5054)
+	//#pragma diag_suppress 177 // suppress #177-D function  was declared but never referenced
+	#include "rapidjson/document.h"
+	#include "rapidjson/writer.h"
+	#include "rapidjson/stringbuffer.h"
+	#include "rapidjson/filereadstream.h"
+	#include "rapidjson/filewritestream.h"
+	#pragma warning(default:5054)
 #else
 	#include "../../common/rapidjson/document.h"
 	#include "../../common/rapidjson/writer.h"
@@ -22,308 +36,318 @@
 	#include "../../common/rapidjson/filewritestream.h"
 #endif
 
+#ifdef _MSC_VER
+	#pragma warning(default:6102)
+	#pragma warning(default:6313)
+	#pragma warning(default:6385)
+	#pragma warning(default:4996)
+	#pragma warning(default:5054)
+	#pragma warning(default:26495)
+	#pragma warning(default:33010)
+#endif
+
 namespace CGDK
 {
 
-// 1) KAKAO ì‚¬ìš©ì
-http_api::kakao::RESPONSE_AUTHORIZE http_api::kakao::request(const REQUEST_AUTHORIZE& _request)
+// 1) KAKAO »ç¿ëÀÚ
+http_api::kakao::RESPONSE_AUTHORIZE http_api::kakao::request(const REQUEST_AUTHORIZE& /*_request*/)
 {
-	// ------------------------------------------------------------------
-	// 
-	// KAKAO ì¸ì¦ - ì½”ë“œ ë°›ê¸°
+	//// ------------------------------------------------------------------
+	//// 
+	//// KAKAO ÀÎÁõ - ÄÚµå ¹Ş±â
+	////
+	//// ¿äÃ» ¸Ş½ÃÁö URL
+	////   
+	////   2) HTTP URL		https://kauth.kakao.com/oauth/authorize
+	////	 3) HTTP Method		GET
+	////	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
+	////   5) Parameters
+	////		- client_id			(ÇÊ¼ö)	¾Û »ı¼º ½Ã ¹ß±Ş ¹ŞÀº REST API Å°.
+	////		- redirect_uri		(ÇÊ¼ö)	ÄÚµå°¡ ¸®´ÙÀÌ·ºÆ® µÈ URI. ¼³Á¤>ÀÏ¹İ>À¥>»çÀÌÆ® µµ¸ŞÀÎ¿¡¼­ ¼³Á¤ÇÑ °¢°¢ÀÇ µµ¸ŞÀÎ¿¡ ¼³Á¤>ÀÏ¹İ>À¥>Redirect Path¸¦ ºÙÀÎ URI
+	////		- response_type		(ÇÊ¼ö)	code ¹®ÀÚ¿­ °ªÀ¸·Î °íÁ¤
+	////		- state						Cross-site request Forgery °ø°İÀ» º¸È£ÇÏ±â À§ÇÑ ÀÓÀÇÀÇ °íÀ¯ÇÑ ¹®ÀÚ¿­, ¸®´ÙÀÌ·ºÆ®½Ã ÇØ´ç°ªÀÌ Àü´ŞµÊ.
+	////		- encode_state				state°¡ encodeµÇ¾î ÀÖ´ÂÁö¿¡ ´ëÇÑ À¯¹«(boolean). true(y¶Ç´Â 1)ÀÏ °æ¿ì state Àü´Ş ½Ã decoded state·Î Àü´Ş.
+	////									false(n¶Ç´Â0)ÀÏ °æ¿ì º°µµÀÇ decode¸¦ ÇÏÁö ¾Ê°í state¸¦ ±×´ë·Î Àü´Ş. default false
+	////
+	////   ¿äÃ»)	GET /oauth/authorize?client_id={app_key}&redirect_uri={redirect_uri}&response_type=code HTTP/1.1 
+	////			Host: kauth.kakao.com
+	////
+	////   °á°ú)	HTTP / 1.1 302 Found
+	////				Content - Length: 0
+	////				Location : {redirect_uri} ? code = { authorize_code }
+	////
+	//// ------------------------------------------------------------------
+	//// declare) 
+	//const std::size_t SIZE_BUFFER = 8192;
+
+	//// check)
+	//CGASSERT_ERROR(_request.str_url.empty() == false);
+
+	//// check)
+	//THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
+
+	//// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
+	//auto prequest_http = make_object<query::http::query>();
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
-	//   
-	//   2) HTTP URL		https://kauth.kakao.com/oauth/authorize
-	//	 3) HTTP Method		GET
-	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
-	//   5) Parameters
-	//		- client_id			(í•„ìˆ˜)	ì•± ìƒì„±ì‹œ ë°œê¸‰ ë°›ì€ REST API í‚¤.
-	//		- redirect_uri		(í•„ìˆ˜)	ì½”ë“œê°€ ë¦¬ë‹¤ì´ë ‰íŠ¸ ëœ URI. ì„¤ì •>ì¼ë°˜>ì›¹>ì‚¬ì´íŠ¸ ë„ë©”ì¸ì—ì„œ ì„¤ì •í•œ ê°ê°ì˜ ë„ë©”ì¸ì— ì„¤ì •>ì¼ë°˜>ì›¹>Redirect Pathë¥¼ ë¶™ì¸ URI
-	//		- response_type		(í•„ìˆ˜)	code ë¬¸ìì—´ ê°’ìœ¼ë¡œ ê³ ì •
-	//		- state						Cross-site request Forgery ê³µê²©ì„ ë³´í˜¸í•˜ê¸° ìœ„í•œ ì„ì˜ì˜ ê³ ìœ í•œ ë¬¸ìì—´, ë¦¬ë‹¤ì´ë ‰íŠ¸ì‹œ í•´ë‹¹ê°’ì´ ì „ë‹¬ë¨.
-	//		- encode_state				stateê°€ encodeë˜ì–´ ìˆëŠ”ì§€ì— ëŒ€í•œ ìœ ë¬´(boolean). true(yë˜ëŠ” 1)ì¼ ê²½ìš° state ì „ë‹¬ì‹œ decoded stateë¡œ ì „ë‹¬.
-	//									false(në˜ëŠ”0)ì¼ ê²½ìš° ë³„ë„ì˜ decodeë¥¼ í•˜ì§€ ì•Šê³  stateë¥¼ ê·¸ëŒ€ë¡œ ì „ë‹¬. default false
-	//
-	//   ìš”ì²­)	GET /oauth/authorize?client_id={app_key}&redirect_uri={redirect_uri}&response_type=code HTTP/1.1 
-	//			Host: kauth.kakao.com
-	//
-	//   ê²°ê³¼)	HTTP / 1.1 302 Found
-	//				Content - Length: 0
-	//				Location : {redirect_uri} ? code = { authorize_code }
-	//
-	// ------------------------------------------------------------------
-	// declare) 
-	const std::size_t SIZE_BUFFER = 8192;
+	//// declare)
+	//auto bufObject = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 
-	// check)
-	CGASSERT_ERROR(_request.str_url.empty() == false);
+	//// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	////auto	sizeWrite = std::snprintf(reinterpret_cast<char*>(bufObject.data()), SIZE_BUFFER, std::string_view("/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code&state=%s").data(), _request.client_id.c_str(), _request.redirect_uri.c_str(), _request.state.c_str());
+	//auto sizeWrite = std::snprintf(bufObject.data<char>(), SIZE_BUFFER, std::string_view("/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code").data(), _request.client_id.c_str(), _request.redirect_uri.c_str());
 
-	// check)
-	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
+	//// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
+	//THROW_IF(sizeWrite<0, throwable::failure(eRESULT::FAIL));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
-	auto prequest_http = make_object<query::http::query>();
-	
-	// declare)
-	auto bufObject = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
+	//// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
+	//auto http_method = eHTTP_METHOD::GET_;
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	//auto	sizeWrite = __sprintf(reinterpret_cast<char*>(bufObject.data()), SIZE_BUFFER, "/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code&state=%s", _request.client_id.c_str(), _request.redirect_uri.c_str(), _request.state.c_str());
-	auto sizeWrite = __sprintf(bufObject.data<char>(), SIZE_BUFFER, "/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code", _request.client_id.c_str(), _request.redirect_uri.c_str());
+	//// declare) 
+	//std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" };
 
-	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
-	THROW_IF(sizeWrite<0, throwable::failure(eRESULT::FAIL));
+	//// declare) 
+	//shared_buffer buf_option;
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
-	auto http_method = eHTTP_METHOD::GET_;
+	//// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	//std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 
-	// declare) 
-	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" };
-
-	// declare) 
-	shared_buffer buf_option;
-
-	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
-
-	// 6) requestë¥¼ Setí•œë‹¤.
-	prequest_http->set_request(
-		http_method,
-		_request.str_url,
-		443,
-		"HTTP/1.1",
-		bufObject.data<char>(),
-		std::string_view(),
-		std::move(vector_header),
-		buf_option,
-		std::move(vector_accept),
-		1		// 0: normal, 1:ssl
-	);
+	//// 6) request¸¦ SetÇÑ´Ù.
+	//prequest_http->set_request(
+	//	http_method,
+	//	_request.str_url,
+	//	443,
+	//	"HTTP/1.1",
+	//	bufObject.data<char>(),
+	//	std::string_view(),
+	//	std::move(vector_header),
+	//	buf_option,
+	//	std::move(vector_accept),
+	//	1		// 0: normal, 1:ssl
+	//);
 
 	// declare) 
 	http_api::kakao::RESPONSE_AUTHORIZE response;
 
-	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
-	response.rsp_code = eRESPONSE_CODE::A0000_;
-	response.rsp_message.clear();
+	//// 7) ±âº»°ªÀ» ¼³Á¤...
+	//response.rsp_code = eRESPONSE_CODE::A0000_;
+	//response.rsp_message.clear();
 
-	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
-	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
-	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
-		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
-		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
-			response.rsp_code = eRESPONSE_CODE::FAIL_;
-			response.rsp_message = _msg.status_message;
+	//// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
+	//prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
+	//{
+	//	// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
+	//	if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
+	//	{
+	//		// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
+	//		response.rsp_code = eRESPONSE_CODE::FAIL_;
+	//		response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
-			response.buf_response.clear();
+	//		// - buffer¸¦ clearÇÑ´Ù.
+	//		response.buf_response.clear();
 
-			// Return)
-			return;
-		}
+	//		// Return)
+	//		return;
+	//	}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
+	//	// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
+	//	_msg.contents[0].append<char>(0);
 
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
-		response.buf_response = _msg.contents[0];
+	//	// - buffer¸¦ ³Ö´Â´Ù.
+	//	response.buf_response = _msg.contents[0];
 
-		//// declare) 
-		//rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
+	//	//// declare) 
+	//	//rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		//// - Parsingí•œë‹¤.
-		//const auto&	result = json_data.Parse(_msg.contents[0].data_);
+	//	//// - ParsingÇÑ´Ù.
+	//	//const auto&	result = json_data.Parse(_msg.contents[0].data_);
 
-		//// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
-		//RETURN_IF(result.IsNull())
+	//	//// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
+	//	//RETURN_IF(result.IsNull())
 
-		//// - ê°’ì„ ì„¤ì •í•œë‹¤.
-		//for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
-		//{
-		//	auto	str_name	 = (*iter).name.GetString();
-		//	auto&	value	 = (*iter).value;
+	//	//// - °ªÀ» ¼³Á¤ÇÑ´Ù.
+	//	//for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
+	//	//{
+	//	//	auto	str_name	 = (*iter).name.GetString();
+	//	//	auto&	value	 = (*iter).value;
 
-		//	// - rsp_code
-		//	if(strcmp(str_name, "rsp_code")==0)
-		//	{
-		//		response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
-		//	}
-		//	// - rsp_message
-		//	else if(strcmp(str_name, "rsp_message") == 0)
-		//	{
-		//		convert_utf8_to_multibyte(response.rsp_message, value.GetString());
-		//	}
+	//	//	// - rsp_code
+	//	//	if(strcmp(str_name, "rsp_code")==0)
+	//	//	{
+	//	//		response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
+	//	//	}
+	//	//	// - rsp_message
+	//	//	else if(strcmp(str_name, "rsp_message") == 0)
+	//	//	{
+	//	//		convert_utf8_to_multibyte(response.rsp_message, value.GetString());
+	//	//	}
 
-		//	//AddJSONMember<char, rapidjson::UTF8<char>>(*this, iter);
-		//}
-	});
+	//	//	//AddJSONMember<char, rapidjson::UTF8<char>>(*this, iter);
+	//	//}
+	//});
 
-	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
-	prequest_http->request();
+	//// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
+	//prequest_http->request();
 
-	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
-	prequest_http->wait();
+	//// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
+	//prequest_http->wait();
 
 	// return) 
 	return	response;
 }
-http_api::kakao::RESPONSE_TOKEN http_api::kakao::request(const REQUEST_TOKEN& _request)
+http_api::kakao::RESPONSE_TOKEN http_api::kakao::request(const REQUEST_TOKEN& /*_request*/)
 {
-	// ------------------------------------------------------------------
-	// 
-	// KAKAO ì¸ì¦ - ì‚¬ìš©ì í† í° ë°›ê¸°
-	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
-	//   
-	//   2) HTTP URL		https://kauth.kakao.com/oauth/token
-	//	 3) HTTP Method		POST
-	//	 4) Content-Type	"Content-Type: application/json;charset=UTF-8"
-	//   5) Parameters
-	//		- grant_type		(í•„ìˆ˜)	authorization_codeë¡œ ê³ ì •
-	//		- client_id			(í•„ìˆ˜)	ì•± ìƒì„±ì‹œ ë°œê¸‰ ë°›ì€ REST APIí‚¤.
-	//		- redirect_uri		(í•„ìˆ˜)	ì½”ë“œê°€ ë¦¬ë‹¤ì´ë ‰íŠ¸ ëœ URI. ì„¤ì •>ì¼ë°˜>ì›¹>ì‚¬ì´íŠ¸ ë„ë©”ì¸ì—ì„œ ì„¤ì •ëœ ê°ê°ì˜ ë„ë©”ì¸ì— ì„¤ì •>ì¼ë°˜>ì›¹>Redirect Pathë¥¼ ë¶™ì¸ URI
-	//		- code				(í•„ìˆ˜)	ìœ„ ì½”ë“œ ë°›ê¸°ì—ì„œ ë°œê¸‰ ë°›ì€ ì¸ì¦ëœ ì½”ë“œ
-	//		- client_secret				ì„¤ì •>ì¼ë°˜>Client Secretì—ì„œ ìƒì„±ëœ client_secret ì½”ë“œ ACTIVE ìƒíƒœì¸ ê²½ìš° í•„ìˆ˜ë¡œ ì„¤ì •í•´ì•¼ í•¨.
-	//
-	//	ìš”ì²­)	curl -v -X POST https://kauth.kakao.com/oauth/token 
-	//			 -d 'grant_type=authorization_code' 
-	//			 -d 'client_id={app_key}' 
-	//			 -d 'redirect_uri={redirect_uri}' 
-	//			 -d 'code={authorize_code}'	
-	//
-	//	ê²°ê³¼)	HTTP/1.1 200 OK
-	//			Content-Type: application/json;charset=UTF-8
-	//			{
-	//				"access_token":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-	//				"token_type":"bearer",
-	//				"refresh_token":"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
-	//				"expires_in":43199,
-	//				"scope":"Basic_Profile"
-	//			}
-	//
-	// ------------------------------------------------------------------
-	// declare) 
-	const size_t SIZE_BUFFER = 8192;
+	//// ------------------------------------------------------------------
+	//// 
+	//// KAKAO ÀÎÁõ - »ç¿ëÀÚ ÅäÅ« ¹Ş±â
+	////
+	//// ¿äÃ» ¸Ş½ÃÁö URL
+	////   
+	////   2) HTTP URL		https://kauth.kakao.com/oauth/token
+	////	 3) HTTP Method		POST
+	////	 4) Content-Type	"Content-Type: application/json;charset=UTF-8"
+	////   5) Parameters
+	////		- grant_type		(ÇÊ¼ö)	authorization_code·Î °íÁ¤
+	////		- client_id			(ÇÊ¼ö)	¾Û »ı¼º ½Ã ¹ß±Ş ¹ŞÀº REST APIÅ°.
+	////		- redirect_uri		(ÇÊ¼ö)	ÄÚµå°¡ ¸®´ÙÀÌ·ºÆ® µÈ URI. ¼³Á¤>ÀÏ¹İ>À¥>»çÀÌÆ® µµ¸ŞÀÎ¿¡¼­ ¼³Á¤µÈ °¢°¢ÀÇ µµ¸ŞÀÎ¿¡ ¼³Á¤>ÀÏ¹İ>À¥>Redirect Path¸¦ ºÙÀÎ URI
+	////		- code				(ÇÊ¼ö)	À§ ÄÚµå ¹Ş±â¿¡¼­ ¹ß±Ş ¹ŞÀº ÀÎÁõµÈ ÄÚµå
+	////		- client_secret				¼³Á¤>ÀÏ¹İ>Client Secret¿¡¼­ »ı¼ºµÈ client_secret ÄÚµå ACTIVE »óÅÂÀÎ °æ¿ì ÇÊ¼ö·Î ¼³Á¤ÇØ¾ß ÇÔ.
+	////
+	////	¿äÃ»)	curl -v -X POST https://kauth.kakao.com/oauth/token 
+	////			 -d 'grant_type=authorization_code' 
+	////			 -d 'client_id={app_key}' 
+	////			 -d 'redirect_uri={redirect_uri}' 
+	////			 -d 'code={authorize_code}'	
+	////
+	////	°á°ú)	HTTP/1.1 200 OK
+	////			Content-Type: application/json;charset=UTF-8
+	////			{
+	////				"access_token":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+	////				"token_type":"bearer",
+	////				"refresh_token":"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+	////				"expires_in":43199,
+	////				"scope":"Basic_Profile"
+	////			}
+	////
+	//// ------------------------------------------------------------------
+	//// declare) 
+	//const size_t SIZE_BUFFER = 8192;
 
-	// check)
-	CGASSERT_ERROR(_request.str_url.empty() == false);
+	//// check)
+	//CGASSERT_ERROR(_request.str_url.empty() == false);
 
-	// check)
-	THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
+	//// check)
+	//THROW_IF(_request.str_url.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
 
-	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
-	auto prequest_http = make_object<query::http::query>();
+	//// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
+	//auto prequest_http = make_object<query::http::query>();
 
-	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-	auto str_object = "/oauth/2.0/token";
+	//// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+	//auto str_object = "/oauth/2.0/token";
 
-	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
-	auto http_method = eHTTP_METHOD::POST_;
+	//// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
+	//auto http_method = eHTTP_METHOD::POST_;
 
-	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤. - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
-	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" };
+	//// 4) Header¸¦ ¼³Á¤ÇÑ´Ù. - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
+	//std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" };
 
-	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
-	auto buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-	buf_option.append<TEXT_WEB>("code=");			buf_option.append<TEXT_WEB>(_request.code);
-	buf_option.append<TEXT_WEB>("&client_id=");		buf_option.append<TEXT_WEB>(_request.client_id);
-	buf_option.append<TEXT_WEB>("&redirect_uri=");	buf_option.append<TEXT_WEB>(_request.redirect_uri);
-	buf_option.append<TEXT_WEB>("&grant_type=authorization_code");
+	//// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
+	//auto buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
+	//buf_option.append<text<char>>("code=");			buf_option.append<text<char>>(_request.code);
+	//buf_option.append<text<char>>("&client_id=");		buf_option.append<text<char>>(_request.client_id);
+	//buf_option.append<text<char>>("&redirect_uri=");	buf_option.append<text<char>>(_request.redirect_uri);
+	//buf_option.append<text<char>>("&grant_type=authorization_code");
 
-	// 6) Options
-	if(_request.client_secret.empty()==false)
-	{
-		buf_option.append<TEXT_WEB>("&client_secret=");	buf_option.append<TEXT_WEB>(_request.client_secret);
-	}
-	buf_option[buf_option.size()] = 0;
+	//// 6) Options
+	//if(_request.client_secret.empty()==false)
+	//{
+	//	buf_option.append<text<char>>("&client_secret=");	buf_option.append<text<char>>(_request.client_secret);
+	//}
+	//buf_option[buf_option.size()] = 0;
 
-	// 7) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
-	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
-	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
+	//// 7) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
+	//std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
+	////std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 
-	// 8) requestë¥¼ Setí•œë‹¤.
-	prequest_http->set_request(
-		http_method,
-		_request.str_url,
-		443,
-		//800,
-		"HTTP/1.1",
-		str_object,
-		std::string_view(),
-		std::move(vector_header),
-		buf_option,
-		std::move(vector_accept),
-		1		// 0: normal, 1:ssl
-	);
+	//// 8) request¸¦ SetÇÑ´Ù.
+	//prequest_http->set_request(
+	//	http_method,
+	//	_request.str_url,
+	//	443,
+	//	//800,
+	//	"HTTP/1.1",
+	//	str_object,
+	//	std::string_view(),
+	//	std::move(vector_header),
+	//	buf_option,
+	//	std::move(vector_accept),
+	//	1		// 0: normal, 1:ssl
+	//);
 
 	// declare) 
 	http_api::kakao::RESPONSE_TOKEN response;
 
-	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
-	response.rsp_code = eRESPONSE_CODE::A0000_;
-	response.rsp_message.clear();
+	//// 7) ±âº»°ªÀ» ¼³Á¤...
+	//response.rsp_code = eRESPONSE_CODE::A0000_;
+	//response.rsp_message.clear();
 
-	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
-	prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
-	{
-		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
-		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
-		{
-			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
-			response.rsp_code = eRESPONSE_CODE::FAIL_;
-			response.rsp_message = _msg.status_message;
+	//// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
+	//prequest_http->set_function([&](sMESSAGE_HTTP_RESPONSE& _msg)
+	//{
+	//	// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
+	//	if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
+	//	{
+	//		// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
+	//		response.rsp_code = eRESPONSE_CODE::FAIL_;
+	//		response.rsp_message = _msg.status_message;
 
-			// - bufferë¥¼ clearí•œë‹¤.
-			response.buf_response.clear();
+	//		// - buffer¸¦ clearÇÑ´Ù.
+	//		response.buf_response.clear();
 
-			// Return)
-			return;
-		}
+	//		// Return)
+	//		return;
+	//	}
 
-		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
-		_msg.contents[0].append<char>(0);
+	//	// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
+	//	_msg.contents[0].append<char>(0);
 
-		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
-		response.buf_response = _msg.contents[0];
+	//	// - buffer¸¦ ³Ö´Â´Ù.
+	//	response.buf_response = _msg.contents[0];
 
-		// declare) 
-		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
+	//	// declare) 
+	//	rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 
-		// - Parsingí•œë‹¤.
-		const auto&	result = json_data.Parse(_msg.contents[0].data());
+	//	// - ParsingÇÑ´Ù.
+	//	const auto&	result = json_data.Parse(_msg.contents[0].data());
 
-		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
-		RETURN_IF(result.IsNull())
+	//	// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
+	//	RETURN_IF(result.IsNull())
 
-		// - ê°’ì„ ì„¤ì •í•œë‹¤.
-		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
-		{
-			auto str_name = (*iter).name.GetString();
-			auto& value = (*iter).value;
+	//	// - °ªÀ» ¼³Á¤ÇÑ´Ù.
+	//	for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
+	//	{
+	//		auto str_name = (*iter).name.GetString();
+	//		auto& value = (*iter).value;
 
-			// - rsp_code
-			if(strcmp(str_name, "rsp_code")==0)
-			{
-				response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
-			}
-			// - rsp_message
-			else if(strcmp(str_name, "rsp_message") == 0)
-			{
-				response.rsp_message = convert_utf8_to_multibyte(value.GetString());
-			}
+	//		// - rsp_code
+	//		if(strcmp(str_name, "rsp_code")==0)
+	//		{
+	//			response.rsp_code = get_value_RESPONSE_CODE(value.GetString());
+	//		}
+	//		// - rsp_message
+	//		else if(strcmp(str_name, "rsp_message") == 0)
+	//		{
+	//			response.rsp_message = convert_utf8_to_multibyte(value.GetString());
+	//		}
 
-			//AddJSONMember<char, rapidjson::UTF8<char>>(*this, iter);
-		}
-	});
+	//		//AddJSONMember<char, rapidjson::UTF8<char>>(*this, iter);
+	//	}
+	//});
 
-	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
-	prequest_http->request();
+	//// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
+	//prequest_http->request();
 
-	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
-	prequest_http->wait();
+	//// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
+	//prequest_http->wait();
 
 	// return) 
 	return response;
@@ -332,9 +356,9 @@ http_api::kakao::RESPONSE_LOGOUT http_api::kakao::request(const REQUEST_LOGOUT& 
 {
 	// ------------------------------------------------------------------
 	// 
-	// KAKAO ì¸ì¦ - ë¡œê·¸ì•„ì›ƒ
+	// KAKAO ÀÎÁõ - ·Î±×¾Æ¿ô
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		https://kapi.kakao.com/v1/user/logout
 	//	 3) HTTP Method		POST
@@ -342,10 +366,10 @@ http_api::kakao::RESPONSE_LOGOUT http_api::kakao::request(const REQUEST_LOGOUT& 
 	//   5) Parameters
 	//		- Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 	//
-	//	ìš”ì²­)	curl -v -X POST https://kapi.kakao.com/v1/user/logout 
+	//	¿äÃ»)	curl -v -X POST https://kapi.kakao.com/v1/user/logout 
 	//			 -H "Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 	//
-	//	ê²°ê³¼)	HTTP / 1.1 200 OK
+	//	°á°ú)	HTTP / 1.1 200 OK
 	//				Content - Type: application / json; charset = UTF - 8
 	//			{
 	//				"id":123456789
@@ -363,9 +387,9 @@ http_api::kakao::RESPONSE_SIGNUP http_api::kakao::request(const REQUEST_SIGNUP& 
 {
 	// ------------------------------------------------------------------
 	// 
-	// KAKAO ì¸ì¦ - ì•±ì—°ê²°
+	// KAKAO ÀÎÁõ - ¾Û¿¬°á
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		https://kapi.kakao.com/v1/user/signup
 	//	 3) HTTP Method		POST
@@ -374,11 +398,11 @@ http_api::kakao::RESPONSE_SIGNUP http_api::kakao::request(const REQUEST_SIGNUP& 
 	//		- Authorization: Bearer {access_token}
 	//	    - Content-Type: application/x-www-form-urlencoded;charset=utf-8
 	//
-	//	ìš”ì²­)	curl - v - X POST https ://kapi.kakao.com/v1/user/signup 
+	//	¿äÃ»)	curl - v - X POST https ://kapi.kakao.com/v1/user/signup 
 	//				-H "Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" 
 	//				--data-urlencode 'properties={"age":"23", "gender":"female"}'
 	//
-	//	ê²°ê³¼)	HTTP / 1.1 200 OK
+	//	°á°ú)	HTTP / 1.1 200 OK
 	//			Content-Type: application/json;charset=UTF-8
 	//			{
 	//				"id":123456789
@@ -395,9 +419,9 @@ http_api::kakao::RESPONSE_UNLINK http_api::kakao::request(const REQUEST_UNLINK& 
 {
 	// ------------------------------------------------------------------
 	// 
-	// KAKAO ì¸ì¦ - ì•±ì—°ê²°í•´ì œ
+	// KAKAO ÀÎÁõ - ¾Û¿¬°áÇØÁ¦
 	//
-	// ìš”ì²­ ë©”ì‹œì§€ URL
+	// ¿äÃ» ¸Ş½ÃÁö URL
 	//   
 	//   2) HTTP URL		https://kapi.kakao.com/v1/user/unlink HTTP/1.1
 	//	 3) HTTP Method		POST
@@ -416,14 +440,14 @@ http_api::kakao::RESPONSE_UNLINK http_api::kakao::request(const REQUEST_UNLINK& 
 	//			Authorization: KakaoAK {admin_key}
 	//
 	//
-	//	ìš”ì²­1)	curl -v -X POST https://kapi.kakao.com/v1/user/unlink 
+	//	¿äÃ»1)	curl -v -X POST https://kapi.kakao.com/v1/user/unlink 
 	//			  -H "Authorization: Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 	//
-	//	ìš”ì²­)	curl -v -X POST https://kapi.kakao.com/v1/user/unlink 
+	//	¿äÃ»)	curl -v -X POST https://kapi.kakao.com/v1/user/unlink 
 	//			  -H "Authorization: KakaoAK kkkkkkkkkkkkkkkkkkkkkkkkkkkkkk" 
 	//			  -d 'target_id_type=user_id&target_id=123456789'
 	//
-	//	ê²°ê³¼)	HTTP/1.1 200 OK
+	//	°á°ú)	HTTP/1.1 200 OK
 	//			Content-Type: application/json;charset=UTF-8
 	//			{
 	//			    "id":123456789
@@ -680,50 +704,50 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// KAKAO ì¸ì¦ - ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²° ìš”ì²­(3-legged)
+//	// KAKAO ÀÎÁõ - »ç¿ëÀÚ·Î±×ÀÎ¿¬°á ¿äÃ»(3-legged)
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/KAKAO/2.0/token
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Parameters
-//	//		- code						<authorization_code>		ì‚¬ìš©ìì¸ì¦ ì„±ê³µ í›„ ì „ì†¡ë˜ëŠ” authorization_code
-//	//		- client_id					<client_id>					ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ ì•±ì˜ Client ID
-//	//		- client_secret				<client_secret>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ ì•±ì˜ Client Secret
-//	//		- redirect_uri				<callback_uri>				Access Tokenì„ ì „ë‹¬ë°›ì„ callback_uri
-//	//		- grant_type				ê³ ì •ê°’:authorization_code	Access Tokenì„ í—ˆìš©í•˜ê¸° ìœ„í•œ ê°’
+//	//		- code						<authorization_code>		»ç¿ëÀÚÀÎÁõ ¼º°ø ÈÄ Àü¼ÛµÇ´Â authorization_code
+//	//		- client_id					<client_id>					¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ¾ÛÀÇ Client ID
+//	//		- client_secret				<client_secret>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ¾ÛÀÇ Client Secret
+//	//		- redirect_uri				<callback_uri>				Access TokenÀ» Àü´Ş¹ŞÀ» callback_uri
+//	//		- grant_type				°íÁ¤°ª:authorization_code	Access TokenÀ» Çã¿ëÇÏ±â À§ÇÑ °ª
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
 //	const size_t	SIZE_BUFFER = 8192;
 //
-//	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
+//	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
 //	auto	str_object	 = "/KAKAO/2.0/token";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto	http_method	 = eHTTP_METHOD::POST_;
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤. - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù. - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" };
 //
-//	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-//	buf_option.append<TEXT_WEB>("code=");				buf_option.append<TEXT_WEB>(_request.code);
-//	buf_option.append<TEXT_WEB>("&client_id=");			buf_option.append<TEXT_WEB>(_request.client_id);
-//	buf_option.append<TEXT_WEB>("&client_secret=");		buf_option.append<TEXT_WEB>(_request.client_secret);
-//	buf_option.append<TEXT_WEB>("&redirect_uri=");		buf_option.append<TEXT_WEB>(_request.redirect_uri);
-//	buf_option.append<TEXT_WEB>("&grant_type=authorization_code");
+//	buf_option.append<text<char>>("code=");				buf_option.append<text<char>>(_request.code);
+//	buf_option.append<text<char>>("&client_id=");			buf_option.append<text<char>>(_request.client_id);
+//	buf_option.append<text<char>>("&client_secret=");		buf_option.append<text<char>>(_request.client_secret);
+//	buf_option.append<text<char>>("&redirect_uri=");		buf_option.append<text<char>>(_request.redirect_uri);
+//	buf_option.append<text<char>>("&grant_type=authorization_code");
 //	buf_option.front<char>(buf_option.size_)	 = 0;
 //
-//	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view>	vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view>	vector_accept{ "*/*", "application/json" };
 //
-//	// 7) requestë¥¼ Setí•œë‹¤.
+//	// 7) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -741,43 +765,43 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_TOKEN	response;
 //
-//	// 8) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 8) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 9) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 9) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parseí•œë‹¤.
+//		// - ParseÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -858,10 +882,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 5) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 5) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 12) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 12) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -872,48 +896,48 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// KAKAO ì¸ì¦ - ì´ìš©ê¸°ê´€ Access Token ìš”ì²­ (2-legged)
+//	// KAKAO ÀÎÁõ - ÀÌ¿ë±â°ü Access Token ¿äÃ» (2-legged)
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/KAKAO/2.0/token
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Parameters
-//	//		- client_id					<client_id>					ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ ì•±ì˜ Client ID
-//	//		- client_secret				<client_secret>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ ì•±ì˜ Client Secret
-//	//		- grant_type				ê³ ì •ê°’:client_credentials	2-legged ì¸ì¦ì„ ìœ„í•œ ì¸ì¦ë°©ì‹ ì§€ì •
-//	//		- scope						ê³ ì •ê°’:oob					Access Token ê¶Œí•œ ë²”ìœ„
+//	//		- client_id					<client_id>					¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ¾ÛÀÇ Client ID
+//	//		- client_secret				<client_secret>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ¾ÛÀÇ Client Secret
+//	//		- grant_type				°íÁ¤°ª:client_credentials	2-legged ÀÎÁõÀ» À§ÇÑ ÀÎÁõ¹æ½Ä ÁöÁ¤
+//	//		- scope						°íÁ¤°ª:oob					Access Token ±ÇÇÑ ¹üÀ§
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
 //	const size_t	SIZE_BUFFER = 8192;
 //
-//	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
+//	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
 //	auto	str_object	 = "/KAKAO/2.0/token";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto	http_method	 = eHTTP_METHOD::POST_;
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤. - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù. - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" };
 //
-//	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-//	buf_option.append<TEXT_WEB>("client_id=");			buf_option.append<TEXT_WEB>(_request.client_id);
-//	buf_option.append<TEXT_WEB>("&client_secret=");		buf_option.append<TEXT_WEB>(_request.client_secret);
-//	buf_option.append<TEXT_WEB>("&grant_type=client_credentials");
-//	buf_option.append<TEXT_WEB>("&scope=oob");
+//	buf_option.append<text<char>>("client_id=");			buf_option.append<text<char>>(_request.client_id);
+//	buf_option.append<text<char>>("&client_secret=");		buf_option.append<text<char>>(_request.client_secret);
+//	buf_option.append<text<char>>("&grant_type=client_credentials");
+//	buf_option.append<text<char>>("&scope=oob");
 //	buf_option.front<char>(buf_option.size_)	 = 0;
 //
-//	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 7) requestë¥¼ Setí•œë‹¤.
+//	// 7) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -931,43 +955,43 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_TOKEN2	response;
 //
-//	// 8) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 8) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 9) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 9) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// 1) Parseí•œë‹¤.
+//		// 1) ParseÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// 2) ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// 2) °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -1010,10 +1034,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 5) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 5) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 12) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 12) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -1024,51 +1048,51 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// KAKAO ì¸ì¦ - Login Access Token ê°±ì‹ (refresh_token ì‚¬ìš©)
+//	// KAKAO ÀÎÁõ - Login Access Token °»½Å(refresh_token »ç¿ë)
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/KAKAO/2.0/token
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Parameters
-//	//		- client_id					<client_id>					ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ ì•±ì˜ Client ID
-//	//		- client_secret				<client_secret>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ ì•±ì˜ Client Secret
-//	//		- refresh_token				<refresh_token>				login í† í° ë°œê¸‰ ì‹œ ë°›ì€ access_token ê°±ì‹ ìš© token
-//	//		- scope						ê³ ì •ê°’						Access Token ê¶Œí•œ ë²”ìœ„
+//	//		- client_id					<client_id>					¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ¾ÛÀÇ Client ID
+//	//		- client_secret				<client_secret>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ¾ÛÀÇ Client Secret
+//	//		- refresh_token				<refresh_token>				login ÅäÅ« ¹ß±Ş ½Ã ¹ŞÀº access_token °»½Å¿ë token
+//	//		- scope						°íÁ¤°ª						Access Token ±ÇÇÑ ¹üÀ§
 //	//									[login|inquiry|transfer]
-//	//		- grant_type				ê³ ì •ê°’:refresh_token		Access Tokenì„ í—ˆìš©í•˜ê¸° ìœ„í•œ ê°’
+//	//		- grant_type				°íÁ¤°ª:refresh_token		Access TokenÀ» Çã¿ëÇÏ±â À§ÇÑ °ª
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
 //	const size_t	SIZE_BUFFER = 8192;
 //
-//	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
+//	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
 //	auto str_object = "/oauth/2.0/token";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method = eHTTP_METHOD::POST_;
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" };
 //
-//	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-//	buf_option.append<TEXT_WEB>("client_id=");			buf_option.append<TEXT_WEB>(_request.client_id);
-//	buf_option.append<TEXT_WEB>("&client_secret=");	buf_option.append<TEXT_WEB>(_request.client_secret);
-//	buf_option.append<TEXT_WEB>("&refresh_token=");	buf_option.append<TEXT_WEB>(_request.refresh_token);
-//	buf_option.append<TEXT_WEB>("&scope=");			buf_option.append<TEXT_WEB>(to_string<char>(_request.scope));
-//	buf_option.append<TEXT_WEB>("&grant_type=refresh_token");
+//	buf_option.append<text<char>>("client_id=");			buf_option.append<text<char>>(_request.client_id);
+//	buf_option.append<text<char>>("&client_secret=");	buf_option.append<text<char>>(_request.client_secret);
+//	buf_option.append<text<char>>("&refresh_token=");	buf_option.append<text<char>>(_request.refresh_token);
+//	buf_option.append<text<char>>("&scope=");			buf_option.append<text<char>>(to_string<char>(_request.scope));
+//	buf_option.append<text<char>>("&grant_type=refresh_token");
 //	buf_option.front<char>(buf_option.size_)	 = 0;
 //
-//	// 6) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 6) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 7) requestë¥¼ Setí•œë‹¤.
+//	// 7) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -1086,43 +1110,43 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_TOKEN_REFRESH	response;
 //
-//	// 8) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 8) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 9) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 9) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if (_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// 1) Parseí•œë‹¤.
+//		// 1) ParseÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// 2) ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// 2) °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -1165,10 +1189,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 5) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 5) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 12) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 12) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -1324,21 +1348,21 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+//	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/v1.0/user/me
 //	//	 3) HTTP Method		GET
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization			Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization			Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	//   6) Parameters
-//	//		- user_seq_no			"U123456789"			AN(10) ì‚¬ìš©ìì¼ë ¨ë²ˆí˜¸
+//	//		- user_seq_no			"U123456789"			AN(10) »ç¿ëÀÚÀÏ·Ã¹øÈ£
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -1347,35 +1371,35 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto bufObject	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto	sizeWrite	 = __sprintf(reinterpret_cast<char*>(bufObject.data_), SIZE_BUFFER, "/v1.0/user/me?user_seq_no=%s", _request.user_seq_no.c_str());
+//	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto	sizeWrite	 = std::snprintf(reinterpret_cast<char*>(bufObject.data_), SIZE_BUFFER, std::string_view("/v1.0/user/me?user_seq_no=%s").data(), _request.user_seq_no.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite<0, throwable::failure(eRESULT::FAIL));
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto	http_method	 = eHTTP_METHOD::GET_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type:application/x-www-form-urlencoded;charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) }; 
 //
 //	// declare) 
 //	shared_buffer	buf_option;
 //
-//	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 6) requestë¥¼ Setí•œë‹¤.
+//	// 6) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -1392,46 +1416,46 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_USER_ME	response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
 //		// declare)
 //		size_t	res_cnt	 = 0;
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -1485,7 +1509,7 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //				for (auto iterRes = value.Begin(); iterRes != value.End(); ++iterRes)
 //				{
 //					// declare) 
-//					http_api::kakao::RESPONSE_USER_ME::ACCOUNT_INFO	AccouuntInfo;
+//					http_api::kakao::RESPONSE_USER_ME::ACCOUNT_INFO	AccountInfo;
 //
 //					for (auto iterNest = iterRes->MemberBegin(); iterNest != iterRes->MemberEnd(); ++iterNest)
 //					{
@@ -1495,66 +1519,66 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //						// - "fintech_use_num"
 //						if (strcmp(strName_Nested, "fintech_use_num") == 0)
 //						{
-//							AccouuntInfo.fintech_use_num = value_Nested.GetString();
+//							AccountInfo.fintech_use_num = value_Nested.GetString();
 //						}
 //						// - "account_alias"
 //						else if (strcmp(strName_Nested, "account_alias") == 0)
 //						{
-//							convert_utf8_to_multibyte(AccouuntInfo.account_alias, value_Nested.GetString());
+//							convert_utf8_to_multibyte(AccountInfo.account_alias, value_Nested.GetString());
 //						}
 //						// - "bank_code_std"
 //						else if (strcmp(strName_Nested, "bank_code_std") == 0)
 //						{
-//							AccouuntInfo.bank_code_std = get_enum_OAUTH_BANK_CODE(value_Nested.GetString());
+//							AccountInfo.bank_code_std = get_enum_OAUTH_BANK_CODE(value_Nested.GetString());
 //						}
 //						// - "bank_code_sub"
 //						else if (strcmp(strName_Nested, "bank_code_sub") == 0)
 //						{
-//							AccouuntInfo.bank_code_sub = __from_string<int64_t>(value_Nested.GetString());
+//							AccountInfo.bank_code_sub = __from_string<int64_t>(value_Nested.GetString());
 //						}
 //						// - "bank_name"
 //						else if (strcmp(strName_Nested, "bank_name") == 0)
 //						{
-//							convert_utf8_to_multibyte(AccouuntInfo.bank_name, value_Nested.GetString());
+//							convert_utf8_to_multibyte(AccountInfo.bank_name, value_Nested.GetString());
 //						}
 //						// - "account_num_masked"
 //						else if (strcmp(strName_Nested, "account_num_masked") == 0)
 //						{
-//							AccouuntInfo.account_num_masked = value_Nested.GetString();
+//							AccountInfo.account_num_masked = value_Nested.GetString();
 //						}
 //						// - "account_holder_name"
 //						else if (strcmp(strName_Nested, "account_holder_name") == 0)
 //						{
-//							convert_utf8_to_multibyte(AccouuntInfo.account_holder_name, value_Nested.GetString());
+//							convert_utf8_to_multibyte(AccountInfo.account_holder_name, value_Nested.GetString());
 //						}
 //						// - "account_type"
 //						else if (strcmp(strName_Nested, "account_type") == 0)
 //						{
-//							AccouuntInfo.account_type = value_Nested.GetString();
+//							AccountInfo.account_type = value_Nested.GetString();
 //						}
 //						// - "inquiry_agree_yn"
 //						else if (strcmp(strName_Nested, "inquiry_agree_yn") == 0)
 //						{
-//							AccouuntInfo.inquiry_agree_yn = get_enum_OAUTH_YESNO(value_Nested.GetString());
+//							AccountInfo.inquiry_agree_yn = get_enum_OAUTH_YESNO(value_Nested.GetString());
 //						}
 //						// - "inquiry_agree_dtime"
 //						else if (strcmp(strName_Nested, "inquiry_agree_dtime") == 0)
 //						{
-//							AccouuntInfo.inquiry_agree_dtime = from_string_date_time(value_Nested.GetString());
+//							AccountInfo.inquiry_agree_dtime = from_string_date_time(value_Nested.GetString());
 //						}
 //						// - "transfer_agree_yn"
 //						else if (strcmp(strName_Nested, "transfer_agree_yn") == 0)
 //						{
-//							AccouuntInfo.transfer_agree_yn = get_enum_OAUTH_YESNO(value_Nested.GetString());
+//							AccountInfo.transfer_agree_yn = get_enum_OAUTH_YESNO(value_Nested.GetString());
 //						}
 //						// - "transfer_agree_dtime"
 //						else if (strcmp(strName_Nested, "transfer_agree_dtime") == 0)
 //						{
-//							AccouuntInfo.transfer_agree_dtime = from_string_date_time(value_Nested.GetString());
+//							AccountInfo.transfer_agree_dtime = from_string_date_time(value_Nested.GetString());
 //						}
 //					}
 //
-//					response.res_list.push_back(AccouuntInfo);
+//					response.res_list.push_back(AccountInfo);
 //				}
 //
 //				// check) 
@@ -1563,10 +1587,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -1577,22 +1601,22 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+//	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		https://openapi.open.openform.or.kr/oauth/2.0/unlink
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization			Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization			Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	//   6) Parameters
-//	//		- client_user_code		"F001234560"			AN(10) ì´ìš©ê¸°ê´€ì½”ë“œ
-//	//		- user_seq_no			"U123456789"			AN(10) ì‚¬ìš©ìì¼ë ¨ë²ˆí˜¸
+//	//		- client_user_code		"F001234560"			AN(10) ÀÌ¿ë±â°üÄÚµå
+//	//		- user_seq_no			"U123456789"			AN(10) »ç¿ëÀÚÀÏ·Ã¹øÈ£
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -1601,33 +1625,33 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto str_object = "/oauth/2.0/unlink";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method = eHTTP_METHOD::POST_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	//    Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	//    Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) }; 
 //
-//	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-//	buf_option.append<TEXT_WEB>("{client_use_code: ");	buf_option.append<TEXT_WEB>(_request.client_use_code);
-//	buf_option.append<TEXT_WEB>(", user_seq_no: ");		buf_option.append<TEXT_WEB>(_request.user_seq_no);
-//	buf_option.append<TEXT_WEB>("}");
+//	buf_option.append<text<char>>("{client_use_code: ");	buf_option.append<text<char>>(_request.client_use_code);
+//	buf_option.append<text<char>>(", user_seq_no: ");		buf_option.append<text<char>>(_request.user_seq_no);
+//	buf_option.append<text<char>>("}");
 //	buf_option.front<char>(buf_option.size_) = 0;
 //
-//	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 6) requestë¥¼ Setí•œë‹¤.
+//	// 6) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -1644,43 +1668,43 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_UNLINK	response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -1715,10 +1739,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -1729,24 +1753,24 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// KAKAO ì¸ì¦ - ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²° ìš”ì²­(3-legged): êµ¬ë²„ì „
+//	// KAKAO ÀÎÁõ - »ç¿ëÀÚ·Î±×ÀÎ¿¬°á ¿äÃ»(3-legged): ±¸¹öÀü
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		https://openapi.open.openform.or.kr/oauth/2.0/authorize
 //	//	 3) HTTP Method		GET
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Parameters
-//	//		- response_type			ê³ ì •ê°’: code			KAKAO 2.0 ì¸ì • ìš”ì²­ì‹œ ë°˜í™˜ë˜ëŠ” í˜•íƒœ
-//	//		- client_id				<client_id>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ í˜‘ì˜ Client ID
-//	//		- redirect_uri			<callback_uri>			ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²°ì´ ì„±ê³µë˜ë©´ ì´ìš©ê¸°ê´€ìœ¼ë¡œ ì—°ê²°ë˜ëŠ” URL
-//	//		- scope					ê³ ì •ê°’:login			Access Token ê¶Œí•œ ë²”ìœ„
+//	//		- response_type			°íÁ¤°ª: code			KAKAO 2.0 ÀÎÁ¤ ¿äÃ» ½Ã ¹İÈ¯µÇ´Â ÇüÅÂ
+//	//		- client_id				<client_id>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ÇùÀÇ Client ID
+//	//		- redirect_uri			<callback_uri>			»ç¿ëÀÚ·Î±×ÀÎ¿¬°áÀÌ ¼º°øÇÏ¸é ÀÌ¿ë±â°üÀ¸·Î ¿¬°áµÇ´Â URL
+//	//		- scope					°íÁ¤°ª:login			Access Token ±ÇÇÑ ¹üÀ§
 //	//								(login | inquiry | transfer)
-//	//		- client_info			<client_info>			ì´ìš©ê¸°ê´€ì´ ì…‹íŒ…í•˜ëŠ” ì„ì˜ì˜ ì •ë³´
-//	//								(Max: 256bytes)			Callback í˜¸ì¶œ ì‹œ ê·¸ëŒ€ë¡œ ì „ë‹¬ë¨
+//	//		- client_info			<client_info>			ÀÌ¿ë±â°üÀÌ ¼¼ÆÃÇÏ´Â ÀÓÀÇÀÇ Á¤º¸
+//	//								(Max: 256bytes)			Callback È£Ãâ ½Ã ±×´ë·Î Àü´ŞµÊ
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -1755,26 +1779,26 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto bufObject = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufObject.data_), SIZE_BUFFER, "/oauth/2.0/register_account?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&client_info=%s", _request.client_id.c_str(), _request.redirect_uri.c_str(), to_string<char>(_request.scope), _request.client_info.c_str());
+//	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufObject.data_), SIZE_BUFFER, std::string_view("/oauth/2.0/register_account?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&client_info=%s").data(), _request.client_id.c_str(), _request.redirect_uri.c_str(), to_string<char>(_request.scope), _request.client_info.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite<0, throwable::failure(eRESULT::FAIL));
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method = eHTTP_METHOD::GET_;
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" };
 //
 //	// declare) 
 //	shared_buffer buf_option;
 //
-//	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //
-//	// 6) requestë¥¼ Setí•œë‹¤.
+//	// 6) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -1791,43 +1815,43 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_REGISTER_ACCOUNT	response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -1848,10 +1872,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -1862,20 +1886,20 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// KAKAO ì¸ì¦ - ê³„ì¢Œë“±ë¡í™•ì¸ ìš”ì²­ (3-legged): êµ¬ë²„ì „
+//	// KAKAO ÀÎÁõ - °èÁÂµî·ÏÈ®ÀÎ ¿äÃ» (3-legged): ±¸¹öÀü
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		https://openapi.open.openform.or.kr/oauth/2.0/authorize_account
 //	//	 3) HTTP Method		GET
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Parameters
-//	//		- response_type			ê³ ì •ê°’: code			KAKAO 2.0 ì¸ì • ìš”ì²­ì‹œ ë°˜í™˜ë˜ëŠ” í˜•íƒœ
-//	//		- client_id				<client_id>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ í˜‘ì˜ Client ID
-//	//		- redirect_uri			<callback_uri>			ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²°ì´ ì„±ê³µë˜ë©´ ì´ìš©ê¸°ê´€ìœ¼ë¡œ ì—°ê²°ë˜ëŠ” URL
-//	//		- scope					[inquiry | transfer]	Access Token ê¶Œí•œ ë²”ìœ„
-//	//		- client_info			<client_info>			ì´ìš©ê¸°ê´€ì´ ì…‹íŒ…í•˜ëŠ” ì„ì˜ì˜ ì •ë³´
-//	//								(Max: 256bytes)			Callback í˜¸ì¶œ ì‹œ ê·¸ëŒ€ë¡œ ì „ë‹¬ë¨
+//	//		- response_type			°íÁ¤°ª: code			KAKAO 2.0 ÀÎÁ¤ ¿äÃ» ½Ã ¹İÈ¯µÇ´Â ÇüÅÂ
+//	//		- client_id				<client_id>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ÇùÀÇ Client ID
+//	//		- redirect_uri			<callback_uri>			»ç¿ëÀÚ·Î±×ÀÎ¿¬°áÀÌ ¼º°øÇÏ¸é ÀÌ¿ë±â°üÀ¸·Î ¿¬°áµÇ´Â URL
+//	//		- scope					[inquiry | transfer]	Access Token ±ÇÇÑ ¹üÀ§
+//	//		- client_info			<client_info>			ÀÌ¿ë±â°üÀÌ ¼¼ÆÃÇÏ´Â ÀÓÀÇÀÇ Á¤º¸
+//	//								(Max: 256bytes)			Callback È£Ãâ ½Ã ±×´ë·Î Àü´ŞµÊ
 //	//
 //	// ------------------------------------------------------------------
 //	// check)
@@ -1884,7 +1908,7 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// check)
 //	THROW_IF(_request.scope!=eOAUTH_SCOPE::INQUIRY_ && _request.scope != eOAUTH_SCOPE::TRANSFER_, throwable::failure(eRESULT::INVALID_ARGUMENT));
 //
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -1893,26 +1917,26 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto bufObject = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufObject.data_), SIZE_BUFFER, "/oauth/2.0/authorize_account?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&client_info=%s", _request.client_id.c_str(), _request.redirect_uri.c_str(), to_string<char>(_request.scope), _request.client_info.c_str());
+//	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufObject.data_), SIZE_BUFFER, std::string_view("/oauth/2.0/authorize_account?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&client_info=%s").data(), _request.client_id.c_str(), _request.redirect_uri.c_str(), to_string<char>(_request.scope), _request.client_info.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite<0, throwable::failure(eRESULT::FAIL));
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method = eHTTP_METHOD::GET_;
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" };
 //
 //	// declare) 
 //	shared_buffer buf_option;
 //
-//	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 6) requestë¥¼ Setí•œë‹¤.
+//	// 6) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -1929,43 +1953,43 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_AUTHORIZE_ACCOUNT response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -1986,10 +2010,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -2029,23 +2053,23 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// KAKAO ì¸ì¦ - ê³„ì¢Œë“±ë¡í™•ì¸ ìš”ì²­ (3-legged): êµ¬ë²„ì „
+//	// KAKAO ÀÎÁõ - °èÁÂµî·ÏÈ®ÀÎ ¿äÃ» (3-legged): ±¸¹öÀü
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		https://openapi.open.openform.or.kr/v1.0/account/list
 //	//	 3) HTTP Method		GET
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Parameters
-//	//		- response_type			ê³ ì •ê°’: code			KAKAO 2.0 ì¸ì • ìš”ì²­ì‹œ ë°˜í™˜ë˜ëŠ” í˜•íƒœ
-//	//		- client_id				<client_id>				ì˜¤í”ˆí”Œë«í¼ì—ì„œ ë°œê¸‰í•œ ì´ìš©ê¸°ê´€ í˜‘ì˜ Client ID
-//	//		- redirect_uri			<callback_uri>			ì‚¬ìš©ìë¡œê·¸ì¸ì—°ê²°ì´ ì„±ê³µë˜ë©´ ì´ìš©ê¸°ê´€ìœ¼ë¡œ ì—°ê²°ë˜ëŠ” URL
-//	//		- scope					[inquiry | transfer]	Access Token ê¶Œí•œ ë²”ìœ„
-//	//		- client_info			<client_info>			ì´ìš©ê¸°ê´€ì´ ì…‹íŒ…í•˜ëŠ” ì„ì˜ì˜ ì •ë³´
-//	//								(Max: 256bytes)			Callback í˜¸ì¶œ ì‹œ ê·¸ëŒ€ë¡œ ì „ë‹¬ë¨
+//	//		- response_type			°íÁ¤°ª: code			KAKAO 2.0 ÀÎÁ¤ ¿äÃ» ½Ã ¹İÈ¯µÇ´Â ÇüÅÂ
+//	//		- client_id				<client_id>				¿ÀÇÂÇÃ·§Æû¿¡¼­ ¹ß±ŞÇÑ ÀÌ¿ë±â°ü ÇùÀÇ Client ID
+//	//		- redirect_uri			<callback_uri>			»ç¿ëÀÚ·Î±×ÀÎ¿¬°áÀÌ ¼º°øÇÏ¸é ÀÌ¿ë±â°üÀ¸·Î ¿¬°áµÇ´Â URL
+//	//		- scope					[inquiry | transfer]	Access Token ±ÇÇÑ ¹üÀ§
+//	//		- client_info			<client_info>			ÀÌ¿ë±â°üÀÌ ¼¼ÆÃÇÏ´Â ÀÓÀÇÀÇ Á¤º¸
+//	//								(Max: 256bytes)			Callback È£Ãâ ½Ã ±×´ë·Î Àü´ŞµÊ
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -2054,35 +2078,35 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto bufObject = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufObject.data_), SIZE_BUFFER, "/v1.0/account/list?user_seq_no=%s&include_cancel_yn=%s&sort_order=%s", _request.user_seq_no.c_str(), to_string<char>(_request.include_cancel_yn), to_string<char>(_request.sort_order));
+//	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufObject.data_), SIZE_BUFFER, std::string_view("/v1.0/account/list?user_seq_no=%s&include_cancel_yn=%s&sort_order=%s").data(), _request.user_seq_no.c_str(), to_string<char>(_request.include_cancel_yn), to_string<char>(_request.sort_order));
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite<0, throwable::failure(eRESULT::FAIL));
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto		http_method	 = eHTTP_METHOD::GET_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) };
 //
 //	// declare) 
 //	shared_buffer buf_option;
 //
-//	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 6) requestë¥¼ Setí•œë‹¤.
+//	// 6) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -2099,46 +2123,46 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_ACCOUNT_LIST	response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
 //		// declare)
 //		size_t	res_cnt	 = 0;
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -2181,7 +2205,7 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //				for (auto iterRes = value.Begin(); iterRes != value.End(); ++iterRes)
 //				{
 //					// declare) 
-//					http_api::kakao::RESPONSE_ACCOUNT_LIST::ACCOUNT_INFO	AccouuntInfo;
+//					http_api::kakao::RESPONSE_ACCOUNT_LIST::ACCOUNT_INFO	AccountInfo;
 //
 //					for (auto iterNest = iterRes->MemberBegin(); iterNest != iterRes->MemberEnd(); ++iterNest)
 //					{
@@ -2191,36 +2215,36 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //						// - "fintech_use_num"
 //						if (strcmp(strName_Nested, "fintech_use_num") == 0)
 //						{
-//							AccouuntInfo.fintech_use_num	 = value_Nested.GetString();
+//							AccountInfo.fintech_use_num	 = value_Nested.GetString();
 //						}
 //						// - "account_alias"
 //						else if (strcmp(strName_Nested, "account_alias") == 0)
 //						{
-//							AccouuntInfo.account_alias		 = value_Nested.GetString();
+//							AccountInfo.account_alias		 = value_Nested.GetString();
 //						}
 //						// - "bank_code_std"
 //						else if (strcmp(strName_Nested, "bank_code_std") == 0)
 //						{
-//							AccouuntInfo.bank_code_std		 = get_enum_OAUTH_BANK_CODE(value_Nested.GetString());
+//							AccountInfo.bank_code_std		 = get_enum_OAUTH_BANK_CODE(value_Nested.GetString());
 //						}
 //						// - "bank_code_sub"
 //						else if (strcmp(strName_Nested, "bank_code_sub") == 0)
 //						{
-//							AccouuntInfo.bank_code_sub		 = __from_string<int64_t>(value_Nested.GetString());
+//							AccountInfo.bank_code_sub		 = __from_string<int64_t>(value_Nested.GetString());
 //						}
 //						// - "bank_name"
 //						else if (strcmp(strName_Nested, "bank_name") == 0)
 //						{
-//							convert_utf8_to_multibyte(AccouuntInfo.bank_name, value_Nested.GetString());
+//							convert_utf8_to_multibyte(AccountInfo.bank_name, value_Nested.GetString());
 //						}
 //						// - "account_num_masked"
 //						else if (strcmp(strName_Nested, "account_num_masked") == 0)
 //						{
-//							AccouuntInfo.account_num_masked	 = value_Nested.GetString();
+//							AccountInfo.account_num_masked	 = value_Nested.GetString();
 //						}
 //					}
 //
-//					response.res_list.push_back(AccouuntInfo);
+//					response.res_list.push_back(AccountInfo);
 //				}
 //
 //				// check) 
@@ -2229,10 +2253,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -2243,22 +2267,22 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+//	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/v1.0/account/update_info
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization			Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization			Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	//   6) Parameters
-//	//		- fintech_use_num		<fintech_use_num>			AN(24) í•€í…Œí¬ì´ìš©ë²ˆí˜¸
-//	//		- account_alias			"ë³´í—˜ë£Œë‚©ë¶€ê³„ì¢Œ"			AN(50) ë³€ê²½ì½”ìí•˜ëŠ” ê³„ì¢Œë³„ëª…
+//	//		- fintech_use_num		<fintech_use_num>			AN(24) ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
+//	//		- account_alias			"º¸Çè·á³³ºÎ°èÁÂ"			AN(50) º¯°æÄÚÀÚÇÏ´Â °èÁÂº°¸í
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -2267,29 +2291,29 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto		str_object	 = "/v1.0/account/update_info";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto		http_method	 = eHTTP_METHOD::POST_;
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8", "Authorization: Bearer %s" }; _request.Authorization.c_str();
 //
 //	// declare)
 //	char	strAccountAlias[256];
 //
-//	// 5) ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+//	// 5) ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 //	convert_multibyte_to_utf8(strAccountAlias, _request.account_alias.c_str());
 //
-//	// 6) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 6) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-//	buf_option.append<TEXT_WEB>("fintech_use_num=");		buf_option.append<TEXT_WEB>(_request.fintech_use_num);
-//	buf_option.append<TEXT_WEB>("&account_alias=");		buf_option.append<TEXT_WEB>(strAccountAlias);
+//	buf_option.append<text<char>>("fintech_use_num=");		buf_option.append<text<char>>(_request.fintech_use_num);
+//	buf_option.append<text<char>>("&account_alias=");		buf_option.append<text<char>>(strAccountAlias);
 //	buf_option.front<char>(buf_option.size_)	 = 0;
 //
-//	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 6) requestë¥¼ Setí•œë‹¤.
+//	// 6) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -2306,43 +2330,43 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_ACCOUNT_UPDATE_INFO	response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -2382,10 +2406,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -2396,19 +2420,19 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+//	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/v1.0/account/cancel
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization			Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization			Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	//   6) Parameters
-//	//		- scope					[inquire | transfer]	inquire:ì¡°íšŒì„œë¹„ìŠ¤, transfer:ì¶œê¸ˆì„œë¹„ìŠ¤
-//	//		- fintech_use_num		"12345678901234567890"	AN(24) í•€í…Œí¬ì´ìš©ë²ˆí˜¸
+//	//		- scope					[inquire | transfer]	inquire:Á¶È¸¼­ºñ½º, transfer:Ãâ±İ¼­ºñ½º
+//	//		- fintech_use_num		"12345678901234567890"	AN(24) ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
 //	//
 //	// ------------------------------------------------------------------
 //	// check)
@@ -2417,7 +2441,7 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// check)
 //	THROW_IF(_request.scope!=eOAUTH_SCOPE::INQUIRY_ && _request.scope != eOAUTH_SCOPE::TRANSFER_, throwable::failure(eRESULT::INVALID_ARGUMENT));
 //
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -2426,32 +2450,32 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto str_object = "/v1.0/account/update_info";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method = eHTTP_METHOD::POST_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) };
 //
-//	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	shared_buffer	buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
-//	buf_option.append<TEXT_WEB>("scope=");				buf_option.append<TEXT_WEB>(to_string<char>(_request.scope));
-//	buf_option.append<TEXT_WEB>("&fintech_use_num=");	buf_option.append<TEXT_WEB>(_request.fintech_use_num);
+//	buf_option.append<text<char>>("scope=");				buf_option.append<text<char>>(to_string<char>(_request.scope));
+//	buf_option.append<text<char>>("&fintech_use_num=");	buf_option.append<text<char>>(_request.fintech_use_num);
 //	buf_option.front<char>(buf_option.size_)	 = 0;
 //
-//	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 6) requestë¥¼ Setí•œë‹¤.
+//	// 6) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -2468,43 +2492,43 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_ACCOUNT_CANCEL	response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -2559,10 +2583,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 12) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 12) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -2573,22 +2597,22 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+//	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/v1.0/account/balance
 //	//	 3) HTTP Method		GET
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization			Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization			Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	//   6) Parameters
-//	//		- fintech_use_num		"12345678901234567890"	AN(24) í•€í…Œí¬ì´ìš©ë²ˆí˜¸
-//	//		- tran_dtime			"20160310101921"		N(14) ìš”ì²­ì¼ì‹œ
+//	//		- fintech_use_num		"12345678901234567890"	AN(24) ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
+//	//		- tran_dtime			"20160310101921"		N(14) ¿äÃ»ÀÏ½Ã
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -2597,42 +2621,35 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto bufObject = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufObject.data_), SIZE_BUFFER, "/v1.0/account/balance?fintech_use_num=%s&tran_dtime=%04u%02u%02u%02u%02u%02u", 
-//		_request.fintech_use_num.c_str(),
-//		_request.tran_dtime.get_year  <uint32_t>(),
-//		_request.tran_dtime.get_month <uint32_t>(),
-//		_request.tran_dtime.get_day   <uint32_t>(),
-//		_request.tran_dtime.get_hour  <uint32_t>(),
-//		_request.tran_dtime.get_minute<uint32_t>(),
-//		_request.tran_dtime.get_second<uint32_t>());
+//	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufObject.data_), SIZE_BUFFER, std::string_view("/v1.0/account/balance?fintech_use_num=%s&tran_dtime=%04u%02u%02u%02u%02u%02u").data(), //		_request.fintech_use_num.c_str(), //		_request.tran_dtime.get_year  <uint32_t>(), //		_request.tran_dtime.get_month <uint32_t>(), //		_request.tran_dtime.get_day   <uint32_t>(), //		_request.tran_dtime.get_hour  <uint32_t>(), //		_request.tran_dtime.get_minute<uint32_t>(), //		_request.tran_dtime.get_second<uint32_t>());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite<0, throwable::failure(eRESULT::FAIL));
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method	 = eHTTP_METHOD::GET_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) };
 //
 //	// declare) 
 //	shared_buffer buf_option;
 //
-//	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 6) requestë¥¼ Setí•œë‹¤.
+//	// 6) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -2649,43 +2666,43 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_ACCOUNT_BALANCE	response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -2765,10 +2782,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -2779,29 +2796,29 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+//	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/v1.0/account/transaction_list
 //	//	 3) HTTP Method		GET
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization			Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization			Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	//   6) Parameters
-//	//		- fintech_use_num			"12345678901234567890"	AN(24) í•€í…Œí¬ì´ìš©ë²ˆí˜¸
-//	//		- inquiry_type				"A"						A(1) ì¡°íšŒêµ¬ë¶„ì½›ë“œ A:All, I:ì…ê¸ˆ, O:ì…ê¸ˆ
-//	//		- from_date					"20160310101921"		N(14) ì¡°íšŒì‹œì‘ì¼ì
-//	//		- to_date					"20160310101921"		N(14) ì¡°íšŒì¢…ë£Œì¼ì
-//	//		- sort_order				"D"						A(1) ì •ë ¬ìˆœì„œ D:Descending, A:Ascending
-//	//		- page_index				"00001"					N(5) í˜ì´ì§€ë²ˆí˜¸
-//	//		- tran_dtime				"20160310101921"		N(14) ìš”ì²­ì¼ì‹œ
-//	//		- before_inquiry_trace_info	"123"					AN(20) ì§ì „ ì¡°íšŒ ì¶”ì  ì •ë³´
-//	//		- list_tran_seqno			"123"					N(10) ìµœì¢… ê±°ë˜ë‚´ì—­ ìˆœë²ˆ
+//	//		- fintech_use_num			"12345678901234567890"	AN(24) ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
+//	//		- inquiry_type				"A"						A(1) Á¶È¸±¸ºĞ±”µå A:All, I:ÀÔ±İ, O:ÀÔ±İ
+//	//		- from_date					"20160310101921"		N(14) Á¶È¸½ÃÀÛÀÏÀÚ
+//	//		- to_date					"20160310101921"		N(14) Á¶È¸Á¾·áÀÏÀÚ
+//	//		- sort_order				"D"						A(1) Á¤·Ä¼ø¼­ D:Descending, A:Ascending
+//	//		- page_index				"00001"					N(5) ÆäÀÌÁö¹øÈ£
+//	//		- tran_dtime				"20160310101921"		N(14) ¿äÃ»ÀÏ½Ã
+//	//		- before_inquiry_trace_info	"123"					AN(20) Á÷Àü Á¶È¸ ÃßÀû Á¤º¸
+//	//		- list_tran_seqno			"123"					N(10) ÃÖÁ¾ °Å·¡³»¿ª ¼ø¹ø
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -2810,50 +2827,41 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto bufObject = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 2) ì‹œê°„ì„ ì–»ëŠ”ë‹¤.
+//	// 2) ½Ã°£À» ¾ò´Â´Ù.
 //	auto&	from_time	 = _request.from_time;
 //	auto&	to_time		 = _request.to_time;
 //	auto&	tran_dtime	 = _request.tran_dtime;
 //
-//	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto	sizeWrite	 = __sprintf(reinterpret_cast<char*>(bufObject.data_), SIZE_BUFFER, "/v1.0/account/transaction_list?fintech_use_num=%s&inquiry_type=%s&from_date=%04u%02u%02u&to_date=%04u%02u%02u&sort_order=%s&page_index=%05u&tran_dtime=%04u%02u%02u%02u%02u%02u&befor_inquiry_trace_info=%llu&list_tran_seqno=%llu",
-//		_request.fintech_use_num.c_str(),
-//		to_string<char>(_request.inquiry_type),
-//		from_time.get_year<uint32_t>(), from_time.get_month<uint32_t>(), from_time.get_day<uint32_t>(),
-//		to_time.get_year<uint32_t>(), to_time.get_month<uint32_t>(), to_time.get_day<uint32_t>(),
-//		to_string<char>(_request.sort_order),
-//		_request.page_index,
-//		tran_dtime.get_year<uint32_t>(), tran_dtime.get_month<uint32_t>(), tran_dtime.get_day<uint32_t>(), tran_dtime.get_hour<uint32_t>(), tran_dtime.get_minute<uint32_t>(), tran_dtime.get_second<uint32_t>(),
-//		_request.before_inquiry_trace_info,
-//		_request.list_tran_seqno
-//	);
+//	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto	sizeWrite	 = std::snprintf(reinterpret_cast<char*>(bufObject.data_), SIZE_BUFFER, std::string_view("/v1.0/account/transaction_list?fintech_use_num=%s&inquiry_type=%s&from_date=%04u%02u%02u&to_date=%04u%02u%02u&sort_order=%s&page_index=%05u&tran_dtime=%04u%02u%02u%02u%02u%02u&befor_inquiry_trace_info=%llu&list_tran_seqno=%llu").data(), //		_request.fintech_use_num.c_str(), //		to_string<char>(_request.inquiry_type), //		from_time.get_year<uint32_t>(), from_time.get_month<uint32_t>(), from_time.get_day<uint32_t>(), //		to_time.get_year<uint32_t>(), to_time.get_month<uint32_t>(), to_time.get_day<uint32_t>(), //		to_string<char>(_request.sort_order), //		_request.page_index, //		tran_dtime.get_year<uint32_t>(), tran_dtime.get_month<uint32_t>(), tran_dtime.get_day<uint32_t>(), tran_dtime.get_hour<uint32_t>(), tran_dtime.get_minute<uint32_t>(), tran_dtime.get_second<uint32_t>(), //		_request.before_inquiry_trace_info, //		_request.list_tran_seqno
+//);
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite<0, throwable::failure(eRESULT::FAIL));
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto	http_method	 = eHTTP_METHOD::GET_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) };
 //
 //	// declare) 
 //	shared_buffer buf_option;
 //
-//	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 6) requestë¥¼ Setí•œë‹¤.
+//	// 6) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -2870,46 +2878,46 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_ACCOUNT_TRANSACTION_LIST	response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
 //		// declare) 
 //		int	page_record_cnt = 0;
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -3036,16 +3044,16 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //							// declare) 
 //							static_string<64>	tempString;
 //
-//							// - ë¬¸ìì—´ ë³€í™˜
+//							// - ¹®ÀÚ¿­ º¯È¯
 //							convert_utf8_to_multibyte(tempString, value_Nested.GetString());
 //
 //							// - "access_token"
-//							if (__strcmp(tempString.c_str(), "ì…ê¸ˆ") == 0)
+//							if (std::string_view(tempString.c_str()).compare("ÀÔ±İ") == 0)
 //							{
 //								transaction.inout_type = eOAUTH_INOUT_TYPE::IN_;
 //							}
 //							// - "token_type"
-//							else if (__strcmp(tempString.c_str(), "ì¶œê¸ˆ") == 0)
+//							else if (std::string_view(tempString.c_str()).compare("Ãâ±İ") == 0)
 //							{
 //								transaction.inout_type = eOAUTH_INOUT_TYPE::OUT_;
 //							}
@@ -3087,10 +3095,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -3101,24 +3109,24 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+//	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/v1.0/transfer/withdraw
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	//   6) Parameters
-//	//		- dps_print_content			"ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­"		AH(20) ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­
-//	//		- fintech_use_num			"12345678901234567890"	AN(24) í•€í…Œí¬ì´ìš©ë²ˆí˜¸
-//	//		- tran_amt					"10000"					N(12) ê±°ë˜ê¸ˆì•¡
-//	//		- tran_dtime				"20160310101921"		N(14) ìš”ì²­ì¼ì‹œ
+//	//		- dps_print_content			"ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª"		AH(20) ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª
+//	//		- fintech_use_num			"12345678901234567890"	AN(24) ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
+//	//		- tran_amt					"10000"					N(12) °Å·¡±İ¾×
+//	//		- tran_dtime				"20160310101921"		N(14) ¿äÃ»ÀÏ½Ã
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -3127,49 +3135,45 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto str_object = "/v1.0/transfer/withdraw";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method = eHTTP_METHOD::POST_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) };
 //
-//	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
 //	// declare)
 //	char strDpsPrintContent[256];
 //
-//	// 6) ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+//	// 6) ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 //	convert_multibyte_to_utf8(strDpsPrintContent, _request.dps_print_content.c_str());
 //
 //	// 7) Option
-//	sizeWrite	 = __sprintf(reinterpret_cast<char*>(buf_option.data_), SIZE_BUFFER, "{\"dps_print_content\": \"%s\", \"fintech_use_num\": \"%s\", \"tran_amt\": \"%lld\", \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}",
-//		strDpsPrintContent,
-//		_request.fintech_use_num.c_str(),
-//		_request.tran_amt,
-//		_request.tran_dtime.get_year<uint32_t>(), _request.tran_dtime.get_month<uint32_t>(), _request.tran_dtime.get_day<uint32_t>(), _request.tran_dtime.get_hour<uint32_t>(), _request.tran_dtime.get_minute<uint32_t>(), _request.tran_dtime.get_second<uint32_t>()
-//		);
+//	sizeWrite	 = std::snprintf(reinterpret_cast<char*>(buf_option.data_), SIZE_BUFFER, std::string_view("{\"dps_print_content\": \"%s\", \"fintech_use_num\": \"%s\", \"tran_amt\": \"%lld\", \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}").data(), //		strDpsPrintContent, //		_request.fintech_use_num.c_str(), //		_request.tran_amt, //		_request.tran_dtime.get_year<uint32_t>(), _request.tran_dtime.get_month<uint32_t>(), _request.tran_dtime.get_day<uint32_t>(), _request.tran_dtime.get_hour<uint32_t>(), _request.tran_dtime.get_minute<uint32_t>(), _request.tran_dtime.get_second<uint32_t>()
+//);
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 8) Optionì˜ ê¸¸ì´ë¥¼ ì €ì¥í•œë‹¤.
+//	// 8) OptionÀÇ ±æÀÌ¸¦ ÀúÀåÇÑ´Ù.
 //	buf_option.size_ = sizeWrite;
 //
-//	// 9) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 9) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 10) requestë¥¼ Setí•œë‹¤.
+//	// 10) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -3186,43 +3190,43 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_TRANSFER_WITHDRAW	response;
 //
-//	// 11) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 11) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 12) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 12) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -3353,10 +3357,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -3367,29 +3371,29 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+//	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/v1.0/transfer/deposit
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	//   6) Parameters
-//	//		- ws_pass_pharase			"ASDFQWERZXCVTYUI"	AN(64) ì´ìš©ê¸°ê´€ ì…ê¸ˆì´ì²´ìš© ì•”í˜¸ë¬¸êµ¬
-//	//		- ws_print_content			"ì¶œê¸ˆê³„ì¢Œì¸ìë‚´ì—­"		AH(20) ì¶œê¸ˆê³„ì¢Œì¸ìë‚´ì—­
-//	//		- req_cnt					"25"					N(5)   ì…ê¸ˆìš”ì²­ê±´ìˆ˜
-//	//		- req_list					<object>				       ì…ê¸ˆìš”ì²­ëª©ë¡
-//	//		- --tran_no					"1"					N(5)   ê±°ë˜ìˆœë²ˆ
-//	//		- --fintech_use_num			"1234567890123456"	N(24)  í•€í…Œí¬ì´ìš©ë²ˆí˜¸
-//	//		- --print_content			"ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­"		AH(20) ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­
-//	//		- --tran_amt				"10000"				N(12) ê±°ë˜ê¸ˆì•¡
-//	//		- tran_dtime				"20160310101921"		N(14) ìš”ì²­ì¼ì‹œ
+//	//		- ws_pass_pharase			"ASDFQWERZXCVTYUI"	AN(64) ÀÌ¿ë±â°ü ÀÔ±İÀÌÃ¼¿ë ¾ÏÈ£¹®±¸
+//	//		- ws_print_content			"Ãâ±İ°èÁÂÀÎÀÚ³»¿ª"		AH(20) Ãâ±İ°èÁÂÀÎÀÚ³»¿ª
+//	//		- req_cnt					"25"					N(5)   ÀÔ±İ¿äÃ»°Ç¼ö
+//	//		- req_list					<object>				       ÀÔ±İ¿äÃ»¸ñ·Ï
+//	//		- --tran_no					"1"					N(5)   °Å·¡¼ø¹ø
+//	//		- --fintech_use_num			"1234567890123456"	N(24)  ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
+//	//		- --print_content			"ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª"		AH(20) ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª
+//	//		- --tran_amt				"10000"				N(12) °Å·¡±İ¾×
+//	//		- tran_dtime				"20160310101921"		N(14) ¿äÃ»ÀÏ½Ã
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -3398,81 +3402,76 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto str_object = "/v1.0/transfer/deposit";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method = eHTTP_METHOD::POST_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// - Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// - Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) }; 
 //
-//	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
 //	// declare) 
 //	char	strPrintContent[256];
 //
-//	// 6) ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+//	// 6) ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 //	convert_multibyte_to_utf8(strPrintContent, _request.wd_print_content.c_str());
 //
 //	// - ...
-//	sizeWrite	 = __sprintf(reinterpret_cast<char*>(buf_option.data_), SIZE_BUFFER, "{\"wd_pass_phrase\": \"%s\", \"wd_print_content\": \"%s\", \"req_cnt\": \"%llu\", \"req_list\": [",
-//		_request.wd_pass_phrase.c_str(),
-//		strPrintContent,
-//		_request.req_list.size()
-//		);
+//	sizeWrite	 = std::snprintf(reinterpret_cast<char*>(buf_option.data_), SIZE_BUFFER, std::string_view("{\"wd_pass_phrase\": \"%s\", \"wd_print_content\": \"%s\", \"req_cnt\": \"%llu\", \"req_list\": [").data(), //		_request.wd_pass_phrase.c_str(), //		strPrintContent, //		_request.req_list.size()
+//);
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+//	// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 //	buf_option.size_ += sizeWrite;
 //
-//	// - req_listë¥¼ ì¶”ê°€í•œë‹¤.
+//	// - req_list¸¦ Ãß°¡ÇÑ´Ù.
 //	for(auto iter: _request.req_list)
 //	{
-//		// - ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+//		// - ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 //		convert_multibyte_to_utf8(strPrintContent, iter.print_content.c_str());
 //
-//		// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-//		auto	sizeWrite2 = __sprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER - buf_option.size_, "{ \"tran_no\": \"%d\", \"fintech_use_num\": \"%s\", \"print_content\": \"%s\", \"tran_amt\": \"%lld\"}",
-//			iter.tran_no,					// tran_no
-//			iter.fintech_use_num.c_str(),	// fintech_use_num
-//			strPrintContent,				// print_content
+//		// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+//		auto	sizeWrite2 = std::snprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER - buf_option.size_, std::string_view("{ \"tran_no\": \"%d\", \"fintech_use_num\": \"%s\", \"print_content\": \"%s\", \"tran_amt\": \"%lld\"}").data(), //			iter.tran_no, // tran_no
+//			iter.fintech_use_num.c_str(), // fintech_use_num
+//			strPrintContent, // print_content
 //			iter.tran_amt					// tran_amt
-//		);
+//);
 //
-//		// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//		// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //		THROW_IF(sizeWrite2 < 0, throwable::failure(eRESULT::FAIL));
 //
-//		// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+//		// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 //		buf_option.size_ += sizeWrite2;
 //	}
 //
-//	// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-//	sizeWrite	 = __sprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER- buf_option.size_, "], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}",
-//		_request.tran_dtime.get_year<uint32_t>(), _request.tran_dtime.get_month<uint32_t>(), _request.tran_dtime.get_day<uint32_t>(), _request.tran_dtime.get_hour<uint32_t>(), _request.tran_dtime.get_minute<uint32_t>(), _request.tran_dtime.get_second<uint32_t>()
-//		);
+//	// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+//	sizeWrite	 = std::snprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER- buf_option.size_, std::string_view("], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}").data(), //		_request.tran_dtime.get_year<uint32_t>(), _request.tran_dtime.get_month<uint32_t>(), _request.tran_dtime.get_day<uint32_t>(), _request.tran_dtime.get_hour<uint32_t>(), _request.tran_dtime.get_minute<uint32_t>(), _request.tran_dtime.get_second<uint32_t>()
+//);
 //
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 6) Optionì˜ ê¸¸ì´ë¥¼ ë”í•œë‹¤.
+//	// 6) OptionÀÇ ±æÀÌ¸¦ ´õÇÑ´Ù.
 //	buf_option.size_	+= sizeWrite;
 //
-//	// 7) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 7) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 8) requestë¥¼ Setí•œë‹¤.
+//	// 8) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -3489,46 +3488,46 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_TRANSFER_DEPOSIT	response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
 //		// declare)
 //		size_t	res_cnt	 = 0;
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -3688,10 +3687,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -3702,31 +3701,31 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+//	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/v1.0/transfer/deposit2
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	//   6) Parameters
-//	//		- ws_pass_pharase			"ASDFQWERZXCVTYUI"	AN(64) ì´ìš©ê¸°ê´€ ì…ê¸ˆì´ì²´ìš© ì•”í˜¸ë¬¸êµ¬
-//	//		- ws_print_content			"ì¶œê¸ˆê³„ì¢Œì¸ìë‚´ì—­"		AH(20) ì¶œê¸ˆê³„ì¢Œì¸ìë‚´ì—­
-//	//		- req_cnt					"25"					N(5)   ì…ê¸ˆìš”ì²­ê±´ìˆ˜
-//	//		- req_list					<object>				       ì…ê¸ˆìš”ì²­ëª©ë¡
-//	//		- --tran_no					"1"					N(5)   ê±°ë˜ìˆœë²ˆ
-//	//		- --bank_code_std			"097"					AN(3)  ì…ê¸ˆì€í–‰.í‘œì¤€ì½”ë“œ
-//	//		- --account_num				"001230000678"		AN(16) ê³„ì¢Œë²ˆí˜¸
-//	//		- --account_holder_name		"í™ê¸¸ë™"				AH(20) ì…ê¸ˆê³„ì¢Œì˜ˆê¸ˆì£¼ëª…
-//	//		- --print_content			"ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­"		AH(20) ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­
-//	//		- --tran_amt				"10000"				N(12) ê±°ë˜ê¸ˆì•¡
-//	//		- tran_dtime				"20160310101921"		N(14) ìš”ì²­ì¼ì‹œ
+//	//		- ws_pass_pharase			"ASDFQWERZXCVTYUI"	AN(64) ÀÌ¿ë±â°ü ÀÔ±İÀÌÃ¼¿ë ¾ÏÈ£¹®±¸
+//	//		- ws_print_content			"Ãâ±İ°èÁÂÀÎÀÚ³»¿ª"		AH(20) Ãâ±İ°èÁÂÀÎÀÚ³»¿ª
+//	//		- req_cnt					"25"					N(5)   ÀÔ±İ¿äÃ»°Ç¼ö
+//	//		- req_list					<object>				       ÀÔ±İ¿äÃ»¸ñ·Ï
+//	//		- --tran_no					"1"					N(5)   °Å·¡¼ø¹ø
+//	//		- --bank_code_std			"097"					AN(3)  ÀÔ±İÀºÇà.Ç¥ÁØÄÚµå
+//	//		- --account_num				"001230000678"		AN(16) °èÁÂ¹øÈ£
+//	//		- --account_holder_name		"È«±æµ¿"				AH(20) ÀÔ±İ°èÁÂ¿¹±İÁÖ¸í
+//	//		- --print_content			"ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª"		AH(20) ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª
+//	//		- --tran_amt				"10000"				N(12) °Å·¡±İ¾×
+//	//		- tran_dtime				"20160310101921"		N(14) ¿äÃ»ÀÏ½Ã
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -3735,88 +3734,83 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto str_object	 = "/v1.0/transfer/deposit2";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method	 = eHTTP_METHOD::POST_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	//    Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	//    Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) };
 //
-//	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto buf_option	 = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
 //	// declare) 
 //	char strWdPrintContent[256];
 //
-//	// 6) ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+//	// 6) ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 //	convert_multibyte_to_utf8(strWdPrintContent, _request.wd_print_content.c_str());
 //
 //	// - ...
-//	sizeWrite = __sprintf(reinterpret_cast<char*>(buf_option.data_), SIZE_BUFFER, "{\"wd_pass_phrase\": \"%s\", \"wd_print_content\": \"%s\", \"req_cnt\": \"%llu\", \"req_list\": [",
-//		_request.wd_pass_phrase.c_str(),
-//		strWdPrintContent,
-//		_request.req_list.size()
-//		);
+//	sizeWrite = std::snprintf(reinterpret_cast<char*>(buf_option.data_), SIZE_BUFFER, std::string_view("{\"wd_pass_phrase\": \"%s\", \"wd_print_content\": \"%s\", \"req_cnt\": \"%llu\", \"req_list\": [").data(), //		_request.wd_pass_phrase.c_str(), //		strWdPrintContent, //		_request.req_list.size()
+//);
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+//	// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 //	buf_option.size_ += sizeWrite;
 //
 //
-//	// -) req_listë¥¼ ì¶”ê°€í•œë‹¤.
+//	// -) req_list¸¦ Ãß°¡ÇÑ´Ù.
 //	for(auto iter: _request.req_list)
 //	{
 //		// declare) 
 //		char	strAccountHolderName[256];
 //		char	strPrintContent[256];
 //
-//		// 6) ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+//		// 6) ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 //		convert_multibyte_to_utf8(strAccountHolderName, iter.account_holder_name.c_str());
 //		convert_multibyte_to_utf8(strPrintContent, iter.print_content.c_str());
 //
-//		// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-//		sizeWrite = __sprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER - buf_option.size_, "{ \"tran_no\": \"%d\", \"bank_code_std\": \"%03d\", \"account_num\": \"%s\", \"account_holder_name\": \"%s\", \"print_content\": \"%s\", \"tran_amt\": \"%lld\"}",
-//			iter.tran_no,							// tran_no
-//			static_cast<int>(iter.bank_code_std),	// bank_code_std
-//			iter.accoount_num.c_str(),				// account_num
-//			strAccountHolderName,					// account_holder_name
-//			strPrintContent,						// print_content
+//		// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+//		sizeWrite = std::snprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER - buf_option.size_, std::string_view("{ \"tran_no\": \"%d\", \"bank_code_std\": \"%03d\", \"account_num\": \"%s\", \"account_holder_name\": \"%s\", \"print_content\": \"%s\", \"tran_amt\": \"%lld\"}").data(), //			iter.tran_no, // tran_no
+//			static_cast<int>(iter.bank_code_std), // bank_code_std
+//			iter.account_num.c_str(), // account_num
+//			strAccountHolderName, // account_holder_name
+//			strPrintContent, // print_content
 //			iter.tran_amt							// tran_amt
-//		);
+//);
 //
-//		// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//		// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //		THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//		// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+//		// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 //		buf_option.size_ += sizeWrite;
 //	}
 //
-//	// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-//	sizeWrite	 = __sprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER- buf_option.size_, "], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}",
-//		_request.tran_dtime.get_year<uint32_t>(), _request.tran_dtime.get_month<uint32_t>(), _request.tran_dtime.get_day<uint32_t>(), _request.tran_dtime.get_hour<uint32_t>(), _request.tran_dtime.get_minute<uint32_t>(), _request.tran_dtime.get_second<uint32_t>()
-//		);
+//	// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+//	sizeWrite	 = std::snprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER- buf_option.size_, std::string_view("], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}").data(), //		_request.tran_dtime.get_year<uint32_t>(), _request.tran_dtime.get_month<uint32_t>(), _request.tran_dtime.get_day<uint32_t>(), _request.tran_dtime.get_hour<uint32_t>(), _request.tran_dtime.get_minute<uint32_t>(), _request.tran_dtime.get_second<uint32_t>()
+//);
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 6) Optionì˜ ê¸¸ì´ë¥¼ ì €ì¥í•œë‹¤.
+//	// 6) OptionÀÇ ±æÀÌ¸¦ ÀúÀåÇÑ´Ù.
 //	buf_option.size_	+= sizeWrite;
 //
-//	// 7) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 7) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 8) requestë¥¼ Setí•œë‹¤.
+//	// 8) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -3833,46 +3827,46 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_TRANSFER_DEPOSIT2	response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
 //		// declare)
 //		size_t	res_cnt = 0;
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -4027,10 +4021,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -4041,28 +4035,28 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+//	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/v1.0/transfer/result
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	//   6) Parameters
-//	//		- check_type				"1"					AN(1) 1:ì¶œê¸ˆì´ì²´, 2:ì…ê¸ˆì´ì²´
-//	//		- req_cnt					"25"					N(5)   ì…ê¸ˆìš”ì²­ê±´ìˆ˜
-//	//		- req_list					<object>				       ì…ê¸ˆìš”ì²­ëª©ë¡
-//	//		- --tran_no					"1"					N(5)   ê±°ë˜ìˆœë²ˆ
-//	//		- --org_bank_tran_id		"123456712345"		AN(20) ì›ê±°ë˜, ê±°ë˜ê³ ìœ ë²ˆí˜¸(ì°¸ê°€ê¸°ê´€)
-//	//		- --org_bank_tran_date		"20160310"			N(8)   ì›ê±°ë˜ ê±°ë˜ì¼ì(ì°¸ê°€ê¸°ê´€)
-//	//		- --org_tran_amt			"10000"				N(12)  ì›ê±°ë˜ ê±°ë˜ê¸ˆì•¡
-//	//		- tran_dtime				"20160310101921"		N(14)  ìš”ì²­ì¼ì‹œ
+//	//		- check_type				"1"					AN(1) 1:Ãâ±İÀÌÃ¼, 2:ÀÔ±İÀÌÃ¼
+//	//		- req_cnt					"25"					N(5)   ÀÔ±İ¿äÃ»°Ç¼ö
+//	//		- req_list					<object>				       ÀÔ±İ¿äÃ»¸ñ·Ï
+//	//		- --tran_no					"1"					N(5)   °Å·¡¼ø¹ø
+//	//		- --org_bank_tran_id		"123456712345"		AN(20) ¿ø°Å·¡, °Å·¡°íÀ¯¹øÈ£(Âü°¡±â°ü)
+//	//		- --org_bank_tran_date		"20160310"			N(8)   ¿ø°Å·¡ °Å·¡ÀÏÀÚ(Âü°¡±â°ü)
+//	//		- --org_tran_amt			"10000"				N(12)  ¿ø°Å·¡ °Å·¡±İ¾×
+//	//		- tran_dtime				"20160310101921"		N(14)  ¿äÃ»ÀÏ½Ã
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -4071,73 +4065,69 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto str_object = "/v1.0/transfer/result";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method = eHTTP_METHOD::POST_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) };
 //
-//	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
 //	// - ...
-//	sizeWrite	 = __sprintf(reinterpret_cast<char*>(buf_option.data_), SIZE_BUFFER, "{\"check_type\": \"%s\", \"req_cnt\": \"%llu\", \"req_list\": [",
-//		to_string<char>(_request.check_type),
-//		_request.req_list.size()
-//		);
+//	sizeWrite	 = std::snprintf(reinterpret_cast<char*>(buf_option.data_), SIZE_BUFFER, std::string_view("{\"check_type\": \"%s\", \"req_cnt\": \"%llu\", \"req_list\": [").data(), //		to_string<char>(_request.check_type), //		_request.req_list.size()
+//);
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+//	// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 //	buf_option.size_ += sizeWrite;
 //
 //
-//	// -) req_listë¥¼ ì¶”ê°€í•œë‹¤.
+//	// -) req_list¸¦ Ãß°¡ÇÑ´Ù.
 //	for(auto iter: _request.req_list)
 //	{
 //		const time::local::time_point&	org_bank_tran_date	 = iter.org_bank_tran_date;
 //
-//		// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-//		auto	sizeWrite2 = __sprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER - buf_option.size_, "{ \"tran_no\": \"%d\", \"org_bank_tran_id\": \"%s\", \"org_bank_tran_date\": \"%04u%02u%02u\", \"org_tran_amt\": \"%lld\"}",
-//			iter.tran_no,						// tran_no
-//			iter.org_bank_tran_id.c_str(),		// org_bank_tran_id
-//			org_bank_tran_date.get_year<uint32_t>(), org_bank_tran_date.get_month<uint32_t>(), org_bank_tran_date.get_day<uint32_t>(),	// org_bank_tran_date
+//		// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+//		auto	sizeWrite2 = std::snprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER - buf_option.size_, std::string_view("{ \"tran_no\": \"%d\", \"org_bank_tran_id\": \"%s\", \"org_bank_tran_date\": \"%04u%02u%02u\", \"org_tran_amt\": \"%lld\"}").data(), //			iter.tran_no, // tran_no
+//			iter.org_bank_tran_id.c_str(), // org_bank_tran_id
+//			org_bank_tran_date.get_year<uint32_t>(), org_bank_tran_date.get_month<uint32_t>(), org_bank_tran_date.get_day<uint32_t>(), // org_bank_tran_date
 //			iter.org_tran_amt					// org_tran_amt
-//		);
+//);
 //
-//		// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//		// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //		THROW_IF(sizeWrite2 < 0, throwable::failure(eRESULT::FAIL));
 //
-//		// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+//		// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 //		buf_option.size_ += sizeWrite2;
 //	}
 //
-//	// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-//	sizeWrite	 = __sprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER- buf_option.size_, "], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}",
-//		_request.tran_dtime.get_year<uint32_t>(), _request.tran_dtime.get_month<uint32_t>(), _request.tran_dtime.get_day<uint32_t>(), _request.tran_dtime.get_hour<uint32_t>(), _request.tran_dtime.get_minute<uint32_t>(), _request.tran_dtime.get_second<uint32_t>()
-//		);
+//	// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+//	sizeWrite	 = std::snprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER- buf_option.size_, std::string_view("], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}").data(), //		_request.tran_dtime.get_year<uint32_t>(), _request.tran_dtime.get_month<uint32_t>(), _request.tran_dtime.get_day<uint32_t>(), _request.tran_dtime.get_hour<uint32_t>(), _request.tran_dtime.get_minute<uint32_t>(), _request.tran_dtime.get_second<uint32_t>()
+//);
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 6) Optionì˜ ê¸¸ì´ë¥¼ ì €ì¥í•œë‹¤.
+//	// 6) OptionÀÇ ±æÀÌ¸¦ ÀúÀåÇÑ´Ù.
 //	buf_option.size_	+= sizeWrite;
 //
-//	// 7) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 7) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 8) requestë¥¼ Setí•œë‹¤.
+//	// 8) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -4154,46 +4144,46 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_TRANSFER_RESULT	response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
 //		// declare)
 //		size_t	res_cnt = 0;
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -4353,10 +4343,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -4367,30 +4357,30 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+//	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/v1.0/transfer/recheck
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	//   6) Parameters
-//	//		- check_type				"1"					AN(1) 1:ì¶œê¸ˆì´ì²´, 2:ì…ê¸ˆì´ì²´
-//	//		- req_cnt					"25"					N(5)   ì…ê¸ˆìš”ì²­ê±´ìˆ˜
-//	//		- req_list					<object>				       ì…ê¸ˆìš”ì²­ëª©ë¡
-//	//		-   tran_no					"1"					N(5)   ê±°ë˜ìˆœë²ˆ
-//	//		-   org_bank_tran_dtime		"20160725100010"		AN(14) ì›ê±°ë˜ìš”ì²­ì¼ì‹œ
-//	//		-   org_req_gubun			"1"					AN(1)  ì›ê±°ë˜ìš”ì²­ê³„ì¢Œì§€ì •ë°©ì‹êµ¬ë¶„ 1:í•€í…Œí¬ì´ã…£ìš©ë²ˆí˜¸, 2:ê³„ì¢Œë²ˆí˜¸
-//	//		-   print_content			"ì…ê¸ˆê³„ì¢Œì¸ìë‚´ì—­"		AH(20)  ì›ê±°ë˜ ì…ì¶œê¸ˆê³„ì¢Œì¸ìë‚´ì—­
-//	//		-   fintech_use_num			"1234567890123456"	AN(24)  í•€í…Œí¬ì´ìš©ë²ˆí˜¸
-//	//		-   org_tran_amt			"10000"				N(12)  ì›ê±°ë˜ ê±°ë˜ê¸ˆì•¡
-//	//		- tran_dtime				"20160310101921"		N(14)  ìš”ì²­ì¼ì‹œ
+//	//		- check_type				"1"					AN(1) 1:Ãâ±İÀÌÃ¼, 2:ÀÔ±İÀÌÃ¼
+//	//		- req_cnt					"25"					N(5)   ÀÔ±İ¿äÃ»°Ç¼ö
+//	//		- req_list					<object>				       ÀÔ±İ¿äÃ»¸ñ·Ï
+//	//		-   tran_no					"1"					N(5)   °Å·¡¼ø¹ø
+//	//		-   org_bank_tran_dtime		"20160725100010"		AN(14) ¿ø°Å·¡¿äÃ»ÀÏ½Ã
+//	//		-   org_req_gubun			"1"					AN(1)  ¿ø°Å·¡¿äÃ»°èÁÂÁöÁ¤¹æ½Ä±¸ºĞ 1:ÇÉÅ×Å©ÀÌ¤Ó¿ë¹øÈ£, 2:°èÁÂ¹øÈ£
+//	//		-   print_content			"ÀÔ±İ°èÁÂÀÎÀÚ³»¿ª"		AH(20)  ¿ø°Å·¡ ÀÔÃâ±İ°èÁÂÀÎÀÚ³»¿ª
+//	//		-   fintech_use_num			"1234567890123456"	AN(24)  ÇÉÅ×Å©ÀÌ¿ë¹øÈ£
+//	//		-   org_tran_amt			"10000"				N(12)  ¿ø°Å·¡ °Å·¡±İ¾×
+//	//		- tran_dtime				"20160310101921"		N(14)  ¿äÃ»ÀÏ½Ã
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto	prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -4399,83 +4389,78 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto str_object	 = "/v1.0/transfer/recheck";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method	 = eHTTP_METHOD::POST_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	//    Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	//    Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) };
 //
-//	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
 //	// - ...
-//	sizeWrite = __sprintf(reinterpret_cast<char*>(buf_option.data_), SIZE_BUFFER, "{\"check_type\": \"%s\", \"req_cnt\": \"%llu\", \"req_list\": [",
-//		to_string<char>(_request.check_type),
-//		_request.req_list.size()
-//		);
+//	sizeWrite = std::snprintf(reinterpret_cast<char*>(buf_option.data_), SIZE_BUFFER, std::string_view("{\"check_type\": \"%s\", \"req_cnt\": \"%llu\", \"req_list\": [").data(), //		to_string<char>(_request.check_type), //		_request.req_list.size()
+//);
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+//	// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 //	buf_option.size_ += sizeWrite;
 //
-//	// - req_listë¥¼ ì¶”ê°€í•œë‹¤.
+//	// - req_list¸¦ Ãß°¡ÇÑ´Ù.
 //	for(auto iter: _request.req_list)
 //	{
 //		// declare) 
 //		char	strPrintContent[256];
 //
-//		// - ë¬¸ìì—´ë³€í™˜ì„ ìˆ˜í–‰í•œë‹¤.
+//		// - ¹®ÀÚ¿­º¯È¯À» ¼öÇàÇÑ´Ù.
 //		convert_multibyte_to_utf8(strPrintContent, iter.print_content.c_str());
 //
 //		// - 
 //		const auto&		org_tran_dtime	 = iter.org_tran_dtime;
 //
-//		// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-//		auto	sizeWrite2 = __sprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER - buf_option.size_, "{ \"tran_no\": \"%d\", \"org_tran_dtime\": \"%04u%02u%02u%02u%02u%02u\", \"org_req_gubun\": \"%s\", \"bank_code_std\": \"%03d\", \"account_num\": \"%s\", \"print_content\": \"%s\", \"fintech_use_num\": \"%s\", \"org_tran_amt\": \"%lld\"}",
-//			iter.tran_no,					// tran_no
-//			org_tran_dtime.get_year<uint32_t>(), org_tran_dtime.get_month<uint32_t>(), org_tran_dtime.get_day<uint32_t>(), org_tran_dtime.get_hour<uint32_t>(), org_tran_dtime.get_minute<uint32_t>(), org_tran_dtime.get_second<uint32_t>(),
-//			to_string<char>(iter.org_req_gubun),		// org_req_gubun
-//			iter.bank_code_std,				// bank_code_std
-//			iter.accoount_num.c_str(),		// account_num
-//			strPrintContent,				// print_content
-//			iter.fintech_use_num.c_str(),	// fintech_use_num
+//		// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+//		auto	sizeWrite2 = std::snprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER - buf_option.size_, std::string_view("{ \"tran_no\": \"%d\", \"org_tran_dtime\": \"%04u%02u%02u%02u%02u%02u\", \"org_req_gubun\": \"%s\", \"bank_code_std\": \"%03d\", \"account_num\": \"%s\", \"print_content\": \"%s\", \"fintech_use_num\": \"%s\", \"org_tran_amt\": \"%lld\"}").data(), //			iter.tran_no, // tran_no
+//			org_tran_dtime.get_year<uint32_t>(), org_tran_dtime.get_month<uint32_t>(), org_tran_dtime.get_day<uint32_t>(), org_tran_dtime.get_hour<uint32_t>(), org_tran_dtime.get_minute<uint32_t>(), org_tran_dtime.get_second<uint32_t>(), //			to_string<char>(iter.org_req_gubun), // org_req_gubun
+//			iter.bank_code_std, // bank_code_std
+//			iter.account_num.c_str(), // account_num
+//			strPrintContent, // print_content
+//			iter.fintech_use_num.c_str(), // fintech_use_num
 //			iter.org_tran_amt				// org_tran_amt
-//		);
+//);
 //
-//		// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//		// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //		THROW_IF(sizeWrite2 < 0, throwable::failure(eRESULT::FAIL));
 //
-//		// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+//		// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 //		buf_option.size_ += sizeWrite2;
 //	}
 //
-//	// - ë’·ë¶€ë¶„ì„ ì¶”ê°€í•œë‹¤.
-//	sizeWrite	 = __sprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER- buf_option.size_, "], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}",
-//		_request.tran_dtime.get_year<uint32_t>(), _request.tran_dtime.get_month<uint32_t>(), _request.tran_dtime.get_day<uint32_t>(), _request.tran_dtime.get_hour<uint32_t>(), _request.tran_dtime.get_minute<uint32_t>(), _request.tran_dtime.get_second<uint32_t>()
-//		);
+//	// - µŞºÎºĞÀ» Ãß°¡ÇÑ´Ù.
+//	sizeWrite	 = std::snprintf(reinterpret_cast<char*>(buf_option.data_ + buf_option.size_), SIZE_BUFFER- buf_option.size_, std::string_view("], \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}").data(), //		_request.tran_dtime.get_year<uint32_t>(), _request.tran_dtime.get_month<uint32_t>(), _request.tran_dtime.get_day<uint32_t>(), _request.tran_dtime.get_hour<uint32_t>(), _request.tran_dtime.get_minute<uint32_t>(), _request.tran_dtime.get_second<uint32_t>()
+//);
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 6) Optionì˜ ê¸¸ì´ë¥¼ ì €ì¥í•œë‹¤.
+//	// 6) OptionÀÇ ±æÀÌ¸¦ ÀúÀåÇÑ´Ù.
 //	buf_option.size_	+= sizeWrite;
 //
-//	// 7) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 7) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 8) requestë¥¼ Setí•œë‹¤.
+//	// 8) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -4492,46 +4477,46 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_TRANSFER_RECHECK	response;
 //
-//	// 9) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 9) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 10) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 10) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
 //		// declare)
 //		size_t	res_cnt = 0;
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -4691,10 +4676,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -4705,24 +4690,24 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì‚¬ìš©ìì •ë³´ì¡°íšŒ API
+//	// »ç¿ëÀÚÁ¤º¸Á¶È¸ API
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/v1.0/inquiry/realname
 //	//	 3) HTTP Method		POST
 //	//	 4) Content-Type	"Content-Type: application/json; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	//   6) Parameters
-//	//		- bank_code_std				"097"					AN(3)  ê°œì„¤ê¸°ê´€ í‘œì¤€ì½”ë“œ
-//	//		- account_num				"1234567890123123"	AN(16) ê°œì¢Œë²ˆí˜¸
-//	//		- account_holder_info		"8801012"				AN(7)  ì˜ˆê¸ˆì£¼ ì¸ì¦ì •ë³´ YYYYMMDD(6) + ì‹ë³„ì •ë³´(1)
-//	//		- tran_dtime				"20160310101921"		N(14)  ìš”ì²­ì¼ì‹œ
+//	//		- bank_code_std				"097"					AN(3)  °³¼³±â°ü Ç¥ÁØÄÚµå
+//	//		- account_num				"1234567890123123"	AN(16) °³ÁÂ¹øÈ£
+//	//		- account_holder_info		"8801012"				AN(7)  ¿¹±İÁÖ ÀÎÁõÁ¤º¸ YYYYMMDD(6) + ½Äº°Á¤º¸(1)
+//	//		- tran_dtime				"20160310101921"		N(14)  ¿äÃ»ÀÏ½Ã
 //	//
 //	// ------------------------------------------------------------------
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto prequest_http = make_object<query::http::query>();
 //
 //	// declare)
@@ -4731,46 +4716,42 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare)
 //	auto str_object = "/v1.0/inquiry/real_name";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method = eHTTP_METHOD::POST_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	//    Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	//    Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/json; charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) }; 
 //
-//	// 5) parameterë¥¼ ì„¤ì •í•œë‹¤.
+//	// 5) parameter¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto buf_option = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// Decalre) 
+//	// Declare) 
 //	auto& tran_dtime = _request.tran_dtime;
 //
 //	// - ...
-//	sizeWrite = __sprintf(reinterpret_cast<char*>(buf_option.data_), SIZE_BUFFER, "{\"bank_code_std\": \"%03d\", \"account_num\": \"%s\", \"account_holder_info\": \"%s\", \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}",
-//		_request.bank_code_std,
-//		_request.accoount_num.c_str(),
-//		_request.accoount_holder_info.c_str(),
-//		tran_dtime.get_year<uint32_t>(), tran_dtime.get_month<uint32_t>(), tran_dtime.get_day<uint32_t>(), tran_dtime.get_hour<uint32_t>(), tran_dtime.get_minute<uint32_t>(), tran_dtime.get_second<uint32_t>()
-//	);
+//	sizeWrite = std::snprintf(reinterpret_cast<char*>(buf_option.data_), SIZE_BUFFER, std::string_view("{\"bank_code_std\": \"%03d\", \"account_num\": \"%s\", \"account_holder_info\": \"%s\", \"tran_dtime\": \"%04u%02u%02u%02u%02u%02u\"}").data(), //		_request.bank_code_std, //		_request.account_num.c_str(), //		_request.account_holder_info.c_str(), //		tran_dtime.get_year<uint32_t>(), tran_dtime.get_month<uint32_t>(), tran_dtime.get_day<uint32_t>(), tran_dtime.get_hour<uint32_t>(), tran_dtime.get_minute<uint32_t>(), tran_dtime.get_second<uint32_t>()
+//);
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// - ê¸¸ì´ë¥¼ ì¶”ê°€í•œë‹¤.
+//	// - ±æÀÌ¸¦ Ãß°¡ÇÑ´Ù.
 //	buf_option.size_  = sizeWrite;
 //
-//	// 7) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 7) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 8) requestë¥¼ Setí•œë‹¤.
+//	// 8) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -4787,43 +4768,43 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_INQUIRY_REAL_NAME	response;
 //
-//	// 9) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 9) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 10) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 10) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -4909,10 +4890,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 
@@ -4923,49 +4904,49 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //{
 //	// ------------------------------------------------------------------
 //	// 
-//	// ì°¸ê°€ê¸°ê´€ìƒíƒœì¡°íšŒ
+//	// Âü°¡±â°ü»óÅÂÁ¶È¸
 //	//
-//	// ìš”ì²­ ë©”ì‹œì§€ URL
+//	// ¿äÃ» ¸Ş½ÃÁö URL
 //	//   
 //	//   2) HTTP URL		/v1.0/bank/status
 //	//	 3) HTTP Method		GET
 //	//	 4) Content-Type	"Content-Type: application/x-www-form-urlencoded; charset=UTF-8"
 //	//   5) Header
-//	//		- Authorization				Bearer<access_token>	ì˜¤í”ˆí”Œë«í¼ìœ¼ë¡œë¶€í„° ì „ì†¡ë°›ì€ access_tokenì„ HTTP Headerì— ì¶”ê°€ [scope=login]
+//	//		- Authorization				Bearer<access_token>	¿ÀÇÂÇÃ·§ÆûÀ¸·ÎºÎÅÍ Àü¼Û¹ŞÀº access_tokenÀ» HTTP Header¿¡ Ãß°¡ [scope=login]
 //	//
 //	// ------------------------------------------------------------------
 //	// declare)
 //	const size_t	SIZE_BUFFER = 8192;
 //
-//	// 1) CGWeb::CHTTPRequest ê°ì²´ë¥¼ ìƒì„±í•œë‹¤.
+//	// 1) CGWeb::CHTTPRequest °´Ã¼¸¦ »ı¼ºÇÑ´Ù.
 //	auto prequest_http = make_object<query::http::query>();
 //
-//	// 2) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
+//	// 2) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
 //	auto str_object = "/v1.0/bank/status";
 //
-//	// 3) HTTP Methodë¥¼ ì„¤ì •í•œë‹¤.
+//	// 3) HTTP Method¸¦ ¼³Á¤ÇÑ´Ù.
 //	auto http_method = eHTTP_METHOD::GET_;
 //
 //	// declare)
 //	auto bufHeader = alloc_shared_buffer(SIZE_BUFFER * sizeof(char));
 //
-//	// 4) HTTP URLì„ ì„¤ì •í•œë‹¤.(URLì¤‘ Pathë¶€ë¶„ë§Œ...)
-//	auto sizeWrite = __sprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, "Authorization: Bearer %s", _request.Authorization.c_str());
+//	// 4) HTTP URLÀ» ¼³Á¤ÇÑ´Ù.(URLÁß PathºÎºĞ¸¸...)
+//	auto sizeWrite = std::snprintf(reinterpret_cast<char*>(bufHeader.data_), SIZE_BUFFER, std::string_view("Authorization: Bearer %s").data(), _request.Authorization.c_str());
 //
-//	// check) sprintfê°€ ì˜¤ë¥˜ê°€ ë‚¬ìœ¼ë©´ Exceptionì„ ë˜ì§„ë‹¤.
+//	// check) sprintf°¡ ¿À·ù°¡ ³µÀ¸¸é ExceptionÀ» ´øÁø´Ù.
 //	THROW_IF(sizeWrite < 0, throwable::failure(eRESULT::FAIL));
 //
-//	// 4) Headerë¥¼ ì„¤ì •í•œë‹¤ - Content_Typeë¥¼ ì„¤ì •í•œë‹¤. (Headerë¶€ë¶„ì— Content_Typeì´ ë“¤ì–´ê°„ë‹¤.)
+//	// 4) Header¸¦ ¼³Á¤ÇÑ´Ù - Content_Type¸¦ ¼³Á¤ÇÑ´Ù. (HeaderºÎºĞ¿¡ Content_TypeÀÌ µé¾î°£´Ù.)
 //	std::vector<std::string_view> vector_header{ "Content-Type: application/x-www-form-urlencoded; charset=UTF-8", reinterpret_cast<char*>(bufHeader.data_) }; 
 //
 //	// declare) 
 //	shared_buffer buf_option;
 //
-//	// 5) Accept ë°›ì„ ê²ƒì„ ì„¤ì •.
+//	// 5) Accept ¹ŞÀ» °ÍÀ» ¼³Á¤.
 //	std::vector<std::string_view> vector_accept{ "*/*", "text/plain" };
 //	//std::vector<std::string_view> vector_accept{ "*/*", "application/json" };
 //
-//	// 6) requestë¥¼ Setí•œë‹¤.
+//	// 6) request¸¦ SetÇÑ´Ù.
 //	prequest_http->set_request(
 //		http_method,
 //		_request.str_url,
@@ -4982,43 +4963,43 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //	// declare) 
 //	http_api::kakao::RESPONSE_BANK_STATUS	response;
 //
-//	// 7) ê¸°ë³¸ê°’ì„ ì„¤ì •...
+//	// 7) ±âº»°ªÀ» ¼³Á¤...
 //	response.rsp_code = eRESPONSE_CODE::A0000_;
 //	response.rsp_message.clear();
 //
-//	// 8) CGWeb::CHTTPRequest ê°ì²´ì— ì‘ë‹µì´í›„ ì²˜ë¦¬í•  ë‚´ìš©ì„ Lambdaí•¨ìˆ˜ë¥¼ ì‚¬ìš©í•´ ì„¤ì •í•´ì¤€ë‹¤.
+//	// 8) CGWeb::CHTTPRequest °´Ã¼¿¡ ÀÀ´äÀÌÈÄ Ã³¸®ÇÒ ³»¿ëÀ» LambdaÇÔ¼ö¸¦ »ç¿ëÇØ ¼³Á¤ÇØÁØ´Ù.
 //	prequest_http->SetResponse([&](sMESSAGE_HTTP_RESPONSE& _msg)
 //	{
-//		// check) Resultê°€ 0ì´ë©´ ì‹¤íŒ¨ì´ë¯€ë¡œ ëë‚¸ë‹¤.
+//		// check) Result°¡ 0ÀÌ¸é ½ÇÆĞÀÌ¹Ç·Î ³¡³½´Ù.
 //		if(_msg.status_code != eHTTP_STATUS_CODE::OK_)
 //		{
-//			// - ë‚´ë¶€ì²˜ë¦¬ ì¤‘ Errorì„ ëª…ì‹œ
+//			// - ³»ºÎÃ³¸® Áß ErrorÀ» ¸í½Ã
 //			response.rsp_code	 = eRESPONSE_CODE::FAIL_;
 //			response.rsp_message = _msg.status_message;
 //
-//			// - bufferë¥¼ clearí•œë‹¤.
+//			// - buffer¸¦ clearÇÑ´Ù.
 //			response.buf_response.clear();
 //
 //			// Return)
 //			return;
 //		}
 //
-//		// - ë§ˆì§€ë§‰ì„ nullë¡œ ë°”ê¾¼ë‹¤.
+//		// - ¸¶Áö¸·À» null·Î ¹Ù²Û´Ù.
 //		_msg.contents[0].append<char>(0);
 //
-//		// - bufferë¥¼ ë„£ëŠ”ë‹¤.
+//		// - buffer¸¦ ³Ö´Â´Ù.
 //		response.buf_response = _msg.contents[0];
 //
 //		// declare) 
 //		rapidjson::GenericDocument<rapidjson::UTF8<char>> json_data;
 //
-//		// - Parsingí•œë‹¤.
+//		// - ParsingÇÑ´Ù.
 //		const auto&	result = json_data.Parse(_msg.contents[0].data_);
 //
-//		// check) Parsingì— ì‹¤íŒ¨í–ˆìœ¼ë©´ falseë¥¼ ë¦¬í„´í•œë‹¤.
+//		// check) Parsing¿¡ ½ÇÆĞÇßÀ¸¸é false¸¦ ¸®ÅÏÇÑ´Ù.
 //		RETURN_IF(result.IsNull())
 //
-//		// - ê°’ì„ ì„¤ì •í•œë‹¤.
+//		// - °ªÀ» ¼³Á¤ÇÑ´Ù.
 //		for (auto iter = json_data.MemberBegin(); iter != json_data.MemberEnd(); ++iter)
 //		{
 //			auto	str_name	 = (*iter).name.GetString();
@@ -5082,10 +5063,10 @@ http_api::kakao::RESPONSE_PUSH_GCM_PUSH_FAIL http_api::kakao::request(const REQU
 //		}
 //	});
 //
-//	// 8) requestë¥¼ ìš”ì²­í•œë‹¤.
+//	// 8) request¸¦ ¿äÃ»ÇÑ´Ù.
 //	prequest_http->request();
 //
-//	// 9) ì™„ë£Œë¥¼ ê¸°ë‹¤ë¦°ë‹¤.
+//	// 9) ¿Ï·á¸¦ ±â´Ù¸°´Ù.
 //	prequest_http->wait();
 //
 //	// return) 

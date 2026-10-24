@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Receive 최적화 · CGDK10 기술 문서</title>
+<meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - TCP/UDP 수신 경로에 적용된 최적화 기법 (IOCP, epoll, io_uring, UDS)">
+<link rel="icon" href="assets/CGCII_logo.PNG">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
+  <div class="ver">Game Server Engine</div>
+  <ul>
+    <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
+    <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
+    <li class="sub"><a href="pool.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Pool system</a></li>
+    <li class="sub"><a href="object.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l6 3v7l-6 3-6-3v-7z"/><path d="M2 4.5l6 3 6-3M8 7.5v7"/></svg>Object system</a></li>
+    <li class="sub"><a href="log.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h6l3 3v10H4z"/><path d="M6.5 8h4M6.5 10.5h4M6.5 5.5h2"/></svg>Log system</a></li>
+    <li class="sub"><a href="socket.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1.5v3.5M10 1.5v3.5"/><path d="M3.5 5h9v3.5a4.5 4.5 0 0 1-9 0z"/><path d="M8 13v1.5"/></svg>Socket system</a></li>
+    <li class="sub"><a href="socket.io_uring.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 1.5L3.5 9h4.5l-1 5.5L12.5 7H8z"/></svg>io_uring</a></li>
+    <li class="sub"><a href="socket.uds.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.6-1.6a2.8 2.8 0 0 1 4 4L11 8.5"/><path d="M9 11.5l-1.6 1.6a2.8 2.8 0 0 1-4-4L5 7.5"/></svg>UDS (같은 host 접속)</a></li>
+    <li class="sub"><a href="socket.send.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 1.5L7 9"/><path d="M14.5 1.5l-4.5 13-2.2-5.3L2.5 6z"/></svg>send 최적화</a></li>
+    <li class="sub"><a href="socket.recv.html" class="cur"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9.5v4h12v-4"/><path d="M8 2v8M5 7.5l3 3 3-3"/></svg>Receive 최적화</a></li>
+    <li class="sub"><a href="p2p.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="8" cy="12" r="2"/><path d="M5.6 5.2l1.6 5.2M10.4 5.2l-1.6 5.2M6 4h4"/></svg>P2P system</a></li>
+    <li class="sub"><a href="update.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5V5.2h-2.7"/></svg>Update system</a></li>
+    <li class="sub"><a href="server.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="4.5" rx="1"/><rect x="2" y="9.5" width="12" height="4.5" rx="1"/><path d="M4.5 4.25h.01M4.5 11.75h.01"/></svg>Server system</a></li>
+    <li class="sub"><a href="group.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 2.8a2.3 2.3 0 0 1 0 4.4M13.5 14c0-1.8-1-3.1-2.5-3.6"/></svg>Group system</a></li>
+    <li class="sub"><a href="query.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Query system</a></li>
+    <li class="head"><a href="build.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-3.8 3.8L2.8 12.2a1.4 1.4 0 0 0 2 2l5.9-3.9a3 3 0 0 0 3.8-3.8l-2 2-2-2z"/></svg>빌드 · 플랫폼</a></li>
+    <li class="head"><a href="tests.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5.5 8.2l2 2 3.2-4"/></svg>단위 테스트 · CI</a></li>
+    <li class="head"><a href="benchmarks.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V9M8 13.5V4M13 13.5V7"/><path d="M1.5 13.5h13"/></svg>벤치마크</a></li>
+    <li class="sub"><a href="benchmarks.push.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4 3 3 6-6"/><path d="M10.5 5.5h4v4"/></svg>큰 묶음 push 처리량</a></li>
+    <li class="sub"><a href="benchmarks.cork.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h8M2 11.5h5"/><path d="M12 9.5l2 2-2 2"/></svg>send cork · 서버 push</a></li>
+    <li class="head"><a href="samples.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4"/></svg>예제 · 튜토리얼</a></li>
+    <li class="head"><a href="releases.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h5.5l6.5 6.5-5.5 5.5L2 8z"/><circle cx="5.2" cy="5.2" r=".9"/></svg>릴리즈 노트</a></li>
+    <li class="head"><a href="status.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3M8 11.5h.01"/></svg>미구현 · 알려진 문제</a></li>
+  </ul>
+</aside>
+<main>
+<h1 id="recv">Receive 최적화 <small>net.io.receivable.stream*, net.io.receivable.datagram*, net.io.receivable.stream.h, net.definitions.socket.h</small></h1>
+<p>수신 경로에 들어간 최적화 기법을 플랫폼과 단계별로 정리한다. 목표는 세 가지다.</p>
+<ul>
+  <li>받은 데이터를 앱까지 복사 없이 넘긴다.</li>
+  <li>recv 한 번에 최대한 많이 받는다. 트래픽에 맞춰 버퍼 크기를 바꾼다.</li>
+  <li>이벤트 하나당 syscall 과 할당을 최소로 한다.</li>
+</ul>
+
+<h4 class="sec">공통 구조 : 받은 버퍼에서 바로 처리</h4>
+<ul>
+  <li>소켓마다 진행 중인 수신은 하나다. 스트림이라 순서를 지키기 위해서다.</li>
+  <li>수신 버퍼는 풀에서 온 <code>shared_buffer</code> 다. <code>process_packet()</code> 이 그 안에서 메시지를 잘라 <code>on_message</code> 에 <b>버퍼의 조각</b>으로 넘긴다. 앱으로 복사하지 않는다.</li>
+  <li>앱이 메시지를 쥐고 있어도 안전하다. 조각이 원본 버퍼의 참조를 가진다.</li>
+  <li>메시지 경계에 걸친 꼬리만 남기고(<code>m_buffer_received</code>) 다음 수신은 그 뒤의 빈 공간에 이어 받는다.</li>
+  <li>프레이밍 : 오프셋 0 의 크기 필드(헤더 포함 길이)로 자른다. 다음 메시지에 필요한 크기를 돌려주어 버퍼 준비에 쓴다.</li>
+</ul>
+
+<h4 class="sec">수신 버퍼 크기 규칙</h4>
+<p>IOCP, epoll, io_uring RECV 가 같은 규칙을 쓴다.</p>
+<table class="bench wrap">
+<tr><th>상황</th><th class="lbl">동작</th></tr>
+<tr><td>시작</td><td class="lbl">1 KB (<code>DEFAULT_BYTES_TCP_MESSAGE_BUFFER</code>)</td></tr>
+<tr><td>창을 다 채워 받음</td><td class="lbl">8배로 키운다. 1 KB → 8 KB → 64 KB (<code>MAX_BYTES_RECEIVE_WINDOW_GROWN</code>)</td></tr>
+<tr><td>기다리는 메시지가 더 큼</td><td class="lbl">그 메시지 크기로 (최대 <code>MAX_TCP_MESSAGE_SIZE</code>)</td></tr>
+<tr><td>작은 수신이 연속 64번</td><td class="lbl">작은 버퍼로 줄인다 (<code>COUNT_SMALL_RECEIVES_TO_SHRINK</code>)</td></tr>
+<tr><td>창을 채운 수신, 큰 수신</td><td class="lbl">작은 수신 카운트를 리셋</td></tr>
+</table>
+<ul>
+  <li>64 KB 에서 멈추는 이유 : 더 큰 창은 캐시 밖으로 나가 메시지당 CPU 가 는다(64 KB 메시지 기준 +20%).</li>
+  <li>줄이기에 히스테리시스를 둔 이유 : 도착량이 들쭉날쭉하면 작은 수신 한 번에 줄였다가 다음 폭주에 다시 키우는 요동이 생긴다. 이벤트마다 재할당하고 recv 당 약 700 B 만 받았다.</li>
+</ul>
+<div class="note">이 요동(r11345 회귀)은 Linux 에서 같은 데이터에 recv 를 수백 배 부르게 했다. 메시지당 CPU 가 서버 2배·클라이언트 9배로 늘고 큰 묶음 처리량이 약 -22% 였다. r11371 에서 히스테리시스로 고쳤다. Windows IOCP 는 해당 없었다. 이것으로 서버 recv 횟수는 돌아왔지만 메시지당 CPU 는 서버 −17% · 클라이언트 −24% 줄어드는 데 그쳤고, 남은 원인(send cork)은 r11471 에서 고쳤다(<a href="benchmarks.push.html">큰 묶음 push 처리량</a>).</div>
+
+<h4 class="sec">Windows (IOCP)</h4>
+<ul>
+  <li>Overlapped <code>WSARecv</code> 하나를 상시 걸어 둔다(Proactor). 접속과 동시에 <code>prepare_receive()</code>.</li>
+  <li>완료되면 받은 버퍼에서 메시지를 모두 처리한 뒤 다음 WSARecv 를 건다. 완료 0 바이트나 오류는 접속 종료.</li>
+  <li>수신 버퍼 <code>SO_RCVBUF</code> 를 명시 설정한다(최대 8 MB).</li>
+  <li>loopback 접속은 <code>SIO_LOOPBACK_FAST_PATH</code> 로 지연을 줄인다.</li>
+  <li><code>Nstream_queue</code> : 받자마자 다음 수신을 다시 걸고 처리는 다른 thread 에서 순서대로 한다. 파일 수신처럼 대량 데이터에 맞다. 처리가 가벼우면 오히려 부담이다.</li>
+  <li>RIO(Registered I/O) 판 <code>Nstream_rio</code> 구현이 있다.</li>
+</ul>
+
+<h4 class="sec">Linux (epoll)</h4>
+<ul>
+  <li><b>IOCP 와 같은 버퍼 방식</b> : 처리되지 않은 데이터 뒤의 빈 공간에 바로 recv 한다. 이벤트마다 <code>FIONREAD</code> 로 크기를 묻고 새로 할당해 복사하지 않는다.</li>
+  <li>빈 공간이 모자라면 버퍼를 이 소켓만 쥐고 있고 크기가 충분할 때 남은 데이터를 앞으로 옮긴다(할당 없음). 앱이 메시지를 쥐고 있으면 덮어쓰지 않고 새로 할당해 꼬리만 복사한다.</li>
+  <li>창을 다 채웠으면 남은 데이터가 더 있을 수 있어 이어서 받는다. 이벤트 하나에 최대 8번(<code>MAX_RECEIVE_PER_EVENT</code>). 덜 채웠으면 끝내고 EPOLLONESHOT 을 재무장한다.</li>
+  <li><b>send cork</b> : 받은 메시지를 처리하며 같은 소켓에 보내는 응답을 모아 처리 끝에 한 번에 보낸다(<a href="socket.send.html">send 최적화</a>).</li>
+  <li>소켓 버퍼는 기본 미설정. 명시 <code>SO_RCVBUF</code> 는 커널 autotuning 을 끈다.</li>
+  <li><code>TCP_QUICKACK</code> 은 영구가 아니라 recv 마다 다시 건다(socket option 을 켠 경우).</li>
+  <li>acceptor <code>"cpu_affinity"</code> : accept 된 소켓을 <code>SO_INCOMING_CPU</code> 의 CPU 에 고정된 io_context 에 배정한다. NIC 큐와 처리 CPU 가 같아 캐시 지역성이 좋아진다.</li>
+  <li>busy poll : epoll_wait 자체의 busy poll(kernel 6.9+ <code>EPIOCSPARAMS</code>, r11429)과 소켓 <code>SO_BUSY_POLL</code>. 잠들기 전에 NIC 큐를 돌아 지연을 줄인다. loopback·UDS 는 효과가 없다.</li>
+  <li>acceptor <code>"tcp_defer_accept"</code> : 첫 데이터가 올 때까지 accept 를 미룬다. 클라이언트가 먼저 보내는 프로토콜에서 빈 accept 처리를 없앤다.</li>
+</ul>
+
+<h4 class="sec">Linux UDP</h4>
+<ul>
+  <li><code>recvmmsg</code> 로 한 번에 여러 데이터그램을 받는다. 배치 크기는 도착량에 맞춰 1 ~ 32 로 바뀐다.</li>
+  <li>데이터그램마다 풀 버퍼 하나를 쓴다. 메시지를 복사하지 않는다.</li>
+  <li>r11392 까지 Linux UDP 는 수신 자체가 안 됐다(executable 에 소켓이 연결되지 않음). r11394 에서 고친 뒤 64 B echo 443K msg/s(8 코어) ~ 624K msg/s(32 코어), Release.</li>
+</ul>
+
+<h4 class="sec">Linux (io_uring)</h4>
+<p>구조와 벤치 전체는 <a href="socket.io_uring.html">io_uring 백엔드</a> 문서에 있다. 수신에 해당하는 것만 적는다.</p>
+<p><b>readiness 모드</b> (<code>CGDK_IO_URING=1</code>)</p>
+<ul>
+  <li>epoll 과 같은 준비 이벤트 모델(<code>POLL_ADD</code>)이라 수신 코드는 epoll 과 같다.</li>
+  <li>worker 가 처리 중 낸 재무장 요청은 다음 enter 한 번으로 묶어 제출한다. epoll 은 이벤트마다 <code>epoll_ctl</code> 이다.</li>
+</ul>
+<p><b>completion 모드</b> (<code>CGDK_IO_URING=completion</code>) — 단계별로 들어갔다.</p>
+<table class="bench wrap">
+<tr><th>단계</th><th class="lbl">기법</th><th class="lbl">효과·이유</th></tr>
+<tr><td>2단계 (r11441)</td><td class="lbl">소켓당 RECV op 하나 상시. 버퍼 규칙은 epoll 재사용</td><td class="lbl">recv syscall 이 없다. 완료 통지가 곧 데이터</td></tr>
+<tr><td>3단계 (r11453)</td><td class="lbl">multishot RECV + provided buffer ring (ring 당 16 KB x 256)</td><td class="lbl">op 한 번에 도착마다 CQE. 재제출 비용 없음. 작은 메시지에서 같거나 빠름</td></tr>
+<tr><td>4단계 (r11457)</td><td class="lbl">provided buffer 를 그 자리에서 처리(무복사). 마지막 참조가 사라질 때 ring 에 반납</td><td class="lbl">IOCP 처럼 받은 버퍼가 곧 메시지. UDS 64 B +6%</td></tr>
+<tr><td>모드 전환 (r11459)</td><td class="lbl">큰 트래픽은 가변 버퍼 RECV, 작은 메시지는 multishot</td><td class="lbl">16 KB 고정 버퍼에 큰 메시지가 조각나던 문제 해결</td></tr>
+</table>
+<ul>
+  <li><b>-ENOBUFS</b> : provided buffer 가 바닥나면 RECV 하나를 자기 버퍼로 내고 그 완료 뒤 다시 multishot. 커널은 recv 전에 버퍼를 고르므로 기다리는 데이터 없이도 온다.</li>
+  <li><b>무복사 수신</b> : 남은 데이터가 없으면 provided buffer 를 <code>shared_buffer</code> 의 source 로 감싸 그대로 처리한다. 앱이 메시지를 쥐면 그동안 반납되지 않는다. 경계에 걸친 꼬리만 복사.</li>
+  <li><b>모드 전환</b> : 한 완료가 provided buffer 를 다 채웠거나 그보다 큰 메시지를 기다리면 RECV 모드로 바꾼다. RECV 모드에서 작은 수신이 16번 이어지면 multishot 으로 돌아간다. 새 접속은 multishot 으로 시작한다.</li>
+  <li><b>실행 순서</b> : multishot 은 op 하나에 CQE 가 여럿이다. 한 ring 의 CQE 는 한 번에 한 thread 에서 CQ 순서대로 실행되게 했다.</li>
+  <li>A/B 스위치 : <code>CGDK_IO_URING_MULTISHOT=0</code>, <code>CGDK_IO_URING_ZC_RECV=0</code>, <code>CGDK_IO_URING_RECV_ADAPTIVE=0</code>.</li>
+</ul>
+
+<h4 class="sec">UDS</h4>
+<ul>
+  <li>수신 코드는 TCP 와 같다. 위의 모든 기법이 그대로 적용된다.</li>
+  <li>커널 TCP 스택을 거치지 않아 저부하 지연 p50 이 16.7 → 9.3 µs. 자세한 것은 <a href="socket.uds.html">UDS 문서</a>.</li>
+  <li><code>TCP_QUICKACK</code>, busy poll 은 적용되지 않는다.</li>
+</ul>
+
+<h4 class="sec">측정 (Release, echo ping-pong, msg/s)</h4>
+<p><code>bench_linux_io.cpp</code>, 케이스마다 3초, 네 구성을 교대로 3라운드 돌린 중앙값. 굵은 글씨가 그 행의 최고값.</p>
+<p><b>32 코어 서버</b> (Ubuntu 26.04, kernel 7.0, g++ 15.2), HEAD r11478, executor 8 thread.</p>
+<table class="bench wrap">
+<tr><th>케이스</th><th>epoll</th><th>completion 단일 RECV</th><th>completion multishot (전환 끔)</th><th>completion 기본값 (multishot + 전환 + 무복사)</th></tr>
+<tr><td>tcp 64 B x32, window 16</td><td><b>8,714,806</b></td><td>5,708,428</td><td>5,813,431</td><td>5,776,527</td></tr>
+<tr><td>uds 64 B x32, window 16</td><td><b>8,970,336</b></td><td>5,565,885</td><td>5,804,000</td><td>5,885,948</td></tr>
+<tr><td>tcp 16 B x256, window 1</td><td>580,915</td><td>593,035</td><td>664,054</td><td><b>677,773</b></td></tr>
+<tr><td>tcp 64 KB x4, window 2</td><td>139,215</td><td>161,815</td><td>151,438</td><td><b>166,405</b></td></tr>
+<tr><td>udp 64 B x16, window 32</td><td>411,854</td><td><b>603,202</b></td><td>592,773</td><td>568,570</td></tr>
+</table>
+<p>같은 장비, executor 4 thread.</p>
+<table class="bench wrap">
+<tr><th>케이스</th><th>epoll</th><th>completion 단일 RECV</th><th>completion multishot (전환 끔)</th><th>completion 기본값 (multishot + 전환 + 무복사)</th></tr>
+<tr><td>tcp 64 B x32, window 16</td><td><b>6,648,813</b></td><td>5,768,398</td><td>5,584,789</td><td>5,966,304</td></tr>
+<tr><td>uds 64 B x32, window 16</td><td><b>6,935,301</b></td><td>5,848,525</td><td>6,117,242</td><td>5,793,007</td></tr>
+<tr><td>tcp 16 B x256, window 1</td><td>411,555</td><td>399,423</td><td>423,965</td><td><b>444,646</b></td></tr>
+<tr><td>tcp 64 KB x4, window 2</td><td>143,687</td><td>161,747</td><td>148,264</td><td><b>162,064</b></td></tr>
+<tr><td>udp 64 B x16, window 32</td><td>600,314</td><td>597,620</td><td><b>605,480</b></td><td>546,995</td></tr>
+</table>
+<p><b>8 코어 서버</b> (Ubuntu 24.04, kernel 6.8, g++ 15.2), HEAD r11463, executor 4 thread.</p>
+<table class="bench wrap">
+<tr><th>케이스</th><th>epoll</th><th>completion 단일 RECV</th><th>completion multishot (전환 끔)</th><th>completion 기본값 (multishot + 전환 + 무복사)</th></tr>
+<tr><td>tcp 64 B x32, window 16</td><td><b>3,676,791</b></td><td>3,051,707</td><td>3,098,682</td><td>3,116,766</td></tr>
+<tr><td>uds 64 B x32, window 16</td><td><b>4,932,962</b></td><td>4,584,016</td><td>4,583,811</td><td>4,483,571</td></tr>
+<tr><td>tcp 16 B x256, window 1</td><td>240,510</td><td><b>250,143</b></td><td>238,970</td><td>245,375</td></tr>
+<tr><td>tcp 64 KB x4, window 2</td><td><b>92,280</b></td><td>78,717</td><td>78,287</td><td>80,243</td></tr>
+<tr><td>udp 64 B x16, window 32</td><td><b>443,676</b></td><td>301,010</td><td>293,040</td><td>286,619</td></tr>
+</table>
+<ul>
+  <li><b>32 코어 8 thread</b> : completion 기본값이 epoll 보다 16 B x256 +17%, 64 KB +20%, UDP +38% 빠르다. 64 B x32 와 UDS 는 −34% 다.</li>
+  <li><b>수신 모드 전환의 효과</b> : 32 코어 8 thread 의 64 KB 에서 전환을 켠 기본값이 multishot 고정보다 +10% 다. 큰 메시지를 가변 버퍼 RECV 로 한 번에 받는 효과다. 4 thread 에서도 +9%.</li>
+  <li><b>multishot 의 효과</b> : 32 코어 8 thread 의 16 B x256 에서 단일 RECV 보다 +12%. 소켓마다 RECV 를 다시 내던 비용이 사라진다. 64 KB 는 조각 때문에 −6% 였고 전환이 이를 메운다.</li>
+  <li><b>8 코어</b> : epoll 이 대부분 앞선다. completion 은 16 B x256 에서만 비슷하다(+2 ~ 4%). 구성끼리의 차이는 ±3% 안이라 기법의 효과가 측정 흔들림보다 작다.</li>
+  <li>completion 의 이득은 코어가 많고 worker 마다 ring 이 따로 돌 때 커진다. 64 B x32 처럼 접속당 메시지가 몰리는 패턴은 두 장비 모두 epoll 이 빠르다. 남은 비용은 CQE 단위 처리로 본다.</li>
+</ul>
+
+<h4 class="sec">이력</h4>
+<table class="bench wrap">
+<tr><th>리비전</th><th class="lbl">내용</th></tr>
+<tr><td>r11345</td><td class="lbl">epoll 수신 버퍼를 IOCP 식(빈 공간에 이어 받기)으로. 축소 요동 회귀가 함께 들어감</td></tr>
+<tr><td>r11371</td><td class="lbl">축소 히스테리시스(연속 64번)로 회귀 수정</td></tr>
+<tr><td>r11393 ~ r11398</td><td class="lbl">소켓 버퍼 autotuning, UDP recvmmsg 와 수신 불가 수정, cpu_affinity, tcp_defer_accept, io_uring readiness</td></tr>
+<tr><td>r11394</td><td class="lbl">TCP_QUICKACK recv 마다 재설정, SO_BUSY_POLL</td></tr>
+<tr><td>r11429</td><td class="lbl">epoll_wait busy poll</td></tr>
+<tr><td>r11441 · r11453 · r11457 · r11459</td><td class="lbl">io_uring RECV op, multishot + provided buffer, 무복사 수신, 수신 모드 전환</td></tr>
+</table>
+
+<footer>CGDK10 · 소스 기준 정리 (r11462, 2026-10-23) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+</main>
+</div>
+</body>
+</html>

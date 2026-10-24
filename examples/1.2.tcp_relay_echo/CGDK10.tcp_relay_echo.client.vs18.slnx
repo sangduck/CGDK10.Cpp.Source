@@ -1,0 +1,7 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="client\console\CGDK10.tcp_relay_echo.client.console.vs18.vcxproj" Id="a3d2cd82-3d1c-4fac-a2c9-76d82e5672d9" />
+  <Project Path="client\mfc\CGDK10.tcp_relay_echo.client.mfc.vs18.vcxproj" Id="b796cc6b-60ed-42ae-8ad2-8ef2eff1521a" />
+</Solution>

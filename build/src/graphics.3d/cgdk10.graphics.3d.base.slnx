@@ -1,0 +1,7 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="graphics.3d.base\graphics.3d.base.vcxproj" Id="9d9ca556-a58e-410f-8859-410eeb84aba0" />
+  <Project Path="graphics.3d.device\graphics.3d.device.vcxproj" Id="c1dbbb37-d65e-4935-aab6-be78844256bd" />
+</Solution>

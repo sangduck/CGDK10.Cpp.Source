@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include <iostream>
 
 
@@ -14,7 +14,7 @@
 namespace CGDK
 {
 	// 1) event manager
-	lockable<>					time_event::entity_manager::m_lockable_create;
+	lock_object					time_event::entity_manager::m_lockable_create;
 	own_ptr<time_event::entity_manager> time_event::entity_manager::m_pinstance;
 }
 

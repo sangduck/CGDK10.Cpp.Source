@@ -69,11 +69,12 @@ public:
 
 // implementation) 
 protected:
-			lockable<object_ptr<Ifactory>>	m_pobject_factory;
+			lock_object			m_lockable_pobject_factory;
+			object_ptr<Ifactory> m_pobject_factory;
 
 			CListCtrl			m_listctrl_object;
 			CComboBox			m_combo_update_interval;
-	static	int					m_update_inverval;
+	static	int					m_update_interval;
 			BOOL				m_is_enable_control;
 
 			void				ClearObjectFactoryInfo() noexcept;

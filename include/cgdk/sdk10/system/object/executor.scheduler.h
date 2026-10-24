@@ -31,7 +31,7 @@ namespace CGDK
  정해진 시간에 1회만 실행되고 실행된 Executable은 제거한다.
  내부적으로는 우선순위큐(Priority Queue)를 사용해서 만들어졌기 때문에 매우 많은 
  Executable이 있어도 효율적으로 처리가 가능하다.
- 만약 동시 실행 갯수의 제한으로 실행을 실패했을 경우 실행될 때까지 계속 시도한다.
+ 만약 동시 실행 개수의 제한으로 실행을 실패했을 경우 실행될 때까지 계속 시도한다.
  아직 실행되지 않은 Executable의 경우 cancel_executable()함수로 제거할 수 있다.
  기본 최대 큐의 깊이는 8192개로 설정되어 있다. (필요시 자동 확장된다.)
 
@@ -41,14 +41,13 @@ namespace CGDK
 
 *///-----------------------------------------------------------------------------
 class executor::scheduler :
-	public						CGDK::Nexecutor,
+	public						Nexecutor,
 	virtual public				executor::Iqueue,
 	public						api::threads,
 	public						factory::_traits_system
 {
 public:
 			scheduler() noexcept;
-			scheduler(std::string_view _name);
 	virtual ~scheduler() noexcept;
 
 			struct START_PARAMETER
@@ -58,7 +57,7 @@ public:
 
 public:
 			result_code			start() { context _context; return this->start(_context);}
-			result_code			start(const START_PARAMETER& _parameter) { context temp(buffer_view((char*)&_parameter, sizeof(START_PARAMETER)));  return this->start(temp); }
+			result_code			start(const START_PARAMETER& _parameter) { context temp; temp = buffer_view((char*)&_parameter, sizeof(START_PARAMETER));  return this->start(temp); }
 			result_code			start(const context& _context) { context context_copy(_context); return this->start(context_copy);}
 	virtual	result_code			start(context& _context) override;
 	virtual	result_code			stop() noexcept override;
@@ -73,27 +72,32 @@ public:
 	[[nodiscard]] bool			empty() const noexcept { return this->pended_count() == 0;}
 	[[nodiscard]] bool			exist() const noexcept { return !empty();}
 
-	[[nodiscard]] auto			executor() const noexcept { scoped_lock(this->m_cs_pexecutor) { return this->m_pexecutor; } }
+	[[nodiscard]] auto			executor() const noexcept { std::lock_guard lock(this->m_lockable_pexecutor); return this->m_pexecutor; }
 			void				executor(const object_ptr<Iexecutor>& _pexecutor) noexcept { this->executor(object_ptr<Iexecutor>(_pexecutor)); }
-			void				executor(object_ptr<Iexecutor>&& _pexecutor) noexcept { scoped_lock(this->m_cs_pexecutor) { this->m_pexecutor = std::move(_pexecutor); } }
-	[[nodiscard]] bool			has_executor() const noexcept { scoped_lock(this->m_cs_pexecutor) { return this->m_pexecutor.exist(); } }
+			void				executor(object_ptr<Iexecutor>&& _pexecutor) noexcept {  std::lock_guard lock(this->m_lockable_pexecutor); this->m_pexecutor = std::move(_pexecutor); }
+	[[nodiscard]] bool			has_executor() const noexcept { std::lock_guard lock(this->m_lockable_pexecutor); return this->m_pexecutor.exist(); }
 
 			void				print_statistics() noexcept;
 
 protected:
 			struct EXECUTION_AT;
 
-			lockable<>			m_cs_pexecutor;
+	mutable	lock_object			m_lockable_pexecutor;
 			object_ptr<Iexecutor> m_pexecutor;
 			std::atomic<int>	m_flag_run;
 
 			std::vector<EXECUTION_AT> m_priorityqueue_executable;
-			std::mutex			m_lockable_priorityqueue;
+	mutable	std::mutex			m_lockable_priorityqueue;
 			std::condition_variable	m_cv_priorityqueue_exist;
 			std::condition_variable	m_cv_priorityqueue_in_time;
+#if defined(_WIN32)
+			void*				m_handle_timer = nullptr;	// high resolution waitable timer (HANDLE)
+			void*				m_handle_wake = nullptr;	// wake event (HANDLE)
+#endif
 
 			void				process_push_executable(EXECUTION_AT&& _pexecutable);
 			void				process_pop_executable() noexcept;
+			void				_notify_in_time() noexcept;
 
 	virtual	bool				process_post(object_ptr<Iexecutable>&& _pexecutable) override;
 	virtual	bool				process_post_at(object_ptr<Iexecutable>&& _pexecutable, chrono::tick::time_point _tick_execute);
@@ -102,7 +106,6 @@ protected:
 protected:
 	static	uint32_t			fn_thread(scheduler* _this);
 };
-
 
 
 }

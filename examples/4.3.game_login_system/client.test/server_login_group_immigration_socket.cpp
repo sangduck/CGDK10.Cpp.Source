@@ -81,7 +81,7 @@ int ServerLogin::CGroupImmigrationSocket::OnMessage_RESPONSE_ACCOUNT_LOGIN(CGNET
 		auto&	addrServerLobby		 = bufReceive.extract<SOCKADDR_IN>();
 
 		// 4) Account 정보를 저장한다.
-		auto	pConnectable		 = CSampleSocketClientTCPEchoDlg::m_pconnectorSerbverLobby->AllocConnectable();
+		auto	pConnectable		 = CSampleSocketClientTCPEchoDlg::m_pconnectorServerLobby->AllocConnectable();
 		auto	psocketServerLobby	 = dynamic_pointer_cast<ServerLobby::CSocket>(pConnectable);
 
 		// 5) ACCOUNT_ID는 저장해 놓는다.
@@ -89,7 +89,7 @@ int ServerLogin::CGroupImmigrationSocket::OnMessage_RESPONSE_ACCOUNT_LOGIN(CGNET
 		psocketServerLobby->m_psocketLoginServer = pSocket;
 
 		// 6) Lobby Server에 접속을 시도한다.
-		CSampleSocketClientTCPEchoDlg::m_pconnectorSerbverLobby->Connecting(psocketServerLobby, (LPCSOCKADDR)&addrServerLobby, sizeof(SOCKADDR_IN));
+		CSampleSocketClientTCPEchoDlg::m_pconnectorServerLobby->Connecting(psocketServerLobby, (LPCSOCKADDR)&addrServerLobby, sizeof(SOCKADDR_IN));
 	}
 	// Case) 실패일 경우
 	else

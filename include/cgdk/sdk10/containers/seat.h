@@ -34,8 +34,8 @@
 //    - priority queue를 사용하여 항당 최소 번호를 되돌려 준다.
 //    - 할당된 번호를 다시 되돌려 받을 때 Sort가 일어난다.
 //    - 좌석번호의 증가나 축소는 가능하다.
-//      * 증가를 할때는 이미 할당된 번호 이후의 값을 stack을 하며
-//      * 감소를 할때는 stack중 감소된 좌석번호 이후 값들을 stack에서 찾아
+//      * 증가를 할 때는 이미 할당된 번호 이후의 값을 stack을 하며
+//      * 감소를 할 때는 stack중 감소된 좌석번호 이후 값들을 stack에서 찾아
 //        제거한다. 이미 할당된 것은 다시 free되어 돌아왔을 때 stack을 하지 
 //        않는다.
 //
@@ -81,9 +81,10 @@ public:
 	inline	TSEAT			alloc_seat();
 	inline	void			free_seat(TSEAT _seat);
 	// 3) Status
-			size_t			remained_seat() const noexcept { return m_vector_seat.size()-1;}
-			size_t			max_seat() const noexcept { return m_vector_seat.capacity()-1;}
-			bool			empty() const noexcept { return m_vector_seat.size()==1;}
+	//    - m_vector_seat is a 1-based heap. m_vector_seat[0] is not a seat
+			size_t			remained_seat() const noexcept { return empty() ? 0 : m_vector_seat.size()-1;}
+			size_t			max_seat() const noexcept { return m_max_seat;}
+			bool			empty() const noexcept { return m_vector_seat.size()<=1;}
 	// 4) Info												  
 			TSEAT			begin() const noexcept { return m_begin;}
 			TSEAT			step() const noexcept { return m_step;}
@@ -91,6 +92,7 @@ public:
 private:
 			TSEAT			m_begin = 0;
 			TSEAT			m_step = 0;
+			size_t			m_max_seat = 0;
 			std::vector<TSEAT> m_vector_seat;
 };
 
@@ -157,30 +159,20 @@ void seat<TSEAT>::free_seat(TSEAT _seat)
 template <class TSEAT>
 void seat<TSEAT>::create(size_t _max_seat_count, TSEAT _begin, TSEAT _step)
 {
-	// check) p_iMaxSeatCount이 0인지를 확인한다.
-	if(_max_seat_count == 0)
-	{
-		return;
-	}
-
 	// check) _step이 0인지를 확인한다.
 	if(_step < 1)
 	{
 		return;
 	}
 
-	// check) _max_seat_count이 _stop보다도 작으면 그냥 Return한다.
-	if(_max_seat_count<static_cast<size_t>(_step))
-	{
-		return;
-	}
-
 	// 1) 값을 설정한다.
+	//    - [0] + _max_seat_count seats. reset() never reallocates.
 	m_vector_seat.reserve(_max_seat_count+1);
 
 	// 2) Step을 설정한다.
 	m_begin = _begin;
 	m_step = _step;
+	m_max_seat = _max_seat_count;
 
 	// 3) 모두 지운다.
 	reset();
@@ -192,14 +184,22 @@ void seat<TSEAT>::reset() noexcept
 	// 1) 일단 clear한다.
 	m_vector_seat.clear();
 
+	// check) no seat
+	if(m_max_seat == 0)
+	{
+		return;
+	}
+
 	// 2) 설정한다.
-	TSEAT i = begin();
-	TSEAT end = static_cast<TSEAT>(max_seat());
+	//    - [0] is not a seat (1-based heap)
+	m_vector_seat.push_back(TSEAT());
 
 	// 3) Push back~~
-	for(;i<end;i+=m_step)
+	//    - _max_seat_count seats from begin() (begin(), begin()+step(), ...). an ascending array is a heap.
+	TSEAT value = begin();
+	for(size_t i = 0; i < m_max_seat; ++i, value += m_step)
 	{
-		m_vector_seat.push_back(i);
+		m_vector_seat.push_back(value);
 	}
 }
 

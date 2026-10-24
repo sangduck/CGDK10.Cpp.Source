@@ -43,55 +43,37 @@ receive의 완료가 0Byte 혹은 Error로 되면 접속 종료처리를 한다.
 */
 //-----------------------------------------------------------------------------
 class net::io::receivable::Nstream_rio :
-// inherited classes)
 	virtual public				net::io::Isocket,
 	virtual public				net::io::Ireceivable_stream,
 	virtual public				net::io::Iconnectable,
 	virtual public				net::io::Ipacketable
 {
-// constructor/destructor)
 protected:
 			Nstream_rio();
 	virtual	~Nstream_rio() noexcept;
 
-// public)
 public:
-	//! @brief '소켓별 최소 메시지 버퍼'를 설정한다.
 				  std::size_t	minimum_message_buffer_size(std::size_t _size) noexcept;
 	[[nodiscard]] std::size_t	minimum_message_buffer_size() noexcept;
-
 				  std::size_t	maximum_message_buffer_size(std::size_t _size) noexcept;
 	[[nodiscard]] std::size_t	maximum_message_buffer_size() noexcept;
-
-	//! @brief 받아 놓은 데이터 중 처리되지 않은 데이트 Byte수.
 	[[nodiscard]] std::size_t	queued_receive_bytes() const noexcept { return m_buffer_received.size(); }
 
-// frameworks)
 protected:
-	//! @brief 데이터를 수신 했을 때 호출되는 함수.
 	virtual	void				on_receive( const buffer_view& /*_buffer*/, const net::sockaddr& /*_address*/)	{}
 
-// implementation)
-protected:
-	//! @brief receive를 거는 함수. @return true true 성공 @return true false 실패
 	#if defined(_WINSOCK2API_)
 			bool				receive();
 	#elif defined(_SYS_EPOLL_H)
 	#endif
 
-	//! @brief receivable을 초기화한다.
 	virtual	void				process_reset_receivable() override;
-
-	//! @brief 최초 접속 시 receive를 준비한다.
 	virtual	bool				prepare_receive() override;
-
-	//! @brief receive를 받았을 때 호출된다. @return 0 성공 @return !0 실패
 	virtual void				process_on_receive( const buffer_view& _buffer, const net::sockaddr& _address) { on_receive (_buffer, _address);}
 	virtual	intptr_t			process_complete_receivable( intptr_t _result, std::size_t _transferred) override;
 			void				process_clear_buffer() noexcept;
 
-protected:
-			std::size_t			m_minimum_mesage_buffer_size;
+			std::size_t			m_minimum_message_buffer_size;
 			std::size_t			m_maximum_message_buffer_size;
 
 		#if defined(_WINSOCK2API_)

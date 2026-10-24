@@ -100,7 +100,7 @@
         }
     </style>
     <script language='javascript' type='text/javascript'>
-        var wsUri = "ws://127.0.0.1:22053/log";
+        var wsUri = "ws://" + location.hostname + ":22053/log";
         var websocket;
         var main_frame;
         var main_frame_content;
@@ -199,7 +199,7 @@
                         <div id='button_top_dropdown_user' class='dropdown-content'>
                             <a href='#'>menu 1</a>
                             <a href='#'>menu 2</a>
-                            <a href='#'>logout</a>
+                            <a href='/logout'>logout</a>
                         </div>
                     </span>
                 </th>

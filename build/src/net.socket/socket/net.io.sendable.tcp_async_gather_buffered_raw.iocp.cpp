@@ -44,11 +44,13 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_prepa
 
 void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_expand()
 {
-	// 주의) 할당갯수를 _count에 최소 1의 마진을 줘야 한다. 최대 _count + 1 까지 억세스를 할수 있기 때문이다.
+	// 주의) 할당개수를 _count에 최소 1의 마진을 줘야 한다. 최대 _count + 1 까지 억세스를 할 수 있기 때문이다.
 
 	// check)
-	CGASSERT_ERROR(this->capacity_node != 0);
-	CGASSERT_ERROR(this->allocated != nullptr);
+	CGASSERT_FATAL(this->capacity_node != 0);
+
+	// check)
+	CGASSERT_FATAL(this->allocated != nullptr);
 
 	// 1) capacity x 4
 	this->capacity_node <<= 2;
@@ -57,7 +59,8 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_expan
 	auto allocated_new = reinterpret_cast<char*>(::malloc((sizeof(WSABUF) + sizeof(NODE*)) * (this->capacity_node + 2)));
 
 	// check)
-	THROW_IF(allocated_new == nullptr, throwable::failure(eRESULT::BAD_ALLOC));
+	if(allocated_new == nullptr)
+		throw throwable::failure(eRESULT::BAD_ALLOC);
 
 	auto array_buffer_new = reinterpret_cast<WSABUF*>(allocated_new);
 	auto array_node_new = reinterpret_cast<NODE*>(allocated_new + (sizeof(WSABUF) * (this->capacity_node + 2)));
@@ -71,9 +74,7 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_expan
 
 	// 4) free 
 	if (this->allocated != nullptr)
-	{
 		::free(this->allocated);
-	}
 
 	// 5) apply
 	this->allocated = allocated_new;
@@ -88,9 +89,8 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_free(
 
 	// 2) reset buffer & values
 	if (allocated != nullptr)
-	{
 		::free(this->allocated);
-	}
+
 	this->allocated = nullptr;
 	this->array_wsabuffer = nullptr;
 	this->array_node = nullptr;
@@ -103,7 +103,7 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_reset
 	for (auto piter_node = array_node, piter_node_end = array_node + count_node; piter_node != piter_node_end; ++piter_node)
 	{
 		// check)
-		CGASSERT_ERROR(piter_node->psource != nullptr);
+		CGASSERT_FATAL(piter_node->psource != nullptr);
 
 		piter_node->psource->release();
 		piter_node->psource = nullptr;
@@ -121,7 +121,7 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_reset
 void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_reset_and_swap(QUEUE_SEND&& _move) noexcept
 {
 	// check)
-	CGASSERT_ERROR(allocated != nullptr);
+	CGASSERT_FATAL(allocated != nullptr);
 
 	// 1) swap buffer info
 	SWAP(this->allocated, _move.allocated);
@@ -141,9 +141,13 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_reset
 void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_push_back(const buffer_view& _buffer, Ireferenceable* _powner, std::size_t _count_messages)
 {
 	// check)
-	CGASSERT_ERROR(this->allocated != nullptr);
-	CGASSERT_ERROR(this->array_wsabuffer != nullptr);
-	CGASSERT_ERROR(this->array_node != nullptr);
+	CGASSERT_FATAL(this->allocated != nullptr);
+
+	// check)
+	CGASSERT_FATAL(this->array_wsabuffer != nullptr);
+
+	// check)
+	CGASSERT_FATAL(this->array_node != nullptr);
 
 	// 1) ...
 	auto bytes_requested = _buffer.size<ULONG>();
@@ -153,7 +157,7 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_push_
 		// - get pbuffer and pnode
 		auto* pbuffer_now = array_wsabuffer + this->count_node - 1;
 
-		// - is buffer enought to copy (no => create new)
+		// - is buffer enough to copy (no => create new)
 		if (this->bytes_remained < bytes_requested)
 		{
 			// - shift count
@@ -166,7 +170,7 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_push_
 			auto size_buffer = (BYTES_SEND_GATHER_BUFFER_MIN << shift_count);
 
 			// check)
-			CGASSERT_ERROR(size_buffer <= BYTES_SEND_GATHER_BUFFER_MAX);
+			CGASSERT_FATAL(size_buffer <= BYTES_SEND_GATHER_BUFFER_MAX);
 
 			// - alloc new buffer
 			auto buf_new = alloc_shared_buffer(size_buffer);
@@ -188,7 +192,7 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_push_
 		pbuffer_now->len += static_cast<ULONG>(bytes_requested);
 		this->bytes_remained -= bytes_requested;
 	}
-	// - BYTES_SEND_GATHER_BUFFER_MIN보다 크면 버퍼 통채로 추가한다.
+	// - BYTES_SEND_GATHER_BUFFER_MIN보다 크면 버퍼 통째로 추가한다.
 	else
 	{
 		// - check 
@@ -206,7 +210,7 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_push_
 				this->count_message += _count_messages;
 
 				// check)
-				CGASSERT_ERROR(this->bytes_remained == 0);
+				CGASSERT_FATAL(this->bytes_remained == 0);
 
 				// return) 
 				return;
@@ -230,26 +234,32 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::QUEUE_SEND::buffer_push_
 bool net::io::sendable::Ntcp_async_gather_buffered_raw::process_sendable(const buffer_view _buffer, object_ptr<Ireferenceable>&& _powner, std::size_t _count_messages, const net::sockaddr& /*_paddress*/)
 {
 	// check) _buffer.data()가 NULL이 아닌가?
-	CGASSERT(_buffer.data() != nullptr, false)
+	CGASSERT_FATAL(_buffer.data() != nullptr);
 
 	// check) _buffer.size()이 0이 아닌가?
-	CGASSERT(_buffer.size() != 0, false)
+	CGASSERT_FATAL(_buffer.size() != 0);
+
+	// check) data가 nullptr이거나 size가 0이면 보내지 않는다. (Release)
+	if(_buffer.data() == nullptr || _buffer.size() == 0)
+		return false;
 
 	// check) 
-	RETURN_IF(this->socket_state() < eSOCKET_STATE::ESTABLISHED, false);
+	if(this->socket_state() < eSOCKET_STATE::ESTABLISHED)
+		return false;
 
 	// 1) get socket native handle
 	auto handle_socket = this->native_handle();
 
 	// check) 
-	RETURN_IF(handle_socket == INVALID_SOCKET, false);
+	if(handle_socket == INVALID_SOCKET)
+		return false;
 
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		// 2) 전송 처리 중(m_flag_sending이 signal된 상태(true))라면 queuing 처리만 하고 끝낸다.
 		if (this->m_flag_sending == true)
 		{
-			// check) quque overflowed?
+			// check) queue overflowed?
 			if ((this->m_queue_pending.count_node >= this->m_max_depth_of_send_buffer) || (this->m_queue_pending.bytes_data >= this->m_bytes_max_queued))
 			{
 				// statistics)
@@ -261,9 +271,7 @@ bool net::io::sendable::Ntcp_async_gather_buffered_raw::process_sendable(const b
 
 			// - alloc buffer if empty
 			if (this->m_queue_pending.is_full())
-			{
 				this->m_queue_pending.buffer_expand();
-			}
 
 			// - queuing to pending_queue
 			this->m_queue_pending.buffer_push_back(_buffer, _powner, _count_messages);
@@ -278,9 +286,10 @@ bool net::io::sendable::Ntcp_async_gather_buffered_raw::process_sendable(const b
 
 	// 1) queuing to sending buffer
 	{
-		CGASSERT_ERROR(this->m_queue_sending.count_node == 0);
-		CGASSERT_ERROR(this->m_queue_sending.capacity_node != 0);
-		CGASSERT_ERROR(this->m_queue_sending.allocated != nullptr);
+		// check) 
+		CGASSERT_FATAL(this->m_queue_sending.count_node == 0);
+		CGASSERT_FATAL(this->m_queue_sending.capacity_node != 0);
+		CGASSERT_FATAL(this->m_queue_sending.allocated != nullptr);
 
 		this->m_queue_sending.count_node = 1;
 		*this->m_queue_sending.array_wsabuffer = { _buffer.size<ULONG>(), _buffer.data()};
@@ -303,12 +312,13 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::process_complete_sendabl
 	this->statistics_on_send_message((_transferred_bytes != 0) ? this->m_queue_sending.count_message : 0);
 
 	// check)
-	RETURN_IF(this->m_queue_sending.count_message == 0);
+	if(this->m_queue_sending.count_message == 0)
+		return;
 
 	// check) 
-	CGASSERT_ERROR(this->m_queue_sending.array_node != nullptr);
+	CGASSERT_FATAL(this->m_queue_sending.array_node != nullptr);
 
-	scoped_lock_named(this->m_lockable_sending, cs)
+	SCOPED_LOCK_NAMED(this->m_lockable_sending, cs)
 	{
 		// 1) clear seding queue
 		this->m_queue_sending.buffer_reset();
@@ -333,7 +343,7 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::process_complete_sendabl
 			this->m_flag_sending = false;
 
 			// - lock leave
-			scoped_lock_leave(cs)
+			SCOPED_LOCK_LEAVE(cs)
 
 			// - shutdown if send_disconnected
 			if (this->socket_state() == eSOCKET_STATE::SEND_DISCONNECTED)
@@ -369,10 +379,10 @@ bool net::io::sendable::Ntcp_async_gather_buffered_raw::process_sendable_async(C
 	this->statistics_on_increase_async_sending();
 
 	// declare) 
-	DWORD bytes_sended = 0;
+	DWORD bytes_sent = 0;
 
 	// 3) send~
-	auto result = api::socket::send_async(_handle_socket, _array_wsabuffer, _count_buffer, &bytes_sended, this->m_pexecutable_send_buffer_list.get());
+	auto result = api::socket::send_async(_handle_socket, _array_wsabuffer, _count_buffer, &bytes_sent, this->m_pexecutable_send_buffer_list.get());
 
 	// check) result가 false이고 WOULD BLOCK이 아닐 때만 전송 실패이다.
 	if (result == false && api::get_last_error() != WSA_IO_PENDING)
@@ -413,7 +423,7 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::process_close_sender()
 	// check)
 	bool do_shutdown;
 
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		do_shutdown = this->m_queue_sending.count_node == 0;
 	}
@@ -434,7 +444,7 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::process_close_sender()
 void net::io::sendable::Ntcp_async_gather_buffered_raw::process_reset_sendable() noexcept
 {
 	// 1) ...
-	scoped_lock(this->m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		this->_process_prepare_send_buffers();
 	}
@@ -444,9 +454,7 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::process_reset_sendable()
 
 	// 3) reset executable
 	if (this->m_pexecutable_send_buffer_list.empty())
-	{
 		this->m_pexecutable_send_buffer_list = make_object<executable_send_buffer_list>();
-	}
 }
 
 void net::io::sendable::Ntcp_async_gather_buffered_raw::_process_prepare_send_buffers()

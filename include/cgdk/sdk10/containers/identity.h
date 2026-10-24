@@ -26,7 +26,7 @@
 //    2) alloc가 호출되면 0~(ISIZE-1) 사이에서 할당되지 않은 번호를 돌려준다.
 //    3) free로 할당받았던 번호가 반환되면 반환된 고유번호는 다음에 다시 할당
 //       되어지는 것에 사용된다.
-//    4) 더이상 할당할 고유번호가 없으면 -1이 return된다.
+//    4) 더 이상 할당할 고유번호가 없으면 -1이 return된다.
 //    5) 유사한 Container로는 seat가 있다. seat와 다른 점은 고유번호를 sort하지
 //       하지 않는다는 점이다. seat는 할당되지 않은 번호 중에서 가장 작은 번호를
 //       할당해주지만 이 identity는 그렇지 않다.
@@ -37,7 +37,7 @@
 //       locked_identity<200>   tempseat;
 //
 //    2) 값을 할당받기 위해서는 alloc()함수를 사용하라.
-//       (이때 모든 seat를 다 사용하여 더이상 할당할 seat가 없을 시는 -1을 리턴한다.)
+//       (이때 모든 seat를 다 사용하여 더 이상 할당할 seat가 없을 시는 -1을 리턴한다.)
 //
 //       int value = tempseat.alloc();
 //
@@ -46,12 +46,12 @@
 //       tempseat.free(value);
 //
 //    4) 다음의 함수를 사용하여 현재 상태를 확인할 수 있다.
-//       size()   <- 현재 남아 있는 seat의 갯수
+//       size()   <- 현재 남아 있는 seat의 개수
 //       max_size <- 최대 seat의 수 선언시 template 인자로 넣었던 값이다.
 //       empty()  <- 완전히 비어 있는지를 확인하는 함수.
 //
 // 2. 주의점
-//    1) 이 Container는 alloc와 free를 할때 Thread-Safe하지 않다. 그러므로
+//    1) 이 Container는 alloc와 free를 할 때 Thread-Safe하지 않다. 그러므로
 //       만약에 Thread-Safe하게 동작시키고자 한다면 Lock을 걸어 사용해야 한다.
 //
 // 3. 연관 

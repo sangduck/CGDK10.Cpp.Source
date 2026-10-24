@@ -33,8 +33,6 @@ class schedulable::Ninitializable_startable :
     public				        object::Nnameable
 {
 protected:
-			Ninitializable_startable() noexcept {}
-			Ninitializable_startable(std::string_view _name) noexcept : object::Nnameable(_name) {}
 	virtual ~Ninitializable_startable() noexcept {}
 
 protected:

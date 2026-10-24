@@ -29,15 +29,10 @@ namespace CGDK
 // ----------------------------------------------------------------------------
 template <class RECEIVE_HEADER_T = uint32_t, class SEND_HEADER_T = RECEIVE_HEADER_T>
 class net::socket::tcp :
-	public						net::io::socket::tcp::Ndefault,
-	public						net::io::connectable::tcp::Ndefault,
-	public						net::io::sendable::tcp::Ndefault,
-	public				 		net::io::send_request::tcp::Ndefault,
-	public						net::io::sender::tcp::Ndefault<SEND_HEADER_T>,
-	public						net::io::receivable::tcp::Ndefault,
-	public						net::io::packetable::tcp::Ndefault<RECEIVE_HEADER_T>,
-	public						net::io::messageable::tcp::Ndefault
+	public						net::socket::Itcp<RECEIVE_HEADER_T, SEND_HEADER_T>,
+	public						net::io::connect_notify::tcp::Ndefault
 {
+	virtual result_code			on_message(sMESSAGE_NETWORK& /*_msg*/) override { return eRESULT::BYPASS; }
 };
 
 

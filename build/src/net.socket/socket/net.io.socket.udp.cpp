@@ -24,7 +24,7 @@ intptr_t net::io::socket::Nudp::process_execute_epoll(intptr_t _event, std::size
 		if (_event & EPOLLIN)
 		{
 			// check) 
-			CGASSERT_ERROR(this->m_preceivable_datagram != nullptr);
+			CGASSERT_FATAL(this->m_preceivable_datagram != nullptr);
 
 			// declare) 
 			shared_buffer buffer;
@@ -34,7 +34,7 @@ intptr_t net::io::socket::Nudp::process_execute_epoll(intptr_t _event, std::size
 			this->m_preceivable_datagram->process_complete_receivable(_event, _param, buffer, address);
 		}
 
-		// 3) if error is occured, add socket reason DISCONNECT_REASON_FAIL 
+		// 3) if error occurred, add socket reason DISCONNECT_REASON_FAIL 
 		if (_event & EPOLLERR)
 		{
 			//m_disconnect_reason |= DISCONNECT_REASON_FAIL;
@@ -45,11 +45,7 @@ intptr_t net::io::socket::Nudp::process_execute_epoll(intptr_t _event, std::size
 
 	}
 
-	// 5) addref
-	//if (native_handle() != INVALID_SOCKET)
-	{
-		this->m_pexecutable_socket->add_ref();
-	}
+	// - (an add_ref of m_pexecutable_socket per event was here : never released. the executor holds the executable while it runs)
 
 	// return) 
 	return	0;
@@ -98,7 +94,6 @@ void net::io::socket::Nudp::process_create_socket(ADDRESS_FAMILY _address_family
 	// 3) set socket option
 	api::socket::set_send_buffer_size(handle_socket_new, DEFAULT_UDP_SEND_BUFFER_SIZE);
 	api::socket::set_receive_buffer_size(handle_socket_new, DEFAULT_UDP_RECEIVE_BUFFER_SIZE);
-	api::socket::set_nonblock(handle_socket_new, true);
 
 	// 4) 새소켓을 설정한다.
 	auto handle_socket_old = this->native_handle(handle_socket_new);
@@ -124,8 +119,10 @@ void net::io::socket::Nudp::process_create_socket(ADDRESS_FAMILY _address_family
 	// 6) set address family
 	this->address_family(_address_family);
 
-	// 7) set socket option
+	// 7) set socket option (linux : nonblocking already. create_socket() uses SOCK_NONBLOCK)
+#if defined(_WINSOCK2API_)
 	api::socket::set_nonblock(handle_socket_new, true);
+#endif
 
 	// 8) get_io_context
 	auto pio_context = this->io_context();
@@ -170,7 +167,16 @@ bool net::io::socket::Nudp::process_close_socket(uint64_t _disconnect_reason) no
 	//-----------------------------------------------------------------
 	// 1) socket Handle을 INVALID_SOCKET으로 설정하고 이전 socket핸들을
 	//    얻는다.
+#if defined(_WINSOCK2API_)
+	//    (수신 lock 안에서 바꾼다 : 수신은 같은 lock 안에서 handle을 읽고 recv까지 한다 (_call_receiving))
+	CGSOCKET socket_handle;
+	{
+		std::lock_guard lock_receiving(this->get_lockable_receiving());
+		socket_handle = this->native_handle(INVALID_SOCKET);
+	}
+#else
 	auto socket_handle = this->native_handle(INVALID_SOCKET);
+#endif
 
 	// check) 이전 socket의 HANDLE이 이미 INVALID_SOCKET이면 socket이
 	//        생성된 것이 아니기 때문에 그냥 끝낸다.
@@ -184,6 +190,9 @@ bool net::io::socket::Nudp::process_close_socket(uint64_t _disconnect_reason) no
 
 	// 4) on_closesocket함수를 호출한다.
 	this->on_closesocket(this->m_disconnect_reason);
+	// - drop the datagrams queued for sending (sendmmsg queue, EPOLLOUT)
+	if (this->m_psendable != nullptr)
+		this->m_psendable->process_reset_sendable();
 
 #if defined(_SYS_EPOLL_H)
 	// check) io_context must exist
@@ -195,6 +204,11 @@ bool net::io::socket::Nudp::process_close_socket(uint64_t _disconnect_reason) no
 
 	// 4) socket을 닫는다.
 	api::socket::closesocket(socket_handle);
+
+#if defined(_SYS_EPOLL_H)
+	// - release the executable of the socket (it holds the socket since prepare_receive : set_socket)
+	this->process_reset_executable_socket();
+#endif
 
 	// 5) socket의 I/O를 완료할 때까지 기다린다.io_context가 있을 경우만 처리한다...
 	while(this->statistics_get_now_async_io() != 0)
@@ -287,7 +301,7 @@ result_code net::io::socket::Nudp::_process_starting(context& _context)
 		START_PARAMETER parameter;
 
 		// 2) get parameters
-		if (_context.type() == eCONTEXT_VALUE_TYPE::BUFFER_)
+		if (_context.type() == context::value_type_t::buffer_)
 		{
 			parameter = _context.v.value_buffer.front<START_PARAMETER>();
 		}

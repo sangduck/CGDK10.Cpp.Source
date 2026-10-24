@@ -52,6 +52,14 @@
 #include "cgdk/buffers/_Imemory.h"
 #include "cgdk/buffers/_basic_buffer.h"
 
+#if defined(_CGDK) && !defined(_MSC_VER) && !defined(CGDK_BUFFER_HEADER_ONLY) && !defined(CGDK_BUFFER_BUILD_EXPLICIT_INSTANTIATION)
+namespace CGDK
+{
+	extern template class _buffer_view<char>;
+	extern template class _basic_buffer<char>;
+}
+#endif
+
 //-----------------------------------------------------------------------------
 // Pragma...
 //-----------------------------------------------------------------------------

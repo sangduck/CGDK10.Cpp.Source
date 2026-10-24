@@ -8,10 +8,6 @@ doss::depot::group_immigration::group_immigration()
 {
 }
 
-doss::depot::group_immigration::group_immigration(const std::string_view _name) : Nnameable(_name)
-{
-}
-
 doss::depot::group_immigration::~group_immigration()
 {
 }
@@ -26,7 +22,7 @@ void doss::depot::group_immigration::on_initialize(context& /*_msg*/)
 
 void doss::depot::group_immigration::on_destroying()
 {
-	m_pgroup_next.reset();
+	this->m_pgroup_next.reset();
 }
 
 void doss::depot::group_immigration::on_destroy()
@@ -39,29 +35,29 @@ void doss::depot::group_immigration::on_starting(context& /*_msg*/)
 
 void doss::depot::group_immigration::on_start(context& /*_msg*/)
 {
-	enable_member_enter();
+	this->enable_member_enter();
 }
 
 void doss::depot::group_immigration::on_stopping()
 {
-	disable_member_enter();
+	this->disable_member_enter();
 }
 
 void doss::depot::group_immigration::on_stop()
 {
 }
 
-result_code doss::depot::group_immigration::on_member_entering(member_t* /*_pmember*/, sMESSAGE& /*_msg*/)
+result_code doss::depot::group_immigration::on_member_entering(depot::socket* /*_pmember*/, sMESSAGE& /*_msg*/)
 {
 	return eRESULT::SUCCESS;
 }
 
-void doss::depot::group_immigration::on_member_entered(member_t* _pmember, sMESSAGE& /*_msg*/)
+void doss::depot::group_immigration::on_member_entered(depot::socket* _pmember, sMESSAGE& /*_msg*/)
 {
 	_pmember->register_messageable(this);
 }
 
-uintptr_t doss::depot::group_immigration::on_member_leaving(member_t* _pmember)
+uintptr_t doss::depot::group_immigration::on_member_leaving(depot::socket* _pmember, uintptr_t /*_param*/)
 {
 	// 1) ...
 	_pmember->unregister_messageable(this);
@@ -70,7 +66,7 @@ uintptr_t doss::depot::group_immigration::on_member_leaving(member_t* _pmember)
 	return 0;
 }
 
-void doss::depot::group_immigration::on_member_leaved(member_t* /*_pmember*/, uintptr_t /*_result*/)
+void doss::depot::group_immigration::on_member_leaved(socket* /*_pmember*/, uintptr_t /*_result*/)
 {
 }
 

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Socket system · CGDK10 기술 문서</title>
+<meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - 소스 기준 기술 설명·빌드·릴리즈 노트">
+<link rel="icon" href="assets/CGCII_logo.PNG">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
+  <div class="ver">Game Server Engine</div>
+  <ul>
+    <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
+    <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
+    <li class="sub"><a href="pool.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Pool system</a></li>
+    <li class="sub"><a href="object.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l6 3v7l-6 3-6-3v-7z"/><path d="M2 4.5l6 3 6-3M8 7.5v7"/></svg>Object system</a></li>
+    <li class="sub"><a href="log.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h6l3 3v10H4z"/><path d="M6.5 8h4M6.5 10.5h4M6.5 5.5h2"/></svg>Log system</a></li>
+    <li class="sub"><a href="socket.html" class="cur"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1.5v3.5M10 1.5v3.5"/><path d="M3.5 5h9v3.5a4.5 4.5 0 0 1-9 0z"/><path d="M8 13v1.5"/></svg>Socket system</a></li>
+    <li class="sub"><a href="socket.io_uring.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 1.5L3.5 9h4.5l-1 5.5L12.5 7H8z"/></svg>io_uring</a></li>
+    <li class="sub"><a href="socket.uds.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.6-1.6a2.8 2.8 0 0 1 4 4L11 8.5"/><path d="M9 11.5l-1.6 1.6a2.8 2.8 0 0 1-4-4L5 7.5"/></svg>UDS (같은 host 접속)</a></li>
+    <li class="sub"><a href="socket.send.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 1.5L7 9"/><path d="M14.5 1.5l-4.5 13-2.2-5.3L2.5 6z"/></svg>send 최적화</a></li>
+    <li class="sub"><a href="socket.recv.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9.5v4h12v-4"/><path d="M8 2v8M5 7.5l3 3 3-3"/></svg>Receive 최적화</a></li>
+    <li class="sub"><a href="p2p.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="8" cy="12" r="2"/><path d="M5.6 5.2l1.6 5.2M10.4 5.2l-1.6 5.2M6 4h4"/></svg>P2P system</a></li>
+    <li class="sub"><a href="update.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5V5.2h-2.7"/></svg>Update system</a></li>
+    <li class="sub"><a href="server.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="4.5" rx="1"/><rect x="2" y="9.5" width="12" height="4.5" rx="1"/><path d="M4.5 4.25h.01M4.5 11.75h.01"/></svg>Server system</a></li>
+    <li class="sub"><a href="group.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 2.8a2.3 2.3 0 0 1 0 4.4M13.5 14c0-1.8-1-3.1-2.5-3.6"/></svg>Group system</a></li>
+    <li class="sub"><a href="query.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Query system</a></li>
+    <li class="head"><a href="build.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-3.8 3.8L2.8 12.2a1.4 1.4 0 0 0 2 2l5.9-3.9a3 3 0 0 0 3.8-3.8l-2 2-2-2z"/></svg>빌드 · 플랫폼</a></li>
+    <li class="head"><a href="tests.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5.5 8.2l2 2 3.2-4"/></svg>단위 테스트 · CI</a></li>
+    <li class="head"><a href="benchmarks.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V9M8 13.5V4M13 13.5V7"/><path d="M1.5 13.5h13"/></svg>벤치마크</a></li>
+    <li class="sub"><a href="benchmarks.push.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4 3 3 6-6"/><path d="M10.5 5.5h4v4"/></svg>큰 묶음 push 처리량</a></li>
+    <li class="sub"><a href="benchmarks.cork.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h8M2 11.5h5"/><path d="M12 9.5l2 2-2 2"/></svg>send cork · 서버 push</a></li>
+    <li class="head"><a href="samples.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4"/></svg>예제 · 튜토리얼</a></li>
+    <li class="head"><a href="releases.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h5.5l6.5 6.5-5.5 5.5L2 8z"/><circle cx="5.2" cy="5.2" r=".9"/></svg>릴리즈 노트</a></li>
+    <li class="head"><a href="status.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3M8 11.5h.01"/></svg>미구현 · 알려진 문제</a></li>
+  </ul>
+</aside>
+<main>
+<h1 id="socket">Socket system <small>net.socket.h, net.socket/socket/, build/src/net.socket/</small></h1>
+<h3>계층 구성</h3>
+<p>소켓은 인터페이스(<code>net::io::I*</code>: <code>Isocket</code>, <code>Iconnectable</code>, <code>Iconnect_notify</code>, <code>Iconnect_requestable</code>, <code>Isendable</code>, <code>Isend_request</code>, <code>Isender(_datagram)</code>, <code>Ireceivable_stream/datagram</code>, <code>Ipacketable</code>, <code>Imessageable</code>, <code>Irestorable</code>)와 N* 컴포넌트의 조합이다. 기본 조합은 <code>net.definitions.socket.h</code> 의 <code>…::tcp::Ndefault</code>.</p>
+<table>
+<tr><th>계층</th><th>기본</th><th>대안</th></tr>
+<tr><td>socket</td><td><code>socket::Ntcp</code></td><td><code>Nudp</code>, <code>Ndummy</code></td></tr>
+<tr><td>connect_requestable</td><td><code>connect_requestable::Ntcp</code></td><td><code>Ntcp_reconnect</code></td></tr>
+<tr><td>connect_notify</td><td><code>connect_notify::Nbase</code></td><td>—</td></tr>
+<tr><td>connectable</td><td><code>connectable::Ntcp</code></td><td><code>Ndummy</code></td></tr>
+<tr><td>sendable</td><td><code>sendable::Ntcp_async_gather</code></td><td><code>Ntcp_sync</code>, <code>Ntcp_sync_buffered</code>, <code>Ntcp_async</code>, <code>Ntcp_async_gather_buffered</code>, Windows <code>*_raw</code>·<code>*_rio</code>, UDP <code>Nudp</code>(sendmmsg)</td></tr>
+<tr><td>send_request</td><td><code>send_request::Nbase</code></td><td><code>Nproxy</code>, <code>Nudp_resend</code></td></tr>
+<tr><td>sender</td><td><code>sender::Nstream_header&lt;uint32_t&gt;</code></td><td><code>Nstream</code>, <code>Ndatagram</code>, <code>group_set</code>, <code>group_map</code></td></tr>
+<tr><td>receivable</td><td><code>receivable::Nstream</code></td><td><code>Nstream_queue</code>, <code>Nstream_rio</code>, <code>Ndatagram</code>, <code>Nstream_crypt</code></td></tr>
+<tr><td>packetable</td><td><code>packetable::Nstream&lt;uint32_t&gt;</code></td><td><code>Nstream_json</code>, <code>Ndatagram</code>, <code>Ndatagram_response</code></td></tr>
+<tr><td>messageable</td><td><code>messageable::Nbase</code></td><td><code>Nqueue</code>, <code>Nproxy&lt;&gt;</code></td></tr>
+</table>
+<p>완성형 소켓(<code>net::socket</code>, <code>&lt;RECEIVE_HEADER_T=uint32_t, SEND_HEADER_T=RECEIVE_HEADER_T&gt;</code>): <code>Itcp</code>(connect_notify 없는 전체 스택), <code>tcp</code>(서버 측 기본, <code>on_message</code> 기본 BYPASS), <code>tcp_client</code>, <code>tcp_client_reconnect</code>(<code>on_request_reconnect(Iconnective*)</code>), <code>tcp_no_gather</code>, <code>tcp_buffered</code>, <code>tcp_queue</code>, <code>tcp_lambda</code>, <code>tcp_restorable</code>, <code>udp</code>(<code>Nudp</code> + <code>binder::Nudp</code> + datagram 계층), <code>udp_resend</code>.</p>
+<pre><code>class my_socket : public net::socket::tcp&lt;&gt;
+{
+    result_code on_message(sMESSAGE_NETWORK&amp; _msg) override;
+    void on_connect() override;
+    void on_disconnect(uint64_t _reason) override;
+    void on_fail_connect(uint64_t _reason) override;             // 클라이언트
+    result_code on_request_connect(const net::sockaddr&amp;) ;      // 선택
+};
+// UDP: on_receive(buffer_view, sockaddr), on_fail_receive, on_receive_exhausted</code></pre>
+<p>종료 이유 <code>DISCONNECT_REASON_*</code>: 상위 바이트 플래그(FAIL, ACTIVE, ABORTIVE …) + 하위 코드(OVERFLOW_MAX_MESSAGES, MESSAGE_LENGTH_TOO_LONG, KEEP_ALIVE_TIME_OUT, SUSTAIN_TIMEOUT …). 부가 <code>add_on::Nkeep_alive</code>, <code>Nsocket_sustain</code>. 관리자 <code>connectable_manager::list&lt;T&gt;</code>, <code>list_keep_alive_active / passive</code>.</p>
+
+<h3>acceptor · connector · connect_requestable</h3>
+<ul>
+  <li><code>net::acceptor&lt;TSOCKET&gt;</code> = <code>connective::acceptor::Ntcp</code> + <code>Nmessage_transmitter</code> + <code>connectable_manager::list&lt;TSOCKET&gt;</code>. 소켓 할당 <code>process_alloc_connectable()</code>. SSL 특수화 <code>net.acceptor.secure.h</code>(<code>Ntcp_ssl</code>), HTTP <code>net.acceptor.http.h</code>. <code>start()</code> / <code>start(START_PARAMETER)</code> / <code>start(context)</code>. 훅 <code>on_request_accept</code>, <code>on_accept(Iconnectable*)</code>, <code>on_fail_accept</code>, <code>on_accept_aborted / recovered</code>, <code>on_prepare_socket</code>, <code>on_closesocket</code>, <code>on_starting / on_start / on_stop</code>. accept 되는 소켓의 io_context 는 <code>process_get_connectable_io_context()</code> 로 지정. <code>executable_accept</code> 는 acceptor 를 <code>object_ptr</code> 로 보유(r11388).</li>
+  <li><code>net::connector&lt;TSOCKET&gt;</code> = <code>connective::connector::Ntcp</code> + list. TSOCKET 이 connect-requestable 이 아니면 <code>CONNECTABLE_SOCKET_TCP&lt;T&gt;</code> 로 감싸 <code>Ntcp_reconnect</code> 를 덧붙인다. 훅 <code>on_request_connect(Iconnectable*, context&amp;)</code>, <code>on_disconnect(Iconnectable*, reason)</code>. context 키 <code>"connection_list"</code>, <code>"socket_option"</code>, <code>"enable_progress_log"</code>. UDS 지원(r11406).</li>
+  <li><code>connect_requestable::Ntcp / Ntcp_reconnect</code>: Linux 는 any:0 명시 bind 를 생략(TIME_WAIT 시 0.8 ms/회, 포트 고갈 회피, r11387). bind(any:0) 의 EADDRINUSE 가 묻히던 문제는 r11413.</li>
+  <li>비상 acceptor <code>net::emergency::acceptor&lt;T&gt;</code> / <code>manager</code>(<code>net.emergency.manager.h</code>): system_executor 와 분리된 자체 executor, 접속당 전용 thread(종료 시 제거). <code>manager::install&lt;TSOCKET&gt;(START_PARAMETER, SETTING)</code> 가 shutdown(Linux SIGTERM/SIGINT, Windows SIGINT), emergency(SIGUSR1 / SIGBREAK: 비상 acceptor 기동), terminate(SIGUSR2 / SIGTERM: 덤프, 접속 강제 종료, <code>_Exit</code>) 를 건다. <code>trigger()</code> 로 코드에서 발생. <code>system_executor::register_destroy_handler</code> 로 정상 종료 시에만 내려간다.</li>
+</ul>
+<h4>파라미터 구조체 (<code>net.definitions.parameters.h</code>)</h4>
+<table>
+<tr><th>구조체</th><th>필드</th></tr>
+<tr><td><code>sSOCKET_ACCEPT_PARAMETER</code></td><td><code>local_endpoint</code>, <code>accept_endpoint</code>, <code>prepare_on_start</code>, <code>must_prepare</code>, <code>flag_option</code>, <code>reuse_address</code>(true), <code>reallocate_port_at_duplicate_port_error</code>, <code>enable_progress_log</code>, <code>cryption_type</code>, <code>enable_uds</code>, <code>uds_only</code>, <code>tcp_fastopen</code>(큐 길이, 기본 <code>DEFAULT_TCP_FASTOPEN_QUEUE_LENGTH</code> 256), <code>socket_option</code>, <code>flag_socket_option</code>, <code>tcp_defer_accept</code>(초, Linux), <code>enable_cpu_affinity</code>(SO_INCOMING_CPU)</td></tr>
+<tr><td><code>sSOCKET_CONNECT_REQUEST_PARAMETER</code></td><td><code>remote_endpoint</code>, <code>bind_endpoint</code>, <code>reconnection_interval</code>(5 s), <code>reconnection_enable</code>, <code>flag_wait_complete_connecting / disconnecting</code>, <code>socket_option</code>, <code>flag_socket_option</code>, <code>enable_progress_log</code></td></tr>
+<tr><td><code>sSOCKET_OPTION_TCP</code></td><td><code>tcp_nodelay</code>(기본 true), <code>tcp_quickack</code>(Linux: recv 마다 재설정 / Windows: <code>SIO_TCP_SET_ACK_FREQUENCY</code>=1 영구), <code>tcp_fastopen</code>(Linux <code>TCP_FASTOPEN_CONNECT</code>, Windows ConnectEx 전 <code>TCP_FASTOPEN</code>), <code>busy_poll</code>(µs, Linux), <code>tcp_notsent_lowat</code>(bytes, Linux). Windows 는 busy_poll/notsent_lowat 경고 후 무시. <code>connectable::Ntcp::process_complete_connect</code> 에서 적용, UDS 는 건너뜀. <code>api::socket::set_tcp_quickack / set_busy_poll / set_tcp_notsent_lowat / set_tcp_fastopen(_connect) / get_sysctl_tcp_fastopen</code></td></tr>
+</table>
+<p>context 키 — acceptor: <code>local_endpoint, accept_endpoint, prepare_on_start, must_prepare, reuse_address, reallocate_port, cryption, enable_uds, uds_only, tcp_fastopen, tcp_defer_accept, cpu_affinity, socket_option</code>. connect: <code>remote_endpoint, bind_endpoint, address, port, service, flag(ai_passive, v4mapped …), reconnection, reconnection_interval, wait_complete_connecting, wait_complete_disconnecting, progress_log, socket_option</code>. socket_option 안: <code>nodelay, quickack, fastopen, busy_poll, notsent_lowat</code>. 크기는 <code>k/kb/m/mb</code>, 값은 <code>true/false/enable/disable/default</code>.</p>
+
+<h3>송신</h3>
+<p>적용된 최적화 기법 전체는 <a href="socket.send.html">send 최적화</a> 문서.</p>
+<ul>
+  <li><code>Isender</code>: <code>send(shared_buffer[&amp;&amp;], option)</code>, 컨테이너(vector, list, deque, array, circular_list, static_vector) 일괄 send, <code>send(sMESSAGE_BUNDLE)</code>, <code>operator&lt;&lt;</code>, datagram <code>send_to(buf, sockaddr)</code>. 모두 <code>process_send(buffer, count_message, option)</code> 로 간다.</li>
+  <li><code>Ntcp_async_gather</code>(기본): 큐의 버퍼를 하나의 <code>sendmsg</code> / WSASend 로 묶는다. 상수 <code>BYTES_SEND_ASYNC_THRESHOLD</code> 4 KB, <code>COUNT_SEND_GATHER_START_DEPTH</code> 16, gather 버퍼 1~64 KB.</li>
+  <li>큐 한도(<code>Itcp_gather</code>): <code>maximum_depth_of_send_buffer()</code> 4096(2의 거듭제곱), <code>maximum_depth_of_send_buffer_bytes()</code> 8 MB(accept 된 소켓은 4 MB). 보내는 thread 가 가져간 묶음(EPOLLOUT 대기 잔량 포함)은 한도에 세지 않는다(r11361, IOCP 와 동일). 초과 시 <code>process_on_send_overflow</code> → <code>OVERFLOW_MAX_MESSAGES / OVERFLOW_MAX_BYTES</code>.</li>
+  <li>Linux <code>MSG_ZEROCOPY</code>(io_uring 백엔드만): <code>enable_zerocopy()</code>, <code>zerocopy_threshold()</code>(16 KB).</li>
+  <li><code>send_defer</code>(<code>system/object/send_defer.h</code>): 그룹 락 안 또는 <code>send_defer::scope</code> 안의 send 는 큐잉되어 가장 바깥 락 해제 시 순서대로 flush. <code>send_defer::flush()</code>, <code>enable(false)</code>, <code>Isend_deferrable</code>. <code>Ntcp_async_gather(_buffered)</code> 와 <code>Nudp</code> 만 구현. 락 안에서 응답을 기다리는 동기 호출은 <code>scoped_thread_block</code> 또는 <code>flush()</code> 필요. epoll 의 <code>net::io::send_cork</code> 는 한 thread 의 연속 send 를 1회 <code>sendmsg</code> 로 합친다(옛 단일 슬롯 cork API 는 r11362 삭제).</li>
+</ul>
+<h3>수신 · 프레이밍</h3>
+<p>적용된 최적화 기법 전체는 <a href="socket.recv.html">Receive 최적화</a> 문서.</p>
+<ul>
+  <li><code>packetable::Nstream&lt;HEAD=uint32_t&gt;</code>: 오프셋 0 의 크기 필드(<b>헤더 포함 길이</b>)로 메시지를 자르고 <code>process_pre_message → process_message → on_message</code>. 헤더보다 짧으면 <code>INVALID_MESSAGE_TOO_SHORT_LENGTH</code>. 남은 부분 메시지는 다음 read 로 이월. 크기 접근자 <code>message_headerable</code>(int32 at 0), <code>message_headable_primitive&lt;T,N&gt;</code>, <code>definition_message_header&lt;T&gt;</code>(<code>net.definitions.socket.protocol.h</code>). 메시지 타입 필드는 이 계층에 없다.</li>
+  <li>다른 프로토콜: 헤더 템플릿 타입을 바꾸거나 <code>Ipacketable::process_packet</code> 을 교체(<code>Nstream_json</code>, websocket 의 <code>process_packet_websocket</code>, crypt receivable). <code>messageable::Nqueue</code> 는 즉시 디스패치 대신 큐잉.</li>
+  <li>한도(<code>net.definitions.socket.h</code>): <code>MAX_TCP_MESSAGE_SIZE</code> 512 MB, <code>MIN_TCP_MESSAGE_SIZE</code> 1 KB, 기본 메시지 버퍼 1 KB(최대 <code>MEMORYPOOL_MAX_SIZE_OF_MEMORY_BLOCK</code>), 수신 큐 256 MB, 수신 버퍼 4 KB~8 MB.</li>
+  <li>버퍼 성장(<code>receivable::Nstream</code>): <code>MAX_RECEIVE_PER_EVENT</code> 8, <code>MAX_BYTES_RECEIVE_WINDOW_GROWN</code> 64 KB, 작은 수신이 연속 64회면 축소(<code>m_count_receive_small</code> hysteresis, r11345 회귀 수정). 소켓별 <code>minimum/maximum_message_buffer_size()</code>, 전역 <code>default_message_buffer_min_size/max_size</code>, <code>set_default_packet_buffer_size</code>. Linux 소켓 버퍼는 기본 커널 autotuning, <code>net::io::socket::Ntcp::enable_explicit_socket_buffer_size</code> 로 명시 설정.</li>
+</ul>
+<h3>플랫폼 백엔드</h3>
+<ul>
+  <li>Windows: <code>*.iocp.cpp</code>, RIO <code>*.rio.cpp</code>(<code>Nstream_rio</code>, <code>*_rio</code> sendable). loopback fast path <code>api::socket::set_loopback_fast_path</code>(<code>SIO_LOOPBACK_FAST_PATH</code>) 를 acceptor/connector/connect_requestable 에서 호출. Windows TFO 클라이언트는 SYN 에 데이터를 싣는 API 미구현.</li>
+  <li>Linux: <code>*.epoll.cpp</code>. net.socket 에 io_uring 파일은 없고 Executor 의 io_context 백엔드가 담당. 구조·설계 경위·epoll 대비 벤치는 <a href="socket.io_uring.html">io_uring 백엔드 · Linux 벤치</a>. SOCK_NONBLOCK 생성, accept4, UDP recvmmsg/sendmmsg(r11393~). epoll 핸들은 native handle 과 따로 저장되므로 socket 교체 시 detach / closesocket / address_family / <code>set_epoll_handle</code> 을 모두 바꿔야 한다. connect 완료 처리 중 <code>m_epoll_event_processing_now</code> 로 close 와의 경합을 막는다(r11387).</li>
+  <li>UDS loopback(Linux): <code>enable_uds</code> acceptor 는 TCP 와 함께 추상 주소 <code>"\0cgdk.tcp.&lt;listen port&gt;"</code>(<code>api::socket::make_uds_address</code>) 로도 listen(listen 주소가 any/loopback 일 때만, 실패 시 경고 후 TCP 만). <code>uds_only</code> 는 TCP 를 bind 만 하고 listen 하지 않음. 클라이언트는 <code>connect_requestable::Ntcp::enable_uds_loopback(true)</code> 를 켠 경우에만(기본 off = TCP) loopback(127.x, ::1) 대상에 UDS 먼저, 없으면 TCP. bind_endpoint 지정 시 생략. <code>sockaddr::is_unix()</code>, <code>is_loopback()</code> 은 UDS 도 true, <code>to_string()</code> = <code>"unix"</code>. 사용법·동작·성능은 <a href="socket.uds.html">UDS (같은 host 접속)</a> 문서.</li>
+</ul>
+<h3>ssl · crypt · http · websocket · kafka · mail</h3>
+<ul>
+  <li><code>net::socket::tcp_ssl&lt;&gt;</code>(<code>Nsocket_ssl</code>, <code>ssl_start_handshake()</code>, <code>start_ssl_handshake_timer()</code> 10 s), <code>tcp_crypt&lt;&gt;</code>(CGDK 자체 cryptor, 훅 <code>on_connecting</code>, <code>process_certify_client_info</code>, <code>process_create_cryptor_for_server</code>). <code>connect_requestable::Ntcp_ssl / Ntcp_reconnect_ssl</code>, <code>connective::acceptor::Ntcp_ssl</code>, <code>sendable::Ntcp_crypt*</code>.</li>
+  <li><code>net::socket::http_server</code>(<code>Nhttp_server</code>, SSL 가능): <code>on_message(sMESSAGE_HTTP_REQUEST&amp;)</code>, <code>on_message(sMESSAGE_HTTP_WEBSOCKET&amp;)</code>, <code>on_websocket_upgrade(request)</code> false → 403, <code>send_websocket_ping()</code>, body 16 MB. <code>http_client</code>: <code>on_message(sMESSAGE_HTTP_RESPONSE&amp;)</code>, body 64 MB, connect/response timeout. <code>net::http_request / Ihttp_request</code>(<code>set_request</code>, <code>request()</code>). 메시지 <code>MSG_HTTP*.h</code>, <code>WEBSOCKET_MESSAGE.h</code>. acceptor/connector 특수화 <code>net.acceptor.http.h</code>, <code>net.connector.http.h</code>.</li>
+  <li>kafka(librdkafka): <code>net::kafka::producer</code>(<code>produce()</code>, <code>produce_to(topic[, partition])</code>, <code>on_delivery</code>), <code>consumer</code>(<code>subscribe / unsubscribe</code>, <code>on_message(sMESSAGE_KAFKA&amp;)</code>, <code>on_error</code>). mail: <code>net::email::smtp</code> + <code>smtp::socket</code>(SSL connect_requestable).</li>
+</ul>
+<h3>테스트 · 튜토리얼</h3>
+<p><code>unit_test.net_socket.http</code> 96개(http_parser 25, http_fuzz 4, http_request 8, http_client 9, socket_sustain 5, connect_requestable 7, socket_option 12, uds 24, linux_io 11, tcp_packet 5, ssl_loopback 1, bench 2), <code>unit_test.net_socket.kafka</code> 6개. 튜토리얼 <code>network.1.socket</code>(tcp_simple, send_receive, configure, udp, http, websocket, ex01~ex15).</p>
+
+
+<footer>CGDK10 · 소스 기준 정리 (r11415, 2026-10-22) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+</main>
+</div>
+</body>
+</html>

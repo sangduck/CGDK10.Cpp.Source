@@ -1,23 +1,67 @@
-ï»¿#include "pch.h"
+#include "pch.h"
+#include <cstring>
+#include <charconv>
 
 #if defined(_WIN32)
-#include <DbgHelp.h>
-#include <shellapi.h>
-#include <shlobj.h>
+	#include <DbgHelp.h>
+	#include <shellapi.h>
+	#include <shlobj.h>
+	#pragma comment(lib, "Dbghelp.lib")
+#elif defined(__linux__)
+	#include <execinfo.h>
+	#include <signal.h>
+	#include <stdlib.h>
+	#include <unistd.h>
+	#include <sys/wait.h>
+	#include <sys/resource.h>
+	#include <dlfcn.h>
+	#include <cxxabi.h>
+	#include <link.h>
+	#include <fstream>
+	#include <sstream>
+	#include <ucontext.h>
+	#include <sys/prctl.h>
 #endif
-
+	
 using namespace CGDK;
 
-#ifdef NDEBUG
-	#define	DEFAULT_ENABLE_SEH	true
+#if defined(__linux__)
+// runs gcore on this process
+//  - Yama 'ptrace_scope = 1' : gcore (a child of this process) cannot attach to this process (its parent)
+//    unless this process allows it => allowed only while gcore is running
+static int _run_gcore(const std::string& _command) noexcept
+{
+	// 1) allow to be traced
+	::prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
+
+	// 2) run gcore
+	int result = ::system(_command.c_str());
+
+	// 3) restore
+	::prctl(PR_SET_PTRACER, 0, 0, 0, 0);
+
+	// return)
+	return result;
+}
+#endif
+
+#if defined(_WIN32)
+	#ifdef NDEBUG
+		#define	DEFAULT_ENABLE_EXCEPTION_HANDLING	true
+	#else
+		#define	DEFAULT_ENABLE_EXCEPTION_HANDLING	false
+	#endif 
+#elif defined(__linux__)
+	#define	DEFAULT_ENABLE_EXCEPTION_HANDLING	true
 #else
-	#define	DEFAULT_ENABLE_SEH	false
-#endif 
+	#error "[CGDK10] Not supported Platform"
+#endif
+
 
 
 dump_manager::dump_manager(eDUMP_CONTEXT _type_dump, size_t _max_dump_count) noexcept :
 		object::Nnameable(),
-		m_is_enable_seh(DEFAULT_ENABLE_SEH),
+		m_is_exception_handling(DEFAULT_ENABLE_EXCEPTION_HANDLING),
 		m_count_dump_limit(_max_dump_count),
 		m_count_dump_now(0),
 		m_type_dump(_type_dump),
@@ -34,91 +78,440 @@ result_code dump_manager::destroy() noexcept
 	return result_code(eRESULT::SUCCESS);
 }
 
-bool dump_manager::create_dump(const std::string_view _str_dump_file, LPEXCEPTION_POINTERS _pexception)
+std::string _generate_dump_filename(std::string_view _str_dump_path, size_t _count_dump_now, std::string_view _prefix)
+{
+	// 1) ÇöÀçÀÇ ½Ã°£À» ¾ò´Â´Ù.
+	auto time_now = chrono::to_date_time(chrono::time::utc::now());
+
+	// 2) fileÀÌ¸§À» ¼³Á¤ÇÑ´Ù.
+#if defined(_WIN32)
+	return CGDK::stream_string(
+		_str_dump_path, "/", _prefix,
+		CGDK::stream_width(time_now.t_year, 4, '0'), "-",
+		CGDK::stream_width(time_now.t_month, 2, '0'), "-",
+		CGDK::stream_width(time_now.t_day, 2, '0'), "@",
+		CGDK::stream_width(time_now.t_hour, 2, '0'), "-",
+		CGDK::stream_width(time_now.t_minute, 2, '0'), "-",
+		CGDK::stream_width(time_now.t_second, 2, '0'), "@",
+		CGDK::stream_width(time_now.t_fraction, 7, '0'), "_",
+		static_cast<int>(_count_dump_now),
+		".dmp");
+#elif defined(__linux__)
+	return CGDK::stream_string(
+		_str_dump_path, "/", _prefix,
+		CGDK::stream_width(time_now.t_year, 4, '0'), "-",
+		CGDK::stream_width(time_now.t_month, 2, '0'), "-",
+		CGDK::stream_width(time_now.t_day, 2, '0'), "@",
+		CGDK::stream_width(time_now.t_hour, 2, '0'), "-",
+		CGDK::stream_width(time_now.t_minute, 2, '0'), "-",
+		CGDK::stream_width(time_now.t_second, 2, '0'), "@",
+		CGDK::stream_width(time_now.t_fraction, 7, '0'), "_",
+		static_cast<int>(_count_dump_now));
+#endif
+}
+
+std::string _generate_crush_dump_filename(std::string_view _str_dump_path, size_t _count_dump_now)
+{
+	return _generate_dump_filename(_str_dump_path, _count_dump_now, "crash_");
+}
+
+#if defined(_WIN32)
+uint32_t _to_minidump_type(eDUMP_CONTEXT _type_dump) noexcept
+{
+	switch(_type_dump)
+	{
+	case	eDUMP_CONTEXT::DETAIL:
+			return MiniDumpWithPrivateReadWriteMemory | MiniDumpWithDataSegs | MiniDumpWithHandleData | MiniDumpWithFullMemoryInfo | MiniDumpWithThreadInfo | MiniDumpWithUnloadedModules;
+
+	case	eDUMP_CONTEXT::FULL:
+			return MiniDumpWithFullMemory | MiniDumpWithFullMemoryInfo | MiniDumpWithHandleData | MiniDumpWithThreadInfo | MiniDumpWithUnloadedModules;
+
+	default:
+			return MiniDumpNormal;
+	}
+}
+#endif
+
+
+#if defined(_WIN32)
+
+// Windows¿ë ½ºÅÃ ¸Ş¸ğ¸® ´ıÇÁ
+std::string _dump_stack_memory_win(void* stack_pointer,  void* /*context_ptr*/, size_t bytes = 512)
+{
+	if (!stack_pointer)
+		return "";
+
+	std::ostringstream ss;
+	ss << "\n========== Stack Memory Dump ==========\n";
+	ss << "Stack pointer: 0x" << std::hex << (uintptr_t)stack_pointer << "\n";
+	ss << std::hex << std::uppercase << std::setfill('0');
+
+	HANDLE process = GetCurrentProcess();
+	ULONG64* stack = (ULONG64*)stack_pointer;
+	size_t qwords = bytes / 8;
+
+	for (size_t i = 0; i < qwords; i++)
+	{
+		uintptr_t addr = (uintptr_t)&stack[i];
+		ULONG64 value = 0;
+
+		// ¾ÈÀüÇÏ°Ô ¸Ş¸ğ¸® ÀĞ±â
+		if (IsBadReadPtr(&stack[i], sizeof(ULONG64)))
+			break;
+
+		value = stack[i];
+
+		ss << "0x" << std::setw(16) << addr << ": 0x" << std::setw(16) << value;
+
+		// ½Éº¼ Á¤º¸ Á¶È¸
+		DWORD64 dwDisplacement = 0;
+		char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
+		PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
+		pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+		pSymbol->MaxNameLen = MAX_SYM_NAME;
+
+		if (SymFromAddr(process, value, &dwDisplacement, pSymbol))
+		{
+			ss << "  <- " << pSymbol->Name;
+			if (dwDisplacement != 0)
+				ss << "+0x" << std::hex << dwDisplacement;
+		}
+
+		ss << "\n";
+
+		if ((i + 1) % 4 == 0)
+			ss << "\n";
+	}
+
+	return ss.str();
+}
+
+// Windows¿ë ½ºÅÃ ÇÁ·¹ÀÓ ºĞ¼®
+std::string _analyze_stack_frames_win(void* base_pointer, void* stack_pointer, HANDLE process)
+{
+	if (!base_pointer)
+		return "";
+
+	std::ostringstream ss;
+	ss << "\n========== Stack Frame Analysis ==========\n";
+	ss << std::hex << std::uppercase << std::setfill('0');
+
+	struct StackFrame
+	{
+		StackFrame* rbp;
+		void* rip;
+	};
+
+	StackFrame* frame = (StackFrame*)base_pointer;
+	int frame_num = 0;
+
+	while (frame && frame_num < 32)
+	{
+		// ¾ÈÀüÇÏ°Ô ¸Ş¸ğ¸® ÀĞ±â
+		if (IsBadReadPtr(frame, sizeof(StackFrame)))
+			break;
+
+		// ½ºÅÃ ¹üÀ§ °ËÁõ
+		if ((uintptr_t)frame < (uintptr_t)stack_pointer || 
+			(uintptr_t)frame > (uintptr_t)stack_pointer + 1024*1024)
+			break;
+
+		ss << "Frame #" << std::dec << frame_num << ":\n";
+		ss << "  RBP: 0x" << std::hex << std::setw(16) << (uintptr_t)frame << "\n";
+		ss << "  RIP: 0x" << std::setw(16) << (uintptr_t)frame->rip << "\n";
+
+		// ·ÎÄÃ º¯¼ö ¿µ¿ª ´ıÇÁ
+		ss << "  Local variables area (RBP-64 to RBP):\n";
+		ULONG64* locals = (ULONG64*)((char*)frame - 64);
+
+		if (!IsBadReadPtr(locals, 64))
+		{
+			for (int i = 0; i < 8; i++)
+			{
+				ULONG64 value = locals[i];
+				uintptr_t addr = (uintptr_t)&locals[i];
+
+				ss << "    [RBP" << std::dec << std::showpos << ((i-8)*8) << std::noshowpos << "] ";
+				ss << "0x" << std::hex << std::setw(16) << addr << ": 0x" << std::setw(16) << value;
+
+				// ½Éº¼ Á¤º¸ È®ÀÎ
+				DWORD64 dwDisplacement = 0;
+				char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
+				PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
+				pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+				pSymbol->MaxNameLen = MAX_SYM_NAME;
+
+				if (SymFromAddr(process, value, &dwDisplacement, pSymbol))
+				{
+					ss << "  <- " << pSymbol->Name;
+				}
+				else
+				{
+					// ASCII ¹®ÀÚ¿­·Î ÇØ¼® °¡´ÉÇÑÁö Ã¼Å©
+					char* str = (char*)&value;
+					bool is_printable = true;
+					for (int j = 0; j < 8; j++)
+					{
+						if (str[j] != 0 && (str[j] < 32 || str[j] > 126))
+						{
+							is_printable = false;
+							break;
+						}
+					}
+					if (is_printable && str[0] != 0)
+					{
+						ss << "  (\"";
+						for (int j = 0; j < 8 && str[j] != 0; j++)
+							ss << str[j];
+						ss << "\")";
+					}
+				}
+
+				ss << "\n";
+			}
+		}
+
+		ss << "\n";
+
+		// ´ÙÀ½ ÇÁ·¹ÀÓÀ¸·Î
+		frame = frame->rbp;
+		frame_num++;
+	}
+
+	return ss.str();
+}
+
+// Windows¿ë »ó¼¼ callstack ·Î±×
+void _log_callstack_win(std::string_view _message, LPEXCEPTION_POINTERS _pexception)
+{
+	// 1) log record »ı¼º
+	auto plog_record = make_object<LOG_RECORD>();
+
+	// 2) set log record
+	plog_record->type = log_type_t::fatal;
+	plog_record->level = log_level_t::higher();
+	plog_record->result = eRESULT::EXCEPTION;
+	plog_record->origin = log_origin_t{ 0 };
+	plog_record->time_occurred = chrono::time::utc::now();
+
+	// 3) log message
+	plog_record->set_message<char>(_message);
+
+	// 4) Initialize symbol handler
+	HANDLE process = GetCurrentProcess();
+	SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
+
+	if (!SymInitialize(process, NULL, TRUE))
+	{
+		plog_record->add_message<char>("Failed to initialize symbol handler");
+		_log(DEFAULT_LOGGER, plog_record);
+		return;
+	}
+
+	// 5) Context Á¤º¸°¡ ÀÖÀ¸¸é ½ºÅÃ ºĞ¼®
+	if (_pexception && _pexception->ContextRecord)
+	{
+		CONTEXT* context = _pexception->ContextRecord;
+
+#if defined(_M_X64)
+		void* stack_ptr = (void*)context->Rsp;
+		void* base_ptr = (void*)context->Rbp;
+#elif defined(_M_IX86)
+		void* stack_ptr = (void*)context->Esp;
+		void* base_ptr = (void*)context->Ebp;
+#elif defined(_M_ARM64)
+		void* stack_ptr = (void*)context->Sp;
+		void* base_ptr = nullptr;
+#else
+		void* stack_ptr = nullptr;
+		void* base_ptr = nullptr;
+#endif
+
+		// ½ºÅÃ ¸Ş¸ğ¸® ´ıÇÁ
+		if (stack_ptr)
+		{
+			std::string stack_dump = _dump_stack_memory_win(stack_ptr, context, 512);
+			if (!stack_dump.empty())
+				plog_record->add_message<char>(stack_dump);
+		}
+
+		// ½ºÅÃ ÇÁ·¹ÀÓ ºĞ¼®
+		if (base_ptr)
+		{
+			std::string frame_analysis = _analyze_stack_frames_win(base_ptr, stack_ptr, process);
+			if (!frame_analysis.empty())
+				plog_record->add_message<char>(frame_analysis);
+		}
+	}
+
+	// 6) Callstack Ä¸Ã³
+	const int MAX_FRAMES = 62; // StackWalk64ÀÇ Á¦ÇÑ
+	void* stack[MAX_FRAMES];
+	WORD frames = CaptureStackBackTrace(0, MAX_FRAMES, stack, NULL);
+
+	// 7) °¢ ÇÁ·¹ÀÓ »ó¼¼ Á¤º¸ Ãâ·Â
+	for (WORD i = 0; i < frames; i++)
+	{
+		std::stringstream frame_detail;
+
+		DWORD64 address = (DWORD64)stack[i];
+
+		frame_detail << "\n========== Frame #" << std::dec << i << " ==========\n";
+		frame_detail << "Address    : 0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << address << "\n";
+
+		// ½Éº¼ Á¤º¸
+		DWORD64 dwDisplacement = 0;
+		char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
+		PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
+		pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+		pSymbol->MaxNameLen = MAX_SYM_NAME;
+
+		if (SymFromAddr(process, address, &dwDisplacement, pSymbol))
+		{
+			frame_detail << "Symbol     : " << pSymbol->Name << "+0x" << std::hex << dwDisplacement << "\n";
+			frame_detail << "Module     : 0x" << std::setw(16) << pSymbol->ModBase << "\n";
+		}
+
+		// ¼Ò½º ÆÄÀÏ Á¤º¸
+		IMAGEHLP_LINE64 line;
+		line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+		DWORD dwLineDisplacement = 0;
+
+		if (SymGetLineFromAddr64(process, address, &dwLineDisplacement, &line))
+		{
+			frame_detail << "Source     :\n";
+			frame_detail << "  at " << line.FileName << ":" << std::dec << line.LineNumber << "\n";
+
+			// ¼Ò½º ÄÚµå ÀĞ±â ½Ãµµ (FILE API »ç¿ë)
+			FILE* file = nullptr;
+			if (fopen_s(&file, line.FileName, "r") == 0 && file != nullptr)
+			{
+				char source_line[1024];
+				int current_line = 1;
+				int target_line = line.LineNumber;
+				int context_lines = 2;
+
+				while (fgets(source_line, sizeof(source_line), file) != nullptr && current_line <= target_line + context_lines)
+				{
+					// °³Çà Á¦°Å
+					size_t len = strlen(source_line);
+					if (len > 0 && source_line[len - 1] == '\n')
+						source_line[len - 1] = '\0';
+
+					if (current_line >= target_line - context_lines)
+					{
+						if (current_line == target_line)
+							frame_detail << "  ==> " << current_line << ": " << source_line << "\n";
+						else
+							frame_detail << "      " << current_line << ": " << source_line << "\n";
+					}
+					current_line++;
+				}
+
+				fclose(file);
+			}
+		}
+
+		plog_record->add_message<char>(frame_detail.str());
+	}
+
+	// 8) Cleanup
+	SymCleanup(process);
+
+	// 9) trace log
+	_log(DEFAULT_LOGGER, plog_record);
+}
+
+bool dump_manager::create_dump(const std::string& _str_dump_file, LPEXCEPTION_POINTERS _pexception)
 {
 	// check) 
-	RETURN_IF(_str_dump_file.empty(), false);
+	if(_str_dump_file.empty())
+		return false;
 
 	// check) 
-	RETURN_IF(_pexception==nullptr, false);
+	if(_pexception == nullptr)
+		return false;
 	
-#if defined(_MSC_VER)
-	scoped_lock(m_lockable_map_dump)
 	{
-		//-----------------------------------------------------------------
-		// 1. ë¨¼ì € ì´ë¯¸ ë°œìƒí•œ ì ì´ ìˆëŠ” Exceptionì¸ì§€ í™•ì¸í•œë‹¤.
-		//-----------------------------------------------------------------
-		// 1) í•´ë‹¹í•˜ëŠ” ì£¼ì†Œë¥¼ ì°¾ëŠ”ë‹¤.
-		auto iter_find = m_map_dump.find(_pexception->ExceptionRecord->ExceptionAddress);
+		// lock)
+		std::lock_guard<std::mutex> lock(this->m_lockable_map_dump);
 
-		// check) ì´ë¯¸ ì¡´ì¬í•˜ëŠ” ê²ƒì´ë¼ë©´ ë°œìƒíšŸìˆ˜ë§Œ ì¦ê°€ì‹œí‚¤ê³  ëë‚¸ë‹¤.
-		if(iter_find!=m_map_dump.end())
+		//-----------------------------------------------------------------
+		// 1. ¸ÕÀú ÀÌ¹Ì ¹ß»ıÇÑ ÀûÀÌ ÀÖ´Â ExceptionÀÎÁö È®ÀÎÇÑ´Ù.
+		//-----------------------------------------------------------------
+		// 1) ÇØ´çÇÏ´Â ÁÖ¼Ò¸¦ Ã£´Â´Ù.
+		auto iter_find = this->m_map_dump.find(_pexception->ExceptionRecord->ExceptionAddress);
+
+		// check) ÀÌ¹Ì Á¸ÀçÇÏ´Â °ÍÀÌ¶ó¸é ¹ß»ıÈ½¼ö¸¸ Áõ°¡½ÃÅ°°í ³¡³½´Ù.
+		if(iter_find != this->m_map_dump.end())
 		{
-			// - ë°œìƒíšŸìˆ˜ë§Œ ì¶”ê°€í•œë‹¤.
+			// - ¹ß»ıÈ½¼ö¸¸ Ãß°¡ÇÑ´Ù.
 			++(iter_find->second.count_times);
 
-			// - Dumpë¥¼ ì¶”ê°€í•œë‹¤.
-			m_list_exception_event.push_back(_pexception->ExceptionRecord->ExceptionAddress);
+			// - Dump¸¦ Ãß°¡ÇÑ´Ù.
+			this->m_list_exception_event.push_back(_pexception->ExceptionRecord->ExceptionAddress);
 
-			// return) falseë¥¼ ë¦¬í„´í•œë‹¤.
+			// return) false¸¦ ¸®ÅÏÇÑ´Ù.
 			return false;
 		}
 
 
 		//-----------------------------------------------------------------
-		// 2. Exception ê¸°ë³¸ ì²˜ë¦¬
+		// 2. Exception ±âº» Ã³¸®
 		//-----------------------------------------------------------------
-		// 1) Exception Countë¥¼ ì¦ê°€ì‹œí‚¨ë‹¤.
-		++m_count_dump_now;
+		// 1) Exception Count¸¦ Áõ°¡½ÃÅ²´Ù.
+		++this->m_count_dump_now;
 
-		// check) ExceptionìµœëŒ€ìˆ˜ì— ë”°ë¼ ì²˜ë¦¬í•œë‹¤. (m_count_dump_limitê°€ 0ë³´ë‹¤ ì‘ìœ¼ë©´ í•œê³„ê°€ ì—†ë‹¤.)
-		RETURN_IF(m_count_dump_limit>=0 && m_count_dump_now>m_count_dump_limit, false);
-
+		// check) ExceptionÃÖ´ë¼ö¿¡ µû¶ó Ã³¸®ÇÑ´Ù. (m_count_dump_limit°¡ 0ÀÌ¸é ÇÑ°è°¡ ¾ø´Ù.)
+		if(this->m_count_dump_limit > 0 && this->m_count_dump_now > this->m_count_dump_limit)
+			return false;
 
 		//-----------------------------------------------------------------
-		// 3. Dumpì •ë³´ë¥¼ ìƒˆë¡œ ì¶”ê°€í•œë‹¤.
+		// 3. DumpÁ¤º¸¸¦ »õ·Î Ãß°¡ÇÑ´Ù.
 		//-----------------------------------------------------------------
-		// declare) ì—†ë‹¤ë©´ ìƒˆë¡œ ì¶”ê°€í•œë‹¤.
+		// declare) ¾ø´Ù¸é »õ·Î Ãß°¡ÇÑ´Ù.
 		sMESSAGE_DUMP tempMessage;
 
-		// 1) Dump Infoì™€ Messageë¥¼ ì„¤ì •í•œë‹¤.
+		// 1) Dump Info¿Í Message¸¦ ¼³Á¤ÇÑ´Ù.
 		tempMessage.dump_info.thread_id			 = GetCurrentThreadId();
-		tempMessage.dump_info.time_occure_first	 = chrono::time::local::now();
-		tempMessage.dump_info.time_occure_last	 = tempMessage.dump_info.time_occure_first;
+		tempMessage.dump_info.time_occurred_first	 = chrono::time::local::now();
+		tempMessage.dump_info.time_occurred_last	 = tempMessage.dump_info.time_occurred_first;
 		tempMessage.dump_info.count_times		 = 1;
 		tempMessage.dump_info.sExceptionRecords	 = *_pexception->ExceptionRecord;
 		tempMessage.dump_info.sContextRecord	 = *_pexception->ContextRecord;
 		tempMessage.dump_info.dump_filename		 = _str_dump_file;
 
-		// 2) Dumpì •ë³´ë¥¼ ì¶”ê°€í•œë‹¤.
-		m_map_dump.emplace(tempMessage.dump_info.sExceptionRecords.ExceptionAddress, tempMessage.dump_info);
+		// 2) DumpÁ¤º¸¸¦ Ãß°¡ÇÑ´Ù.
+		this->m_map_dump.emplace(tempMessage.dump_info.sExceptionRecords.ExceptionAddress, tempMessage.dump_info);
 
-		// 3) Dumpë¥¼ Notifyí•  Messageë¥¼ ì¶”ê°€í•œë‹¤.
-		m_list_exception_event.push_back(tempMessage.dump_info.sExceptionRecords.ExceptionAddress);
+		// 3) Dump¸¦ NotifyÇÒ Message¸¦ Ãß°¡ÇÑ´Ù.
+		this->m_list_exception_event.push_back(tempMessage.dump_info.sExceptionRecords.ExceptionAddress);
 	}
 
 
 	//-----------------------------------------------------------------
-	// 4. Fileì„ startí•œë‹¤.
+	// 4. FileÀ» startÇÑ´Ù.
 	//-----------------------------------------------------------------
 	// declare) 
 	FILE_HANDLE hFile;
 
-	// 1) Fileì„ ì—°ë‹¤.
+	// 1) FileÀ» ¿¬´Ù.
+	api::file::create_parent_directories(_str_dump_file);
 	hFile = CreateFileA(_str_dump_file.data(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
-	// check) Fileì„ ì—´ì§€ ëª»í–ˆë‚˜?
-	RETURN_IF(hFile==INVALID_CGHANDLE_VALUE, false);
+	// check) FileÀ» ¿­Áö ¸øÇß³ª?
+	if(hFile==INVALID_CGHANDLE_VALUE)
+		return false;
 
 
 	//-----------------------------------------------------------------
-	// 5. Dumpë¥¼ ì €ì¥í•œë‹¤.
+	// 5. Dump¸¦ ÀúÀåÇÑ´Ù.
 	//-----------------------------------------------------------------
-	// 1) Dump Inputê°’ì„ ì„¤ì •í•œë‹¤.
-	MINIDUMP_EXCEPTION_INFORMATION	temp_dump_information;
-	temp_dump_information.ThreadId			 = GetCurrentThreadId();
-	temp_dump_information.ExceptionPointers	 = _pexception;
-	temp_dump_information.ClientPointers	 = TRUE;
+	// 1) Dump Input°ªÀ» ¼³Á¤ÇÑ´Ù.
+	MINIDUMP_EXCEPTION_INFORMATION temp_dump_information;
+	temp_dump_information.ThreadId = GetCurrentThreadId();
+	temp_dump_information.ExceptionPointers = _pexception;
+	temp_dump_information.ClientPointers = TRUE;
 
 	// declare) 
 	uint32_t dumptype;
@@ -131,20 +524,20 @@ bool dump_manager::create_dump(const std::string_view _str_dump_file, LPEXCEPTIO
 			break;
 
 	case	eDUMP_CONTEXT::DETAIL:
-			dumptype = MiniDumpWithPrivateReadWriteMemory	// ì½ê±°ë‚˜ ì“¸ìˆ˜ ìˆëŠ” ë©”ëª¨ë¦¬ë“¤(Stack/Heap/TLS)
-					 | MiniDumpWithDataSegs					// ì „ì—­ë³€ìˆ˜
-					 | MiniDumpWithHandleData				// í•¸ë“¤ ì •ë³´(Socket, File, ë“±ë“±...)
-					 | MiniDumpWithFullMemoryInfo			// ê°€ìƒ ë©”ëª¨ë¦¬ ìƒì˜ ë ˆì´ì•„ì›ƒ ì •ë³´
-					 | MiniDumpWithThreadInfo				// ì¶”ê°€ì ì¸ Thread ì •ë³´ (Threadì‹œê°„ë“¤, ì‹œì‘ì£¼ì†Œ ë“±ë“±...)
+			dumptype = MiniDumpWithPrivateReadWriteMemory	// ÀĞ°Å³ª ¾µ ¼ö ÀÖ´Â ¸Ş¸ğ¸®µé(Stack/Heap/TLS)
+					 | MiniDumpWithDataSegs					// Àü¿ªº¯¼ö
+					 | MiniDumpWithHandleData				// ÇÚµé Á¤º¸(Socket, File, µîµî...)
+					 | MiniDumpWithFullMemoryInfo			// °¡»ó ¸Ş¸ğ¸® »óÀÇ ·¹ÀÌ¾Æ¿ô Á¤º¸
+					 | MiniDumpWithThreadInfo				// Ãß°¡ÀûÀÎ Thread Á¤º¸ (Thread½Ã°£µé, ½ÃÀÛÁÖ¼Ò µîµî...)
 					 | MiniDumpWithUnloadedModules			// 
 					;
 			break;
 
 	case	eDUMP_CONTEXT::FULL:
-			dumptype = MiniDumpWithFullMemory				// ëª¨ë“  ë©”ëª¨ë¦¬ì½ê±°ë‚˜ ì“¸ìˆ˜ ìˆëŠ” ë©”ëª¨ë¦¬ë“¤(Stack/Heap/TLS)
-					 | MiniDumpWithFullMemoryInfo			// ê°€ìƒ ë©”ëª¨ë¦¬ ìƒì˜ ë ˆì´ì•„ì›ƒ ì •ë³´
-					 | MiniDumpWithHandleData				// í•¸ë“¤ ì •ë³´(Socket, File, ë“±ë“±...)
-					 | MiniDumpWithThreadInfo				// ì¶”ê°€ì ì¸ Thread ì •ë³´ (Threadì‹œê°„ë“¤, ì‹œì‘ì£¼ì†Œ ë“±ë“±...)
+			dumptype = MiniDumpWithFullMemory				// ¸ğµç ¸Ş¸ğ¸®ÀĞ°Å³ª ¾µ ¼ö ÀÖ´Â ¸Ş¸ğ¸®µé(Stack/Heap/TLS)
+					 | MiniDumpWithFullMemoryInfo			// °¡»ó ¸Ş¸ğ¸® »óÀÇ ·¹ÀÌ¾Æ¿ô Á¤º¸
+					 | MiniDumpWithHandleData				// ÇÚµé Á¤º¸(Socket, File, µîµî...)
+					 | MiniDumpWithThreadInfo				// Ãß°¡ÀûÀÎ Thread Á¤º¸ (Thread½Ã°£µé, ½ÃÀÛÁÖ¼Ò µîµî...)
 					 | MiniDumpWithUnloadedModules			// 
 					;
 			break;
@@ -154,94 +547,1341 @@ bool dump_manager::create_dump(const std::string_view _str_dump_file, LPEXCEPTIO
 			break;
 	}
 
-	// 2) Dumpí•œë‹¤.
-	BOOL	result	 = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hFile , static_cast<MINIDUMP_TYPE>(dumptype), &temp_dump_information, NULL, NULL);
+	// 2) DumpÇÑ´Ù.
+	BOOL result = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hFile , static_cast<MINIDUMP_TYPE>(dumptype), &temp_dump_information, NULL, NULL);
 
-	// check) Mini DumpíŒŒì¼ ì €ì¥ì— ì‹¤íŒ¨í–ˆë‚˜?
-	EXECUTE_IF(result == FALSE, LOG(log_type_t::error) << "(err ) fail to writing dump on file["sv << _str_dump_file  <<"] ("sv << __FUNCTION__ << ")"sv);
+	// check) Mini DumpÆÄÀÏ ÀúÀå¿¡ ½ÇÆĞÇß³ª?
+	EXECUTE_IF(result == FALSE, LOG_FATAL << "(fatal) fail to writing dump on file[" << _str_dump_file << "]");
+
+	// trace) 
+	LOG_FATAL << "(fatal) CGDK.system.object: dump file created [" << _str_dump_file << "] ";
 
 
 	//-----------------------------------------------------------------
-	// 6. Fileì„ ë‹«ëŠ”ë‹¤.
+	// 6. FileÀ» ´İ´Â´Ù.
 	//-----------------------------------------------------------------
-	// 1) Fileì„ ë‹«ëŠ”ë‹¤.
+	// 1) FileÀ» ´İ´Â´Ù.
 	CloseHandle(hFile);
-#elif defined(__linux__)
-	scoped_lock(m_lockable_map_dump)
-	{
 
-	}
-
-#else
-#endif
 
 	// return) 
 	return true;
 }
 
+void dump_manager::translator_function(uint32_t, LPEXCEPTION_POINTERS _pexception)
+{
+	// 1) Dump¸¦ ¶á´Ù.
+	dump_manager::instance()->process_exception(_pexception);
+}
+
 void dump_manager::process_exception(LPEXCEPTION_POINTERS _pexception)
 {
 	// check)
-	RETURN_IF(_pexception == nullptr);
-	
+	if(_pexception == nullptr)
+		return;
+
+	// check) enable»óÅÂ°¡ ¾Æ´Ï¸é ¼³Á¤À» ÇÏÁö ¾Ê´Â´Ù.
+	if(this->m_is_exception_handling == false)
+		return;
 
 	//-----------------------------------------------------------------
-	// 1. Dump fileì„ ìƒì„±í•œë‹¤.
+	// 1. Dump fileÀ» »ı¼ºÇÑ´Ù.
 	//-----------------------------------------------------------------
-	// 1) í˜„ì¬ì˜ ì‹œê°„ì„ ì–»ëŠ”ë‹¤.
-	auto time_now = chrono::to_date_time(chrono::time::utc::now());
-
-	// 2) fileì´ë¦„ì„ ì„¤ì •í•œë‹¤.
-	char tempFileName[MAX_STRING_LENGTH] {0};
-	__sprintf(tempFileName, "%s/crash(%04d-%02d-%02d@%02d-%02d-%02d@%07d)[%d].dmp", 
-		m_str_dump_path.c_str(),
-		time_now.t_year,
-		time_now.t_month,
-		time_now.t_day,
-		time_now.t_hour,
-		time_now.t_minute,
-		time_now.t_second,
-		time_now.t_fraction,
-		static_cast<int>(m_count_dump_now));
-	
-	// 3) Dump Fileì„ ìƒì„±í•œë‹¤.
-	create_dump(tempFileName, _pexception);
-
+	// 1) Dump FileÀ» »ı¼ºÇÑ´Ù.
+	this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now), _pexception);
 
 	//-----------------------------------------------------------------
-	// 2. Exception Throw
+	// 2. »ó¼¼ Callstack ·Î±× ³²±â±â
 	//-----------------------------------------------------------------
-#if defined(_MSC_VER)
+	std::string exception_message = "Exception: ";
+	if (_pexception && _pexception->ExceptionRecord)
+	{
+		DWORD code = _pexception->ExceptionRecord->ExceptionCode;
+		switch (code)
+		{
+		case EXCEPTION_ACCESS_VIOLATION:         exception_message += "EXCEPTION_ACCESS_VIOLATION"; break;
+		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:    exception_message += "EXCEPTION_ARRAY_BOUNDS_EXCEEDED"; break;
+		case EXCEPTION_BREAKPOINT:               exception_message += "EXCEPTION_BREAKPOINT"; break;
+		case EXCEPTION_DATATYPE_MISALIGNMENT:    exception_message += "EXCEPTION_DATATYPE_MISALIGNMENT"; break;
+		case EXCEPTION_FLT_DENORMAL_OPERAND:     exception_message += "EXCEPTION_FLT_DENORMAL_OPERAND"; break;
+		case EXCEPTION_FLT_DIVIDE_BY_ZERO:       exception_message += "EXCEPTION_FLT_DIVIDE_BY_ZERO"; break;
+		case EXCEPTION_FLT_INEXACT_RESULT:       exception_message += "EXCEPTION_FLT_INEXACT_RESULT"; break;
+		case EXCEPTION_FLT_INVALID_OPERATION:    exception_message += "EXCEPTION_FLT_INVALID_OPERATION"; break;
+		case EXCEPTION_FLT_OVERFLOW:             exception_message += "EXCEPTION_FLT_OVERFLOW"; break;
+		case EXCEPTION_FLT_STACK_CHECK:          exception_message += "EXCEPTION_FLT_STACK_CHECK"; break;
+		case EXCEPTION_FLT_UNDERFLOW:            exception_message += "EXCEPTION_FLT_UNDERFLOW"; break;
+		case EXCEPTION_ILLEGAL_INSTRUCTION:      exception_message += "EXCEPTION_ILLEGAL_INSTRUCTION"; break;
+		case EXCEPTION_IN_PAGE_ERROR:            exception_message += "EXCEPTION_IN_PAGE_ERROR"; break;
+		case EXCEPTION_INT_DIVIDE_BY_ZERO:       exception_message += "EXCEPTION_INT_DIVIDE_BY_ZERO"; break;
+		case EXCEPTION_INT_OVERFLOW:             exception_message += "EXCEPTION_INT_OVERFLOW"; break;
+		case EXCEPTION_INVALID_DISPOSITION:      exception_message += "EXCEPTION_INVALID_DISPOSITION"; break;
+		case EXCEPTION_NONCONTINUABLE_EXCEPTION: exception_message += "EXCEPTION_NONCONTINUABLE_EXCEPTION"; break;
+		case EXCEPTION_PRIV_INSTRUCTION:         exception_message += "EXCEPTION_PRIV_INSTRUCTION"; break;
+		case EXCEPTION_SINGLE_STEP:              exception_message += "EXCEPTION_SINGLE_STEP"; break;
+		case EXCEPTION_STACK_OVERFLOW:           exception_message += "EXCEPTION_STACK_OVERFLOW"; break;
+		default:
+			exception_message += CGDK::stream_string("Code ", CGDK::stream_hex(code, 8, true, true));
+			break;
+		}
+
+		if (code == EXCEPTION_ACCESS_VIOLATION && _pexception->ExceptionRecord->NumberParameters >= 2)
+		{
+			ULONG_PTR access_type = _pexception->ExceptionRecord->ExceptionInformation[0];
+			ULONG_PTR address = _pexception->ExceptionRecord->ExceptionInformation[1];
+			exception_message += CGDK::stream_string(" (",
+				access_type == 0 ? "read " : access_type == 1 ? "write " : "",
+				"access at ",
+				CGDK::stream_hex(address, 16, true, true),
+				")");
+		}
+	}
+
+	_log_callstack_win(exception_message, _pexception);
+
+
+	//-----------------------------------------------------------------
+	// 3. Exception Throw
+	//-----------------------------------------------------------------
 	// declare) 
-	throwable::seh_exception rException;
+	throwable::system_exception rException;
 
-	// 1) Throwë¥¼ í•œë‹¤.
-	rException.m_exception_record = *_pexception->ExceptionRecord;
-	rException.m_context_record = *_pexception->ContextRecord;
+	// 1) throw °´Ã¼¸¦ ÀÛ¼ºÇÑ´Ù.
+#if defined(_WIN32)
+	if (_pexception && _pexception->ExceptionRecord && _pexception->ContextRecord)
+	{
+		rException.m_exception_record = *_pexception->ExceptionRecord;
+		rException.m_context_record = *_pexception->ContextRecord;
+	}
+#elif defined(__linux__)
 
-	// Throw) ë˜ì§„ë‹¤!!!
-	throw rException;
 #endif
+
+	// ¤µhrow) ´øÁø´Ù!!!
+	throw rException;
 }
 
 void dump_manager::process_invalid_parameter(const std::wstring_view /*_expression*/, const std::wstring_view /*_function*/, const std::wstring_view /*_file*/, unsigned int /*_line*/, uintptr_t /*_preserved*/)
 {
-	// Throw) ë˜ì§„ë‹¤!!!
+	// Throw) ´øÁø´Ù!!!
 	throw throwable::failure(eRESULT::INVALID_PARAMETER_HANDLE);
 }
 
+#elif defined(__linux__)
+
+// ·¹Áö½ºÅÍ Á¤º¸ Ãâ·Â
+std::string _dump_registers(ucontext_t* context)
+{
+	if (!context)
+		return "";
+
+	std::stringstream ss;
+	ss << "\n========== CPU Registers ==========\n";
+
+#if defined(__x86_64__)
+	// x86_64 ¾ÆÅ°ÅØÃ³
+	auto& regs = context->uc_mcontext.gregs;
+	ss << std::hex << std::uppercase;
+	ss << "RAX: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_RAX] << "  ";
+	ss << "RBX: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_RBX] << "\n";
+	ss << "RCX: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_RCX] << "  ";
+	ss << "RDX: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_RDX] << "\n";
+	ss << "RSI: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_RSI] << "  ";
+	ss << "RDI: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_RDI] << "\n";
+	ss << "RBP: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_RBP] << "  ";
+	ss << "RSP: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_RSP] << "\n";
+	ss << "R8 : 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_R8]  << "  ";
+	ss << "R9 : 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_R9]  << "\n";
+	ss << "R10: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_R10] << "  ";
+	ss << "R11: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_R11] << "\n";
+	ss << "R12: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_R12] << "  ";
+	ss << "R13: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_R13] << "\n";
+	ss << "R14: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_R14] << "  ";
+	ss << "R15: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_R15] << "\n";
+	ss << "RIP: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_RIP] << "  ";
+	ss << "EFLAGS: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)regs[REG_EFL] << "\n";
+
+	// Instruction pointer°¡ °¡¸®Å°´Â °÷ÀÇ ¸Ş¸ğ¸® ³»¿ë
+	ss << "\nInstruction bytes at RIP:\n  ";
+	unsigned char* rip = (unsigned char*)regs[REG_RIP];
+	for (int i = 0; i < 16; i++)
+	{
+		ss << std::setw(2) << std::setfill('0') << (int)rip[i] << " ";
+		if ((i + 1) % 8 == 0)
+			ss << "\n  ";
+	}
+	ss << "\n";
+
+#elif defined(__i386__)
+	// x86 32-bit ¾ÆÅ°ÅØÃ³
+	auto& regs = context->uc_mcontext.gregs;
+	ss << std::hex << std::uppercase;
+	ss << "EAX: 0x" << std::setw(8) << std::setfill('0') << (uint32_t)regs[REG_EAX] << "  ";
+	ss << "EBX: 0x" << std::setw(8) << std::setfill('0') << (uint32_t)regs[REG_EBX] << "\n";
+	ss << "ECX: 0x" << std::setw(8) << std::setfill('0') << (uint32_t)regs[REG_ECX] << "  ";
+	ss << "EDX: 0x" << std::setw(8) << std::setfill('0') << (uint32_t)regs[REG_EDX] << "\n";
+	ss << "ESI: 0x" << std::setw(8) << std::setfill('0') << (uint32_t)regs[REG_ESI] << "  ";
+	ss << "EDI: 0x" << std::setw(8) << std::setfill('0') << (uint32_t)regs[REG_EDI] << "\n";
+	ss << "EBP: 0x" << std::setw(8) << std::setfill('0') << (uint32_t)regs[REG_EBP] << "  ";
+	ss << "ESP: 0x" << std::setw(8) << std::setfill('0') << (uint32_t)regs[REG_ESP] << "\n";
+	ss << "EIP: 0x" << std::setw(8) << std::setfill('0') << (uint32_t)regs[REG_EIP] << "  ";
+	ss << "EFLAGS: 0x" << std::setw(8) << std::setfill('0') << (uint32_t)regs[REG_EFL] << "\n";
+#elif defined(__aarch64__)
+	// ARM64 ¾ÆÅ°ÅØÃ³
+	ss << std::hex << std::uppercase;
+	for (int i = 0; i < 31; i++)
+	{
+		ss << "X" << std::dec << i << ": 0x" << std::hex << std::setw(16) << std::setfill('0') 
+		   << (uint64_t)context->uc_mcontext.regs[i];
+		if (i % 2 == 1)
+			ss << "\n";
+		else
+			ss << "  ";
+	}
+	ss << "SP: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)context->uc_mcontext.sp << "  ";
+	ss << "PC: 0x" << std::setw(16) << std::setfill('0') << (uint64_t)context->uc_mcontext.pc << "\n";
+#else
+	ss << "Register dump not supported for this architecture\n";
+#endif
+
+	return ss.str();
+}
+
+// ½ºÅÃ ¸Ş¸ğ¸® ´ıÇÁ
+std::string _dump_stack_memory(void* stack_pointer, size_t bytes = 256)
+{
+	if (!stack_pointer)
+		return "";
+
+	std::stringstream ss;
+	ss << "\n========== Stack Memory Dump ==========\n";
+	ss << "Stack pointer: 0x" << std::hex << (uintptr_t)stack_pointer << "\n";
+	ss << std::hex << std::uppercase << std::setfill('0');
+
+	uint64_t* stack = (uint64_t*)stack_pointer;
+	size_t qwords = bytes / 8;
+
+	for (size_t i = 0; i < qwords; i++)
+	{
+		uintptr_t addr = (uintptr_t)&stack[i];
+		ss << "0x" << std::setw(16) << addr << ": 0x" << std::setw(16) << stack[i];
+
+		// Æ÷ÀÎÅÍÃ³·³ º¸ÀÌ´Â °ªÀÎÁö È®ÀÎ (dladdr·Î Ã¼Å©)
+		Dl_info info;
+		if (dladdr((void*)stack[i], &info) && info.dli_sname)
+		{
+			int status;
+			char* demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+			ss << "  <- " << ((demangled && status == 0) ? demangled : info.dli_sname);
+			if (demangled)
+				free(demangled);
+		}
+
+		ss << "\n";
+
+		if ((i + 1) % 4 == 0)
+			ss << "\n";
+	}
+
+	return ss.str();
+}
+
+// ½ºÅÃ ÇÁ·¹ÀÓ ºĞ¼® (RBP Ã¼ÀÎ ÃßÀû)
+std::string _analyze_stack_frames(void* base_pointer, void* stack_pointer)
+{
+	if (!base_pointer)
+		return "";
+
+	std::stringstream ss;
+	ss << "\n========== Stack Frame Analysis ==========\n";
+	ss << std::hex << std::uppercase << std::setfill('0');
+
+	struct StackFrame
+	{
+		StackFrame* rbp;
+		void* rip;
+	};
+
+	StackFrame* frame = (StackFrame*)base_pointer;
+	int frame_num = 0;
+
+	while (frame && frame_num < 32)
+	{
+		// ½ºÅÃ ¹üÀ§ °ËÁõ (°£´ÜÇÑ Ã¼Å©)
+		if ((uintptr_t)frame < (uintptr_t)stack_pointer || 
+			(uintptr_t)frame > (uintptr_t)stack_pointer + 1024*1024)
+			break;
+
+		ss << "Frame #" << std::dec << frame_num << ":\n";
+		ss << "  RBP: 0x" << std::hex << std::setw(16) << (uintptr_t)frame << "\n";
+		ss << "  RIP: 0x" << std::setw(16) << (uintptr_t)frame->rip << "\n";
+
+		// ·ÎÄÃ º¯¼ö ¿µ¿ª ´ıÇÁ (RBP ±âÁØ ¾Æ·¡ÂÊ)
+		ss << "  Local variables area (RBP-64 to RBP):\n";
+		uint64_t* locals = (uint64_t*)((char*)frame - 64);
+		for (int i = 0; i < 8; i++)
+		{
+			uintptr_t addr = (uintptr_t)&locals[i];
+			ss << "    [RBP" << std::dec << std::showpos << ((i-8)*8) << std::noshowpos << "] ";
+			ss << "0x" << std::hex << std::setw(16) << addr << ": 0x" << std::setw(16) << locals[i];
+
+			// ½Éº¼ Á¤º¸ È®ÀÎ
+			Dl_info info;
+			if (dladdr((void*)locals[i], &info) && info.dli_sname)
+			{
+				int status;
+				char* demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+				ss << "  <- " << ((demangled && status == 0) ? demangled : info.dli_sname);
+				if (demangled)
+					free(demangled);
+			}
+			else
+			{
+				// ASCII·Î ÇØ¼® °¡´ÉÇÑÁö Ã¼Å©
+				char* str = (char*)&locals[i];
+				bool is_printable = true;
+				for (int j = 0; j < 8; j++)
+				{
+					if (str[j] != 0 && (str[j] < 32 || str[j] > 126))
+					{
+						is_printable = false;
+						break;
+					}
+				}
+				if (is_printable && str[0] != 0)
+				{
+					ss << "  (\"";
+					for (int j = 0; j < 8 && str[j] != 0; j++)
+						ss << str[j];
+					ss << "\")";
+				}
+			}
+
+			ss << "\n";
+		}
+
+		ss << "\n";
+
+		// ´ÙÀ½ ÇÁ·¹ÀÓÀ¸·Î
+		frame = frame->rbp;
+		frame_num++;
+	}
+
+	return ss.str();
+}
+
+// ¼Ò½º ÆÄÀÏ¿¡¼­ Æ¯Á¤ ¶óÀÎ ÁÖº¯ ÄÚµå¸¦ ÀĞ´Â ÇÔ¼ö
+std::string _read_source_lines(const char* filename, int line_number, int context_lines = 3)
+{
+	std::ifstream file(filename);
+	if (!file.is_open())
+		return "";
+
+	std::stringstream result;
+	std::string line;
+	int current_line = 1;
+	int start_line = std::max(1, line_number - context_lines);
+	int end_line = line_number + context_lines;
+
+	while (std::getline(file, line) && current_line <= end_line)
+	{
+		if (current_line >= start_line)
+		{
+			if (current_line == line_number)
+				result << "  ==> " << current_line << ": " << line << "\n";
+			else
+				result << "      " << current_line << ": " << line << "\n";
+		}
+		current_line++;
+	}
+
+	return result.str();
+}
+
+// addr2lineÀ» »ç¿ëÇÏ¿© ÀÎ¶óÀÎ ÇÔ¼ö¸¦ Æ÷ÇÔÇÑ ¸ğµç Á¤º¸¸¦ ¾ò´Â ÇÔ¼ö
+struct SourceLocationInfo
+{
+	std::string function_name;
+	std::string file_path;
+	int line_number = 0;
+	bool is_inline = false;
+};
+
+struct SymbolResolveResult
+{
+	std::vector<SourceLocationInfo> locations;
+	std::string diagnostic;
+};
+
+std::string _shell_quote(const char* text)
+{
+	std::string result = "'";
+	for (const char* p = text; p != nullptr && *p != '\0'; ++p)
+	{
+		if (*p == '\'')
+			result += "'\\''";
+		else
+			result += *p;
+	}
+	result += "'";
+	return result;
+}
+
+SymbolResolveResult _get_detailed_source_location(uintptr_t addr, const char* executable_path)
+{
+	SymbolResolveResult result;
+
+	if (executable_path == nullptr || executable_path[0] == '\0')
+	{
+		result.diagnostic = "addr2line skipped: empty executable path";
+		return result;
+	}
+
+	char addr_str[64];
+	snprintf(addr_str, sizeof(addr_str), "0x%lx", (unsigned long)addr);
+
+	// -i: ÀÎ¶óÀÎ ÇÔ¼ö Æ÷ÇÔ, -f: ÇÔ¼ö¸í, -C: demangle, -p: pretty print, -a: ÁÖ¼Ò Ç¥½Ã
+	std::string command = "addr2line -e " + _shell_quote(executable_path) + " -i -f -C -a " + addr_str + " 2>&1";
+
+	FILE* pipe = popen(command.c_str(), "r");
+	if (!pipe)
+	{
+		result.diagnostic = "addr2line popen failed: " + command;
+		return result;
+	}
+
+	char line[512];
+	bool first_entry = true;
+	std::string raw_output;
+
+	while (fgets(line, sizeof(line), pipe) != nullptr)
+	{
+		// °³Çà Á¦°Å
+		size_t len = strlen(line);
+		if (len > 0 && line[len - 1] == '\n')
+			line[len - 1] = '\0';
+
+		if (!raw_output.empty())
+			raw_output += " | ";
+		raw_output += line;
+
+		// ÁÖ¼Ò ¶óÀÎ ½ºÅµ
+		if (line[0] == '0' && line[1] == 'x')
+			continue;
+
+		SourceLocationInfo info;
+		info.is_inline = !first_entry;
+
+		// ÇÔ¼ö¸í ¶óÀÎ
+		if (std::string_view(line) != "??")
+		{
+			info.function_name = line;
+
+			// ´ÙÀ½ ¶óÀÎ¿¡¼­ ÆÄÀÏ:¶óÀÎ Á¤º¸ ÀĞ±â
+			if (fgets(line, sizeof(line), pipe) != nullptr)
+			{
+				len = strlen(line);
+				if (len > 0 && line[len - 1] == '\n')
+					line[len - 1] = '\0';
+
+				if (!raw_output.empty())
+					raw_output += " | ";
+				raw_output += line;
+
+				// "file:line" ¶Ç´Â "file:?" Çü½Ä ÆÄ½Ì
+				if (std::string_view(line) != "??:0" && std::string_view(line) != "??:?")
+				{
+					const std::string_view str_line(line);
+					const auto pos_colon = str_line.rfind(':');
+					if (pos_colon != std::string_view::npos)
+					{
+						info.file_path = std::string(str_line.substr(0, pos_colon));
+						info.line_number = 0;
+						std::from_chars(str_line.data() + pos_colon + 1, str_line.data() + str_line.size(), info.line_number);
+
+						result.locations.push_back(info);
+					}
+				}
+			}
+		}
+
+		first_entry = false;
+	}
+
+	int exit_status = pclose(pipe);
+	if (result.locations.empty())
+	{
+		std::stringstream ss;
+		ss << "addr2line unresolved for " << executable_path << " " << addr_str;
+		if (exit_status != -1)
+		{
+			if (WIFEXITED(exit_status))
+				ss << " (exit=" << WEXITSTATUS(exit_status) << ")";
+			else if (WIFSIGNALED(exit_status))
+				ss << " (signal=" << WTERMSIG(exit_status) << ")";
+		}
+		if (!raw_output.empty())
+			ss << ": " << raw_output;
+		result.diagnostic = ss.str();
+	}
+
+	return result;
+}
+
+// ¸Ş¸ğ¸® ¸Ê Á¤º¸ Á¶È¸ (Ãß°¡ µğ¹ö±ë Á¤º¸)
+std::string _get_memory_map_info(void* addr)
+{
+	std::string line;
+	std::ifstream maps("/proc/self/maps");
+	if (!maps.is_open())
+		return line;
+
+	uintptr_t addr_value = (uintptr_t)addr;
+
+	while (std::getline(maps, line))
+	{
+		uintptr_t start = 0, end = 0;
+		const auto pos_dash = line.find('-');
+		if (pos_dash != std::string::npos
+		 && std::from_chars(line.data(), line.data() + pos_dash, start, 16).ec == std::errc{}
+		 && std::from_chars(line.data() + pos_dash + 1, line.data() + line.size(), end, 16).ec == std::errc{})
+		{
+			if (addr_value >= start && addr_value < end)
+				return line;
+		}
+	}
+
+	line.clear();
+	return line;
+}
+
+void _log_callstack(std::string_view _message, void** _array_callstack, int _count, ucontext_t* context = nullptr)
+{
+	// 1) log record¸¦ »ı¼ºÇÑ´Ù.
+	auto plog_record = make_object<LOG_RECORD>();
+
+	// 2) set log record
+	plog_record->type = log_type_t::fatal;
+	plog_record->level = log_level_t::higher();
+	plog_record->result = eRESULT::EXCEPTION;
+	plog_record->origin = log_origin_t{ 0 };
+	plog_record->time_occurred = chrono::time::utc::now();
+
+	// 3) log message
+	plog_record->set_message<char>(_message);
+
+	// 4) CPU context Á¤º¸°¡ ÀÖÀ¸¸é ½ºÅÃ ºĞ¼® Ãß°¡
+	if (context)
+	{
+		std::string registers = _dump_registers(context);
+		if (!registers.empty())
+			plog_record->add_message<char>(registers);
+
+		// ½ºÅÃ ¸Ş¸ğ¸® ´ıÇÁ
+#if defined(__x86_64__)
+		void* stack_ptr = (void*)context->uc_mcontext.gregs[REG_RSP];
+		void* base_ptr = (void*)context->uc_mcontext.gregs[REG_RBP];
+#elif defined(__i386__)
+		void* stack_ptr = (void*)context->uc_mcontext.gregs[REG_ESP];
+		void* base_ptr = (void*)context->uc_mcontext.gregs[REG_EBP];
+#elif defined(__aarch64__)
+		void* stack_ptr = (void*)context->uc_mcontext.sp;
+		void* base_ptr = nullptr; // ARM64´Â frame pointer »ç¿ëÀÌ optional
+#else
+		void* stack_ptr = nullptr;
+		void* base_ptr = nullptr;
+#endif
+
+		if (stack_ptr)
+		{
+			std::string stack_dump = _dump_stack_memory(stack_ptr, 512);
+			if (!stack_dump.empty())
+				plog_record->add_message<char>(stack_dump);
+		}
+
+		if (base_ptr)
+		{
+			std::string frame_analysis = _analyze_stack_frames(base_ptr, stack_ptr);
+			if (!frame_analysis.empty())
+				plog_record->add_message<char>(frame_analysis);
+		}
+	}
+
+	// 4) trace callstack
+	if (_count != 0)
+	{
+		// - get string 
+		auto array_string = backtrace_symbols(_array_callstack, _count);
+
+		// check) 
+		if (array_string != nullptr)
+		{
+			// ½ÇÇà ÆÄÀÏ °æ·Î ¾ò±â
+			char exe_path[1024];
+			ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+			if (len != -1)
+				exe_path[len] = '\0';
+			else
+				exe_path[0] = '\0';
+
+			// - description ex¸¦ Ãß°¡ÇÑ´Ù.
+			for (int i = 0; i < _count; ++i)
+			{
+				Dl_info info;
+				std::stringstream callstack_detail;
+
+				// dladdrÀ» »ç¿ëÇÏ¿© ´õ »ó¼¼ÇÑ Á¤º¸¸¦ ¾ò´Â´Ù
+				if (dladdr(_array_callstack[i], &info))
+				{
+					// ÇÔ¼ö¸í demangling
+					int status;
+					char* demangled = nullptr;
+					if (info.dli_sname != nullptr)
+					{
+						demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+					}
+
+					const char* function_name = (demangled && status == 0) ? demangled : (info.dli_sname ? info.dli_sname : "??");
+					const char* file_name = info.dli_fname ? info.dli_fname : "??";
+
+					// ±âº» Á¤º¸ Ãâ·Â
+					char header[2048];
+					snprintf(header, sizeof(header), "\n========== Frame #%d ==========", i);
+					callstack_detail << header << "\n";
+
+					snprintf(header, sizeof(header), "Address    : 0x%016lx", (unsigned long)_array_callstack[i]);
+					callstack_detail << header << "\n";
+
+					snprintf(header, sizeof(header), "Binary     : %s (base: 0x%016lx, offset: +0x%lx)",
+						file_name,
+						(unsigned long)info.dli_fbase,
+						(unsigned long)((char*)_array_callstack[i] - (char*)info.dli_fbase));
+					callstack_detail << header << "\n";
+
+					if (info.dli_sname)
+					{
+						snprintf(header, sizeof(header), "Symbol     : %s (at 0x%016lx, offset: +0x%lx)",
+							function_name,
+							(unsigned long)info.dli_saddr,
+							(unsigned long)((char*)_array_callstack[i] - (char*)info.dli_saddr));
+						callstack_detail << header << "\n";
+					}
+
+					// addr2lineÀ¸·Î »ó¼¼ ¼Ò½º À§Ä¡ ¾ò±â (ÀÎ¶óÀÎ ÇÔ¼ö Æ÷ÇÔ)
+					SymbolResolveResult source_result;
+					if (exe_path[0] != '\0')
+					{
+						auto absolute_addr = (uintptr_t)_array_callstack[i];
+						auto relative_addr = (uintptr_t)((char*)_array_callstack[i] - (char*)info.dli_fbase);
+
+						// ½ÇÇà ÆÄÀÏ ³»ÀÇ ½Éº¼ÀÎ °æ¿ì
+						if (info.dli_fname && std::string_view(info.dli_fname).find(exe_path) != std::string_view::npos)
+						{
+							source_result = _get_detailed_source_location(absolute_addr, exe_path);
+							if (source_result.locations.empty() && relative_addr != absolute_addr)
+								source_result = _get_detailed_source_location(relative_addr, exe_path);
+						}
+						// °øÀ¯ ¶óÀÌºê·¯¸®ÀÎ °æ¿ì
+						else if (info.dli_fname)
+						{
+							// °øÀ¯ ¶óÀÌºê·¯¸® º£ÀÌ½º ÁÖ¼Ò ±âÁØ ¿ÀÇÁ¼Â °è»ê
+							source_result = _get_detailed_source_location(relative_addr, info.dli_fname);
+						}
+					}
+
+					// ¼Ò½º À§Ä¡ Á¤º¸ Ãâ·Â
+					if (!source_result.locations.empty())
+					{
+						callstack_detail << "Source     :\n";
+						for (size_t j = 0; j < source_result.locations.size(); ++j)
+						{
+							const auto& loc = source_result.locations[j];
+							if (loc.is_inline)
+								callstack_detail << "  [inlined] ";
+							else
+								callstack_detail << "  ";
+
+							callstack_detail << loc.function_name;
+							if (!loc.file_path.empty() && loc.line_number > 0)
+							{
+								callstack_detail << "\n            at " << loc.file_path << ":" << loc.line_number << "\n";
+
+								// ¼Ò½º ÄÚµå ÁÖº¯ ¶óÀÎ Ç¥½Ã
+								std::string source_code = _read_source_lines(loc.file_path.c_str(), loc.line_number, 2);
+								if (!source_code.empty())
+								{
+									callstack_detail << source_code;
+								}
+							}
+							else
+							{
+								callstack_detail << "\n";
+							}
+						}
+					}
+					else if (!source_result.diagnostic.empty())
+					{
+						callstack_detail << "Source     : " << source_result.diagnostic << "\n";
+					}
+
+					// ¸Ş¸ğ¸® ¸Ê Á¤º¸
+					std::string mem_map = _get_memory_map_info(_array_callstack[i]);
+					if (!mem_map.empty())
+					{
+						callstack_detail << "Memory Map : " << mem_map << "\n";
+					}
+
+					// backtrace_symbols ¿øº» Á¤º¸
+					callstack_detail << "Raw Info   : " << array_string[i] << "\n";
+
+					// demangled ¸Ş¸ğ¸® ÇØÁ¦
+					if (demangled)
+						free(demangled);
+				}
+				else
+				{
+					// dladdr ½ÇÆĞ ½Ã ±âº» Á¤º¸¸¸
+					char header[256];
+					snprintf(header, sizeof(header), "\n========== Frame #%d ==========", i);
+					callstack_detail << header << "\n";
+					callstack_detail << "Address    : 0x" << std::hex << (unsigned long)_array_callstack[i] << "\n";
+					callstack_detail << "Raw Info   : " << array_string[i] << "\n";
+
+					// ¸Ş¸ğ¸® ¸Ê Á¤º¸
+					std::string mem_map = _get_memory_map_info(_array_callstack[i]);
+					if (!mem_map.empty())
+					{
+						callstack_detail << "Memory Map : " << mem_map << "\n";
+					}
+				}
+
+				plog_record->add_message<char>(callstack_detail.str());
+			}
+		}
+
+		// - free array_string
+		free(array_string);
+	}
+
+	// 5) trace log
+	_log(DEFAULT_LOGGER, plog_record);
+}
+
+bool dump_manager::create_dump(const std::string& _str_dump_file)
+{
+	// check) 
+	if(_str_dump_file.empty())
+		return false;
+	{
+		// lock)
+		std::lock_guard<std::mutex> lock(this->m_lockable_map_dump);
+
+		////-----------------------------------------------------------------
+		//// 1. ¸ÕÀú ÀÌ¹Ì ¹ß»ıÇÑ ÀûÀÌ ÀÖ´Â ExceptionÀÎÁö È®ÀÎÇÑ´Ù.
+		////-----------------------------------------------------------------
+		//// 1) ÇØ´çÇÏ´Â ÁÖ¼Ò¸¦ Ã£´Â´Ù.
+		//auto iter_find = this->m_map_dump.find(_pexception->ExceptionRecord->ExceptionAddress);
+
+		//// check) ÀÌ¹Ì Á¸ÀçÇÏ´Â °ÍÀÌ¶ó¸é ¹ß»ıÈ½¼ö¸¸ Áõ°¡½ÃÅ°°í ³¡³½´Ù.
+		//if (iter_find != this->m_map_dump.end())
+		//{
+		//	// - ¹ß»ıÈ½¼ö¸¸ Ãß°¡ÇÑ´Ù.
+		//	++(iter_find->second.count_times);
+
+		//	// - Dump¸¦ Ãß°¡ÇÑ´Ù.
+		//	this->m_list_exception_event.push_back(_pexception->ExceptionRecord->ExceptionAddress);
+
+		//	// return) false¸¦ ¸®ÅÏÇÑ´Ù.
+		//	return false;
+		//}
+
+
+		//-----------------------------------------------------------------
+		// 2. Exception ±âº» Ã³¸®
+		//-----------------------------------------------------------------
+		// 1) Exception Count¸¦ Áõ°¡½ÃÅ²´Ù.
+		++this->m_count_dump_now;
+
+		// check) ExceptionÃÖ´ë¼ö¿¡ µû¶ó Ã³¸®ÇÑ´Ù. (m_count_dump_limit°¡ 0ÀÌ¸é ÇÑ°è°¡ ¾ø´Ù.)
+		if(this->m_count_dump_limit > 0 && this->m_count_dump_now > this->m_count_dump_limit)
+			return false;
+
+
+		////-----------------------------------------------------------------
+		//// 3. DumpÁ¤º¸¸¦ »õ·Î Ãß°¡ÇÑ´Ù.
+		////-----------------------------------------------------------------
+		//// declare) ¾ø´Ù¸é »õ·Î Ãß°¡ÇÑ´Ù.
+		//sMESSAGE_DUMP tempMessage;
+
+		//// 1) Dump Info¿Í Message¸¦ ¼³Á¤ÇÑ´Ù.
+		//tempMessage.dump_info.thread_id = GetCurrentThreadId();
+		//tempMessage.dump_info.time_occurred_first = chrono::time::local::now();
+		//tempMessage.dump_info.time_occurred_last = tempMessage.dump_info.time_occurred_first;
+		//tempMessage.dump_info.count_times = 1;
+		//tempMessage.dump_info.sExceptionRecords = *_pexception->ExceptionRecord;
+		//tempMessage.dump_info.sContextRecord = *_pexception->ContextRecord;
+		//tempMessage.dump_info.dump_filename = _str_dump_file;
+
+		//// 2) DumpÁ¤º¸¸¦ Ãß°¡ÇÑ´Ù.
+		//this->m_map_dump.emplace(tempMessage.dump_info.sExceptionRecords.ExceptionAddress, tempMessage.dump_info);
+
+		//// 3) Dump¸¦ NotifyÇÒ Message¸¦ Ãß°¡ÇÑ´Ù.
+		//this->m_list_exception_event.push_back(tempMessage.dump_info.sExceptionRecords.ExceptionAddress);
+	}
+
+	// trace) 
+	LOG_FATAL << "(fatal) CGDK.system.object: dump file created [" << _str_dump_file << "]";
+
+
+	//-----------------------------------------------------------------
+	// 6. write dump file using gcore
+	//-----------------------------------------------------------------
+	// 1) make command string - gcore¸¦ »ç¿ëÇÏ¿© core dump »ı¼º
+	api::file::create_parent_directories(_str_dump_file);
+	auto dump_command = std::format("gcore -o {} {} >/dev/null 2>&1", _str_dump_file, getpid());
+
+	// 2) write to dump
+	int result = _run_gcore(dump_command);
+
+	// check) dump »ı¼º ½ÇÆĞ È®ÀÎ
+	if (result != 0)
+	{
+		LOG_FATAL << "(fatal) CGDK.system.object: failed to create dump file (gcore returned " << result << ")";
+
+		// gcore°¡ ¾ø°Å³ª ½ÇÆĞÇÑ °æ¿ì, /proc/self/coredump_filter ¼³Á¤ ÈÄ abort() ½Ãµµ
+		// coredump_filter¸¦ ¼³Á¤ÇÏ¿© ¸ğµç ¸Ş¸ğ¸® ¿µ¿ª Æ÷ÇÔ
+		FILE* filter = fopen("/proc/self/coredump_filter", "w");
+		if (filter)
+		{
+			fprintf(filter, "0x7f"); // ¸ğµç ¸Ş¸ğ¸® ¸Ê ¿µ¿ª Æ÷ÇÔ
+			fclose(filter);
+		}
+
+		// core pattern È®ÀÎ ·Î±×
+		FILE* pattern = fopen("/proc/sys/kernel/core_pattern", "r");
+		if (pattern)
+		{
+			char core_pattern[256];
+			if (fgets(core_pattern, sizeof(core_pattern), pattern))
+			{
+				LOG_FATAL << "(fatal) CGDK.system.object: core_pattern = " << core_pattern;
+			}
+			fclose(pattern);
+		}
+	}
+
+	// return) 
+	return (result == 0);
+}
+
+// ucontext¸¦ Æ÷ÇÔÇÑ »ó¼¼ signal handler
+void dump_manager::translator_function_sa(int _signal, siginfo_t* _info, void* _context)
+{
+	// check) no instance (not created yet, or already destroyed while the process exits)
+	//  - never create it here : allocating memory in a signal handler may deadlock (e.g. with the allocator lock held)
+	if (m_s_pinstance.empty())
+		return;
+
+	// 1) Dump¸¦ ¶á´Ù.
+	m_s_pinstance->process_exception_detailed(_signal, _info, (ucontext_t*)_context);
+}
+
+void dump_manager::translator_function(int _signal)
+{
+	// check) no instance (not created yet, or already destroyed while the process exits)
+	//  - never create it here : allocating memory in a signal handler may deadlock (e.g. with the allocator lock held)
+	if (m_s_pinstance.empty())
+		return;
+
+	// 1) Dump¸¦ ¶á´Ù.
+	m_s_pinstance->process_exception(_signal);
+}
+
+// - throws throwable::system_exception from the handler of a crash signal (same as the SE translator of windows)
+//   1) synchronous fault (si_code > 0 : SIGSEGV, SIGFPE, SIGBUS, SIGILL ... raised by the faulting instruction)
+//      => throws the exception at the faulting instruction (it can be caught by try/catch)
+//         * the code must be compiled with '-fnon-call-exceptions' (like '/EHa' of MSVC)
+//         * the signal is unblocked before throwing (the handler does not return : the mask is not restored by sigreturn)
+//   2) asynchronous (si_code <= 0 : sent by kill(), raise(), tgkill()) => can't throw at an arbitrary point
+//      => terminated by the default action of the signal (after the handler returns)
+static thread_local bool t_is_signal_exception_thrown = false;
+
+static void _throw_signal_exception(int _signal, siginfo_t* _info)
+{
+	// check) asynchronous signal : default action
+	if (_info == nullptr || _info->si_code <= 0)
+	{
+		::signal(_signal, SIG_DFL);
+		::raise(_signal);	// pending while this handler runs (delivered after it returns)
+		return;
+	}
+
+	// 1) unblock the signal
+	sigset_t set_signal;
+	sigemptyset(&set_signal);
+	sigaddset(&set_signal, _signal);
+	::pthread_sigmask(SIG_UNBLOCK, &set_signal, nullptr);
+
+	// 2) throw
+	t_is_signal_exception_thrown = true;
+	throw throwable::system_exception(_signal);
+}
+
+// - abort() caused by an uncaught exception thrown by _throw_signal_exception() (the dump was created already)
+static bool _is_abort_by_signal_exception() noexcept
+{
+	// - gcc : the exception is 'caught' (__cxa_begin_catch) before std::terminate() when no handler is found
+	return t_is_signal_exception_thrown && (std::uncaught_exceptions() > 0 || std::current_exception() != nullptr);
+}
+
+void dump_manager::process_exception_detailed(int _signal, siginfo_t* _info, ucontext_t* _context)
+{
+	// check) enable»óÅÂ°¡ ¾Æ´Ï¸é ¼³Á¤À» ÇÏÁö ¾Ê´Â´Ù.
+	if(this->m_is_exception_handling == false)
+		return;
+
+	// definitions)
+	#define TRACE_MAX 1024
+
+	switch (_signal)
+	{
+	case	SIGHUP:
+			{
+				// ¿¬°á ²÷±â, ÇÁ·Î¼¼½ºÀÇ ¼³Á¤ ÆÄÀÏÀ» ´Ù½Ã ÀĞ´Âµ¥ »ç¿ëµÈ´Ù.
+			}
+			break;
+
+	case	SIGTRAP:
+			{
+				// Æ®·¦ ÃßÀû
+			}
+			break;
+
+	case	SIGBUS:
+			{
+				// ¹ö½º ¿¡·¯
+				// 
+				// - create dump
+				this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now));
+
+				// - back trace
+				void* array_callstack[TRACE_MAX];
+				auto size = backtrace(array_callstack, TRACE_MAX);
+
+				// - trace callstack with context
+				_log_callstack("receive signal'SIGBUS'"sv, array_callstack, size, _context);
+
+				// - throw exception 
+				_throw_signal_exception(_signal, _info);
+
+			}
+			break;
+
+	case	SIGFPE:
+			{
+				// ºÎµ¿ ¼Ò¼öÁ¡ ¿¹¿Ü
+
+				// - create dump
+				this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now));
+
+				// - back trace
+				void* array_callstack[TRACE_MAX];
+				auto size = backtrace(array_callstack, TRACE_MAX);
+
+				// - trace callstack with context
+				_log_callstack("receive signal'SIGFPE'"sv, array_callstack, size, _context);
+
+				// - throw exception 
+				_throw_signal_exception(_signal, _info);
+			}
+			break;
+
+	case	SIGILL:
+			{
+				// Àß¸øµÈ ¸í·É¾î
+
+				// - create dump
+				this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now));
+
+				// - back trace
+				void* array_callstack[TRACE_MAX];
+				auto size = backtrace(array_callstack, TRACE_MAX);
+
+				// - trace callstack with context
+				_log_callstack("receive signal'SIGILL'"sv, array_callstack, size, _context);
+
+				// - throw exception 
+				_throw_signal_exception(_signal, _info);
+			}
+			break;
+
+	case	SIGSEGV:
+			{
+				// ¼¼±×¸àÅ×ÀÌ¼Ç À§¹İ
+
+				// - create dump
+				this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now));
+
+				// - back trace
+				void* array_callstack[TRACE_MAX];
+				auto size = backtrace(array_callstack, TRACE_MAX);
+
+				// - trace callstack with context
+				_log_callstack("receive signal'SIGSEGV'"sv, array_callstack, size, _context);
+
+				// - throw exception 
+				_throw_signal_exception(_signal, _info);
+			}
+			break;
+
+	case	SIGSTKFLT:
+			{
+				// ÄÚÇÁ·Î¼¼¼­ ½ºÅÃ ½ÇÆĞ
+
+				// - create dump
+				this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now));
+
+				// - back trace
+				void* array_callstack[TRACE_MAX];
+				auto size = backtrace(array_callstack, TRACE_MAX);
+
+				// - trace callstack with context
+				_log_callstack("receive signal'SIGSTKFLT'"sv, array_callstack, size, _context);
+
+				// - throw exception 
+				_throw_signal_exception(_signal, _info);
+			}
+			break;
+
+	case	SIGABRT:
+			{
+				// 1) dump (not for the uncaught exception of a crash signal : the dump was created already)
+				if (_is_abort_by_signal_exception() == false)
+				{
+					// - create dump
+					this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now));
+
+					// - back trace
+					void* array_callstack[TRACE_MAX];
+					auto size = backtrace(array_callstack, TRACE_MAX);
+
+					// - trace callstack with context
+					_log_callstack("receive signal'SIGABRT'"sv, array_callstack, size, _context);
+				}
+
+				// 2) not thrown : terminated by the default action (abort() or kill -ABRT) after this handler returns
+				::signal(SIGABRT, SIG_DFL);
+				::raise(SIGABRT);
+			}
+			break;
+
+	default:			{
+				// - create dump
+				this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now));
+
+				// - back trace
+				void* array_callstack[TRACE_MAX];
+				auto size = backtrace(array_callstack, TRACE_MAX);
+
+				// - trace callstack with context
+				char msg[128];
+				snprintf(msg, sizeof(msg), "receive unknown signal'%d'", _signal);
+				_log_callstack(msg, array_callstack, size, _context);
+
+				// - throw exception 
+				_throw_signal_exception(_signal, _info);
+			}
+			break;
+	}
+}
+
+void dump_manager::process_exception(int _signal)
+{
+
+	// check) enable»óÅÂ°¡ ¾Æ´Ï¸é ¼³Á¤À» ÇÏÁö ¾Ê´Â´Ù.
+	if(this->m_is_exception_handling == false)
+		return;
+
+	// definitions)
+	#define TRACE_MAX 1024
+
+	switch (_signal)
+	{
+	case	SIGHUP:
+			{
+				// ¿¬°á ²÷±â, ÇÁ·Î¼¼½ºÀÇ ¼³Á¤ ÆÄÀÏÀ» ´Ù½Ã ÀĞ´Âµ¥ »ç¿ëµÈ´Ù.
+			}
+			break;
+
+	case	SIGTRAP:
+			{
+				// Æ®·¦ ÃßÀû
+			}
+			break;
+
+	case	SIGBUS:
+			{
+				// ¹ö½º ¿¡·¯
+				// 
+				// - create dump
+				this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now));
+
+				// - back trace
+				void* array_callstack[TRACE_MAX];
+				auto size = backtrace(array_callstack, TRACE_MAX);
+
+				// - trace callstack
+				_log_callstack("receive signal'SIGBUS'"sv, array_callstack, size);
+
+				// - throw exception 
+				throwable::system_exception rException;
+				throw rException;
+
+			}
+			break;
+
+	case	SIGFPE:
+			{
+				// ¹ö½º ¿¡·¯
+
+				// - create dump
+				this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now));
+
+				// - back trace
+				void* array_callstack[TRACE_MAX];
+				auto size = backtrace(array_callstack, TRACE_MAX);
+
+				// - trace callstack
+				_log_callstack("receive signal'SIGFPE'"sv, array_callstack, size);
+
+				// - throw exception 
+				throwable::system_exception rException;
+				throw rException;
+			}
+			break;
+
+	case	SIGILL:
+			{
+				// ¹ö½º ¿¡·¯
+
+				// - create dump
+				this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now));
+
+				// - back trace
+				void* array_callstack[TRACE_MAX];
+				auto size = backtrace(array_callstack, TRACE_MAX);
+
+				// - trace callstack
+				_log_callstack("receive signal'SIGILL'"sv, array_callstack, size);
+
+				// - throw exception 
+				throwable::system_exception rException;
+				throw rException;
+			}
+			break;
+
+	case	SIGSEGV:
+			{
+				// - create dump
+				this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now));
+
+				// - back trace
+				void* array_callstack[TRACE_MAX];
+				auto size = backtrace(array_callstack, TRACE_MAX);
+
+				// - trace callstack
+				_log_callstack("receive signal'SIGSEGV'"sv, array_callstack, size);
+
+				// - throw exception 
+				throwable::system_exception rException;
+				throw rException;
+			}
+			break;
+
+	case	SIGSTKFLT:
+			{
+				// - create dump
+				this->create_dump(_generate_crush_dump_filename(this->m_str_dump_path, this->m_count_dump_now));
+
+				// - back trace
+				void* array_callstack[TRACE_MAX];
+				auto size = backtrace(array_callstack, TRACE_MAX);
+
+				// - trace callstack
+				_log_callstack("receive signal'SIGSTKFLT'"sv, array_callstack, size);
+
+				// - throw exception 
+				throwable::system_exception rException;
+				throw rException;
+			}
+			break;
+
+	case	SIGINT:
+			{
+				// - throw exception
+				throwable::system_exception rException;
+				throw rException;
+			}
+			break;
+
+	case	SIGABRT:
+			{
+				//// - throw exception 
+				//throwable::system_exception rException;
+				//throw rException;
+			}
+			break;
+
+	case	SIGKILL:
+			{
+				// Á×ÀÌ±â. ÀÌ ½Ã±×³ÎÀº ÀâÈ÷Áö´Â ¾Ê´Â´Ù.
+				this->destroy();
+			}
+			break;
+
+	case	SIGQUIT:
+			{
+				// Á¾·á
+				this->destroy();
+			}
+			break;
+
+	case	SIGUSR1:
+			{
+				// »ç¿ëÀÚ Á¤ÀÇ signal 1
+			}
+			break;
+
+	case	SIGUSR2:
+			{
+				// »ç¿ëÀÚ Á¤ÀÇ signal 2
+				throw throwable::force_raise();
+			}
+			break;
+
+	case	SIGPIPE:
+			{
+				// ÀĞÀº °ÍÀÌ ¾ø´Â ÆÄÀÌÇÁ¿¡ ´ëÇÑ ½Ã±×³Î
+			}
+			break;
+
+	case	SIGALRM:
+			{
+				// °æ°í Å¬·°
+			}
+			break;
+
+	case	SIGTERM:
+			{
+				// ¼ÒÇÁÆ®¿ş¾î Á¾·á ½Ã±×³Î, ÀÏ¹İÀûÀ¸·Î kill ½Ã±×³ÎÀÌ Àü¼ÛµÇ±â Àü¿¡ Àü¼ÛµÈ´Ù. ÀâÈ÷´Â signalÀÌ±â ¶§¹®¿¡ Á¾·áµÇ´Â °ÍÀ» Æ®·¢ÇÒ ¼ö ÀÖ´Ù.
+				this->destroy();
+			}
+			break;
+
+	case	SIGCHLD:
+			{
+				// ÀÚ½Ä ÇÁ·Î¼¼½ºÀÇ »óÅÂ º¯È­
+			}
+			break;
+
+	case	SIGCONT:
+			{
+				// STOP signal ÀÌÈÄ ´Ù½Ã ÁøÇàÇÒ ¶§ »ç¿ë.
+				//this->resume();
+			}
+			break;
+
+	case	SIGSTOP:
+			{
+				// Á¤Áö, ÀÌ ½Ã±×³Î ¿ª½Ã ÀâÀ» ¼ö ¾ø´Ù.
+				//this->pause();
+			}
+			break;
+
+	case	SIGTSTP:
+			{
+				// Å°º¸µå¿¡¼­ Ctrl+Z¸¦ ´­·¶À» ¶§ ¹ß»ıÇÑ´Ù.
+				//this->destroy();
+			}
+			break;
+
+	case	SIGTTIN:
+			{
+				// ¹é±×¶ó¿îµå¿¡¼­ Á¦¾îÅÍ¹Ì³Î ÀĞ±â
+			}
+			break;
+
+	case	SIGTTOU:
+			{
+				// ¹é±×¶ó¿îµå¿¡¼­ Á¦¾îÅÍ¹Ì³Î ¾²±â
+			}
+			break;
+
+	case	SIGURG:
+			{
+				// ¼ÒÄÏ¿¡¼­ ±ä±ÙÇÑ »óÅÂ
+			}
+			break;
+
+	case	SIGXCPU:
+			{
+				// CPU ½Ã°£ Á¦ÇÑ ÃÊ°ú setrlimit(2) ¸Å´º¾ó ÆäÀÌÁö ÂüÁ¶
+			}
+			break;
+
+	case	SIGXFSZ:
+			{
+				// ÆÄÀÏ Å©±âÁ¦ÇÑ ÃÊ°ú setrlimit(2) ¸Å´º¾ó ÆäÀÌÁö ÂüÁ¶
+			}
+			break;
+
+	case	SIGVTALRM:
+			{
+				// °¡»ó ½Ã°£ °æ°í setrlimit(2) ¸Å´º¾ó ÆäÀÌÁö ÂüÁ¶
+			}
+			break;
+
+	case	SIGPROF:
+			{
+				// ÇÁ·ÎÆÄÀÏ¸µ Å¸ÀÌ¸Ó °æ°í setrlimit(2) ¸Å´º¾ó ÆäÀÌÁö ÂüÁ¶
+			}
+			break;
+
+	case	SIGWINCH:
+			{
+				// À©µµ¿ì Å©±â º¯°æ
+			}
+			break;
+
+	case	SIGIO:
+			{
+				// ±â¼úÀÚ¿¡¼­ ÀÔÃâ·ÂÀÌ °¡´ÉÇÔ. fcntl(2) ¸Å´º¾ó ÂüÁ¶
+			}
+			break;
+
+	case	SIGPWR:
+			{
+				// Àü¿ø ½ÇÆĞ
+			}
+			break;
+	}
+}
+#else
+	#error "[CGDK10] Not supported Platform"
+#endif
 
 std::vector<DUMP_INFO> dump_manager::status_snap() const noexcept
 {
 	// declare) 
 	std::vector<DUMP_INFO> vector_temp;
 
-	scoped_lock(m_lockable_map_dump)
 	{
-		// - reserve
-		vector_temp.reserve(m_map_dump.size());
+		// lock)
+		std::lock_guard<std::mutex> lock(this->m_lockable_map_dump);
 
-		for (auto& iter : m_map_dump)
+		// - reserve
+		vector_temp.reserve(this->m_map_dump.size());
+
+		for (auto& iter : this->m_map_dump)
 		{
 			vector_temp.push_back(iter.second);
 		}
@@ -253,11 +1893,122 @@ std::vector<DUMP_INFO> dump_manager::status_snap() const noexcept
 
 void dump_manager::initialize_instance()
 {
-	scoped_lock(m_s_lockable_create)
-	{
-		RETURN_IF(m_s_pinstance.exist());
+	// lock)
+	std::lock_guard<std::mutex> lock(m_s_lockable_create);
+
+	// check) ÀÌ¹Ì instance°¡ Á¸ÀçÇÏ¸é »ı¼ºÇÏÁö ¾Ê´Â´Ù.
+	if(m_s_pinstance.exist())
+		return;
 		
-		m_s_pinstance = _make_own_raw<dump_manager>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL);
+//#if defined(__linux__)
+//	// 1) set dump limit as unlimited
+//	rlimit core_limits;
+//	core_limits.rlim_cur = core_limits.rlim_max = RLIM_INFINITY;
+//	setrlimit(RLIMIT_CORE, &core_limits);
+//#endif
+
+	m_s_pinstance.exchange_release(_make_own_raw<dump_manager>(CGNEW_DEBUG_INFO_PARAMETERS_INITIAL));
+}
+
+//-----------------------------------------------------------------------------
+// initialize with a setting context (ex: "dump" section of the json setting file)
+//
+//	"dump": {
+//		"enable": true,              // crash dump enable (true/false)
+//		"path": "dumps/crash",       // dump path (created when the dump is written)
+//		"count_limit": 100,          // max dump count (0: unlimited)
+//		"dump_type": "mini"          // "mini" / "detail" / "full" / "default"
+//	}
+//-----------------------------------------------------------------------------
+void dump_manager::initialize_instance(context& _context)
+{
+	// 1) get instance (created if not exist)
+	auto pdump_manager = dump_manager::instance();
+
+	// trace)
+	LOG_INFO << "  @ dump manager"sv;
+
+	// 2) "enable"
+	if (const auto& context_find = _context.find("enable"sv); context_find.is_valid())
+	{
+		std::string str_value = context_find;
+
+		if (CGDK::__stricmp(str_value.c_str(), "false") == 0 || CGDK::__stricmp(str_value.c_str(), "disable") == 0 || str_value == "0")
+		{
+			pdump_manager->enable_exception_handling(false);
+
+			// trace)
+			LOG_INFO << "  + parameter['enable']: false"sv;
+		}
+		else if (CGDK::__stricmp(str_value.c_str(), "true") == 0 || CGDK::__stricmp(str_value.c_str(), "enable") == 0 || str_value == "1")
+		{
+			pdump_manager->enable_exception_handling(true);
+
+			// trace)
+			LOG_INFO << "  + parameter['enable']: true"sv;
+		}
+		else
+		{
+			// trace)
+			LOG_WARNING << "  (!) invalid parameter['enable']: '"sv << str_value << "' (ignored)"sv;
+		}
+	}
+
+	// 3) "path"
+	if (const auto& context_find = _context.find("path"sv, "dump_path"sv); context_find.is_valid())
+	{
+		std::string str_path = context_find;
+
+		pdump_manager->set_dump_path(str_path);
+
+		// trace)
+		LOG_INFO << "  + parameter['path']: "sv << str_path;
+	}
+
+	// 4) "count_limit"
+	if (const auto& context_find = _context.find("count_limit"sv, "count limit"sv, "countlimit"sv); context_find.is_valid())
+	{
+		std::string str_value = context_find;
+
+		int64_t count_limit = 0;
+		try { count_limit = std::stoll(str_value); } catch (...) { count_limit = -1; }
+
+		if (count_limit >= 0)
+		{
+			pdump_manager->set_dump_count_limit(static_cast<size_t>(count_limit));
+
+			// trace)
+			LOG_INFO << "  + parameter['count_limit']: "sv << count_limit;
+		}
+		else
+		{
+			// trace)
+			LOG_WARNING << "  (!) invalid parameter['count_limit']: '"sv << str_value << "' (ignored)"sv;
+		}
+	}
+
+	// 5) "dump_type"
+	if (const auto& context_find = _context.find("dump_type"sv, "dump type"sv, "dumptype"sv); context_find.is_valid())
+	{
+		std::string str_value = context_find;
+
+		if (CGDK::__stricmp(str_value.c_str(), "mini") == 0)
+			pdump_manager->set_dump_type(eDUMP_CONTEXT::MINI);
+		else if (CGDK::__stricmp(str_value.c_str(), "detail") == 0 || CGDK::__stricmp(str_value.c_str(), "defail") == 0)
+			pdump_manager->set_dump_type(eDUMP_CONTEXT::DETAIL);
+		else if (CGDK::__stricmp(str_value.c_str(), "full") == 0)
+			pdump_manager->set_dump_type(eDUMP_CONTEXT::FULL);
+		else if (CGDK::__stricmp(str_value.c_str(), "default") == 0)
+			pdump_manager->set_dump_type(eDUMP_CONTEXT::DEFAULT);
+		else
+		{
+			// trace)
+			LOG_WARNING << "  (!) invalid parameter['dump_type']: '"sv << str_value << "' (ignored)"sv;
+			return;
+		}
+
+		// trace)
+		LOG_INFO << "  + parameter['dump_type']: '"sv << str_value << "'"sv;
 	}
 }
 
@@ -266,13 +2017,15 @@ void dump_manager::set_instance(own_ptr<dump_manager>&& _pinstance) noexcept
 	// declare)
 	own_ptr<dump_manager> pinstance_pre;
 
-	scoped_lock(m_s_lockable_create)
 	{
+		// lock)
+		std::lock_guard<std::mutex> lock(m_s_lockable_create);
+
 		// 1) move old instance
 		pinstance_pre = std::move(m_s_pinstance);
 
 		// 2) set new instance
-		m_s_pinstance = std::move(_pinstance);
+		m_s_pinstance.exchange_release(std::move(_pinstance));
 	}
 
 	// 3) reset old instance
@@ -284,8 +2037,10 @@ void dump_manager::reset_instance() noexcept
 	// declare)
 	own_ptr<dump_manager> pinstance;
 
-	scoped_lock(m_s_lockable_create)
 	{
+		// lock)
+		std::lock_guard<std::mutex> lock(m_s_lockable_create);
+
 		// 1) move instance
 		pinstance = std::move(m_s_pinstance);
 	}
@@ -296,292 +2051,156 @@ void dump_manager::reset_instance() noexcept
 
 void dump_manager::print_statistics() noexcept
 {
-	//try
-	//{
-	//	// 1) get instance
-	//	auto instance = instance();
+	try
+	{
+		// declare)
+		shared_buffer buf_output;
 
-	//	// 2) alloc shared_buffer for log text
-	//	auto buf_output = alloc_shared_buffer((static_cast<size_t>(instance->size()) + 4) * 256);
+		// 1) get instance
+		auto pdump_manager = dump_manager::instance();
 
-	//	buf_output.append_text("\x1b[37m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m");
-	//	buf_output.append_text("\x1b[37m" "{:30s} {:8s}{:>5s}{:>9s}{:>13s}{:>13s}\n" "\x1b[0m",
-	//		"name",
-	//		"type",
-	//		"id",
-	//		"thread",
-	//		"executed",
-	//		"pended"
-	//	);
-	//	buf_output.append_text("\x1b[90m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m");
+		// 2) dump type
+		auto type_dump = pdump_manager->get_dump_type();
+		std::string_view str_type = (type_dump == eDUMP_CONTEXT::FULL) ? "full"sv : (type_dump == eDUMP_CONTEXT::DETAIL) ? "detail"sv : "mini"sv;
 
-	//	scoped_shared_lock(instance->m_lockable_list_executor)
-	//	{
-	//		for (auto& iter : instance->m_list_executor)
-	//		{
-	//			// check)
-	//			CGASSERT_ERROR(iter != nullptr);
+		{
+			// lock)
+			std::unique_lock<std::mutex> lock(pdump_manager->m_lockable_map_dump);
 
-	//			// check)
-	//			CONTINUE_IF(iter == nullptr);
+			// 3) alloc shared_buffer for log text
+			buf_output = alloc_shared_buffer((pdump_manager->m_map_dump.size() + 10) * 384);
 
-	//			// - get statistics
-	//			auto& statistics = iter->statistics();
+			// 4) settings
+			buf_output.append_text("\x1b[37m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
+			buf_output.append_text(std::format("\x1b[37m" "dump  enable: {}  path: '{}'  type: {}  count: {} / {}\n" "\x1b[0m",
+				pdump_manager->m_is_exception_handling ? "true" : "false",
+				pdump_manager->m_str_dump_path,
+				str_type,
+				pdump_manager->m_count_dump_now,
+				(pdump_manager->m_count_dump_limit != 0) ? std::to_string(pdump_manager->m_count_dump_limit) : std::string("unlimited"))
+			);
 
-	//			std::string_view executor_name = (statistics.name.size() < 30) ? std::string_view(statistics.name) : std::string_view(statistics.name.c_str(), 30);
+			// 5) title
+			buf_output.append_text("\x1b[90m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
+			buf_output.append_text(std::format("\x1b[37m" "{:>10s}{:>7s}  {:23s}  {:23s}  {}\n" "\x1b[0m",
+				"thread",
+				"times",
+				"first",
+				"last",
+				"file")
+			);
+			buf_output.append_text("\x1b[90m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
 
-	//			auto alloc_execute = statistics.now.count_execute.load();
+			// 6) dumps (crash address)
+			for (const auto& [paddress, info] : pdump_manager->m_map_dump)
+			{
+				buf_output.append_text(std::format("{}" "{:>10}{:>7}  {:23.23s}  {:23.23s}  {}" "\x1b[0m\n",
+					(info.count_times > 1) ? "\x1b[93m" : "\x1b[92m",
+					info.thread_id,
+					info.count_times,
+					to_string(info.time_occurred_first),
+					to_string(info.time_occurred_last),
+					info.dump_filename)
+				);
+			}
 
-	//			if (statistics.type == eEXECUTOR_TYPE::USER)
-	//			{
-	//				// "1. name" "2. type"
-	//				if (alloc_execute != 0)
-	//				{
-	//					buf_output.append_text("\x1b[92m" "{:30s} {:8s}" "\x1b[0m", executor_name, to_string<char>(statistics.type));
-	//				}
-	//				else
-	//				{
-	//					if (_using_only == true)
-	//						continue;
+			// - no dump
+			if (pdump_manager->m_map_dump.empty())
+				buf_output.append_text("\x1b[90m" "(no dump)\n" "\x1b[0m"sv);
 
-	//					buf_output.append_text("\x1b[32m" "{:30s} {:8s}" "\x1b[0m", executor_name, to_string<char>(statistics.type));
-	//				}
+			buf_output.append_text("\x1b[37m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m"sv);
+		}
 
-	//				// - "3. id"
-	//				{
-	//					auto count = statistics.id;
-
-	//					if (count != 0)
-	//					{
-	//						buf_output.append_text(" {:>4}", count);
-	//					}
-	//					else
-	//					{
-	//						buf_output.append_text("\x1b[90m" "    0" "\x1b[0m");
-	//					}
-	//				}
-
-	//				// - "4. thread_count"
-	//				{
-	//					if (statistics.now.thread_count != 0)
-	//					{
-	//						buf_output.append_text(" {:>8}", statistics.now.thread_count);
-	//					}
-	//					else
-	//					{
-	//						buf_output.append_text("\x1b[90m" "        0" "\x1b[0m");
-	//					}
-	//				}
-
-	//				// - "5. executed"
-	//				{
-	//					auto count = statistics.now.count_execute.load();
-
-	//					if (count != 0)
-	//					{
-	//						buf_output.append_text(" {:>9}", count);
-	//					}
-	//					else
-	//					{
-	//						buf_output.append_text("\x1b[90m" "         0" "\x1b[0m");
-	//					}
-	//				}
-
-	//				// - "6. pended"
-	//				{
-	//					auto* pqueue = dynamic_cast<executor::Iqueue*>(iter);
-
-	//					if (pqueue != nullptr)
-	//					{
-	//						auto count = pqueue->pended_count();
-
-	//						if (count != 0)
-	//						{
-	//							buf_output.append_text(" {:>12}", count);
-	//						}
-	//						else
-	//						{
-	//							buf_output.append_text("\x1b[90m" "            0" "\x1b[0m");
-	//						}
-	//					}
-	//				}
-
-	//				// - new line~
-	//				buf_output.append_text("\n");
-	//			}
-	//			else
-	//			{
-	//				// "1. name" "2. type"
-	//				if (alloc_execute != 0)
-	//				{
-	//					buf_output.append_text("\x1b[37m" "{:30s} {:8s}" "\x1b[0m", executor_name, to_string<char>(statistics.type));
-	//				}
-	//				else
-	//				{
-	//					if (_using_only == true)
-	//						continue;
-
-	//					buf_output.append_text("\x1b[90m" "{:30s} {:8s}" "\x1b[0m", executor_name, to_string<char>(statistics.type));
-	//				}
-
-	//				// - "3. id"
-	//				{
-	//					auto count = statistics.id;
-
-	//					if (count != 0)
-	//					{
-	//						buf_output.append_text(" {:>4}", count);
-	//					}
-	//					else
-	//					{
-	//						buf_output.append_text("\x1b[90m" "    0" "\x1b[0m");
-	//					}
-	//				}
-
-	//				// - "4. thread_count"
-	//				{
-	//					if (statistics.now.thread_count != 0)
-	//					{
-	//						buf_output.append_text(" {:>8}", statistics.now.thread_count);
-	//					}
-	//					else
-	//					{
-	//						buf_output.append_text("\x1b[90m" "        0" "\x1b[0m");
-	//					}
-	//				}
-
-	//				// - "5. executed"
-	//				{
-	//					auto count = statistics.now.count_execute.load();
-
-	//					if (count != 0)
-	//					{
-	//						buf_output.append_text(" {:>12}", count);
-	//					}
-	//					else
-	//					{
-	//						buf_output.append_text("\x1b[90m" "            0" "\x1b[0m");
-	//					}
-	//				}
-
-	//				// - "6. pended"
-	//				{
-	//					auto* pqueue = dynamic_cast<executor::Iqueue*>(iter);
-
-	//					if (pqueue != nullptr)
-	//					{
-	//						auto count = pqueue->pended_count();
-
-	//						if (count != 0)
-	//						{
-	//							buf_output.append_text(" {:>12}", count);
-	//						}
-	//						else
-	//						{
-	//							buf_output.append_text("\x1b[90m" "            0" "\x1b[0m");
-	//						}
-	//					}
-	//				}
-
-	//				// - new line~
-	//				buf_output.append_text("\n");
-	//			}
-	//		}
-	//	}
-	//	buf_output.append_text("\x1b[37m" "---------------------------------------------------------------------------------------------------------------------------------\n" "\x1b[0m");
-
-	//	// 3) ìµœì¢… ì¶œë ¥
-	//#if defined(_WIN32)
-	//	DWORD number_written = 0;
-	//	WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), buf_output.data(), buf_output.size<DWORD>(), &number_written, nullptr);
-	//#else
-	//	fwrite(buf_output.data(), 1, buf_output.size<int>(), stdout);
-	//#endif
-	//}
-	//catch (...)
-	//{
-	//}
+		// 7) output
+	#if defined(_WIN32)
+		DWORD number_written = 0;
+		WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), buf_output.data(), buf_output.size<DWORD>(), &number_written, nullptr);
+	#else
+		fwrite(buf_output.data(), 1, buf_output.size<int>(), stdout);
+	#endif
+	}
+	catch (...)
+	{
+	}
 }
 
 void dump_manager::dispatch_exception_message_all()
 {
-	// check) í•˜ë‚˜ë„ ì—†ìœ¼ë©´ ê·¸ëƒ¥ ëë‚¸ë‹¤.
-	RETURN_IF(m_list_exception_event.empty());
+	// check) ÇÏ³ªµµ ¾øÀ¸¸é ±×³É ³¡³½´Ù.
+	if(m_list_exception_event.empty())
+		return;
 
 	// declare) 
 	circular_list<void*> temp_list;
 
-	// 1) ExceptionEventë¥¼ ë³µì‚¬í•œë‹¤.
-	scoped_lock(m_lockable_map_dump)
+	// 1) ExceptionEvent¸¦ º¹»çÇÑ´Ù.
 	{
-		// - Listë¥¼ ëª½ë•… ë°”ê¾¼ë‹¤~ Swap!!!
+		// lock)
+		std::lock_guard<std::mutex> lock(this->m_lockable_map_dump);
+
+		// - List¸¦ ¸ù¶¥ ¹Ù²Û´Ù~ Swap!!!
 		temp_list.swap(m_list_exception_event);
 
-		// check) í•˜ë‚˜ë„ ì—†ìœ¼ë©´ ê·¸ëƒ¥ ëë‚¸ë‹¤.
-		RETURN_IF(temp_list.empty());
+		// check) ÇÏ³ªµµ ¾øÀ¸¸é ±×³É ³¡³½´Ù.
+		if(temp_list.empty())
+			return;
 	}
 
-	// 2) ëª¨ë“  Messageë¥¼ ì „ì†¡í•œë‹¤.
+	// 2) ¸ğµç Message¸¦ Àü¼ÛÇÑ´Ù.
 	for(auto& iter:temp_list)
 	{
 		// declare) 
 		std::map<void*, DUMP_INFO>::iterator iter_find;
 
-		scoped_lock(m_lockable_map_dump)
 		{
-			//std::scoped_lock cs(m_lockable_map_dump);
+			// lock)
+			std::lock_guard<std::mutex> lock(this->m_lockable_map_dump);
 
-			// - í•´ë‹¹í•˜ëŠ” Dumpë¥¼ ì°¾ëŠ”ë‹¤.
-			iter_find = m_map_dump.find(iter);
+			// - ÇØ´çÇÏ´Â Dump¸¦ Ã£´Â´Ù.
+			iter_find = this->m_map_dump.find(iter);
 
-			// check) ì°¾ì§€ ëª»í–ˆìœ¼ë©´ ë‹¤ìŒ... (ì´ëŸ´ ë¦¬ëŠ” ì—†ë‹¤...)
-			CONTINUE_IF(iter_find == m_map_dump.end());
+			// check) Ã£Áö ¸øÇßÀ¸¸é ´ÙÀ½... (ÀÌ·² ¸®´Â ¾ø´Ù...)
+			CONTINUE_IF(iter_find == this->m_map_dump.end());
 		}
 
-		// - Messageë¥¼ ë‚ ë¦°ë‹¤.
+		// - Message¸¦ ³¯¸°´Ù.
 		transmit_message(sMESSAGE_DUMP((*iter_find).second));
 	}
 }
 
-void dump_manager::enable_seh(bool _is_enable) noexcept
+void dump_manager::enable_exception_handling(bool _is_enable) noexcept
 {
-	m_is_enable_seh = _is_enable;
+	this->m_is_exception_handling = _is_enable;
 }
 
-void dump_manager::disable_seh() noexcept
+void dump_manager::disable_exception_handling() noexcept
 {
-	m_is_enable_seh = false;
+	this->m_is_exception_handling = false;
 }
 
-bool dump_manager::seh_enabled() const noexcept
+bool dump_manager::is_exception_handling() const noexcept
 {
-	return m_is_enable_seh;
+	return this->m_is_exception_handling;
 }
 
-void dump_manager::translator_function(uint32_t, LPEXCEPTION_POINTERS _pexception)
-{
-	// 1) Dumpë¥¼ ëœ¬ë‹¤.
-	dump_manager::instance()->process_exception(_pexception);
-}
-
+#if defined(_WIN32)
 void dump_manager::set_seh_to_thread() noexcept
 {
-	// check) enableìƒíƒœê°€ ì•„ë‹ˆë©´ ì„¤ì •ì„ í•˜ì§€ ì•ŠëŠ”ë‹¤.
-	RETURN_IF(m_is_enable_seh == false);
+	// check) enable»óÅÂ°¡ ¾Æ´Ï¸é ¼³Á¤À» ÇÏÁö ¾Ê´Â´Ù.
+	if(this->m_is_exception_handling == false)
+		return;
 
-	// 1) Translatorë¥¼ ì„¤ì •í•œë‹¤.
+	// 1) Translator¸¦ ¼³Á¤ÇÑ´Ù.
 #if defined(_MSC_VER)
-	#if defined(_MSC_VER)
-		#pragma warning(disable:4535)
-	#endif
+#pragma warning(disable:4535)
+#endif
 
-	#ifndef	NO_SUPPORT_SEH
+#ifndef	NO_SUPPORT_SEH
 	_set_se_translator(&dump_manager::translator_function);
-	#endif
+#endif
 
-	#if defined(_MSC_VER)
-		#pragma warning(default:4535)
-	#endif
+#if defined(_MSC_VER)
+	#pragma warning(default:4535)
 #endif
 }
 
@@ -590,14 +2209,99 @@ void dump_manager::invalid_parameter_handler(wchar_t const* _expression, wchar_t
 	dump_manager::instance()->process_invalid_parameter(_expression, _function, _file, _line, _reserved);
 }
 
+#elif defined(__linux__)
+// - crash signals (process-wide : installed once)
+//   * called by the system_executor and every api::Nthread (like the SE translator of windows)
+//   * a crash on the thread created before the system_executor is also thrown as throwable::system_exception
+void dump_manager::set_signal_handler_crash() noexcept
+{
+	// check) installed already
+	static std::mutex s_lockable_install;
+	static bool s_is_installed = false;
+	std::lock_guard lock(s_lockable_install);
+	if (s_is_installed)
+		return;
+	s_is_installed = true;
+
+	// 0) create the instance now (the signal handlers never create it)
+	dump_manager::instance();
+
+	// sigactionÀ» »ç¿ëÇÏ¿© ucontext Á¤º¸¸¦ ¾òÀ» ¼ö ÀÖµµ·Ï ¼³Á¤
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_sigaction = dump_manager::translator_function_sa;
+	sa.sa_flags = SA_SIGINFO;	// SA_SIGINFO: ucontext. (no SA_RESETHAND : every crash is handled and thrown as throwable::system_exception)
+	sigemptyset(&sa.sa_mask);
+
+	// Å©·¡½Ã °ü·Ã Áß¿ä ½Ã±×³ÎµéÀº »ó¼¼ Á¤º¸ ¼öÁı
+	sigaction(SIGBUS, &sa, nullptr);    // ¹ö½º ¿¡·¯
+	sigaction(SIGFPE, &sa, nullptr);    // ºÎµ¿ ¼Ò¼öÁ¡ ¿¹¿Ü
+	sigaction(SIGILL, &sa, nullptr);    // Àß¸øµÈ ¸í·É¾î
+	sigaction(SIGSEGV, &sa, nullptr);   // ¼¼±×¸àÅ×ÀÌ¼Ç À§¹İ
+	sigaction(SIGSTKFLT, &sa, nullptr); // ÄÚÇÁ·Î¼¼¼­ ½ºÅÃ ½ÇÆĞ
+	sigaction(SIGABRT, &sa, nullptr);   // Abort
+}
+
+// - installs the handler only when the signal has the default disposition
+//   (a handler installed by the application before is not overwritten)
+static void _set_signal_handler_if_default(int _signal, void (*_handler)(int)) noexcept
+{
+	struct sigaction sa_old;
+	memset(&sa_old, 0, sizeof(sa_old));
+
+	// check) fail to get / not default (SIG_IGN or handler of the application)
+	if (sigaction(_signal, nullptr, &sa_old) != 0)
+		return;
+	if ((sa_old.sa_flags & SA_SIGINFO) != 0 || sa_old.sa_handler != SIG_DFL)
+		return;
+
+	signal(_signal, _handler);
+}
+
+void dump_manager::set_signal_handler() noexcept
+{
+	// 1) crash signals (SIGBUS, SIGFPE, SIGILL, SIGSEGV, SIGSTKFLT, SIGABRT)
+	set_signal_handler_crash();
+
+	// 2) SIGPIPE : ignored (writing to a closed socket must not kill the process)
+	_set_signal_handler_if_default(SIGPIPE, SIG_IGN);
+
+	// 3) termination signals (SIGTERM, SIGINT, SIGQUIT, SIGHUP) are NOT handled here.
+	//    - they belong to the application (systemd/docker stop sends SIGTERM).
+	//      the handler of dump_manager ignored SIGTERM and threw an exception from
+	//      an asynchronous signal handler on SIGINT (undefined behavior).
+	//    - the default action (terminate) is kept unless the application installs its own handler.
+
+	// 4) others (only when the signal has the default disposition)
+	_set_signal_handler_if_default(SIGTRAP, dump_manager::translator_function); // Æ®·¦ ÃßÀû
+	_set_signal_handler_if_default(SIGUSR1, dump_manager::translator_function); // »ç¿ëÀÚ Á¤ÀÇ signal 1
+	_set_signal_handler_if_default(SIGUSR2, dump_manager::translator_function); // »ç¿ëÀÚ Á¤ÀÇ signal 2
+	_set_signal_handler_if_default(SIGALRM, dump_manager::translator_function); // °æ°í Å¬·°
+	_set_signal_handler_if_default(SIGSYS, dump_manager::translator_function);
+	_set_signal_handler_if_default(SIGCHLD, dump_manager::translator_function); // ÀÚ½Ä ÇÁ·Î¼¼½ºÀÇ »óÅÂ º¯È­
+	_set_signal_handler_if_default(SIGCONT, dump_manager::translator_function); // STOP signal ÀÌÈÄ ´Ù½Ã ÁøÇàÇÒ ¶§ »ç¿ë.
+	_set_signal_handler_if_default(SIGTSTP, dump_manager::translator_function); // Å°º¸µå¿¡¼­ Ctrl+Z¸¦ ´­·¶À» ¶§ ¹ß»ıÇÑ´Ù.
+	_set_signal_handler_if_default(SIGTTIN, dump_manager::translator_function); // ¹é±×¶ó¿îµå¿¡¼­ Á¦¾îÅÍ¹Ì³Î ÀĞ±â
+	_set_signal_handler_if_default(SIGTTOU, dump_manager::translator_function); // ¹é±×¶ó¿îµå¿¡¼­ Á¦¾îÅÍ¹Ì³Î ¾²±â
+	_set_signal_handler_if_default(SIGURG, dump_manager::translator_function); // ¼ÒÄÏ¿¡¼­ ±ä±ÙÇÑ »óÅÂ
+	_set_signal_handler_if_default(SIGXCPU, dump_manager::translator_function); // CPU ½Ã°£ Á¦ÇÑ ÃÊ°ú setrlimit(2) ¸Å´º¾ó ÆäÀÌÁö ÂüÁ¶
+	_set_signal_handler_if_default(SIGXFSZ, dump_manager::translator_function); // ÆÄÀÏ Å©±âÁ¦ÇÑ ÃÊ°ú setrlimit(2) ¸Å´º¾ó ÆäÀÌÁö ÂüÁ¶
+	_set_signal_handler_if_default(SIGVTALRM, dump_manager::translator_function); // °¡»ó ½Ã°£ °æ°í setrlimit(2) ¸Å´º¾ó ÆäÀÌÁö ÂüÁ¶
+	_set_signal_handler_if_default(SIGPROF, dump_manager::translator_function); // ÇÁ·ÎÆÄÀÏ¸µ Å¸ÀÌ¸Ó °æ°í setrlimit(2) ¸Å´º¾ó ÆäÀÌÁö ÂüÁ¶
+	_set_signal_handler_if_default(SIGWINCH, dump_manager::translator_function); // À©µµ¿ì Å©±â º¯°æ
+	_set_signal_handler_if_default(SIGIO, dump_manager::translator_function); // ±â¼úÀÚ¿¡¼­ ÀÔÃâ·ÂÀÌ °¡´ÉÇÔ. fcntl(2) ¸Å´º¾ó ÂüÁ¶
+	_set_signal_handler_if_default(SIGPWR, dump_manager::translator_function); // Àü¿ø ½ÇÆĞ
+}
+
+#endif
+
+#ifdef _WIN32
 void dump_manager::set_invalid_parameter_handle() noexcept
 {
-#ifdef _WIN32
 	// 1) Set Invalid parameter handler
 	_set_invalid_parameter_handler(invalid_parameter_handler);
-#else
-#endif
 }
+#endif
 
 #if defined(_MSC_VER) && defined(_M_IX86)
 #define	SNAP_PROLOG(context)						\
@@ -707,7 +2411,7 @@ bool CalculateBeginningOfCallInstruction(uint32_t& _RetAddr)
 bool CommonSnapCurrentProcessDump(const std::string_view _str_dump_file, PCONTEXT p_pContext, eDUMP_CONTEXT _type_dump)
 {
 	//-----------------------------------------------------------------
-	// 1. Dump file ì´ë¦„ì„ ì„¤ì •í•œë‹¤.
+	// 1. Dump file ÀÌ¸§À» ¼³Á¤ÇÑ´Ù.
 	//-----------------------------------------------------------------
 	// declare)
 	char			str_tempFileName[MAX_STRING_LENGTH]={};
@@ -716,37 +2420,39 @@ bool CommonSnapCurrentProcessDump(const std::string_view _str_dump_file, PCONTEX
 	// 1) DumpfileName
 	if(_str_dump_file.empty())
 	{
-		// - í˜„ì¬ì˜ ì‹œê°„ì„ ì–»ëŠ”ë‹¤.
+		// - ÇöÀçÀÇ ½Ã°£À» ¾ò´Â´Ù.
 		chrono::time::utc::time_point tempTime = chrono::time::utc::now();
 		const std::string& stdDumpPath = dump_manager::instance()->get_dump_path();
 
-		// - Dump file ì´ë¦„ì„ ì„¤ì •í•œë‹¤.
-		__sprintf(str_tempFileName, "%s/Snap(%04d-%02d-%02d@%02d-%02d-%02d@%03d).dmp", stdDumpPath.c_str(), tempTime.get_year(), tempTime.get_month(), tempTime.get_day(), tempTime.get_hour(), tempTime.get_minute(), tempTime.get_second(), tempTime.get_millisecond());
+		// - Dump file ÀÌ¸§À» ¼³Á¤ÇÑ´Ù.
+		std::snprintf(str_tempFileName, std::size(str_tempFileName), "%s/Snap_%04d-%02d-%02d@%02d-%02d-%02d_%03d.dmp", stdDumpPath.c_str(), tempTime.get_year(), tempTime.get_month(), tempTime.get_day(), tempTime.get_hour(), tempTime.get_minute(), tempTime.get_second(), tempTime.get_millisecond());
 
-		// - Dump fileì´ë¦„ì„ ì„¤ì •í•œë‹¤.
+		// - Dump fileÀÌ¸§À» ¼³Á¤ÇÑ´Ù.
 		_str_dump_file = str_tempFileName;
 	}
 
 
 	//-----------------------------------------------------------------
-	// 2. Fileì„ opení•œë‹¤.
+	// 2. FileÀ» openÇÑ´Ù.
 	//-----------------------------------------------------------------
 	// declare) 
 	FILE_HANDLE hFile;
 
-	// 1) Fileì„ ì—°ë‹¤.
+	// 1) FileÀ» ¿¬´Ù.
+	api::file::create_parent_directories(_str_dump_file);
 	hFile = CreateFileA(_str_dump_file, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
-	// check) Fileì„ ì—´ì§€ ëª»í–ˆë‚˜?
-	RETURN_IF(hFile==INVALID_CGHANDLE_VALUE, false);
+	// check) FileÀ» ¿­Áö ¸øÇß³ª?
+	if(hFile==INVALID_CGHANDLE_VALUE)
+		return false;
 
 
 	//-----------------------------------------------------------------
-	// 3. Dumpë¥¼ ì €ì¥í•œë‹¤.
+	// 3. Dump¸¦ ÀúÀåÇÑ´Ù.
 	//-----------------------------------------------------------------
 	// 1) Exception Recored...
 	EXCEPTION_RECORD temp_exception_record;
-	__zero_memory(&temp_exception_record, sizeof(EXCEPTION_RECORD));
+	std::memset(&temp_exception_record, 0, sizeof(EXCEPTION_RECORD));
 #if defined(_M_X64)
 	temp_exception_record.ExceptionAddress	 = reinterpret_cast<void*>(p_pContext->Rip);
 #else
@@ -755,31 +2461,31 @@ bool CommonSnapCurrentProcessDump(const std::string_view _str_dump_file, PCONTEX
 
 	// 2) Exception Pointer
 	EXCEPTION_POINTERS temp_exception_pointers;
-	__zero_memory(&temp_exception_pointers, sizeof(EXCEPTION_POINTERS));
+	std::memset(&temp_exception_pointers, 0, sizeof(EXCEPTION_POINTERS));
 	temp_exception_pointers.ContextRecord	 = p_pContext;
 	temp_exception_pointers.ExceptionRecord	 = &temp_exception_record;
 
-	// 3) Dump Inputê°’ì„ ì„¤ì •í•œë‹¤.
+	// 3) Dump Input°ªÀ» ¼³Á¤ÇÑ´Ù.
 	MINIDUMP_EXCEPTION_INFORMATION temp_dump_information;
-	__zero_memory(&temp_dump_information, sizeof(MINIDUMP_EXCEPTION_INFORMATION));
+	std::memset(&temp_dump_information, 0, sizeof(MINIDUMP_EXCEPTION_INFORMATION));
 	temp_dump_information.ThreadId			 = GetCurrentThreadId();
 	temp_dump_information.ExceptionPointers	 = &temp_exception_pointers;
 	temp_dump_information.ClientPointers	 = TRUE;
 
-	// 4) Dumpí•œë‹¤.
+	// 4) DumpÇÑ´Ù.
 	auto result = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hFile , _type_dump, &temp_dump_information, NULL, NULL);
 
-	// check) Mini DumpíŒŒì¼ ì €ì¥ì— ì‹¤íŒ¨í–ˆë‚˜?
-	EXECUTE_IF(result == FALSE, LOG(log_type_t::ERROR) << "(err ) fail to writing dump on file["sv << _str_dump_file << "] ("sv << __FUNCTION__ << ")"sv);
+	// check) Mini DumpÆÄÀÏ ÀúÀå¿¡ ½ÇÆĞÇß³ª?
+	EXECUTE_IF(result == FALSE, LOG(log_type_t::fatal) << "(err ) fail to writing dump on file[" << _str_dump_file << "] (" << __FUNCTION__ << ")");
 
 	// trace) 
-	LOG_ERROR << "(err ) CGDK.system.object: dump is created [" << _str_dump_file << "]";
+	LOG_ERROR << "(fatal) CGDK.system.object: dump file created [" << _str_dump_file << "]";
 
 
 	//-----------------------------------------------------------------
-	// 4. Fileì„ ë‹«ëŠ”ë‹¤.
+	// 4. FileÀ» ´İ´Â´Ù.
 	//-----------------------------------------------------------------
-	// 1) Fileì„ ë‹«ëŠ”ë‹¤.
+	// 1) FileÀ» ´İ´Â´Ù.
 	CloseHandle(hFile);
 	
 
@@ -787,24 +2493,7 @@ bool CommonSnapCurrentProcessDump(const std::string_view _str_dump_file, PCONTEX
 	return true;
 }
 
-
-__declspec(naked) bool snap_dump(const std::wstring_view _str_dump_file, eDUMP_CONTEXT _type_dump)
-{
-#pragma  warning(disable:26494)
-	// 1) Stringì„ Convertí•œë‹¤.
-
-	// declare) 
-	char str_buffer[MAX_STRING_LENGTH];
-
-	// 2) snap_dump
-	auto result	 = snap_dump((_str_dump_file.empty() == false) ? encode_string(str_buffer, _str_dump_file) : nullptr, _type_dump);
-
-	// return) Snap Pep
-	SNAP_PEPILOG(result)
-#pragma  warning(default:26494)
-}
-
-__declspec(naked) bool snap_dump(const std::string_view _str_dump_file, eDUMP_CONTEXT _type_dump)
+__declspec(naked) bool CGDK::snap_dump(std::string_view _str_dump_file, eDUMP_CONTEXT _type_dump)
 {
 #ifdef _WIN32
 #pragma  warning(disable:26494)
@@ -815,20 +2504,20 @@ __declspec(naked) bool snap_dump(const std::string_view _str_dump_file, eDUMP_CO
 	CONTEXT	contextInitial;
 	CONTEXT	context_final;
 
-	// 1) REGISTERë¥¼ snapí•œë‹¤~
+	// 1) REGISTER¸¦ snapÇÑ´Ù~
 	SNAP_PROLOG(contextInitial);
 
 
 	//-----------------------------------------------------------------
-	// 2. Dumpë¥¼ ì €ì¥í•œë‹¤.
+	// 2. Dump¸¦ ÀúÀåÇÑ´Ù.
 	//-----------------------------------------------------------------
-	// 1) context_finalì„ 0ìœ¼ë¡œ ì§€ìš´ë‹¤.
-	__zero_memory(&context_final, sizeof(CONTEXT));
+	// 1) context_finalÀ» 0À¸·Î Áö¿î´Ù.
+	std::memset(&context_final, 0, sizeof(CONTEXT));
 
-	// 2) ContextFlagsë¥¼ ì„¤ì •í•œë‹¤.
+	// 2) ContextFlags¸¦ ¼³Á¤ÇÑ´Ù.
 	context_final.ContextFlags	 = _type_dump;
 
-	// 3) Thread Contextë¥¼ ì–»ëŠ”ë‹¤.
+	// 3) Thread Context¸¦ ¾ò´Â´Ù.
 	BOOL result = GetThreadContext(get_current_thread(), &context_final);
 
 	// check) 
@@ -837,19 +2526,19 @@ __declspec(naked) bool snap_dump(const std::string_view _str_dump_file, eDUMP_CO
 		// 4) 
 		COPYKEYCONTEXTREGISTERS(context_final, contextInitial);
 
-		// 5) Return Addressë¥¼ ì–»ëŠ”ë‹¤.
+		// 5) Return Address¸¦ ¾ò´Â´Ù.
 		uint32_t dwRetAddr = reinterpret_cast<uint32_t>(_returnAddress());
 
-		// 6) Call Instructionì˜ ì‹œì‘ì„ ê³„ì‚°í•œë‹¤.
+		// 6) Call InstructionÀÇ ½ÃÀÛÀ» °è»êÇÑ´Ù.
 		result = CalculateBeginningOfCallInstruction(dwRetAddr);
 
 		// check) 
 		if(result==TRUE)
 		{
-			// 7) EIPë¥¼ ì–»ëŠ”ë‹¤.
+			// 7) EIP¸¦ ¾ò´Â´Ù.
 			context_final.Eip = static_cast<uint32_t>(dwRetAddr);
 
-			// 8) íŒŒì¼ì— ê¸°ë¡í•œë‹¤.
+			// 8) ÆÄÀÏ¿¡ ±â·ÏÇÑ´Ù.
 			result = CommonSnapCurrentProcessDump(_str_dump_file, &context_final, _type_dump);
 		}
 	}
@@ -862,39 +2551,72 @@ __declspec(naked) bool snap_dump(const std::string_view _str_dump_file, eDUMP_CO
 #endif
 }
 #else
-bool CGDK::snap_dump(const std::string_view /*_str_dump_file*/, eDUMP_CONTEXT /*_type_dump*/)
+bool CGDK::snap_dump([[maybe_unused]] std::string_view _str_dump_file, [[maybe_unused]] eDUMP_CONTEXT _type_dump)
 {
-	return false;
-}
+	// 1) file name (default : "<dump path>/snap_<time>_<count>")
+	auto pdump_manager = dump_manager::instance();
+	std::string str_dump_file = _str_dump_file.empty() ? _generate_dump_filename(pdump_manager->get_dump_path(), pdump_manager->dump_count(), "snap_") : std::string(_str_dump_file);
 
-bool CGDK::snap_dump(const std::wstring_view /*_str_dump_file*/, eDUMP_CONTEXT /*_type_dump*/)
-{
+#if defined(_WIN32)
+	// 2) create file
+	api::file::create_parent_directories(str_dump_file);
+	HANDLE handle_file = ::CreateFileA(str_dump_file.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+	// check)
+	if (handle_file == INVALID_HANDLE_VALUE)
+	{
+		LOG_ERROR << "(err ) fail to create snap dump file[" << str_dump_file << "]";
+		return false;
+	}
+
+	// 3) write the dump of the current process (all threads, called from this thread : no exception information)
+	auto result = ::MiniDumpWriteDump(::GetCurrentProcess(), ::GetCurrentProcessId(), handle_file, static_cast<MINIDUMP_TYPE>(_to_minidump_type(_type_dump)), nullptr, nullptr, nullptr);
+
+	// 4) close file
+	::CloseHandle(handle_file);
+
+	// check)
+	if (result == FALSE)
+	{
+		LOG_ERROR << "(err ) fail to writing snap dump on file[" << str_dump_file << "]";
+		return false;
+	}
+
+	// trace)
+	LOG_ERROR << "(info) CGDK.system.object: snap dump file created [" << str_dump_file << "]";
+
+	// return)
+	return true;
+#elif defined(__linux__)
+	// 2) make command string ('gcore -o <prefix> <pid>' creates '<prefix>.<pid>')
+	api::file::create_parent_directories(str_dump_file);
+	auto dbx = CGDK::stream_string("gcore -a -o ", str_dump_file, " ", getpid());
+
+	// 3) write to dump
+	auto result = _run_gcore(dbx);
+
+	// trace)
+	LOG_ERROR << "(info) CGDK.system.object: snap dump [" << str_dump_file << "." << getpid() << "] result:" << result;
+
+	// return)
+	return result == 0;
+#else
 	return false;
+#endif
 }
 #endif
 
-void CGDK::enable_seh(bool _is_enable)
+void CGDK::enable_exception_handling(bool _is_enable)
 {
-	dump_manager::instance()->enable_seh(_is_enable);
+	dump_manager::instance()->enable_exception_handling(_is_enable);
 }
 
-void CGDK::disable_seh()
+void CGDK::disable_exception_handling()
 {
-	dump_manager::instance()->disable_seh();
+	dump_manager::instance()->disable_exception_handling();
 }
 
-bool CGDK::seh_enabled()
+bool CGDK::is_exception_handling()
 {
-	return dump_manager::instance()->seh_enabled();
-}
-
-void CGDK::set_seh_to_thread() noexcept
-{
-#if defined(_MSC_VER)
-	// 1) SEH Exception Handlerë¥¼ ì„¤ì •í•œë‹¤.
-	dump_manager::instance()->set_seh_to_thread();
-
-	// 2) Invalid parameter Handlerë¥¼ ì„¤ì •í•œë‹¤.
-	dump_manager::instance()->set_invalid_parameter_handle();
-#endif
+	return dump_manager::instance()->is_exception_handling();
 }

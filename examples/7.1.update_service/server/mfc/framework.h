@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #ifndef VC_EXTRALEAN
 #define VC_EXTRALEAN

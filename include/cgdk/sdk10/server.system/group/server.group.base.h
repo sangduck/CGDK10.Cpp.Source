@@ -36,6 +36,7 @@
 
 // 3) member Data
 #include "cgdk/sdk10/server.system/group/server.group.member_data.h"
+#include "cgdk/sdk10/server.system/group/server.group.member_snapshot.h"
 
 // 4) containerable
 #include "cgdk/sdk10/server.system/group/server.member.Icontainerable.h"

@@ -268,11 +268,11 @@ bool net::io::sendable::Ntcp_async_gather_buffered::process_sendable( const buff
 			if (send_defer::push(this, object_ptr<Ireferenceable>(this)) == false)
 				is_defer_full = true;
 
-			if (send_defer::depth() == 0)
+			if (send_defer::is_cork_age_checked())
 				_cork_begin();
 		}
 		// - send cork : 가장 먼저 모은 것이 오래 기다렸다 => 지금 보낸다. (그룹 락 안에서는 그룹 락이 풀릴 때 보낸다)
-		else if (is_defer_full == false && send_defer::depth() == 0 && _is_cork_expired(SEND_CORK_DURATION, SEND_CORK_CHECK_MAX))
+		else if (is_defer_full == false && send_defer::is_cork_age_checked() && _is_cork_expired(SEND_CORK_DURATION, SEND_CORK_CHECK_MAX))
 		{
 			is_defer_full = true;
 		}

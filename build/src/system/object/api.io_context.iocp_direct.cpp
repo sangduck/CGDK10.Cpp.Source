@@ -137,6 +137,53 @@ void api::io_context_iocp_direct::pop_executable(RESULT& _result, [[maybe_unused
 	_result.result_ = (result == 0);
 }
 
+// - RESULT has the layout of OVERLAPPED_ENTRY (GetQueuedCompletionStatusEx() writes the array of RESULT)
+static_assert(sizeof(api::io_context::RESULT) == sizeof(OVERLAPPED_ENTRY));
+static_assert(offsetof(api::io_context::RESULT, per_handle_key) == offsetof(OVERLAPPED_ENTRY, lpCompletionKey));
+static_assert(offsetof(api::io_context::RESULT, pexecutable) == offsetof(OVERLAPPED_ENTRY, lpOverlapped));
+static_assert(offsetof(api::io_context::RESULT, result_) == offsetof(OVERLAPPED_ENTRY, Internal));
+static_assert(offsetof(api::io_context::RESULT, bytes_transfered) == offsetof(OVERLAPPED_ENTRY, dwNumberOfBytesTransferred));
+
+int api::io_context_iocp_direct::pop_results(RESULT* _presult, int _max_result, chrono::tick::duration _ticks_wait) noexcept
+{
+	// 1) get iocp handle
+	CGHANDLE iocp_handle = handle();
+
+	// check)
+	if (iocp_handle == INVALID_CGHANDLE_VALUE || _presult == nullptr || _max_result <= 0)
+		return 0;
+
+	// 2) get wait time
+	DWORD tick_wait = (_ticks_wait == chrono::tick::duration::max()) ? INFINITE : static_cast<DWORD>(std::chrono::duration_cast<std::chrono::milliseconds>(_ticks_wait).count());
+
+	// 3) 완료를 한 번에 여러 개 받는다. (GetQueuedCompletionStatus()는 syscall 한 번에 하나)
+	ULONG count = 0;
+	auto result = ::GetQueuedCompletionStatusEx(
+		iocp_handle,
+		reinterpret_cast<LPOVERLAPPED_ENTRY>(_presult),
+		static_cast<ULONG>((std::min)(_max_result, MAX_EVENT_BATCH)),
+		&count,
+		tick_wait,
+		FALSE);
+
+	// check) timeout(WAIT_TIMEOUT) 또는 iocp가 닫힘
+	if (result == FALSE)
+		return 0;
+
+	// 4) result값 보정
+	//    - OVERLAPPED_ENTRY::Internal은 그 완료 packet의 NTSTATUS다. GetQueuedCompletionStatus()는 이것이 실패(NT_SUCCESS가 아님 : 음수)면
+	//      FALSE를 돌려주므로 같은 규칙으로 성공 0 / 실패 1 로 바꾼다.
+	//    - lpOverlapped->Internal을 읽으면 안 된다 : executable은 I/O와 PostQueuedCompletionStatus() 양쪽에 쓰이므로
+	//      post된 executable의 OVERLAPPED에는 이전 I/O의 실패 상태가 남아 있을 수 있다. (post packet의 Internal은 0)
+	for (ULONG i = 0; i < count; ++i)
+	{
+		_presult[i].result_ = (static_cast<LONG>(static_cast<ULONG>(static_cast<ULONG_PTR>(_presult[i].result_))) < 0) ? 1 : 0;
+	}
+
+	// return)
+	return static_cast<int>(count);
+}
+
 
 }
 

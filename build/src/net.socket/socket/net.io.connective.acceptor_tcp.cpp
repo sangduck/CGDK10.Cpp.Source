@@ -537,6 +537,11 @@ void net::io::connective::acceptor::Ntcp::request_accept(ADDRESS_FAMILY _address
 	// check) pconnectable가 nullptr이어서는 안된다.
 	CGASSERT_ERROR(pconnectable != nullptr);
 
+	// - the send queue limits back to the ones of the socket object (a socket from the pool kept the ones its last connection set).
+	//   before the default of the accepted sockets below
+	if (auto pgather = dynamic_cast<net::io::sendable::Itcp_gather*>(pconnectable.get()); pgather != nullptr)
+		pgather->reset_send_queue_limit();
+
 	// 2) io_context를 얻는다.
 	auto pio_context = this->io_context();
 
@@ -1057,6 +1062,10 @@ bool net::io::connective::acceptor::Ntcp::request_accept(CGSOCKET _handle_socket
 	//-----------------------------------------------------------------
 	// 1) 새로운 socket을 할당받는다.
 	auto pconnectable = process_alloc_connectable();
+
+	// - the send queue limits back to the ones of the socket object (a socket from the pool kept the ones its last connection set)
+	if (auto pgather = dynamic_cast<net::io::sendable::Itcp_gather*>(pconnectable.get()); pgather != nullptr)
+		pgather->reset_send_queue_limit();
 
 	// - 암호화 socket(Icryptable)이면 acceptor에 설정된 cryption type을 적용한다.
 	if (auto pcryptable = dynamic_cast<Icryptable*>(pconnectable.get()); pcryptable != nullptr)

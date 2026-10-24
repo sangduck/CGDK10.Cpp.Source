@@ -128,8 +128,16 @@ public:
 		int					index;
 		const void*			pcontext;			// - the io_context_uring_cq of the results (nullptr : another backend)
 		BATCH*				pouter;				// - the batch of an outer loop (a handler pumping the executor)
+		void*				pring = nullptr;	// - the ring the batch is published on (batch_begin() : the outermost batch of a worker)
 	};
 	[[nodiscard]] static BATCH*& current_batch() noexcept;
+
+	//! @brief the batch is published on the ring of this worker (begin / end) and its results are claimed one by one (next : false when the
+	//!        rest was taken, *pcount cut). a worker finding one executable running BUSY_LEND (CPU in user space) lends the ring like
+	//!        thread_blocked() and takes the rest of the batch (_lend_busy)
+	static	void				batch_begin(BATCH& _batch) noexcept;
+	static	bool				batch_next(BATCH& _batch, int _index) noexcept;
+	static	void				batch_end(BATCH& _batch) noexcept;
 
 	//! @brief this thread blocks (scoped_thread_block, a wait pumping the executor) / unblocks. the ring of a worker is lent meanwhile : the other
 	//!        workers execute its CQEs (the task work wakes a sleeping owner, so they are posted), the executable the owner blocked in gets its next
@@ -190,7 +198,7 @@ private:
 			RING*				_create_ring_locked() noexcept;
 			RING*				_find_worker_ring() const noexcept;
 			RING*				_ring_of_handle(CGHANDLE _handle, RING*& _pring_before) noexcept;
-			void				_bind_accepted(RING* _pring_accept, CGHANDLE _handle) noexcept;
+			void				_bind_round_robin(CGHANDLE _handle, std::atomic<unsigned>& _index_next) noexcept;
 			RING*				_ring_round_robin() noexcept;
 	[[nodiscard]] bool			_has_orphan() const noexcept;
 			bool				_wake_ring() noexcept;
@@ -214,6 +222,11 @@ private:
 			bool				_take_lent(RING* _pring, POP_RESULT* _results, int& _count, int _max) noexcept;
 			bool				_deliver_lent(RING* _pring, POP_RESULT* _results, int& _count, int _max) noexcept;
 			void				_release_lent(RING* _pring) noexcept;
+			void				_check_busy(RING* _pring_own) noexcept;
+			bool				_lend_busy(RING* _pring, uint64_t _word) noexcept;
+			void				_reclaim_busy(RING* _pring) noexcept;
+	[[nodiscard]] bool			_is_busy(const RING* _pring_own) const noexcept;
+			void				_hand_watch(RING* _pring_own) noexcept;
 			template <class TMATCH>
 			bool				_cancel_ops(TMATCH&& _match) noexcept;
 			template <class TMATCH>
@@ -255,6 +268,8 @@ private:
 			std::deque<Iexecutable*> m_queue_post;
 			std::atomic<std::size_t> m_count_post{ 0 };				// - the size of m_queue_post (written under m_lockable_post : read without it by an owner about to wait)
 			std::atomic<int>	m_count_lent{ 0 };					// - the rings lent (STATE_LENT / STATE_DRAINING_LENT : their owner blocked) : the idle workers wait no longer than LENT_WAIT
+			std::atomic<int64_t> m_tick_check_busy{ 0 };			// - the next check of the busy rings (_check_busy : one worker per BUSY_CHECK, ns of chrono::tick)
+			std::atomic<RING*>	m_pring_watch{ nullptr };			// - the idle owner that waits no longer than BUSY_CHECK / BUSY_WATCH (the busy rings are checked while every worker idles)
 			bool				m_is_signaled{ false };				// - a ring was woken and did not take the queue yet
 			bool				m_is_post_closed{ false };
 			int					m_count_sleepers{ 0 };				// - threads without a ring waiting on m_cv_post

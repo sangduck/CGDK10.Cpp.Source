@@ -849,4 +849,107 @@ TEST(socket_option, uds_socket_skips_the_options)
 }
 #endif
 
+//-----------------------------------------------------------------------------
+// the send queue limits of a socket from the pool : back to the ones of the socket object at each accept
+//  (before : a connection that set maximum_depth_of_send_buffer() / _bytes() left them to the next connection the pooled object served.
+//   the same kind as the socket option above : the acceptor and the connector call reset_send_queue_limit() at the allocation)
+//-----------------------------------------------------------------------------
+namespace
+{
+	struct sLIMIT_SEEN
+	{
+		const void*			psocket;
+		std::size_t			depth;
+		std::size_t			bytes;
+	};
+	std::mutex				g_limit_lockable;
+	std::vector<sLIMIT_SEEN> g_limit_seen;
+	std::atomic<int>		g_limit_count_connected{ 0 };
+
+	constexpr std::size_t	LIMIT_DEPTH_OF_THE_OBJECT = 64;
+
+	class limit_server_socket : public net::socket::tcp<>
+	{
+	public:
+		limit_server_socket() { this->maximum_depth_of_send_buffer(LIMIT_DEPTH_OF_THE_OBJECT); }	// - the limit of the socket object
+
+	protected:
+		virtual void				on_connect() override
+		{
+			{
+				std::lock_guard lock(g_limit_lockable);
+				g_limit_seen.push_back(sLIMIT_SEEN{ this, this->maximum_depth_of_send_buffer(), this->maximum_depth_of_send_buffer_bytes() });
+			}
+
+			// - this connection sets its own limits
+			this->maximum_depth_of_send_buffer(7);
+			this->maximum_depth_of_send_buffer_bytes(300 * 1024);
+
+			++g_limit_count_connected;
+		}
+	};
+}
+
+TEST(socket_option, send_queue_limit_of_a_pooled_socket)
+{
+	{
+		std::lock_guard lock(g_limit_lockable);
+		g_limit_seen.clear();
+	}
+	g_limit_count_connected = 0;
+
+	auto pacceptor = make_own<net::acceptor<limit_server_socket>>();
+	ASSERT_EQ(pacceptor->start(make_acceptor_parameter(option_test_port())), eRESULT::SUCCESS);
+	const auto port = pacceptor->local_endpoint().port();
+
+	// - a connection served by a socket object that served one before
+	const auto count_reused = [&]()
+	{
+		std::lock_guard lock(g_limit_lockable);
+		std::size_t count = 0;
+		for (std::size_t i = 0; i < g_limit_seen.size(); ++i)
+		{
+			for (std::size_t j = 0; j < i; ++j)
+			{
+				if (g_limit_seen[j].psocket == g_limit_seen[i].psocket)
+				{
+					++count;
+					break;
+				}
+			}
+		}
+		return count;
+	};
+
+	// 1) connections one after another till 3 of them were served by a reused socket object (the server socket goes back to the pool.
+	//    the pool hands a returned object out again after a while : the accept sockets prepared in advance, the cache per thread)
+	constexpr int max_connect = 300;
+	int count_connect = 0;
+	for (; count_connect < max_connect && count_reused() < 3; ++count_connect)
+	{
+		auto psocket = make_own<option_client_socket>();
+		psocket->start(make_connect_parameter(port));
+		ASSERT_TRUE(wait_until([&]() { return g_limit_count_connected.load() == count_connect + 1; })) << "connect " << count_connect;
+		psocket->stop();
+		ASSERT_TRUE(wait_until([&]() { return pacceptor->count() == 0; })) << "close " << count_connect;
+	}
+
+	EXPECT_GE(count_reused(), 3u) << "the socket objects were not reused in " << count_connect << " connections : the test checks little";
+
+	// 2) every connection started with the limits of the socket object (the bytes : the one the first connection of an object got,
+	//    the default of the accepted sockets on windows)
+	{
+		std::lock_guard lock(g_limit_lockable);
+		ASSERT_EQ(g_limit_seen.size(), static_cast<std::size_t>(count_connect));
+
+		for (std::size_t i = 0; i < g_limit_seen.size(); ++i)
+		{
+			EXPECT_EQ(g_limit_seen[i].depth, LIMIT_DEPTH_OF_THE_OBJECT) << "connection " << i;
+			EXPECT_EQ(g_limit_seen[i].bytes, g_limit_seen[0].bytes) << "connection " << i;
+		}
+	}
+
+	pacceptor->stop();
+}
+
 }

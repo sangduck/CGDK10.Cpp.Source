@@ -6,13 +6,13 @@
 <title>벤치마크 · CGDK10 기술 문서</title>
 <meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - Release 빌드로 측정한 벤치마크 모음 (메모리 풀, 소켓 echo, 수신 구성, UDS, push 처리량, send cork, 로그)">
 <link rel="icon" href="assets/CGCII_logo.PNG">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div class="layout">
 <aside>
   <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
-  <div class="ver">Game Server Engine</div>
+  <div class="ver"><span class="tag">Game Server Engine</span><span class="since">since 1998</span></div>
   <ul>
     <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
     <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
@@ -68,15 +68,28 @@
 </table>
 
 <h4 class="sec">2. 소켓 echo : epoll 과 io_uring</h4>
-<p>같은 프로세스 안의 echo ping-pong(<code>bench_linux_io.cpp</code>, <code>CGDK_BENCH=3</code>). 32 코어 표(4 · 8 thread, 단계별)는 <a href="socket.io_uring.html">io_uring 백엔드</a>.</p>
-<p>32 코어 서버 A, HEAD r11478, executor 8 thread, 교대 3라운드 중앙값(msg/s). 4 thread 표는 <a href="socket.recv.html">Receive 최적화</a>.</p>
+<p>같은 프로세스 안의 echo ping-pong(<code>bench_linux_io.cpp</code>, <code>CGDK_BENCH=3</code>). 4 · 8 · 16 thread 표는 <a href="socket.recv.html">Receive 최적화</a>, 단계별 표와 백엔드 구조는 <a href="socket.io_uring.html">io_uring 백엔드</a>.</p>
+<p><b>공정 비교(서버·클라이언트 모두 case 의 executor)</b> : 32 코어 서버 A, executor 8 thread, r11496 / r11497 교대 5라운드 중앙값(msg/s). r11497 = CQE 배치 끝 송신(배치 send defer). 괄호는 같은 판의 epoll 대비.</p>
 <table class="bench wrap">
-<tr><th class="lbl">케이스</th><th>epoll</th><th>completion 단일 RECV</th><th>completion multishot (전환 끔)</th><th class="hl">completion 기본값</th></tr>
-<tr><td class="lbl">tcp 64 B x32, window 16</td><td>8,714,806</td><td>5,708,428</td><td>5,813,431</td><td class="hl">5,776,527</td></tr>
-<tr><td class="lbl">uds 64 B x32, window 16</td><td>8,970,336</td><td>5,565,885</td><td>5,804,000</td><td class="hl">5,885,948</td></tr>
-<tr><td class="lbl">tcp 16 B x256, window 1</td><td>580,915</td><td>593,035</td><td>664,054</td><td class="hl">677,773</td></tr>
-<tr><td class="lbl">tcp 64 KB x4, window 2</td><td>139,215</td><td>161,815</td><td>151,438</td><td class="hl">166,405</td></tr>
-<tr><td class="lbl">udp 64 B x16, window 32</td><td>411,854</td><td>603,202</td><td>592,773</td><td class="hl">568,570</td></tr>
+<tr><th class="lbl">케이스</th><th>epoll r11497</th><th>completion r11496</th><th class="hl">completion r11497</th></tr>
+<tr><td class="lbl">tcp 64 B x32, window 16</td><td>15,805,514</td><td>11,007,373 (−31%)</td><td class="hl">17,965,546 (+14%)</td></tr>
+<tr><td class="lbl">uds 64 B x32, window 16</td><td>16,513,529</td><td>28,814,340 (+70%)</td><td class="hl">29,465,724 (+78%)</td></tr>
+<tr><td class="lbl">tcp 16 B x256, window 1</td><td>1,049,849</td><td>1,563,704 (+47%)</td><td class="hl">1,556,107 (+48%)</td></tr>
+<tr><td class="lbl">tcp 64 KB x4, window 2</td><td>190,339</td><td>184,285 (−3%)</td><td class="hl">160,976 (−15%, 노이즈 큼)</td></tr>
+<tr><td class="lbl">udp 64 B x16, window 32</td><td>477,928</td><td>688,836 (+45%)</td><td class="hl">683,340 (+43%)</td></tr>
+</table>
+<ul>
+  <li>r11497 은 tcp 64 B x32 를 +63% 올렸다 : multishot RECV 가 도착마다 CQE 를 내고 CQE 마다 send 가 하나씩 나가던 것(메시지당 0.76 회, epoll 0.15)을 배치 끝에 소켓마다 한 번으로. 나머지 케이스는 노이즈 안. 설명은 <a href="socket.io_uring.html">io_uring 백엔드</a> 5단계.</li>
+  <li><b>아래 8 코어 표(r11463)는 서버가 system executor(epoll)에서 돈 측정이다</b>(r11487 이전 벤치, r11489 이전 acceptor). completion 열은 클라이언트만 completion 이라 위 표와 비교하지 말 것.</li>
+</ul>
+<p><b>공정 비교, 구성별</b> : 32 코어 서버 A(같은 CPU 의 다른 장비), HEAD r11501, executor 8 thread, 교대 5라운드 중앙값(msg/s). P 코어 8 개 + E 코어 16 개의 하이브리드 CPU 라 thread 가 놓이는 코어에 따라 epoll tcp 64 B 가 장비·회차마다 12 ~ 16 M 사이로 달라진다. 4 · 16 thread 표는 <a href="socket.recv.html">Receive 최적화</a>.</p>
+<table class="bench wrap">
+<tr><th class="lbl">케이스</th><th>epoll</th><th>io_uring readiness</th><th>completion 단일 RECV</th><th>completion multishot (전환 끔)</th><th class="hl">completion 기본값</th></tr>
+<tr><td class="lbl">tcp 64 B x32, window 16</td><td>12,312,794</td><td>7,070,281</td><td>10,216,805</td><td>15,005,862</td><td class="hl">15,547,974</td></tr>
+<tr><td class="lbl">uds 64 B x32, window 16</td><td>15,220,425</td><td>7,070,929</td><td>16,789,043</td><td>24,447,594</td><td class="hl">24,877,841</td></tr>
+<tr><td class="lbl">tcp 16 B x256, window 1</td><td>899,639</td><td>397,789</td><td>1,050,780</td><td>1,156,119</td><td class="hl">1,235,988</td></tr>
+<tr><td class="lbl">tcp 64 KB x4, window 2</td><td>160,642</td><td>154,329</td><td>136,955</td><td>126,589</td><td class="hl">180,177</td></tr>
+<tr><td class="lbl">udp 64 B x16, window 32</td><td>419,057</td><td>561,171</td><td>604,649</td><td>611,839</td><td class="hl">600,712</td></tr>
 </table>
 <p>8 코어 서버, HEAD r11463, executor 4 thread, 교대 3라운드 중앙값(msg/s).</p>
 <table class="bench wrap">
@@ -88,9 +101,11 @@
 <tr><td class="lbl">udp 64 B x16, window 32</td><td>443,676</td><td>301,010</td><td>293,040</td><td class="hl">286,619</td></tr>
 </table>
 <ul>
-  <li>32 코어에서는 completion 기본값이 16 B x256(+17%), 64 KB(+20%), UDP(+38%)에서 epoll 을 넘고, 64 B x32 · UDS 는 −34% 다. 8 코어에서는 epoll 이 대부분 앞선다.</li>
-  <li>수신 모드 전환은 32 코어 64 KB 에서 multishot 고정보다 +10% 다. 8 코어에서는 구성끼리 ±3% 안이다. 수신 기법별 설명은 <a href="socket.recv.html">Receive 최적화</a>.</li>
-  <li>UDS 는 같은 조건의 TCP 보다 +34%(8 코어) · +7%(32 코어 4 thread, r11445).</li>
+  <li>공정 비교에서 completion 기본값은 8 thread 의 모든 케이스에서 epoll 을 넘는다(위 표 tcp 64 B +26%, UDS +63%, 16 B x256 +37%, 64 KB +12%, UDP +43%). 16 thread 는 +55 ~ +172%, 4 thread 는 +7 ~ +16% 이고 4 thread 의 64 KB 만 epoll 이 두 배다(접속 4 개 = ring 4 개, loopback 의 SEND_ZC 손해).</li>
+  <li>readiness io_uring 은 공유 ring 의 CQ 대기자 하나라 thread 가 늘수록 뒤처진다(8 thread tcp 64 B 는 epoll 의 57%, UDS 46%, 16 B x256 44%).</li>
+  <li>multishot 은 단일 RECV 보다 tcp 64 B +47%, UDS +46%, 16 B x256 +10%(8 thread). 수신 모드 전환은 64 KB 에서 multishot 고정보다 +42%. 수신 기법별 설명은 <a href="socket.recv.html">Receive 최적화</a>.</li>
+  <li>UDS 는 같은 조건의 TCP 보다 epoll +24%, completion +60%(32 코어 8 thread).</li>
+  <li>(서버 epoll 측정, 8 코어) epoll 이 대부분 앞선다. 공정 비교의 8 코어 재측정은 아직 없다.</li>
 </ul>
 
 <h4 class="sec">3. UDS (같은 host 접속)</h4>
@@ -150,7 +165,8 @@ export CGDK_BENCH=3 CGDK_BENCH_THREADS=4
 ./CGDK10.unit_test.net_socket.http.Release --gtest_filter=bench.epoll
 CGDK_IO_URING_MULTISHOT=0     ./CGDK10.unit_test.net_socket.http.Release --gtest_filter=bench.io_uring_completion   # 단일 RECV
 CGDK_IO_URING_RECV_ADAPTIVE=0 ./CGDK10.unit_test.net_socket.http.Release --gtest_filter=bench.io_uring_completion   # multishot 고정
-./CGDK10.unit_test.net_socket.http.Release --gtest_filter=bench.io_uring_completion                                 # 기본값</code></pre>
+./CGDK10.unit_test.net_socket.http.Release --gtest_filter=bench.io_uring_completion                                 # 기본값
+# case 고르기 : CGDK_BENCH_CASES="tcp echo 64B,uds". case 마다 [bench-cpu] 줄 : 메시지당 CPU, thread·socket 분포, 장비 CPU(겹친 회차 거르기)</code></pre>
 </details>
 <details>
 <summary>push 처리량 실행 (펼치기)</summary>
@@ -233,7 +249,7 @@ int main(int argc, char** argv)
 }</code></pre>
 </details>
 
-<footer>CGDK10 · 소스 기준 정리 (r11463, 2026-10-23) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+<footer>CGDK10 · 소스 기준 정리 (r11497, 2026-10-24) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
 </main>
 </div>
 </body>

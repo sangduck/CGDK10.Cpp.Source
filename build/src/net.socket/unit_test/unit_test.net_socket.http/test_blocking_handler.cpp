@@ -15,7 +15,9 @@
 //  the test runs on the executor of the process (the backend of the run : CGDK_IO_URING=io_uring / completion). 200 connections :
 //  the rings of the system executor are shared by several of them (the sockets on the ring of the blocked one are the case). completion :
 //  the connections spread over the rings (the accepted sockets are bound round robin : not all on the ring of the listen socket).
-//  a busy handler (CPU in user space) is not covered : completion runs the completions of its ring after it (COOP_TASKRUN).
+//  a busy handler (CPU in user space, no block) : its ring is lent too once one executable ran BUSY_LEND (a worker checking the
+//  rings finds the same executable running : api::io_context_uring_cq::_lend_busy). the task work of the requests runs at the timer
+//  tick of the busy owner (COOP_TASKRUN : no IPI), so their CQEs come meanwhile.
 //-----------------------------------------------------------------------------
 #if defined(_SYS_EPOLL_H)
 
@@ -40,7 +42,8 @@ namespace
 		return static_cast<long>(::syscall(SYS_gettid));
 	}
 
-	// - [uint32 size = 12][char kind][3 pad][uint32 index] : 'E' echo, 'S' blocks 300ms in a scoped_thread_block then echoes
+	// - [uint32 size = 12][char kind][3 pad][uint32 index] : 'E' echo, 'S' blocks 300ms in a scoped_thread_block then echoes,
+	//   'B' runs 300ms in user space (busy, no syscall : steady_clock is the vDSO) then echoes
 	constexpr uint32_t BH_SIZE = 12;
 
 	std::mutex				g_bh_lockable;
@@ -62,6 +65,12 @@ namespace
 			{
 				scoped_thread_block block;
 				std::this_thread::sleep_for(300ms);
+			}
+			else if (kind == 'B')
+			{
+				const auto time_end = std::chrono::steady_clock::now() + 300ms;
+				while (std::chrono::steady_clock::now() < time_end)
+					;
 			}
 
 			this->send(_msg.buf_message);
@@ -140,7 +149,8 @@ namespace
 	}
 }
 
-TEST(blocking_handler, does_not_hold_the_other_sockets)
+// - _kind : 'S' the handler of client 0 blocks, 'B' it is busy (CPU)
+void bh_run(char _kind, uint16_t _port)
 {
 	{
 		std::lock_guard lock(g_bh_lockable);
@@ -150,7 +160,7 @@ TEST(blocking_handler, does_not_hold_the_other_sockets)
 	// 1) server (the executor of the process) and 200 connections
 	auto pacceptor = make_own<net::acceptor<bh_server_socket>>();
 	net::acceptor<bh_server_socket>::START_PARAMETER parameter;
-	parameter.local_endpoint = net::ip::tcp::endpoint{ net::ip::address_v4::loopback(), bh_port() };
+	parameter.local_endpoint = net::ip::tcp::endpoint{ net::ip::address_v4::loopback(), _port };
 	parameter.enable_progress_log = false;
 	ASSERT_EQ(pacceptor->start(parameter), eRESULT::SUCCESS);
 	const auto port = pacceptor->local_endpoint().port();
@@ -195,8 +205,8 @@ TEST(blocking_handler, does_not_hold_the_other_sockets)
 		EXPECT_LE(count_same_thread + 1, count / 2) << "the connections on the thread of the blocked one : " << count_same_thread << "/" << (count - 1) << " (" << threads.size() << " threads)";
 	}
 
-	// 2) client 0 blocks its handler 300ms, then sends 4 more (they come after the block : in order)
-	ASSERT_TRUE(clients[0]->send('S', 1));
+	// 2) client 0 blocks (or keeps busy) its handler 300ms, then sends 4 more (they come after it : in order)
+	ASSERT_TRUE(clients[0]->send(_kind, 1));
 	std::this_thread::sleep_for(30ms);
 	for (uint32_t k = 2; k <= 5; ++k)
 		ASSERT_TRUE(clients[0]->send('E', k));
@@ -234,6 +244,89 @@ TEST(blocking_handler, does_not_hold_the_other_sockets)
 	clients.clear();
 	EXPECT_TRUE([&]() { for (int i = 0; i < 500 && pacceptor->count() != 0; ++i) std::this_thread::sleep_for(10ms); return pacceptor->count() == 0; }()) << "connected yet " << pacceptor->count();
 	pacceptor->stop();
+}
+
+TEST(blocking_handler, does_not_hold_the_other_sockets)
+{
+	bh_run('S', bh_port());
+}
+
+// - a busy handler (CPU in user space) : completion lends its ring like the one of a blocked handler (the other sockets of the ring answer meanwhile)
+TEST(blocking_handler, busy_handler_does_not_hold_the_other_sockets)
+{
+	bh_run('B', static_cast<uint16_t>(25900 + api::get_process_id() % 300));		// - not the ports of the other tests
+}
+
+// - completion : a busy handler while every other worker idles (no other traffic wakes them : the watching idle owner checks the rings).
+//   an executor of 2 threads of its own : the sockets 0 and 2 on one ring (accepted round robin), the other worker waits meanwhile
+TEST(blocking_handler, busy_handler_on_an_idle_executor)
+{
+	if (executor::is_io_uring_completion_available() == false)
+		GTEST_SKIP() << "io_uring completion not available";
+
+	{
+		std::lock_guard lock(g_bh_lockable);
+		g_bh_tid_of_port.clear();
+	}
+
+	// 1) the executor (completion) and the acceptor on it
+	const auto backend_before = executor::default_io_backend();
+	executor::set_default_io_backend(executor::io_backend::io_uring_completion);
+	auto pexecutor = executor::make_io_context_threads("busy handler executor", 2);
+	executor::set_default_io_backend(backend_before);
+	ASSERT_TRUE(pexecutor.exist());
+	ASSERT_EQ(pexecutor->backend(), executor::io_backend::io_uring_completion);
+
+	auto pacceptor = make_own<net::acceptor<bh_server_socket>>();
+	pacceptor->io_context(pexecutor.get());
+	net::acceptor<bh_server_socket>::START_PARAMETER parameter;
+	parameter.local_endpoint = net::ip::tcp::endpoint{ net::ip::address_v4::loopback(), static_cast<uint16_t>(25900 + api::get_process_id() % 300 + 1) };
+	parameter.enable_progress_log = false;
+	ASSERT_EQ(pacceptor->start(parameter), eRESULT::SUCCESS);
+	const auto port = pacceptor->local_endpoint().port();
+
+	// - the rings are made by the workers as they start
+	std::this_thread::sleep_for(100ms);
+
+	// 2) connections till two of them run on one thread (round robin over 2 rings : 0 and 2)
+	std::vector<std::unique_ptr<bh_client>> clients;
+	int index_same = -1;
+	for (int i = 0; i < 8 && index_same < 0; ++i)
+	{
+		clients.push_back(std::make_unique<bh_client>());
+		ASSERT_TRUE(clients.back()->connect(port)) << "connect " << i;
+		ASSERT_TRUE(clients.back()->send('E', 0));
+		ASSERT_EQ(clients.back()->receive(), 0) << "client " << i;
+		if (i != 0 && bh_tid_of(*clients.back()) == bh_tid_of(*clients[0]))
+			index_same = i;
+	}
+	ASSERT_GT(index_same, 0) << "no connection on the thread of client 0";
+
+	// - every worker idles (waits in the kernel)
+	std::this_thread::sleep_for(50ms);
+
+	// 3) client 0 busy 300ms, then the other socket of its ring : answered meanwhile (no other traffic)
+	ASSERT_TRUE(clients[0]->send('B', 1));
+	ASSERT_TRUE(clients[0]->send('E', 2));
+	std::this_thread::sleep_for(20ms);
+
+	const auto time_begin = std::chrono::steady_clock::now();
+	ASSERT_TRUE(clients[index_same]->send('E', 100));
+	EXPECT_EQ(clients[index_same]->receive(), 100);
+	const auto us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - time_begin).count();
+	EXPECT_LT(us, 100000) << "the other socket of the ring of the busy one waited";
+
+	// 4) the busy one : in order after it
+	EXPECT_EQ(clients[0]->receive(), 1);
+	EXPECT_EQ(clients[0]->receive(), 2);
+
+	std::cout << "[ info ] the other socket of the ring of the busy one : " << us << "us" << std::endl;
+
+	// 5) close
+	clients.clear();
+	EXPECT_TRUE([&]() { for (int i = 0; i < 500 && pacceptor->count() != 0; ++i) std::this_thread::sleep_for(10ms); return pacceptor->count() == 0; }()) << "connected yet " << pacceptor->count();
+	pacceptor->stop();
+	pexecutor->stop();
 }
 
 }

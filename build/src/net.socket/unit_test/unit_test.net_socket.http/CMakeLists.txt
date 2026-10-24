@@ -102,6 +102,9 @@ bench_linux_io.cpp
 #tcp socket option (TCP_NODELAY, TCP_QUICKACK, SO_BUSY_POLL, TCP_NOTSENT_LOWAT, TCP Fast Open)
 test_socket_option.cpp
 
+#from_string (address string -> sockaddr : "any", "localhost", the port)
+test_sockaddr_from_string.cpp
+
 #connect_requestable : a failed connect (immediate / later), reconnection after it
 test_connect_requestable.cpp
 test_emergency.cpp
@@ -111,6 +114,9 @@ test_blocking_handler.cpp
 
 #io_uring completion : the send path (the SEND ops : a full socket buffer, send then close, close while sending, the send queue limit)
 test_uring_send.cpp
+
+#send_defer auto : the sends of an executable run by the executor (one socket after another, close, exception, other threads)
+test_send_defer_auto.cpp
 )
 
 

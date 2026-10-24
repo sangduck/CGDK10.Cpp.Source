@@ -170,6 +170,7 @@
 
 // 3) 
 #include <any>
+#include <optional>
 
 // 4) CGCII containers
 #include "containers/static_vector"

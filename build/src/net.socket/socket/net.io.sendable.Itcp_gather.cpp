@@ -30,6 +30,21 @@ void net::io::sendable::Itcp_gather::maximum_depth_of_send_buffer_bytes(std::siz
 	this->m_bytes_max_queued = _size;
 }
 
+void net::io::sendable::Itcp_gather::reset_send_queue_limit() noexcept
+{
+	// 1) the first call : the limits of the socket object (its constructor) are kept
+	if (this->m_max_depth_of_send_buffer_initial == 0)
+	{
+		this->m_max_depth_of_send_buffer_initial = this->m_max_depth_of_send_buffer;
+		this->m_bytes_max_queued_initial = this->m_bytes_max_queued;
+		return;
+	}
+
+	// 2) back to them (a socket from the pool kept the limits its last connection set)
+	this->m_max_depth_of_send_buffer = this->m_max_depth_of_send_buffer_initial;
+	this->m_bytes_max_queued = this->m_bytes_max_queued_initial;
+}
+
 void net::io::sendable::Itcp_gather::default_maximum_depth_of_send_buffer(std::size_t _max) noexcept
 {
 	// check) 이전 값과 동일하다면 그냥 끝낸다.

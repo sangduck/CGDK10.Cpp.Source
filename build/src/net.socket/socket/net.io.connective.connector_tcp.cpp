@@ -440,6 +440,10 @@ object_ptr<net::io::Iconnectable> net::io::connective::connector::Ntcp::alloc_co
 		// - the socket option back to the defaults (a socket from the pool kept the option of its last connection)
 		pconnectable->socket_option(sSOCKET_OPTION_TCP{});
 
+		// - the send queue limits back to the ones of the socket object (the same : the ones its last connection set)
+		if (auto pgather = dynamic_cast<net::io::sendable::Itcp_gather*>(pconnectable.get()); pgather != nullptr)
+			pgather->reset_send_queue_limit();
+
 		// 3) the tcp socket option of the connector ("socket_option") : applied when the connect completes. (on_alloc_connectable() may change it)
 		if (this->m_flag_socket_option)
 			pconnectable->socket_option(this->m_socket_option);

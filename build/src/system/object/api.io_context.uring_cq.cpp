@@ -18,6 +18,10 @@
 //  - an accepted socket (the CQE of an accept op) is bound when its CQE is taken, before its handler runs : round robin over the
 //    owned rings (RING::index_bind_next of the ring of the accept). bound by its first submit it went to the ring of the thread
 //    running the accept : every socket of an acceptor ran on the owner of the listen ring while the other workers idled.
+//    a connecting socket likewise, by submit_connect (RING::index_bind_connect of ring 0 : one counter) : bound by
+//    its CONNECT op it went to the ring of the worker running the connect post (the posts of a client opening many connections
+//    are taken 16 at a time : a few threads). a UDS connected at once has no op : the ring of the worker running its posted
+//    completion (its first submit).
 //  - submission : a request belongs to the thread that submitted it (the kernel rule : the requests of a thread that exits
 //    complete with -ECANCELED). so a poll or an op is never submitted by a thread that is not the owner of the ring : any
 //    thread stages it (RING::staged, under the SQ lock) and the owner moves the staged SQEs into the SQ and submits them with
@@ -50,7 +54,9 @@
 //    (a thread pumping the executor : wait_complete_* with execute(2ms)) pops the queue only and sleeps on a condition.
 //  - readiness : the one shot poll / armed sequence / re-arm logic of io_context_uring on the bound ring of the handle.
 //  - the setup flags COOP_TASKRUN | TASKRUN_FLAG : the task work of a request runs when its owner returns to user space
-//    or wakes from a sleep (no IPI). a thread spinning in user space delays the CQEs of the requests it submitted.
+//    or wakes from a sleep (no IPI). a thread spinning in user space runs it at its timer tick (the return to user space of the
+//    interrupt : kernel 7.0 HZ 1000, the CQE came 0.2~0.7ms after the data while the owner spun) : the CQEs come, only nobody
+//    else consumed them (busy ring below).
 //  - multishot recv + provided buffers (submit_recv_multishot) : a provided buffer ring per ring (IORING_REGISTER_PBUF_RING,
 //    group PBUF_GROUP, PROVIDED_BUFFER_COUNT x PROVIDED_BUFFER_SIZE : registered at the first multishot recv on the ring). the
 //    kernel takes a buffer per arrival (the CQE : IORING_CQE_F_BUFFER + the buffer id, F_MORE while the recv goes on), the param
@@ -63,11 +69,20 @@
 //    an orphan : STATE_DRAINING till that worker executed them, t_draining). the CQEs of one multishot op never run concurrently.
 //  - lent ring (thread_blocked : the owner blocks in scoped_thread_block / a wait pumping the executor) : STATE_LENT, drained by the
 //    other workers like an orphan (STATE_DRAINING_LENT while one holds it) - otherwise every socket of the ring waited for the
-//    blocked handler. the task work wakes a sleeping owner, so the CQEs of its requests are posted meanwhile (a busy owner in user
-//    space delays them : COOP_TASKRUN, not helped). the rest of the batch of the owner (RING::carry) runs first, the results of the
+//    blocked handler. the task work wakes a sleeping owner, so the CQEs of its requests are posted meanwhile. the rest of the
+//    batch of the owner (RING::carry) runs first, the results of the
 //    executable the owner blocked in (RING::pblocked) wait for the owner (RING::deferred, in order : one executable's results never
 //    run concurrently). the owner takes the ring back at its unblock (at the release of the worker holding it) and executes carry
 //    and deferred before its CQ. the staged SQEs move to the ring of the draining worker (the owner does not enter while it blocks)
+//  - busy ring (an owner running one executable long : CPU in user space, no block) : lent the same way by another worker. the owner
+//    publishes its outermost batch on its ring (RING::batch_word : seq | end | index, batch_begin / batch_next / batch_end : the
+//    owner claims each result by a CAS). a worker in pop_results() checks the rings every BUSY_CHECK (_check_busy : one at a time) and
+//    a word seen unchanged for BUSY_LEND (the same executable running) lends the ring (_lend_busy : STATE_LENT, the rest of the batch
+//    cut from the word by a CAS into carry, the executable running = pblocked). the owner takes it back at its next pop_results()
+//    (_reclaim_busy : outside a batch, not at an unblock). a handler pumping the executor marks the batch BATCH_NESTED (not lent : it
+//    pops the ring itself). while every worker waits, one idle owner watches (m_pring_watch : its wait is BUSY_CHECK at most while
+//    another ring runs a batch, BUSY_WATCH otherwise ; it frees the watch when it gets work and wakes an idle owner for it when no
+//    other owner may wait soon : _hand_watch). a busy worker checks every BUSY_CHECK_POPS pops (no clock read per pop)
 //-----------------------------------------------------------------------------
 #if defined(__ANDROID__) || defined(__linux__)
 
@@ -192,6 +207,27 @@ namespace
 	// - the idle workers check the lent rings this often (their CQEs are posted while the owner blocks : nobody waits on that CQ)
 	constexpr auto		LENT_WAIT = std::chrono::milliseconds(1);
 	thread_local std::vector<DRAINING> t_draining;
+
+	// - busy owners : the rings are checked every BUSY_CHECK (a worker in pop_results(), the watching idle owner), an executable running
+	//   BUSY_LEND gets its ring lent. the watching owner waits BUSY_WATCH at most while no other ring runs a batch
+	constexpr auto		BUSY_CHECK = std::chrono::milliseconds(1);
+	constexpr auto		BUSY_LEND = std::chrono::milliseconds(2);
+	constexpr auto		BUSY_WATCH = std::chrono::milliseconds(10);
+	constexpr unsigned	BUSY_CHECK_POPS = 32;				// - a worker looks at the time (_check_busy) every this many pops (a batch takes ~10us : < BUSY_CHECK)
+	thread_local unsigned t_count_pop_busy = 0;
+
+	// - the batch word of a ring (RING::batch_word) : seq (bits 32~61) | end (16~31) | index (0~15)
+	constexpr uint64_t	BATCH_LENT = 1ull << 63;			// - the rest was taken by the worker that lent the ring (_lend_busy)
+	constexpr uint64_t	BATCH_NESTED = 1ull << 62;			// - the owner pops its ring in a handler of the batch (not lent till the next result)
+	constexpr uint64_t	_batch_word(uint32_t _seq, int _index, int _end) noexcept { return (static_cast<uint64_t>(_seq & 0x3FFFFFFFu) << 32) | (static_cast<uint64_t>(static_cast<uint16_t>(_end)) << 16) | static_cast<uint16_t>(_index); }
+	constexpr int		_batch_index(uint64_t _word) noexcept { return static_cast<int>(_word & 0xFFFFu); }
+	constexpr int		_batch_end(uint64_t _word) noexcept { return static_cast<int>((_word >> 16) & 0xFFFFu); }
+	constexpr uint32_t	_batch_seq(uint64_t _word) noexcept { return static_cast<uint32_t>((_word >> 32) & 0x3FFFFFFFu); }
+
+	int64_t _tick_ns() noexcept
+	{
+		return std::chrono::duration_cast<std::chrono::nanoseconds>(chrono::tick::now().time_since_epoch()).count();
+	}
 
 	int _io_uring_setup(unsigned _entries, io_uring_params* _pparams) noexcept
 	{
@@ -424,7 +460,8 @@ struct api::io_context_uring_cq::RING
 	std::vector<OP*>	synthetic;						// - the ops cancelled while staged (OP_CANCELLED, still in ops) : delivered with -ECANCELED by the owner
 	std::atomic<bool>	is_wake_pending{ false };		// - a wake for the staged SQEs was written and the owner did not flush them yet (one wake till then)
 	std::atomic<bool>	is_waiting{ false };			// - the owner waits in the kernel for a completion (idle : a wake of the post queue is taken at once)
-	std::atomic<unsigned> index_bind_next{ 0 };			// - the round robin of the sockets accepted by the accept ops of this ring (_bind_accepted)
+	std::atomic<unsigned> index_bind_next{ 0 };			// - the round robin of the sockets accepted by the accept ops of this ring (_bind_round_robin)
+	std::atomic<unsigned> index_bind_connect{ 1 };		// - ring 0 : the round robin of the connecting sockets of the io_context (submit_connect). from 1 : see submit_connect
 	int					wake_fd = -1;					// - the wake eventfd : the other threads write it, the owner polls it (multishot : a CQE per write)
 	uint16_t			wake_generation = 0;			// - the generation of the poll of wake_fd armed last (under lockable_sq : an ended poll of an older owner is not armed again)
 
@@ -434,6 +471,15 @@ struct api::io_context_uring_cq::RING
 	std::vector<POP_RESULT> carry;						// - the rest of the batch of the owner when it blocked : executed first by the worker that drains the ring
 	std::vector<POP_RESULT> deferred;					// - the results of pblocked taken meanwhile : executed by the owner when it took the ring back
 	bool				is_reclaim = false;				// - the owner unblocked while a worker drained the ring : OWNED at the release of that worker
+
+	// - busy (the owner runs one executable long : CPU in user space). the outermost batch of the owner is published here (batch_begin /
+	//   batch_next : the owner only, the cut of _lend_busy by a CAS). a worker seeing the same executable running BUSY_LEND lends the ring
+	std::atomic<uint64_t> batch_word{ 0 };				// - seq | end | index of the batch (end == index : none) | BATCH_LENT | BATCH_NESTED
+	std::atomic<const POP_RESULT*> batch_results{ nullptr };
+	uint32_t			batch_seq = 0;					// - the batches of the owner (a word seen twice is the same executable running)
+	std::atomic<uint64_t> busy_word{ 0 };				// - the word the last check saw (_check_busy : one worker at a time)
+	std::atomic<int64_t> busy_since{ 0 };				// - since then (ns of chrono::tick)
+	std::atomic<bool>	is_busy_lent{ false };			// - lent by _lend_busy (not by thread_blocked) : taken back by the next pop_results() of the owner
 
 	// - the provided buffer ring (submit_recv_multishot : registered at the first one on this ring, _prepare_pbuf()). the kernel takes
 	//   the buffers at the head, the buffers given back are written at the tail under lockable_pbuf by any thread (return_buffer)
@@ -1258,20 +1304,24 @@ api::io_context_uring_cq::RING* api::io_context_uring_cq::_ring_of_handle(CGHAND
 	return pring;
 }
 
-void api::io_context_uring_cq::_bind_accepted(RING* _pring_accept, CGHANDLE _handle) noexcept
+void api::io_context_uring_cq::_bind_round_robin(CGHANDLE _handle, std::atomic<unsigned>& _index_next) noexcept
 {
-	// - a socket accepted by an accept op of _pring_accept (its CQE taken now, before its handler runs) : bound to an owned ring of
-	//   round robin, the ring of its first submit (the RECV of the socket staged for that owner). bound by that submit instead, every
-	//   socket of an acceptor went to the ring of the thread running the accepts (the owner of the listen ring : one thread for all
-	//   of them). the number is the new socket's (the accept gave it) : the binding left by a socket closed before is replaced (the
-	//   ops of that socket carry their ring). an armed poll (a readiness registration of the number) keeps its ring. no owned ring
-	//   (the workers left) : bound by its first submit
+	// - a new socket bound to an owned ring of round robin (_index_next : the counter), before its first submit :
+	//   * accepted : by the accept op of a ring (its CQE taken now, before its handler runs. RING::index_bind_next of that ring).
+	//     bound by its first submit (the RECV of its handler) instead, every socket of an acceptor went to the ring of the thread
+	//     running the accepts (the owner of the listen ring : one thread for all of them)
+	//   * connecting : by submit_connect (RING::index_bind_connect of ring 0). bound by its CONNECT op instead, it went to the ring
+	//     of the worker running the connect post (a client opening many connections : the posts are taken up to 16 at a time by
+	//     the ring woken, its sockets went to a few threads)
+	//   the ring of its first submit then (staged for that owner). the number is the new socket's : the binding left by a socket
+	//   closed before is replaced (the ops of that socket carry their ring). an armed poll (a readiness registration of the number)
+	//   keeps its ring. no owned ring (the workers left) : bound by its first submit
 	HANDLE_ENTRY* pentry = this->_entry(_handle);
 
 	RETURN_IF(pentry == nullptr);
 
 	const unsigned count_rings = this->m_count_rings.load(std::memory_order_acquire);
-	const unsigned start = _pring_accept->index_bind_next.fetch_add(1, std::memory_order_relaxed);
+	const unsigned start = _index_next.fetch_add(1, std::memory_order_relaxed);
 	RING* pring = nullptr;
 
 	for (unsigned i = 0; i < count_rings && pring == nullptr; ++i)
@@ -2270,6 +2320,24 @@ bool api::io_context_uring_cq::submit_accept(CGHANDLE _listen_fd, sockaddr* _add
 
 bool api::io_context_uring_cq::submit_connect(CGHANDLE _fd, const sockaddr* _addr, socklen_t _addrlen, Iexecutable* _pexecutable) noexcept
 {
+	// - the socket goes to an owned ring of round robin (not the ring of the worker running the connect post : _bind_round_robin).
+	//   one counter for the io_context (the one of ring 0 : the rings are not freed till destroy). m_index_ring_next is advanced by
+	//   the wakes of the posts too (a connect post and its wake each : the sockets went to every other ring). a counter per worker
+	//   left the remainders of the workers on the same rings (64 connects over 4 rings : up to 21 on one)
+	//   it starts at 1, the accepts of a ring at 0 : the two ends of a connection of the process (a loopback client and the socket its
+	//   acceptor accepted : the connects and the accepts take turns) do not go to the same ring. on one ring the reply of one end is
+	//   received by the other at once (the task work of its multishot RECV runs when the send returns) : the messages in flight are
+	//   no more batched (mistral 8 threads, echo of 64B x32 window16, before the batch send defer of r11497 : 181~381B a CQE,
+	//   2.4~7.5M msg/s. from 1 : 738~862B, 12.5~13.8M. with the batch send defer the pairs on one ring did not show it)
+	{
+		RING_GUARD guard(*this);
+
+		RETURN_IF(guard.is_valid == false || _fd < 0 || static_cast<unsigned>(_fd) >= this->m_count_handles, false);
+
+		if (this->m_count_rings.load(std::memory_order_acquire) != 0)
+			this->_bind_round_robin(_fd, this->m_rings[0]->index_bind_connect);
+	}
+
 	return this->_submit_op(_fd, _pexecutable, [&](io_uring_sqe* _psqe)
 		{
 			_psqe->opcode = OPCODE_CONNECT;
@@ -2673,7 +2741,7 @@ void api::io_context_uring_cq::_process_cqe(RING* _pring, const void* _pcqe, POP
 
 			// - an accepted socket : bound to a ring now (round robin), not by the first submit of its handler on this thread
 			if (pop->opcode == OPCODE_ACCEPT && cqe.res >= 0)
-				this->_bind_accepted(_pring, static_cast<CGHANDLE>(cqe.res));
+				this->_bind_round_robin(static_cast<CGHANDLE>(cqe.res), _pring->index_bind_next);
 
 			if ((cqe.flags & CQE_FLAG_MORE) != 0)
 			{
@@ -2884,7 +2952,7 @@ void api::io_context_uring_cq::thread_blocked() noexcept
 {
 	// - this thread blocks (scoped_thread_block : a sync query ..., a wait pumping the executor). a worker : its ring is lent to the
 	//   other workers till it unblocks (the CQEs of its requests are posted meanwhile : the task work wakes a sleeping owner. a busy
-	//   owner in user space delays them : COOP_TASKRUN, not helped). nested blocks : the outermost one
+	//   owner in user space : _lend_busy). nested blocks : the outermost one
 	WORKER_RING* pworker = nullptr;
 
 	for (auto& iter : t_worker_ring)
@@ -2936,6 +3004,9 @@ void api::io_context_uring_cq::thread_blocked() noexcept
 					pring->carry.push_back(pbatch->presults[i]);
 
 				*pbatch->pcount = pbatch->index + 1;
+
+				if (pbatch->pring == pring)
+					pring->batch_word.store(_batch_word(pring->batch_seq, pbatch->index, pbatch->index + 1), std::memory_order_release);
 			}
 
 			is_lent = true;
@@ -2972,6 +3043,9 @@ void api::io_context_uring_cq::thread_unblocked() noexcept
 
 	std::lock_guard lock(pring->lockable_lend);
 
+	// - lent while this thread was busy (_lend_busy, before the block) : taken back by its next pop_results() (the busy executable ended)
+	RETURN_IF(pring->is_busy_lent.load(std::memory_order_acquire));
+
 	int expected = STATE_LENT;
 
 	if (pring->state.compare_exchange_strong(expected, STATE_OWNED, std::memory_order_acq_rel))
@@ -2983,6 +3057,241 @@ void api::io_context_uring_cq::thread_unblocked() noexcept
 	{
 		pring->is_reclaim = true;
 	}
+}
+
+void api::io_context_uring_cq::batch_begin(BATCH& _batch) noexcept
+{
+	// - the outermost batch of a worker on its owned ring (a batch of a handler pumping the executor : not published, the outer one
+	//   is marked BATCH_NESTED by that pop_results())
+	_batch.pring = nullptr;
+
+	RETURN_IF(_batch.pcontext == nullptr || _batch.pouter != nullptr || *_batch.pcount <= 0);
+
+	auto* pring = static_cast<const io_context_uring_cq*>(_batch.pcontext)->_find_worker_ring();
+
+	RETURN_IF(pring == nullptr || pring->state.load(std::memory_order_acquire) != STATE_OWNED);
+
+	pring->batch_results.store(_batch.presults, std::memory_order_relaxed);
+	pring->batch_word.store(_batch_word(++pring->batch_seq, 0, *_batch.pcount), std::memory_order_release);
+
+	_batch.pring = pring;
+}
+
+bool api::io_context_uring_cq::batch_next(BATCH& _batch, int _index) noexcept
+{
+	// - the result _index is claimed (a CAS : _lend_busy cuts the end of the word and takes the rest). false : taken (*pcount cut)
+	auto* pring = static_cast<RING*>(_batch.pring);
+
+	RETURN_IF(pring == nullptr, _index < *_batch.pcount);
+
+	auto word = pring->batch_word.load(std::memory_order_acquire);
+
+	for (;;)
+	{
+		const int end = _batch_end(word);
+
+		if (_index >= end)
+		{
+			*_batch.pcount = end;
+			return false;
+		}
+
+		if (pring->batch_word.compare_exchange_weak(word, _batch_word(_batch_seq(word), _index, end) | (word & BATCH_LENT), std::memory_order_acq_rel, std::memory_order_acquire))
+			return true;
+	}
+}
+
+void api::io_context_uring_cq::batch_end(BATCH& _batch) noexcept
+{
+	auto* pring = static_cast<RING*>(_batch.pring);
+
+	RETURN_IF(pring == nullptr);
+
+	pring->batch_word.store(_batch_word(pring->batch_seq, 0, 0), std::memory_order_release);
+	_batch.pring = nullptr;
+}
+
+bool api::io_context_uring_cq::_is_busy(const RING* _pring_own) const noexcept
+{
+	// - another owned ring runs a batch
+	const unsigned count_rings = this->m_count_rings.load(std::memory_order_acquire);
+
+	for (unsigned i = 0; i < count_rings; ++i)
+	{
+		const auto* pring = this->m_rings[i].get();
+
+		CONTINUE_IF(pring == _pring_own || pring->state.load(std::memory_order_acquire) != STATE_OWNED);
+
+		const auto word = pring->batch_word.load(std::memory_order_acquire);
+
+		if (_batch_end(word) > _batch_index(word))
+			return true;
+	}
+
+	return false;
+}
+
+void api::io_context_uring_cq::_check_busy(RING* _pring_own) noexcept
+{
+	// - one worker per BUSY_CHECK : the rings whose owner runs the same executable (the word seen by the last check) for BUSY_LEND are
+	//   lent (drained by _drain_orphans() after this, like the ring of a blocked owner)
+	const auto tick_now = _tick_ns();
+	auto tick_next = this->m_tick_check_busy.load(std::memory_order_relaxed);
+
+	RETURN_IF(tick_now < tick_next);
+	RETURN_IF(this->m_tick_check_busy.compare_exchange_strong(tick_next, tick_now + std::chrono::nanoseconds(BUSY_CHECK).count(), std::memory_order_relaxed) == false);
+
+	const unsigned count_rings = this->m_count_rings.load(std::memory_order_acquire);
+
+	for (unsigned i = 0; i < count_rings; ++i)
+	{
+		auto* pring = this->m_rings[i].get();
+
+		CONTINUE_IF(pring == _pring_own);
+
+		const auto word = pring->batch_word.load(std::memory_order_acquire);
+
+		// - no batch, a batch pumping the ring itself, lent already
+		if (pring->state.load(std::memory_order_acquire) != STATE_OWNED || _batch_end(word) <= _batch_index(word) || (word & (BATCH_LENT | BATCH_NESTED)) != 0)
+		{
+			pring->busy_word.store(0, std::memory_order_relaxed);
+			continue;
+		}
+
+		// - another executable since the last check
+		if (pring->busy_word.load(std::memory_order_relaxed) != word)
+		{
+			pring->busy_word.store(word, std::memory_order_relaxed);
+			pring->busy_since.store(tick_now, std::memory_order_relaxed);
+			continue;
+		}
+
+		CONTINUE_IF(tick_now - pring->busy_since.load(std::memory_order_relaxed) < std::chrono::nanoseconds(BUSY_LEND).count());
+
+		if (this->_lend_busy(pring, word))
+			pring->busy_word.store(0, std::memory_order_relaxed);
+	}
+}
+
+bool api::io_context_uring_cq::_lend_busy(RING* _pring, uint64_t _word) noexcept
+{
+	// - the ring of an owner running one executable long (CPU in user space : the task work of its requests runs at its timer tick, so
+	//   their CQEs come) : lent like thread_blocked() does, from this thread. the rest of the batch (after the executable running) is cut
+	//   from the word by a CAS (the owner claims each result by a CAS : batch_next()) and moved to carry, the results of the executable
+	//   running wait for the owner (pblocked : deferred). the owner takes the ring back at its next pop_results() (_reclaim_busy)
+	const int index = _batch_index(_word);
+	const int end = _batch_end(_word);
+
+	{
+		std::lock_guard lock(_pring->lockable_lend);
+
+		// - the results of an earlier lend not delivered yet : not now (they are older than the CQ : in order)
+		RETURN_IF(_pring->state.load(std::memory_order_acquire) != STATE_OWNED || _pring->carry.empty() == false || _pring->deferred.empty() == false, false);
+
+		const POP_RESULT* presults = _pring->batch_results.load(std::memory_order_acquire);
+
+		RETURN_IF(presults == nullptr, false);
+
+		try
+		{
+			_pring->carry.reserve(static_cast<std::size_t>(end - index));
+		}
+		catch (...)
+		{
+			return false;
+		}
+
+		// 1) lent first (a worker taking it waits for lockable_lend), the rest read before the CAS (the results of the batch do not change
+		//    while its word is the same : seq)
+		int expected = STATE_OWNED;
+
+		RETURN_IF(_pring->state.compare_exchange_strong(expected, STATE_LENT, std::memory_order_acq_rel) == false, false);
+
+		Iexecutable* pbusy = presults[index].pexecutable;
+
+		for (int i = index + 1; i < end; ++i)
+			_pring->carry.push_back(presults[i]);
+
+		_pring->is_busy_lent.store(true, std::memory_order_release);
+
+		// 2) the cut. failed : the owner went on (the executable ended) : not lent
+		auto word = _word;
+
+		if (_pring->batch_word.compare_exchange_strong(word, _batch_word(_batch_seq(_word), index, index + 1) | BATCH_LENT, std::memory_order_acq_rel, std::memory_order_relaxed) == false)
+		{
+			_pring->carry.clear();
+			_pring->is_busy_lent.store(false, std::memory_order_release);
+			_pring->state.store(STATE_OWNED, std::memory_order_release);
+			return false;
+		}
+
+		_pring->is_reclaim = false;
+		_pring->pblocked = pbusy;
+	}
+
+	this->m_count_lent.fetch_add(1, std::memory_order_acq_rel);
+
+	return true;
+}
+
+void api::io_context_uring_cq::_reclaim_busy(RING* _pring) noexcept
+{
+	// - the owner (outside a batch : the busy executable ended) takes back the ring _lend_busy lent : like the outermost unblock
+	std::lock_guard lock(_pring->lockable_lend);
+
+	RETURN_IF(_pring->is_busy_lent.load(std::memory_order_acquire) == false);
+
+	_pring->is_busy_lent.store(false, std::memory_order_release);
+
+	int expected = STATE_LENT;
+
+	if (_pring->state.compare_exchange_strong(expected, STATE_OWNED, std::memory_order_acq_rel))
+	{
+		_pring->pblocked = nullptr;
+		this->m_count_lent.fetch_sub(1, std::memory_order_acq_rel);
+	}
+	else if (expected == STATE_DRAINING_LENT)
+	{
+		_pring->is_reclaim = true;
+	}
+}
+
+void api::io_context_uring_cq::_hand_watch(RING* _pring_own) noexcept
+{
+	// - the watching owner woke for work (it may run long itself) : the watch is free (the next owner to wait takes it). an idle owner
+	//   wakes for it only when no other owner may wait soon : every other owned ring waits, or runs an executable a check saw already
+	//   (a loaded executor : the owners come back to wait often, no wake)
+	RING* pwatch = _pring_own;
+
+	RETURN_IF(this->m_pring_watch.compare_exchange_strong(pwatch, nullptr, std::memory_order_acq_rel) == false);
+
+	const unsigned count_rings = this->m_count_rings.load(std::memory_order_acquire);
+	RING* pring_wake = nullptr;
+
+	for (unsigned i = 0; i < count_rings; ++i)
+	{
+		auto* pring = this->m_rings[(_pring_own->index + 1 + i) % count_rings].get();
+
+		CONTINUE_IF(pring == _pring_own || pring->state.load(std::memory_order_acquire) != STATE_OWNED);
+
+		if (pring->is_waiting.load(std::memory_order_seq_cst))
+		{
+			if (pring_wake == nullptr)
+				pring_wake = pring;
+
+			continue;
+		}
+
+		const auto word = pring->batch_word.load(std::memory_order_acquire);
+
+		RETURN_IF(_batch_end(word) <= _batch_index(word) || pring->busy_word.load(std::memory_order_relaxed) != word);
+	}
+
+	RETURN_IF(pring_wake == nullptr);
+
+	this->m_count_signaling.fetch_add(1, std::memory_order_acq_rel);
+	this->_send_wake(pring_wake);
+	this->m_count_signaling.fetch_sub(1, std::memory_order_acq_rel);
 }
 
 bool api::io_context_uring_cq::_take_lent(RING* _pring, POP_RESULT* _results, int& _count, int _max) noexcept
@@ -3129,6 +3438,15 @@ int api::io_context_uring_cq::pop_results(POP_RESULT* _results, int _max, chrono
 	if (pring == nullptr)
 		return this->_pop_posted_wait(_results, _max, _ticks_wait);
 
+	// - the ring lent by _lend_busy while this thread ran one executable long : taken back (outside a batch : that executable ended)
+	if (pring->is_busy_lent.load(std::memory_order_acquire) && current_batch() == nullptr)
+		this->_reclaim_busy(pring);
+
+	// - a handler of the batch published on this ring pumps the executor : the batch is not lent meanwhile (BATCH_NESTED till its next
+	//   result). lent before : the post queue only (another worker runs the ring)
+	if (auto* pbatch = current_batch(); pbatch != nullptr && pbatch->pring == pring && (pring->batch_word.fetch_or(BATCH_NESTED, std::memory_order_acq_rel) & BATCH_LENT) != 0)
+		return this->_pop_posted_wait(_results, _max, std::min(_ticks_wait, chrono::tick::duration(LENT_WAIT)));
+
 	// - the ring of this thread is lent (this thread blocks and pumps the executor : wait_complete_* ...), or given back while a worker
 	//   still runs its results : the post queue only (the other workers drain the ring. not the CQ here : out of order)
 	if (pring->state.load(std::memory_order_acquire) != STATE_OWNED)
@@ -3175,6 +3493,7 @@ int api::io_context_uring_cq::pop_results(POP_RESULT* _results, int _max, chrono
 	unsigned tail = __atomic_load_n(pring->cq_tail, __ATOMIC_ACQUIRE);
 	const bool is_taskrun = (__atomic_load_n(pring->sq_flags, __ATOMIC_ACQUIRE) & SQ_FLAG_TASKRUN) != 0;
 	bool is_take_post = false;
+	bool is_watch = false;
 
 	if (head == tail || is_taskrun || to_submit != 0)
 	{
@@ -3189,6 +3508,23 @@ int api::io_context_uring_cq::pop_results(POP_RESULT* _results, int _max, chrono
 		// - a lent ring (its owner blocks) : drained after this wait => LENT_WAIT at most (its CQEs wake nobody)
 		if (ticks_wait > chrono::tick::duration(LENT_WAIT) && this->m_count_lent.load(std::memory_order_acquire) != 0)
 			ticks_wait = LENT_WAIT;
+
+		// - the watching owner (one of the idle ones) : the busy rings are checked after this wait => BUSY_CHECK at most while another
+		//   ring runs a batch, BUSY_WATCH otherwise (a ring starting a long executable while every other worker waits : the CQEs of its
+		//   other sockets wake nobody)
+		if (ticks_wait > chrono::tick::duration(BUSY_CHECK) && this->m_count_rings.load(std::memory_order_acquire) > 1)
+		{
+			// - free, or taken from a watching ring that is not owned any more (its worker left, blocks : lent). read first (no CAS on the
+			//   shared word at every wait)
+			RING* pwatch = this->m_pring_watch.load(std::memory_order_acquire);
+
+			if (pwatch == pring
+			 || ((pwatch == nullptr || pwatch->state.load(std::memory_order_acquire) != STATE_OWNED) && this->m_pring_watch.compare_exchange_strong(pwatch, pring, std::memory_order_acq_rel)))
+			{
+				is_watch = true;
+				ticks_wait = std::min(ticks_wait, this->_is_busy(pring) ? chrono::tick::duration(BUSY_CHECK) : chrono::tick::duration(BUSY_WATCH));
+			}
+		}
 
 		bool is_wait = (head == tail && ticks_wait != chrono::tick::duration::zero());
 
@@ -3256,9 +3592,17 @@ int api::io_context_uring_cq::pop_results(POP_RESULT* _results, int _max, chrono
 	if (is_take_post && count < _max)
 		count = this->_pop_posted(_results, count, _max, true);
 
-	// 6) the rings without an owner
+	// 6) the busy rings (one worker per BUSY_CHECK : lent. this thread looks every BUSY_CHECK_POPS pops, the watching owner after its
+	//    wait), the rings without an owner or lent
+	if (is_watch || (++t_count_pop_busy & (BUSY_CHECK_POPS - 1)) == 0)
+		this->_check_busy(pring);
+
 	if (count < _max)
 		this->_drain_orphans(_results, count, _max);
+
+	// 7) the watching owner got work (it may run long itself) : another idle owner watches
+	if (is_watch && count != 0)
+		this->_hand_watch(pring);
 
 	return count;
 }

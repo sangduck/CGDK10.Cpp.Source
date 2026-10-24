@@ -128,3 +128,19 @@
 - 수정 : ENOBUFS 면 복사로 다시 보내고 100ms 동안 zerocopy 쉼(readiness 송신 4곳, completion SEND_ZC 재제출). 새 테스트 tcp_zerocopy_falls_back_to_copy_on_enobufs(RLIMIT_MEMLOCK 0). 인수인계 문서 1.28.
 - 검증 : mistral 8개 동시 readiness / completion 실패 0, 단독 3모드 150/150, net_socket.http 전체 3모드 135 통과.
 - 공유 작업 사본의 송신 cpp 3개와 test_linux_io.cpp 는 다른 세션의 미커밋 수정이 있어 별도 checkout 에서 커밋했다 : 그 세션이 svn update 로 합칠 것.
+
+## Handover refresh - 2026-10-24 (r11499 : windows IOCP 완료 배치)
+- windows executor 가 IOCP 완료를 GetQueuedCompletionStatus 로 하나씩 꺼내던 것을 GetQueuedCompletionStatusEx 로 최대 32개씩(적응형 배치, linux 와 같은 규칙). 실패 판정은 OVERLAPPED_ENTRY::Internal(NTSTATUS) : lpOverlapped->Internal 은 post 된 executable 에 이전 I/O 실패가 남을 수 있어 쓰면 안 된다(인수인계 문서 1.30).
+- Win32 마이크로벤치(24 thread) : 꺼내는 쪽 처리량 소비 1~4 thread x1.6~1.9, 8 thread x1.1~1.2. 실제 IOCP 소켓 echo 로는 아직 안 쟀다.
+- 검증 : Windows Release·Debug execute / service / log / time_event 통과, net_socket.http 는 기존 emergency.* 순서 의존 실패 외 통과(남은 일 22, 이 변경 전에도 같음).
+- 남은 일 14 의 나머지 : FILE_SKIP_COMPLETION_PORT_ON_SUCCESS, WSASend 를 송신 락 밖으로, strand, lambda post, 기본 thread 수.
+
+## Handover refresh - 2026-10-24 (r11507 : 남은 일 20 의 CONNECT 분산)
+- completion 에서 connect 하는 TCP socket 이 connect post 를 실행한 worker 의 ring 에 묶여 몇 thread 에 몰렸다. submit_connect 가 accept 처럼 round robin 으로 바인딩한다(`_bind_round_robin`, ring 0 의 `index_bind_connect`, 시작값 1). 재측정·격차 분석은 남은 일 20 세션의 r11505 / r11506(인수인계 문서 1.31).
+- 테스트 : `io_context_uring_cq.op_connect_binds_the_sockets_round_robin`, `linux_io.io_uring_completion_accepted_sockets_spread` 의 클라이언트 단언 : 수정 전 둘 다 3/3 실패. monsoon r11504 + 변경 Debug 전체 3 백엔드 x2 148, system.object.execute x2 75.
+- 발견 : r11496 의 `send_defer_auto.gather_auto_off` / `buffered_auto_off` 가 epoll 에서 간헐 실패(변경 없는 r11504 단독 3회 중 2회, counts 마지막 26 vs 50) : 미조사.
+
+## Handover refresh - 2026-10-24 (r11512 : 남은 일 24 send_defer_auto 의 close case)
+- 원인 : `Isocket::closesocket()` 은 abortive close(SO_LINGER 0 -> RST)라 커널이 아직 내보내지 않은 것을 버린다. 테스트 클라이언트를 차례로 읽어 socket 0 의 클라이언트가 읽지 않는 동안 ACK 가 늦어(quick ACK 16개 뒤) cwnd 10 에 막힌 24개가 커널 송신 큐에 남았다가 RST 로 버려졌다(26 = 16 + 10). CGDK 는 close 전에 50개를 다 넘겼다(진단 : 송신 통계 50, SIOCOUTQNSD 768, 클라이언트 ECONNRESET). 라이브러리 변경 없음, 테스트 수정(인수인계 문서 1.32).
+- 테스트 : close 는 closesocket 직후 송신 통계 50 + 도착분은 순서대로인 앞부분 + EOF, graceful `disconnect()` case 추가(50개 모두 도착), 클라이언트와 서버 socket 을 포트로 짝지어 비교(epoll 테스트당 5.4초 -> 1.1초). 수정 전 monsoon epoll `*_auto_off` x20 40회 중 15회 실패, `process_flush_deferred_send_on_close()` 를 비운 변이에서 새 검사 4/4 실패.
+- 검증 : monsoon `send_defer_auto.*` x20 3 모드 각 80/80, net_socket.http 전체 3 모드 148/148. mistral 전체 3 모드 x2 148/148.

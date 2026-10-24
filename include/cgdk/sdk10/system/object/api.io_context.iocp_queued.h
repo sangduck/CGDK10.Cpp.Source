@@ -49,7 +49,10 @@ public:
 			bool				post_executable(uint32_t _bytes_transferred, uintptr_t _completion_key, object_ptr<Iexecutable>&& _pexecutable) noexcept;
 			bool				post_executable(uint32_t _bytes_transferred, uintptr_t _completion_key, Iexecutable* _pexecutable) noexcept;
 			void				pop_executable(RESULT& _result, chrono::tick::duration _ticks_wait) noexcept;
+			int					pop_results(RESULT* _presult, int /*_max_result*/, chrono::tick::duration _ticks_wait) noexcept { this->pop_executable(*_presult, _ticks_wait); return _presult->is_valid() ? 1 : 0; }
 			[[nodiscard]] size_t queued_count() const noexcept { std::lock_guard lock(this->m_lockable_complete); return m_queue_executable.size();}
+
+	static	constexpr int		MAX_EVENT_BATCH = 1;	// - pop_results() returns one at a time (executor::io_context compatible with io_context_iocp_direct)
 
 // implementation)
 private:

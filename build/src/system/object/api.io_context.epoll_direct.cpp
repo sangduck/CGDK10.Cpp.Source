@@ -248,6 +248,9 @@ intptr_t api::io_context_epoll_direct::executable_post::process_execute(intptr_t
 			// - release the reference added by post() after the execution (also on exception)
 			struct release_on_exit { Iexecutable* p; ~release_on_exit() noexcept { p->release(); } } release_executable{ pexecutable };
 
+			// - send defer (auto) : the consecutive sends of the posted executable to one socket are sent at once
+			send_defer::auto_scope scope_send_defer;
+
 			pexecutable->process_execute(_result, _param);
 		}
 		catch (...)

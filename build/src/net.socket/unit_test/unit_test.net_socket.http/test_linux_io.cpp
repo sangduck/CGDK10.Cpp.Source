@@ -984,6 +984,8 @@ TEST(linux_io, io_uring_completion_receive_mode)
 // the CQE of the accept. bound by its first submit (the RECV posted by the accept handler) every socket of an acceptor went to the
 // ring of the listen socket : one worker ran them all while the others idled (2026-10-24 : 64 sockets on 1 of 4 threads). a socket
 // runs on the owner of its ring : one thread per socket
+// the connecting sockets (the TCP clients) too : bound round robin by submit_connect. bound by the CONNECT op instead, a socket went to
+// the ring of the worker running its connect post (the posts are taken up to 16 at a time by the ring woken : a few threads)
 //-----------------------------------------------------------------------------
 class lio_thread_server_socket : public net::socket::tcp<>
 {
@@ -1004,12 +1006,61 @@ protected:
 	}
 };
 
-// - the accepted sockets on the io_context of the acceptor (the linux acceptor gives a socket without an io_context the system executor)
+// - the accepted sockets on the io_context of the acceptor (what the linux acceptor does by itself since r11489 : before, a socket without
+//   an io_context got the system executor)
 class lio_thread_acceptor : public net::acceptor<lio_thread_server_socket>
 {
 protected:
 	[[nodiscard]] virtual object_ptr<executor::Iio_context> process_get_connectable_io_context(net::io::Iconnectable* /*_pconnectable*/) override { return this->io_context(); }
 };
+
+// - a client recording the threads that ran its handlers
+class lio_thread_client_socket : public lio_client_socket
+{
+public:
+	inline static std::mutex	s_lockable;
+	inline static std::map<const void*, std::set<std::thread::id>> s_threads;
+
+protected:
+	virtual result_code			on_message(sMESSAGE_NETWORK& _msg) override
+	{
+		{
+			std::lock_guard lock(s_lockable);
+			s_threads[this].insert(std::this_thread::get_id());
+		}
+
+		return lio_client_socket::on_message(_msg);
+	}
+};
+
+// - the sockets per thread of a map of the threads per socket : (sockets, the most sockets on a thread, the sockets on several threads)
+struct lio_spread
+{
+	std::size_t					count_socket = 0;
+	int							max_sockets = 0;
+	int							count_socket_on_threads = 0;
+	std::map<std::thread::id, int> sockets_of_thread;
+};
+
+lio_spread lio_spread_of(std::mutex& _lockable, const std::map<const void*, std::set<std::thread::id>>& _threads)
+{
+	lio_spread result;
+
+	std::lock_guard lock(_lockable);
+	result.count_socket = _threads.size();
+	for (const auto& [psocket, threads] : _threads)
+	{
+		if (threads.size() != 1)
+			++result.count_socket_on_threads;
+		for (const auto& id : threads)
+			++result.sockets_of_thread[id];
+	}
+
+	for (const auto& [id, count] : result.sockets_of_thread)
+		result.max_sockets = std::max(result.max_sockets, count);
+
+	return result;
+}
 
 void lio_check_accepted_sockets_spread(executor::Iio_context* _pio_context, int _count_thread, bool _uds)
 {
@@ -1024,6 +1075,10 @@ void lio_check_accepted_sockets_spread(executor::Iio_context* _pio_context, int 
 		std::lock_guard lock(lio_thread_server_socket::s_lockable);
 		lio_thread_server_socket::s_threads.clear();
 	}
+	{
+		std::lock_guard lock(lio_thread_client_socket::s_lockable);
+		lio_thread_client_socket::s_threads.clear();
+	}
 
 	// 1) the acceptor and the clients on the io_context
 	auto pacceptor = make_own<lio_thread_acceptor>();
@@ -1033,10 +1088,10 @@ void lio_check_accepted_sockets_spread(executor::Iio_context* _pio_context, int 
 	ASSERT_EQ(pacceptor->start(parameter), eRESULT::SUCCESS);
 	const auto port = pacceptor->local_endpoint().port();
 
-	std::vector<own_ptr<lio_client_socket>> clients;
+	std::vector<own_ptr<lio_thread_client_socket>> clients;
 	for (int i = 0; i < count_client; ++i)
 	{
-		auto psocket = make_own<lio_client_socket>();
+		auto psocket = make_own<lio_thread_client_socket>();
 		psocket->keep_received = false;
 		psocket->io_context(_pio_context);
 		psocket->start(lio_connect_parameter(port));
@@ -1051,30 +1106,25 @@ void lio_check_accepted_sockets_spread(executor::Iio_context* _pio_context, int 
 			ASSERT_TRUE(lio_send(clients[i].get(), static_cast<uint32_t>(i * 100 + m), size)) << "send " << i << "/" << m;
 	ASSERT_TRUE(lio_wait_until([&]() { return std::all_of(clients.begin(), clients.end(), [&](auto& _p) { return _p->bytes_received.load() == count_message * size; }); }, 10000ms)) << "received " << clients[0]->bytes_received.load();
 
-	// 3) the threads of the server sockets : every worker runs a share (round robin : count_client / _count_thread each), a socket one thread
-	std::size_t count_socket = 0;
-	int count_socket_on_threads = 0;
-	std::map<std::thread::id, int> sockets_of_thread;
+	// 3) the threads of the server sockets and of the clients : every worker runs a share (round robin : count_client / _count_thread each),
+	//    a socket one thread
+	const auto server = lio_spread_of(lio_thread_server_socket::s_lockable, lio_thread_server_socket::s_threads);
+	const auto client = lio_spread_of(lio_thread_client_socket::s_lockable, lio_thread_client_socket::s_threads);
+
+	EXPECT_EQ(server.count_socket, static_cast<std::size_t>(count_client));
+	EXPECT_EQ(server.sockets_of_thread.size(), static_cast<std::size_t>(_count_thread)) << "the server sockets ran on " << server.sockets_of_thread.size() << " of " << _count_thread << " workers (max " << server.max_sockets << " sockets on one, uds " << _uds << ")";
+	EXPECT_LE(server.max_sockets, count_client / _count_thread + 2) << "uds " << _uds;
+	EXPECT_EQ(server.count_socket_on_threads, 0) << "a server socket ran on several threads (uds " << _uds << ")";
+
+	// - the clients : round robin over the workers by the CONNECT op (TCP). a UDS connects at once (no op : its completion is posted) :
+	//   it goes to the ring of the worker running that post (the posts spread over the idle workers : not asserted)
+	EXPECT_EQ(client.count_socket, static_cast<std::size_t>(count_client));
+	EXPECT_EQ(client.count_socket_on_threads, 0) << "a client ran on several threads (uds " << _uds << ")";
+	if (_uds == false)
 	{
-		std::lock_guard lock(lio_thread_server_socket::s_lockable);
-		count_socket = lio_thread_server_socket::s_threads.size();
-		for (const auto& [psocket, threads] : lio_thread_server_socket::s_threads)
-		{
-			if (threads.size() != 1)
-				++count_socket_on_threads;
-			for (const auto& id : threads)
-				++sockets_of_thread[id];
-		}
+		EXPECT_EQ(client.sockets_of_thread.size(), static_cast<std::size_t>(_count_thread)) << "the clients ran on " << client.sockets_of_thread.size() << " of " << _count_thread << " workers (max " << client.max_sockets << " sockets on one)";
+		EXPECT_LE(client.max_sockets, count_client / _count_thread + 2);
 	}
-
-	int max_sockets = 0;
-	for (const auto& [id, count] : sockets_of_thread)
-		max_sockets = std::max(max_sockets, count);
-
-	EXPECT_EQ(count_socket, static_cast<std::size_t>(count_client));
-	EXPECT_EQ(sockets_of_thread.size(), static_cast<std::size_t>(_count_thread)) << "the server sockets ran on " << sockets_of_thread.size() << " of " << _count_thread << " workers (max " << max_sockets << " sockets on one, uds " << _uds << ")";
-	EXPECT_LE(max_sockets, count_client / _count_thread + 2) << "uds " << _uds;
-	EXPECT_EQ(count_socket_on_threads, 0) << "a socket ran on several threads (uds " << _uds << ")";
 
 	// 4) close
 	for (auto& psocket : clients)

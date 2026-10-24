@@ -36,12 +36,62 @@ using namespace std::chrono_literals;
 
 namespace
 {
-	// - the ports of the tests (27400 + (pid % 100) * 8 + _offset : not the ports of the other tests)
+	// - true when [::]:_port and 0.0.0.0:_port can be bound now (not used, not reserved)
+	bool is_port_bindable(uint16_t _port)
+	{
+		// - the socket api is ready (WSAStartup on windows)
+		static_cast<void>(api::socket::instance());
+
+		auto try_bind = [_port](int _family) -> bool
+		{
+			const auto handle = ::socket(_family, SOCK_STREAM, IPPROTO_TCP);
+			if (handle == INVALID_SOCKET)
+				return false;
+
+			int result;
+			if (_family == AF_INET6)
+			{
+				sockaddr_in6 address{};
+				address.sin6_family = AF_INET6;
+				address.sin6_port = htons(_port);
+				address.sin6_addr = in6addr_any;
+				result = ::bind(handle, reinterpret_cast<const ::sockaddr*>(&address), sizeof(address));
+			}
+			else
+			{
+				sockaddr_in address{};
+				address.sin_family = AF_INET;
+				address.sin_port = htons(_port);
+				address.sin_addr.s_addr = htonl(INADDR_ANY);
+				result = ::bind(handle, reinterpret_cast<const ::sockaddr*>(&address), sizeof(address));
+			}
+		#if defined(_WIN32)
+			::closesocket(handle);
+		#else
+			::close(handle);
+		#endif
+			return result == 0;
+		};
+
+		return try_bind(AF_INET6) && try_bind(AF_INET);
+	}
+
+	// - the ports of the tests : the first bindable one of 20000 + n * 8 + _offset, n from pid % 1500 (step 37 of 1500)
 	//   (below the ephemeral range of linux (32768~) : a client socket of another test may hold a port there, and the acceptor
 	//    moved to the next port silently (reallocate_port_at_duplicate_port_error) while the test connected to the one it asked)
+	//   (bound before use : windows reserves port ranges (netsh int ipv4 show excludedportrange, hyper-v / wsl : 27319~27919 on
+	//    a machine) and bind() fails there. the fixed 27400 + (pid % 100) * 8 failed whenever the pid gave one of them)
 	uint16_t emergency_test_port(int _offset)
 	{
-		return static_cast<uint16_t>(27400 + (api::get_process_id() % 100) * 8 + _offset);
+		constexpr int COUNT = 1500;
+		const int first = static_cast<int>(api::get_process_id() % COUNT);
+		for (int i = 0; i < COUNT; ++i)
+		{
+			const auto port = static_cast<uint16_t>(20000 + ((first + i * 37) % COUNT) * 8 + _offset);
+			if (is_port_bindable(port))
+				return port;
+		}
+		return static_cast<uint16_t>(20000 + first * 8 + _offset);
 	}
 
 	template <class TCONDITION>

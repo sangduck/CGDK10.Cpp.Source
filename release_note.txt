@@ -35,6 +35,780 @@ tls pool의 garbage collection 처리 변경
 2024.2.24
 - 구조체 query 튜터리얼 추가.
 
+2024.02.25
+- examples/1.4.tcp_echo_ok 를 examples/1.4.tcp_echo_ex 로 이름 변경, console/mfc 클라이언트·서버와 CMake 정리 (r10106~r10119)
+
+2024.03.06
+- make_executable(this, &T::f, ...) : 실행할 때까지 대상 객체를 object_ptr 로 붙잡도록 수정 (r10122) - 동작 변경
+  - 전에는 raw 포인터를 람다에 담아, 실행 전에 객체가 해제되면 해제된 객체의 멤버 함수를 부를 수 있었다
+- make_shared_buffer<T>() : 인자 없이 T 의 기본값으로 만드는 오버로드 추가 (r10122, r10124)
+- to_string_dot_seperated_char / to_string_dot_seperated_wchar : 세 자리마다 쉼표를 넣는 숫자 문자열 변환 함수 추가 (uint64_t, float) (r10124)
+- Ischedulable::next_tick, Nthread::statistics_executing_begin : time_point 인자를 값 전달로 변경 (r10122, r10124)
+  - executable::function::set_function 은 const& / && 두 오버로드로 정리 (r10125)
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- server admin : 관리 프로토콜에 CLIENT_REQUEST / CLIENT_RESPONSE 메시지 추가, host_agent 의 group 구조를 peer(server/client/immigration) 로 재구성 (r10121, r10123, r10124, r10225)
+
+2024.03.09
+- acceptor_tcp 정지 : 정지 대기 루프 안에서 매번 close_connectable_all() 을 부르도록 수정 (r10128)
+  - 전에는 루프 들어가기 전에 한 번만 닫아, 그 뒤 accept 가 끝난 socket 은 닫히지 않고 남을 수 있었다
+- connector_tcp : connect 완료를 처리할 때 connective 가 이미 비어 있으면 무시하도록 수정 (r10126~r10127)
+
+2024.03.16
+- GCC(linux) 에서도 std::format 사용 (r10136~r10152, r10156)
+  - buffer 의 format 지원 여부를 __GNUC__ 제외 대신 __cpp_lib_format 으로 판단, 둘 다 없으면 컴파일 오류(static_assert)
+  - chrono to_string(date_time/tm, format), logger_file 의 파일 이름 형식 : {fmt} 이 있으면 fmt::format, 없으면 std::vformat
+  - GCC 빌드 오류 수정 : this-> 명시, atomic 복사 시 load(), size 비교 형 변환, <cstdint>/<cstring> 포함 등 (r10129~r10137, r10157~r10165)
+  - build.txt 추가 (redhat 필요 패키지 목록) (r10155)
+- net::io::binder::Nudp::bind : 주소 family 가 AF_UNSPEC 이면 AF_INET6 으로 bind 하도록 변경 (r10130)
+  - socket::Nudp 소멸자의 assert 조건이 반대로 되어 있던 것 수정
+- time_event::object::service_* / time_event::schedule::service_* : process_event·process_execute_function 의 time_point 인자를 값 전달로 변경 (r10153~r10154)
+  - 헤더 변경 : 재정의한 쪽은 시그니처 수정 후 재빌드
+- doss::Ientity::checkout_all : 락 안에서 복사한 목록이 아니라 멤버 목록을 락 밖에서 돌던 문제 수정 (r10157, r10161~r10163)
+  - checkout 요청 하나가 예외를 던져도 나머지는 계속 처리한다
+
+2024.03.17
+- from_string(address, port, af_prefer) : "localhost"/"loopback", "any", "broadcast" 이름 지원, 127자를 넘는 주소는 예외 (r10166~r10167) - 동작 변경
+  - from_string / to_string / api::get_host_name / get_host_id / get_mac_address 의 noexcept 제거 : 실패 시 예외가 나갈 수 있다
+  - to_string 이 bind any 주소를 "bind_any" 대신 "any" 로 출력
+- Windows UDP 수신(executable_receive) : 보낸 쪽 주소 길이를 net::sockaddr 의 length 에 직접 받도록 수정 (r10168)
+  - 전에는 별도 변수에 받아, 넘겨 주는 sockaddr 의 length 에 반영되지 않았다
+- util.crypt bcrypt : rounds 기록용 snprintf 버퍼 크기를 4 에서 5 로 수정 (r10184)
+  - Windows _snprintf_s 는 count 4 에 버퍼 크기 4 면 NUL 자리가 없어 오류로 처리된다
+- examples/1.5.udp_echo 추가 (console/mfc 클라이언트) (r10169, r10185)
+  - examples CMakeLists 정리 (r10170~r10182)
+
+2024.03.21
+- buffer 이동 : 이동 생성·이동 대입·operator+=(&&) 뒤 원본 buffer 를 비우도록 변경 (r10192~r10193) - 동작 변경
+  - _basic_buffer, _buffer_view, _shared_buffer 가 대상, prepend(T&&) 는 std::move 로 전달
+  - _check_bound 는 빈 buffer 를 검사하지 않는다
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- Windows lib 출력·링크 경로를 lib/cgdk/sdk10/windows/ 로 변경 (r10187~r10189)
+  - #pragma comment(lib, ...) 도 cgdk/sdk10/windows/ 경로로 바뀌어, 사용하는 프로젝트의 라이브러리 경로는 lib 루트로 지정한다
+  - CMake 빌드는 lib/cgdk/sdk10/${DIST} 로 출력·링크 (r10191)
+
+2024.03.30
+- redis querier : session 생성·연결 수 통계(m_count_session_created / m_count_session_established) 추가 (r10198)
+  - session 의 on_request_connect / on_fail_connect / on_disconnect 에서 갱신
+- examples/8.1.bench_redis 추가 (CGDK redis querier 와 redis-plus-plus 비교) (r10197, r10199~r10200)
+
+2024.04.10
+- redis Iquery::wait / process_response : 상태 락 안에서 REQUESTING 상태를 확인하고 기다리도록 수정 (r10201)
+  - 전에는 별도 mutex 로 기다려, 응답이 먼저 오면 notify 를 놓치고 계속 기다릴 수 있었다
+  - post_execute_query 는 std::string&& 를 받도록 변경, querier::execute_query 는 Iquery 파생 타입만 받도록 제한 (r10201, r10241~r10242)
+  - 헤더 변경 : 사용하는 쪽 재빌드
+
+2024.04.28
+- non_copyable 추가, executor·thread·socket·factory·manager 류 클래스를 복사 금지로 변경 (r10230~r10231)
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- vcpkg 정리 : 프로젝트마다 있던 vcpkg.json 을 지우고 루트 vcpkg.json 하나로 모음 (r10226~r10229, r10233, r10251)
+  - 의존성 : gperftools, gtest, openssl, protobuf, boost-asio, boost-thread, redis-plus-plus, libgit2, librdkafka, cppkafka
+  - 각 vcxproj 의 vcpkg 설치 경로 지정 제거 (r10226~r10228)
+- tutorials/server.5.query/query.07.mfc_controls 를 query.ex07.mfc_controls 로 이름 변경 (r10231)
+
+2024.05.03
+- util.crypt : 저장소에 넣어 두던 openssl·curl 헤더(Windows/android) 삭제, vcpkg 의 openssl 사용 (r10247)
+  - openssl 소스 이름을 util.crypt.ssl*.cpp 로 변경, crypt::ssl2 / crypt::ssl3 클래스 추가
+
+2024.05.06
+- object::Inameable : set_name()/get_name() 를 name(v) / name() 으로 변경 (r10249) - 동작 변경
+  - Nnameable(name), acceptor(name) 등 이름을 받는 생성자 제거 : 생성 후 name(...) 으로 지정
+  - 사용하는 코드 수정 필요 (examples·tutorials 는 함께 수정)
+- net::io::Iconnect_notify / net::io::connect_notify::Nbase 추가 : on_request_connect / on_connect / on_fail_connect / on_disconnect 를 connectable 에서 분리 (r10248~r10249)
+  - net::io::Imessageable(on_message) 분리, net.io.messageable.h 는 net.io.messageable.Nbase.h 로 교체
+  - net::socket::Itcp<> 추가, net::socket::tcp<> 는 Itcp + connect_notify::tcp::Ndefault 로 구성
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- server_system::Iservice_component 추가 : service 의 initialize/start/stop/destroy 가 끝나면 자식 객체 중 이 interface 를 가진 것에 on_service_complete_* 를 차례로 부른다 (r10248)
+
+2024.05.19
+- server.kafka 추가 : librdkafka 기반 kafka::manager, producer/consumer, producible/consumable, sendable/receivable (r10199, r10230, r10250, r10252~r10253)
+  - include/cgdk/sdk10/server.kafka.h, build/src/server.query/kafka
+  - tutorials/server.5.query/query.07.kafka 추가 (r10231~r10246)
+
+2024.05.25
+- buffer : format 문자열을 받는 append / append_text / prepend_string / prepend_text 오버로드 삭제 (r10250, r10255~r10257) - 동작 변경
+  - append_text(NFMT::format(...)) 처럼 먼저 문자열을 만들어 넣는다, append_text(const std::basic_string&) 추가
+  - 헤더 변경 : 사용하는 코드 수정 후 재빌드
+
+2024.06.01
+- net::socket::Nlambda<T> / net::socket::tcp_lambda<> 추가 : on_connect / on_disconnect / on_message 등을 람다로 지정하는 socket (r10249, r10255, r10264~r10268)
+  - net::acceptor<> (기본 인자 net::io::socket::Ntcp) 는 socket 을 만드는 함수를 받는다
+  - tutorials/network.1.socket/socket.ex09.lambda_socket 추가 (r10249, r10259~r10261)
+- ODBC Nquery : 재접속(regen_session) 때 statement handle 을 새 연결에서 다시 할당하도록 수정 (r10258)
+  - 전에는 session 만 다시 얻고, 끊긴 연결에서 할당한 statement handle 을 계속 썼다
+- CMake : server.kafka 와 query.07.kafka 를 CMake 빌드에서 제외 (r10269, r10271)
+  - CMakeLists 에서 CMAKE_MINIMUM_REQUIRED 를 PROJECT 앞으로 이동 (r10262~r10263, r10270)
+
+2024.08.31
+- notify_thread_blocked 를 scoped_thread_block 으로, Iexecutor::control(1/2) 를 thread_blocked() / thread_unblocked() 로 변경 (r10278) - 동작 변경
+  - 현재 thread 에 executor 가 없으면 system_executor 에 알린다 (전에는 assert)
+  - OLEDB querier 의 blocking 구간에도 scoped_thread_block 적용, executor.list.h/.inl 삭제
+  - throwable 에 where() (std::source_location) 추가
+  - 헤더 변경 : 사용하는 쪽 재빌드
+  - benchmark/2.execution_thread_blocking 추가 (r10277)
+- connectable::tcp 종료 : shutdown 이 양방향이 아니라 송신 쪽만 닫던 문제 수정 (r10279~r10283)
+  - SD_SEND | SD_RECEIVE 가 1 | 0 = SD_SEND 였다, Windows 는 SD_BOTH, linux 는 SHUT_RDWR/SHUT_WR 사용
+
+2024.10.06
+- object_ptr 소멸자 : m_ref 를 먼저 비운 뒤 release 하도록 순서 변경 (r10285)
+  - 전에는 release() 를 먼저 부르고 _clear() 했다. release 중에 같은 object_ptr 를 다시 보면 해제된 포인터가 남아 있었다
+  - logger_console / logger_hub 의 destroy 에서 reset_default_logger() 의 반환값을 받아 두어 함수 끝까지 살려 둔다
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- _basic_buffer::append_text(string_view / string / 배열) : 문자 타입 T 의 기본값을 char 로 지정 (r10286~r10287)
+- object::Nstartable::start : start 중 예외가 났을 때 destroy 조건 수정 (r10294)
+  - result_code 를 bool 로 검사하던 것을 initialize 결과가 SUCCESS 일 때만 destroy 하도록 고쳤다
+  - server_system::Nservice::_process_destroy_complete 가 끝에 상태를 NONE 으로 되돌리도록 추가
+- template 매개변수 이름 정리 : TOBJECT 를 T 로 (OBJ, factory, make_object, make_own, Npoolable 등) (r10344~r10353)
+  - system_executor::process_detach() 를 process_detach_instance() 로 이름 변경
+  - 헤더 변경 : 사용하는 쪽 재빌드
+
+2024.10.09
+- CMake (linux) : 라이브러리 출력 경로를 배포판별로 나눔 (r10288~r10296, r10354~r10365)
+  - /etc/os-release 의 ID 로 PLATFORM_OS 를 정하고 lib/cgdk/sdk10/<PLATFORM_OS> 에 출력한다 (예 : ubuntu, rocky)
+  - 출력·링크 경로에 섞여 쓰이던 ${DIST} / ${DEST} 를 PLATFORM_OS 로 대체, Debug 플래그 -g1/-g3 를 -g 로 통일
+  - CMAKE_MINIMUM_REQUIRED·CMAKE_POLICY 를 PROJECT 앞으로 이동
+  - library / example / tutorial / benchmark CMakeLists 전체 적용
+- throwable::seh_exception 을 throwable::system_exception 으로 이름 변경, linux 판(signal 번호 보관) 추가 (r10366~r10367) - 동작 변경
+  - seh_exception 을 쓰던 코드는 이름을 바꿔야 한다
+- api::file::write (linux) : 쓴 바이트 수 대신 1 을 돌려주던 문제 수정 (r10377~r10379)
+  - fwrite(_data, _size, 1, ...) 를 fwrite(_data, 1, _size, ...) 로 고쳤다
+  - linux / android 파일 함수를 std:: 이름으로 호출
+
+2024.10.10
+- executor::queue_list_threads 추가 : queue_list 에 thread 묶음을 붙인 executor (r10381~r10382)
+  - start 의 thread_count (기본 core 수 기준 자동) 만큼 thread 를 만들어 execute 를 돌린다
+
+2024.10.12
+- api::io_context_epoll : 종료 처리 변경 (r10384~r10457) - 동작 변경
+  - destroy 가 epoll handle 을 바로 close 하고 thread 를 강제 종료하던 것을 eventfd 로 종료 표시를 보내고 thread 가 끝나길 join 하도록 변경
+  - epoll event pump thread 가 예외로 빠져나가지 않도록 try / catch 로 감싸 다시 돈다
+  - api::threads::wait 이 1ms 씩 sleep 하며 기다리던 것(release 는 최대 10초)을 각 thread 를 join 하는 것으로 변경
+  - api::Nthread::wait (windows) 의 60초 대기 후 강제 종료 경로 제거, 항상 join
+
+2024.10.13
+- linux io_context 를 공통 io_context_Nepoll 과 io_context_epoll_queued / io_context_epoll_direct 로 분리 (r10458~r10512)
+  - epoll_queued : 옛 io_context_epoll 과 같은 방식(epoll pump thread 하나가 꺼내 queue 에 넣고 worker 를 깨움)
+  - epoll_direct : worker thread 가 epoll_wait 를 직접 부르고, post 는 eventfd 로 깨운다
+  - 이 시점 기본값은 api::io_context = io_context_epoll_queued
+  - api::io_context_epoll / api.io_context.epoll.h 삭제
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- print_statistics() 를 static 으로 추가 : net::io::connective::manager, server_query::querier_manager, time_event::entity_manager, schedulable::manager 등 (r10513~r10518)
+  - dump_manager 의 lock 을 shared_mutex 에서 mutex 로 변경 (헤더 변경)
+- _build.windows.vs17.bat : vcvarsall.bat x86_x64 대신 vcvars64.bat 사용 (r10515)
+
+2024.10.19
+- linux signal 처리를 dump_manager 로 모음 (r10520~r10583) - 동작 변경
+  - system_executor 초기화 때 dump_manager::set_signal_handler() 로 거의 모든 signal 을 등록한다
+  - SIGSEGV / SIGBUS / SIGFPE / SIGILL / SIGSTKFLT : dump 파일 이름을 만들고 callstack 을 fatal log 로 남긴 뒤 system_exception 을 throw
+  - SIGINT : system_exception 을 throw, SIGTERM / SIGQUIT : dump_manager::destroy()
+  - Nservice_application 이 하던 signal 등록(SIGPIPE 무시, SIGTSTP stop, SIGCONT resume, SIGINT·SIGQUIT destroy 등) 제거
+  - 중간에 Nservice 로 옮겼던 signal 처리(r10520~r10532)도 dump_manager 로 다시 옮김
+- dump_manager API 이름 변경 (r10533~r10583)
+  - enable_seh / disable_seh / seh_enabled 를 enable_exception_handleing / disable_exception_handleing / is_excpetion_handling 으로 (전역 함수도 같이)
+  - set_seh_to_thread / set_invalid_parameter_handle 은 windows 전용 private 로, snap_dump(wstring_view) 제거
+  - DEFAULT_ENABLE_SEH 를 DEFAULT_ENABLE_EXCEPTION_HANDLING 으로
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- CMake (linux) : 공통 플래그에 -ggdb3, release 에 -fPIC 추가 (r10575~r10579)
+
+2024.10.20
+- server_system::group::Nmap : gcc 에서도 member 를 iterator 로 erase 하도록 통일 (r10584~r10586)
+  - MSVC 가 아니면 key 를 보관해 key 로 지우던 분기 제거, MEMBER_SET 필드 기본 초기화 추가
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- crypt::encrypt_rsa : 결과 버퍼 크기에 key 크기를 더하도록 수정 (r10588~r10589)
+  - OpenSSL 3 decoder 를 쓰는 encrypt_rsa2 선언 추가 (본문은 아직 비어 있음)
+  - _shared_buffer 에 _basic_buffer 를 받는 operator= 추가
+  - tutorial common.4.util/util.01.rsa 추가
+
+2024.10.25
+- executor::queue_list : 실행한 executable 을 한 번 더 release 하던 문제 수정 (r10590)
+  - AUTO_RELEASE_EXECUTABLE 가 object_ptr&& 를 raw pointer 로 받아 reset 에서 release 했는데, 넘긴 object_ptr 도 그대로 참조를 가지고 있어 함수 끝에서 다시 release 됐다
+  - object_ptr 로 보관하도록 변경
+
+2024.10.27
+- linux 기본 io_context 를 io_context_epoll_direct 로 변경 (r10596) - 동작 변경
+- io_context_epoll_direct : post 가 동작하지 않던 문제 수정 (r10616~r10622)
+  - eventfd_write 가 성공(0)일 때 예외를 던지고, eventfd_read 가 성공일 때 그냥 돌아가던 결과 검사를 < 0 으로 수정
+  - post queue 를 꺼낼 때도 lock 을 잡도록 수정
+- system.object.h 에서 OS 헤더(pthread.h, sys/epoll.h, aio.h 등)와 io_context 구현 클래스·executor::io_context / io_context_threads 헤더를 빼고 내부 platform.h 로 옮김 (r10623) - 동작 변경
+  - 이 헤더들에 기대던 사용 코드는 직접 include 해야 한다
+  - oledb querier 와 tutorial execute.03 의 executor 를 io_context_threads 에서 queue_list_threads 로 변경 (r10627~r10628)
+- context : inline 구현을 context.cpp 로 옮김 (r10610~r10611)
+  - write_to_json_string_char / _wchar / _u16char / _u32char 제거, write_to_json_string<T>() 사용
+  - 2 인자 find(a, b) template 제거 (가변 인자 find 로 처리)
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- LOG_RECORD : DEFINE_BUFFER_SERIALIZE 대신 process_serialize_in / out / size_of 직접 구현 (r10601~r10602)
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- archive::file_record 비활성화 : 헤더와 구현 전체 주석 처리 (r10624~r10625) - 동작 변경
+- acceptor / connector 기본 이름을 NFMT::format 대신 문자열 연결로 만듦, http / secure 는 "acceptor.http<..>", "acceptor.secure<..>", "connector.http<..>" 로 구분 (r10603~r10604)
+- 저장소에 들어 있던 openssl 소스(build/src/system/openssl) 삭제, util.crypt 프로젝트에서 번들 openssl 헤더 참조 제거 (r10597~r10602)
+  - ssl manager 에서 OpenSSL 3 에서 쓰지 않는 ERR_load_BIO_strings 호출 제거 (r10630, 2024.10.28)
+
+2024.11.02
+- 외부 라이브러리 정리 (r10633~r10657)
+  - vcpkg.json : builtin-baseline 갱신, zlib / rapidjson 의존성 추가 (r10635)
+  - rapidjson include 를 "rapidjson/..." 로 통일 (linux 의 ../../common/rapidjson 상대 경로 제거)
+  - 번들되어 있던 {fmt} 헤더(include/cgdk/sdk10/system/object/fmt) 삭제 (r10633)
+- Ireferenceable::release() / _process_on_final_release() 구현을 헤더 inline 에서 Ireferenceable.cpp 로 이동 (r10631~r10632)
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- linux CMake : tutorial / example 링크 옵션 정리 (-lz 추가, crypto 제거 등) (r10637~r10660)
+
+2024.11.12
+- Visual Studio 솔루션에서 x86(Win32) 구성 제거 : x86 선택 시 x64 로 빌드 (r10661)
+
+2024.12.01
+- {fmt} 대체 경로 제거 : C++20 <format> 필수 (r10676, r10682)
+  - <format> 이 없으면 빌드 오류. NFMT 는 std 로만 정의된다
+- chrono : is_leap_year / get_day_of_year / get_day_of_week 를 definition.timer.h 에서 chrono.h 로 이동, to_string_month 등 문자열 함수 구현을 chrono.cpp 로 이동 (r10665~r10672)
+  - definition.timer.h 의 linux 용 GetTickCount64() 대체 함수 제거
+- buffers : _UNREAL 정의 시 CGDK 본체 없이 쓰는 경로(Imemory, alloc_shared_buffer)를 사용 (r10662)
+- factory::manager::print_statistics 출력 코드를 factory.manager.print_sub.cpp 로 분리 (r10673)
+- rebuild.windows.*.bat : 재빌드 전에 output, lib/cgdk (tutorials/examples 는 output, execute) 폴더를 지운다 (r10674)
+
+2024.12.25
+- object::Inameable::process_get_name() 반환형을 std::string_view 에서 std::string 으로 변경 (r10685) - 동작 변경
+  - server_system::Nservice 의 이름/설정(m_service_setting) 읽기·쓰기를 setting_lock() 으로 보호
+  - 헤더 변경 : process_get_name 을 override 한 쪽 수정, 재빌드
+
+2024.12.28
+- doss : transaction 에 time_request / time_begin / time_complete, entity_session 에 time_last_request / time_last_complete 통계 시각 추가 (r10686)
+- object_ptr / own_ptr 에 operator bool 추가 (r10686)
+  - own_ptr::operator bool 이 !exist() 를 반환하는 반대 동작이었다 (2026.05.31 코어 정리에서 수정)
+
+2025.02.27
+- service : socket_to_admin 생성을 가상 함수 process_alloc_socket_to_admin(context&) 로 분리 (r10687)
+- admin 인증 메시지(SERVER_CERTIFY_REQUEST/RESPONSE)에 sSERVICE_INSTANCE_INFO 추가, server::Isocket 의 원격 정보를 sSERVICE(setting + instance info) 로 변경 (r10688~r10689) - 프로토콜 변경
+- api::Nthread::raise_exception() linux 지원 (r10690~r10726)
+  - linux 는 pthread_kill(SIGUSR2) 로 대상 thread 에 throwable::force_raise 를 던진다 (thread 마다 SIGUSR2 handler 설치)
+  - tutorial common.3.execute/execute.ex01.force_raise 추가
+- crypt::rsa API 재구성 (r10701~r10731)
+  - crypt::rsa::public_key_t / private_key_t (key 를 std::string 으로 소유, 직렬화 가능), key_pair_t
+  - generate_private_key / generate_public_key / generate_key_pair, encrypt / decrypt, make_encryptor / make_decryptor (Iencryptor / Idecryptor) 추가
+  - 기존 encrypt_rsa / decrypt_rsa / encrypt_rsa2, rsa_public_key / rsa_private_key 제거 : 사용하는 쪽 수정
+- tutorial : server.5.query 번호 재배치(redis 06, http 07, kafka 08), query.05.schema 추가, object.ex02.endcoding_decoding 을 aes / compression / hashing / rsa 파일로 분리 (r10688~r10731)
+
+2025.03.09
+- net.socket.crypt 라이브러리 분리 (r10733~r10766)
+  - 암호화 socket(tcp_crypt)과 SSL(acceptor_ssl, connect_requestable.tcp_ssl 등)을 net.socket / net.socket.http 에서 build/src/net.socket/socket.crypt, include net.socket/socket.crypt 로 이동
+  - 새 헤더 net.socket.crypt.h, 새 라이브러리 CGDK10.net.socket.crypt : 사용하는 쪽 include / 링크 추가
+  - tcp_crypt 용 async_gather_buffered sendable(iocp/epoll) 추가 (r10735)
+- util.crypt 정리 : aes / hmac / sha 파일 분리, base64 는 system.object 의 util.base64 로 이동 (r10733)
+  - util.Icrypt.h, util.crypt.base64.h 삭제, util.Ichecker.h / util.Icompressor.h 추가
+- tutorial network.1.socket/socket.ex10.crypted_send_receive, socket.ex11.ssl_send_receive 추가 (r10732~r10761)
+
+2025.03.15
+- NFMT 매크로 제거 : 라이브러리 전체를 std::format 직접 사용으로 변경 (r10767)
+  - NFMT::format 을 쓰는 사용 코드는 std::format 으로 수정
+
+2025.03.23
+- buffer : sub_size() / sub_data() 의 bound check 조건이 반대로 되어 있던 문제 수정 (r10768)
+- query::rdb::odbc::querier 통계 조회 함수 추가 : get_created_session_count, get_stacked_session_count, get_queued_stacked_query, get_session_regeneration_interval 등 (r10768)
+- crypt::ssl_context : 초기화 실패 시 예외를 다시 던진다 (r10769) - 동작 변경
+  - 전에는 catch 에서 정리만 하고 예외를 삼켰다
+  - eRESULT 추가 : FAIL_TO_INITIALIZE_SSL_CONTEXT, FAIL_TO_USE_SSL_CERTIFICATION_FILE, FAIL_TO_USE_SSL_PRIVATE_KEY, FAIL_TO_CHECK_SSL_PUBLIC_KEY (OpenSSL 오류 문자열을 description 에 담음)
+  - server context 옵션에 SSL_OP_NO_COMPRESSION, SINGLE_DH_USE, SINGLE_ECDH_USE 추가
+
+2025.04.27
+- server admin 구조 재편 (r10770~r10779)
+  - service_ex, server::Isocket, server.admin.socket.to_admin 제거
+  - host / service instance manager, instance_local, admin socket client / server, group_socket 추가
+  - definitions.admin.h 의 eINSTANCE_TYPE 제거
+- connect_requestable::tcp 소멸 대기 조건에 socket 이 CLOSED 가 될 때까지를 추가, connectable::tcp 가 각 종료 경로에서 CLOSED 를 설정하도록 수정 (r10774~r10776)
+- object::Ninitializable::initialize(context&&) 추가 (r10778)
+
+2025.05.06
+- 문자열 변환 함수의 문자 타입 템플릿(char/wchar_t) 정리 (r10780~r10786)
+  - net : to_string<T>(sockaddr / address / address_v4 / address_v6 / eSOCKET_STATE) 를 std::string / std::string_view 반환 함수로 변경, address::to_string<T, Allocator>() 제거
+  - system.object : chrono / factory / executor 등의 to_string<T> 템플릿 정리, eCONTEXT_VALUE_TYPE 대신 context::value_type_t
+  - 헤더 변경 : to_string<char>() 등을 쓰던 사용 코드 수정, 재빌드
+- server admin instance 를 server_admin 에서 server_system namespace 로 이동 (server_system::service::instance_local, server_system::host::...), Nservice::host_instance() 추가 (r10785~r10786)
+- system unit test 를 NuGet(packages.config) gtest 로 전환, CMakeLists 정리 (r10783~r10784)
+
+2025.05.26
+- api::file::write_file(buffer_view, filename, file_location) 추가 (r10791)
+- context 조회를 is_valid() 기준으로 변경 : 없는 key 와 빈 문자열을 구분 (archive.file, connect_requestable, acceptor 등 파라미터 읽기) (r10787~r10795)
+
+2025.06.20
+- log source 추가 : Ilog_source 가 log_archive 를 상속해 자기 log 를 저장, _log() 에 Ilog_source / log_source_t 인자 추가 (r10800~r10801)
+  - {fmt} 용 _log_fmt 제거
+- logger_file : context 에 "disable" 이 없으면 활성 상태로 시작 (r10803) - 동작 변경
+  - 전에는 기본값이 false 라 "disable" 을 주지 않으면 file logger 가 꺼져 있었다
+- logger_hub_archive : executor 가 지정되지 않으면 system_executor 를 사용 (r10803)
+
+2025.07.06
+- query::rdb::odbc : session 재생성 순서 수정 (r10802~r10808)
+  - statement handle 을 먼저 해제한 뒤 session 을 reopen 하고 statement 를 다시 할당한다
+  - SQLSTATE "00…" 과 native error 2003(MySQL 접속 실패)을 CONNECTION_FAILURE 로 분류해 재접속 대상으로 처리
+  - data_source / session open 에 nullptr·초기화 문자열 검사 추가
+- linux(gcc) 빌드 수정 : 의존 이름 template 키워드, constexpr 상수 등 (r10809~r10842)
+
+2025.07.13
+- executor::io_context_threads : blocking 시 추가 thread 정책 변경 (r10843) - 동작 변경
+  - blocking 된 thread 수가 core 수를 넘으면 extra thread 를 띄우고, 최대 수는 thread_count
+  - 쉬는 extra thread 는 condition_variable 로 재사용, stop 시 extra thread 도 종료
+- context 기능 추가 (r10780~r10846)
+  - append(), chrono tick/local/utc time_point 대입, shared_buffer 변환, equal / greater / less 비교 함수
+  - find() 의 key 가 256자 이상이면 KEY_LENGTH_ERROR 예외, 소멸자에서 clear()
+  - JSON 처리를 context.json.cpp 로 분리
+
+2025.08.03
+- acceptor : sSOCKET_ACCEPT_PARAMETER 에 reuse_address, reallocate_port_at_duplicate_port_error 추가 (r10847) - 동작 변경
+  - bind 가 포트 중복으로 실패하면 port+1 로 다시 시도한다 (기본 true, context "reallocate_port")
+  - SO_REUSEADDR 를 항상 켜던 것을 reuse_address 값으로 (context "reuse_address")
+  - accept endpoint 설정을 bind/listen 성공 뒤로 이동
+  - 구조체 크기 변경 : 사용하는 쪽 재빌드
+
+2025.08.07
+- sendable : close/reset 때 아직 보내는 중(m_flag_sending)인 sending 버퍼까지 지우던 문제 수정 (r10848)
+  - tcp_sync_buffered (iocp), tcp_crypt async_gather_buffered (iocp/epoll)
+- group : Igroupable::leave_group() 이 member 락을 잡고 _leave_group() 을 부르도록 분리, group.Icountable 에 락 없는 _member_count() 등 추가 (r10847~r10848)
+
+2025.08.15
+- factory / executor / scheduler / schedulable / dump_manager 의 print_statistics() 본문을 주석 처리 (r10882~r10889) - 동작 변경
+  - 호출해도 아무것도 출력하지 않는다
+- net::sockaddr : 생성자·대입 연산을 v4/v6 별로 정리, 기본 생성 시 AF_UNSPEC (r10871~r10902)
+- linux CMake 정리 : PROJECT 이름 정리(CGDK10.core 등), 컴파일 옵션 -g -Wall -Wextra (r10870~r10919)
+- factory::memory_block 의 memory 클래스와 alloc() 구현을 .inl 에서 cpp 로 이동 (r10921)
+  - 헤더 변경 : 재빌드
+- update::Nreceiver::set_root_path() 인자를 const std::string& 로 변경 (r10924)
+
+2025.11.16
+- Visual Studio 2019(vs16) 프로젝트 파일 삭제, PlatformToolset v143 -> v145 (r10929~r10930)
+  - MFC 컨트롤/도구 프로젝트의 vs16 이름 파일 정리
+
+2025.12.26
+- query::rdb::odbc::session::start_transaction() : result_code 반환에서 예외로 변경, 실패 시 querier 의 max_retry 만큼 재시도 (r10936~r10937) - 동작 변경
+  - 반환값을 검사하던 사용 코드 수정
+
+2026.03.02
+- scoped lock 매크로 이름을 대문자로 변경 (r10939~r10945)
+  - scoped_lock / scoped_lock_named / scoped_lock_leave / scoped_unique_lock / scoped_shared_lock / synchronized / conditional_lock -> SCOPED_LOCK / SCOPED_LOCK_NAMED / SCOPED_LOCK_LEAVE / SCOPED_UNIQUE_LOCK / SCOPED_SHARED_LOCK / SYNCHRONIZED / CONDITIONAL_LOCK
+  - 옛 이름은 남기지 않았다 : 사용 코드 수정
+- lockable<T> 템플릿 제거, lock_object(std::recursive_mutex) 로 대체 (r10950~r10962)
+  - lockable<X> 로 감싸던 멤버는 lock_object 멤버와 데이터 멤버로 분리 (이름은 m_cs_* -> m_lockable_*)
+  - SCOPED_LOCK 대상도 lock_object 로 변경. 사용 코드 수정, 재빌드
+- linux CMake 경고 옵션 강화 (Debug -Wformat=2 -Wformat-security, Release -Wformat), Release 의 -fPIC 제거 (r10949)
+- buffers : release 빌드에서 CGDK_DISABLE_ASSERT 를 자동 정의하던 것 제거 (r10970) - 동작 변경
+  - release 에서도 bound 위반 시 assert 후 예외 (CGDK_DISABLE_ASSERT / CGDK_NO_BOUND_CHECK 를 직접 정의하면 전과 같다)
+  - front/back 접근 bound check 에 data_ nullptr 검사 추가 (r10972)
+- query::http::query::execute_query(format, args...) printf 형식 오버로드 제거 (r10963)
+- logger_console : 한 번에 출력하는 log 크기 한도를 64KB 에서 512KB 로, filter 처리 중 예외를 잡도록 수정 (r10974)
+- get_parameter_endpoint() 에 상위 field 이름 인자 추가(파라미터 로그에 표시), acceptor 가 IPv6 only 설정을 로그로 남김 (r10975~r10976)
+
+2026.03.14
+- object::Nattachable 삭제 : object::Istate 가 자식 state attach/detach 를 직접 처리 (r10977~r10978)
+
+2026.04.26
+- eRESULT::UNEXPECTED_EXCEPTION 값을 0x034d0000 에서 0x034d0009 로 변경, eRESULT::NOT_IMPLEMENTED(0x034d000a) 추가 (r10979)
+  - 값을 저장하거나 다른 프로세스와 주고받는 쪽은 주의, 재빌드
+- depository::_remove_object() 추가 (r10979)
+- buffers (Unreal) : TSharedPtr / TSharedRef 와 그 list/deque/circular_list 직렬화 지원, std::shared_ptr / unique_ptr 배열 특수화는 __cpp_lib_*_arrays 가 있을 때만 (r10980)
+
+2026.05.08
+- query::rdb (ODBC/OLEDB) : eDB_PROVIDER 에 MySQL 9.0 / 9.7 추가 (r10981)
+  - MYSQL_9 / MYSQL_9_ANSI / MYSQL_9_UNICODE, MYSQL_9_7 / _ANSI / _UNICODE ("mysql_9", "mysql_9_7_unicode" 등)
+  - 헤더 변경(server.query.definitions.h) : 사용하는 쪽 재빌드
+
+2026.05.11
+- 빌드 : Visual Studio 2026(vs18) 지원 추가 (r10985~r11006)
+  - .sln 을 변환한 .vs18.slnx 솔루션, vs18 vcxproj, vs18 build/rebuild bat 추가
+  - mfc_controls 프로젝트의 Debug_Dynamic/Release_Dynamic 구성을 Debug/Release 로 변경 (slnx 구성과 맞춤)
+  - mfc_controls lib 이름에서 '_Dynamic' 제거 (예 : CGDK10.system.mfc_controls_Windows10.0_x64_Release.lib) - 동작 변경
+    - server.service.doss.mfc_controls.h 가 옛 이름(CGServerSystemMFCControls_...)을 링크하던 것도 수정
+- vcpkg.json : libgit2 제거 (쓰지 않고 v1.9.3 압축 해제가 windows 에서 실패), builtin-baseline 갱신 (r10988, r10989)
+- log : _log_end 의 operator= 가 _log_stream& 를 돌려주도록 변경, LOG_MESSAGE_EMPTY 에도 사용 가능 (r10995~r10999)
+
+2026.05.17
+- object::Ninitializable / Nstartable : 자식 객체 initialize/start/stop/destroy 처리 수정 (r11033~r11038)
+  - PENDED 판정이 반대로 되어 있어 대기 정보(m_queue_pended)를 잘못 지우던 문제 수정
+  - 자식 목록을 복사해서 순회 (처리 중 자식이 붙거나 떨어져도 안전)
+  - 실패 시 처리한 자식만 역순으로 되돌리고 대기 정보를 비움
+  - initialize 완료 후(_process_initialize 성공 뒤) STOPPED 상태로 바꾸도록 순서 변경, start 실패 시 complete 를 부르지 않음 - 동작 변경
+
+2026.05.18
+- vcpkg.json : openssl/gperftools feature 제거 (dependencies 로 통합), name/version-string 추가 (r11041~r11047)
+- tutorials : network.3.update 의 std::format 출력을 iostream 으로 교체 (r11048)
+
+2026.05.21
+- dump_manager : 예외 발생 시 상세 callstack 로그 추가 (r11047~r11062)
+  - windows : 예외 코드/접근 주소, 스택 메모리 덤프, 스택 프레임 분석, 프레임별 심볼/소스 줄 (Dbghelp.lib 자동 링크)
+  - linux : sigaction(SA_SIGINFO) 으로 ucontext 를 받아 레지스터/스택 덤프, addr2line 으로 소스 위치, /proc/self/maps 정보
+  - 헤더 변경(dump_manager.h) : 사용하는 쪽 재빌드
+- logger_console : 콘솔 문자셋 자동 감지 (r11053~r11057)
+  - windows : GetConsoleOutputCP, linux : LC_ALL/LC_CTYPE/LANG
+  - "character_set" 에 "auto"/"detect" 추가 ("default" 도 감지로 동작) - 동작 변경
+  - UCS2 는 WriteConsoleW 로 출력, linux 는 출력 후 fflush
+- log stream : 문자열 추가 시 버퍼가 꽉 차면 null 종료가 버퍼 밖에 쓰이던 문제 수정 (r11049)
+- LOG_RECORD : UTF-8 변환 임시 버퍼 크기 계산 수정 (r11056)
+
+2026.05.23
+- 빌드 (linux CMake) : svn_version.sh 로 svn_version.h 생성 (r11058~r11075)
+  - include/cgdk/sdk10/svn_version.sh <작업 사본> <template> <output> (SubWCRev 대체)
+- 빌드 (CMake) : 모듈별 편의 target(ADD_CUSTOM_TARGET) 이름이 겹쳐 CMP0002 오류가 나던 문제 수정 (r11079~r11084)
+  - alias 'odbc' 를 'rdb.odbc' 로 변경 (시스템 libodbc 링크를 가리던 문제)
+
+2026.05.25
+- buffer : prepend 계열 함수 삭제 (r11095~r11098) - 동작 변경
+  - _basic_buffer / _buffer_view / _shared_buffer 의 prepend, sWEBSOCKET_MESSAGE::process_prepend, prepend_MESSAGE_HTTP 삭제
+  - 헤더 변경 : 사용하는 쪽 재빌드 (prepend 를 쓰는 코드는 append 로 바꿔야 한다)
+- buffer : type traits 정리 (r11090~r11094)
+  - is_tuple / is_text / is_std_string(_view) / is_static_string / is_object_ptr / is_own_ptr 이 cv/ref 를 제거하고 판정
+  - is_memcopy_able -> is_memcopyable (옛 이름은 별칭으로 유지), is_own_ptr_serialziable 삭제
+- string functions 정리 (r11098~r11114)
+  - 플랫폼별 문자열 래퍼(__sprintf, __strcmp 등)를 std 함수(snprintf, string_view::compare ...) 로 교체
+  - stream_string / stream_wstring / stream_width / stream_hex / stream_fixed, __to_lower, __stricmp(string_view) 추가
+  - to_string_scaled_byte 가 std::string 을 돌려주도록 변경
+- logger (acceptor/buffer/console/file) : 로그 쓰기 중 예외를 잡아 오류 로그를 남김 (r11087)
+
+2026.05.28
+- examples : asio 예제 CMake 를 새 Boost CONFIG(Boost::headers) 방식으로 변경 (r11135, r11136)
+
+2026.05.31
+- 코어 정리 : 버그 수정 (r11147~r11164)
+  - own_ptr::operator bool 이 반대로 동작하던 문제 수정 (exist 일 때 false 였음) - 동작 변경
+  - net::io::Ireconnectable : peer address 검색 조건 반전 수정
+  - receivable::stream : 버퍼 크기 assert 조건 반전 수정
+  - Nhttp_server : UTF-8 4바이트 디코딩 오류 수정, websocket key 길이 검사 추가
+  - net::ip::address_v4/v6::is_private 범위 수정 (172.16/12, 192.168/16, fc00::/7), basic_endpoint operator== 무한 재귀 수정
+  - basic_resolver_results 복사 생성/swap/operator== 가 아무 것도 하지 않던 문제 수정
+  - NUMERIC::from_float/from_double 소수부가 0 이 되던 문제 수정
+  - odbc Nquery : move_first 실패 시 처리, admin service 의 iid AUTO 판정 반전 수정, 정적 id 생성기 atomic
+  - CMake : CMAKE_BULD_TYPE / CMAKE_RUNTIME_OTPUT_DIRECTORY 오타 수정
+- 코어 정리 : 쓰지 않는 코드 삭제 (r11165~r11174) - 동작 변경
+  - containers : _fast_vector.h, fast_vector, span.h, _placement_array.h, placement_array, identity_priority.h, priority_queue.h, stack.h
+  - common : locked_identity.h, lockfree_self_stack.h, lockfree_self_stack_64.h
+  - system.object : executable.list.h/.inl
+- query::rdb : OLEDB 구현 삭제, windows 도 ODBC 하나로 (r11170) - 동작 변경
+  - server.query.rdb.oledb.h 삭제, server.query.rdb.h 는 ODBC 를 사용
+- schedulable::Nexecutable_list : const 함수에서 GCC 컴파일 오류 수정 (lock 멤버 mutable) (r11173)
+- buffer : linux 에서 _buffer_view<char> / _basic_buffer<char> / _shared_buffer<buffer> 를 명시적 인스턴스화 (r11175)
+  - 라이브러리 안에서 한 번만 인스턴스화 (CGDK_BUFFER_HEADER_ONLY 로 끌 수 있다)
+
+2026.06.02
+- logger_file : 백업 폴더와 크기/줄 수 기준 재생성 추가 (r11193~r11196)
+  - "backup_path" : 재생성 때 이전 파일을 이 폴더로 옮김
+  - "recreation_bytes_limit" / "recreation_limit_lines" : 크기 또는 줄 수가 넘으면 새 파일
+  - 시간 기준 재생성은 'recreation' 키 대신 재생성 간격(0 이 아니면)으로 판단 - 동작 변경
+- server admin : host/service instance 에 lock 추가, sINSTANCE_KEY 추가, 상태 갱신 정리 (r11178~r11192)
+  - 헤더 이름 수정 : server.admin_Info.binder.h -> server.admin_info.binder.h, server.service_appilcation.h -> server.service_application.h
+- unit test : 모듈별 unit_test 폴더로 재배치, unit_test.server_system.service 추가 (r11182~r11185)
+
+2026.09.22
+- factory 통계 : 실행 횟수/누적 실행 시간(execute_count, execute_accumated) 추가 (r11202)
+  - Ireferenceable::statistics_on_extra -> statistics_on_execute_elapsed_time(duration)
+  - 헤더 변경(definitions.factory.h, Ireferenceable.h) : 사용하는 쪽 재빌드
+- 빌드 : 빌드 스크립트와 솔루션 이름에서 'windows' 제거 (r11204~r11216)
+  - 예 : build.windows.vs18.bat -> build.vs18.bat, CGDK10.net.socket.windows.vs18.slnx -> CGDK10.net.socket.vs18.slnx
+  - vs17 은 .sln, vs18 은 .slnx
+
+2026.09.25
+- 빌드 (CMake) : 공통 규칙 build/cmake/cgdk.cmake 추가, windows(MSVC, multi-config) 에서도 CMake 빌드 (r11217~r11219)
+  - vcxproj 와 같은 출력 이름/경로, build/cmake_generate(.vs17/.vs18).bat 추가
+
+2026.09.28
+- util::edc : CRC32 slice-by-16 + PCLMUL(x64, 실행 중 판정), MD5 블록 처리 최적화 (r11226, r11227)
+- 코드 정리 : RETURN_IF/THROW_IF 를 if 문으로, shared_buffer 이동 사용 (r11220~r11225)
+
+2026.10.05
+- context (json) : 환경 변수로 설정을 덮어쓰는 특수 키 추가 (r11231~r11233)
+  - "@merge_keys_from_env": "ENV" : 환경 변수의 json 객체를 그 위치에 병합
+  - "@add_keys_from_env": "ENV" : 키를 추가만 함 (이미 있으면 예외)
+  - "@del_key": "key" | ["key", ...] : 그 위치에서 키 삭제
+- 빌드 : tutorials/examples 프로젝트 파일 이름에서 '.windows' 제거 (r11233)
+
+2026.10.06
+- coroutine 추가 (system.object) (r11233~r11243)
+  - coroutine::task<T>, co_await 가능한 함수 실행(function_awaiter), coroutine.sleep / coroutine.post
+  - executor 를 지정해 재개, detached coroutine 수 확인(count_detached / wait_detached)
+  - tutorial : execute.06.coroutine
+- query (rdb.odbc / redis / http) : execute_query 가 execute_result<T> 를 돌려주도록 변경 (r11237) - 동작 변경
+  - CGDK coroutine 안에서 co_await execute_query(...) 로 결과를 기다릴 수 있다
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- kafka : server.query/kafka 를 net.socket/socket.kafka 로 옮김 (r11238) - 동작 변경
+  - server.kafka.h 삭제, net.socket/socket.kafka/*.h 사용, tutorial socket.ex12.kafka
+- 빌드 (CMake) : cgdk_update_svn_version.cmake 추가 (r11239)
+
+2026.10.07
+- schedulable : 실행 간격 변경과 밀린 실행 처리 정책 추가 (r11253)
+  - Nschedulable::execute_interval(duration), overrun_policy(eSCHEDULE_OVERRUN::CATCH_UP / SKIP)
+  - 설정 키 "overrun"("skip"/"catch_up"), "interval"(ms)
+  - executor::scheduler (windows) : 고해상도 waitable timer 사용
+  - fix : executor::queue_list::process_post 가 성공해도 false 를 돌려주던 문제 수정
+- dump_manager : dump_manager::initialize_instance(context) 로 설정 적용, linux 시그널을 system_exception 으로 던짐 (r11252)
+- api::thread : raise_exception -> force_raise_exception(message) (windows : 대상 thread 에 APC 로 예외) (r11244~r11246)
+  - mfc_controls 의 executor 목록에 force exception / snap dump 버튼 추가
+- api::file::create_parent_directories 추가, dump/log 파일의 상위 폴더를 자동으로 만듦 (r11249)
+- logger_file : initialize 인자에 limit_bytes / limit_lines / begin_time 추가 (r11249)
+- tutorials : execute.ex02.crash_dump, execute.ex03.snap_dump, execute.ex04.setting 추가 (r11248, r11251)
+
+2026.10.08
+- 빌드 (linux CMake) : lib 폴더 이름을 'linux_<arch>_glibc<버전>_<컴파일러><major>' 로 변경 (r11254) - 동작 변경
+  - build/cmake/cgdk_platform.cmake 추가, 옛 배포판 이름 폴더(예 : ubuntu)는 새 폴더의 symbolic link 로 만든다
+- CI : Jenkinsfile, build/run_unit_tests.sh 추가 (r11254~r11256)
+- NUMERIC : 나눗셈을 128bit 정수 연산으로 다시 작성 (r11254)
+- time_event : entity 재등록을 _reschedule_time_entity 로, 시간 문자열 범위 검사 (r11254)
+- unit test : server_query(numeric), server_system.log(logger_file), server_system.time_event 추가 (r11254)
+
+2026.10.09
+- net.socket (send) : send queue overflow 시 예외 대신 socket 을 닫도록 변경 (r11257) - 동작 변경
+  - exception_on_send_overflow 가 설정된 경우만 예전처럼 예외
+  - accept 된 socket 의 기본 최대 send queue 크기 추가 (Itcp_gather::default_maximum_queued_bytes_accepted)
+  - epoll : 한 번에 보내는 iovec 수를 IOV_MAX 로 제한
+- net.socket.crypt (ssl) : 클라이언트 기본 ssl context(인증서 검증) 와 host name(SNI) 사용 (r11257)
+  - prepare_ssl(enable, host_name), acceptor "ssl_handshake_timeout"
+  - 복호화 버퍼 여유 확대, epoll 에서 EAGAIN 처리
+
+2026.10.10
+- net.socket.mail : SMTP client 구현 (TLS/STARTTLS, AUTH, MIME) (r11258)
+  - ssl(465) / starttls(587) / none, 서버 인증서는 system CA 로 검증 (SNI)
+  - AUTH : XOAUTH2 > PLAIN > LOGIN, 명령마다 응답 timeout, 결과 콜백은 한 번
+  - tutorial : socket.ex13.mail (r11259)
+- server.system : Xservice::run 추가 - windows service / linux systemd 서비스로 설치·실행 (r11260~r11266)
+  - --install / --uninstall / --start / --stop / --service / --setting, --account / --password / --no-restart
+  - windows : 실패 시 재시작, 이벤트 소스 등록 / linux : systemd unit, SIGTERM 으로 정상 종료
+  - logger_system 추가 (windows : event log, linux : syslog)
+  - sSERVICE::sSETTING : 필드 이름 정리(file_execute -> filename, str_path -> path, str_path_working -> working_path),
+    arguments / environment (std::vector<std::string>), service_type(EXECUTE/SERVICE/DOCKER), stop_grace_period 추가
+    - 옛 설정 키(file_execute, str_path_working, path_working)도 읽는다
+    - 헤더/구조체 변경 : 사용하는 쪽 재빌드
+  - 버그 수정 : initialize / -s/-t/-p/-c 결과를 반대로 판단하던 문제 (result_code 는 실패일 때 true)
+- server admin : host_agent / admin_server 를 현재 구조로 이식, 3계층(service -> host_agent -> admin_server) 재구성 (r11267~r11271)
+  - REQUEST_RESULT / request id, certify key, 접속 정책(sACCESS_POLICY), desired state, 자동 재시작 정책(crash loop 감지)
+  - Nservice_application (linux) : 기본 foreground 실행 (--daemon 일 때만 fork) - 동작 변경
+  - socket::client : 인증 실패/NOT_EXIST 시 재접속 간격 증가 (최대 60초)
+  - deploy : systemd unit, admin_server Dockerfile
+- context : 버그 수정과 성능 개선 (r11270)
+  - 비교 연산자 !=, <, >= 와 double 비교 반전 수정, operator=(const T*) 의 잘못된 delete, 자기 대입, swap 부모 포인터 수정
+  - from_json : double, 오류 위치 / to_json : 문자열 이스케이프, double
+  - map_nodes 를 std::map<std::string, context, std::less<>> 로 변경 (키 조회 약 2.7배) - 헤더 변경 : 재빌드
+- net::ip::address_v6::get_v4_mapped 바이트 순서 수정 (r11270)
+- dump_manager (linux) : SIGTERM/SIGINT/SIGQUIT/SIGHUP 은 앱에 맡기고 SIGPIPE 무시, 기존 핸들러를 덮어쓰지 않음 (r11270) - 동작 변경
+- encode_string (linux) : 버퍼 넘침 수정 (null 종료/용량) (r11269)
+- lib 경로 (windows) : lib/cgdk/sdk10/windows/<v145|v143>/ 로 toolset 별 분리 (r11272) - 동작 변경
+  - lib_path.h (CGDK_LIB_DIR_WINDOWS), vcxproj OutDir, cgdk.cmake
+- server admin : control api(http, HMAC 서명), prometheus /metrics, 설정 reload, web ui 로그인, websocket Origin 검사 (r11272~r11274)
+  - linux : SOCK_CLOEXEC / accept4 / EPOLL_CLOEXEC / EFD_CLOEXEC, api::file::open 은 O_CLOEXEC
+  - legacy admin_server.mfc/linux/shared/service, admin_client 삭제
+- http (Nhttp_server / Nhttp_client) : 크기 제한, timeout, 파서 수정 (r11275~r11278)
+  - set_http_limits(header, body) (기본 64KB / 16MB), 넘으면 끊음
+  - fix : header 가 여러 번에 나눠 오면 멈추던 문제 (windows, 1KB 초과)
+  - fix : websocket frame 길이가 uint16_t 로 잘리던 문제, pipelining 된 요청을 처리하지 않던 문제, chunked 요청/응답 파싱
+  - websocket : fragment 재조립, pong 수정, ping keepalive, close frame 응답
+  - Nhttp_client : 응답 timeout(set_response_timeout, 504), 짧은 status line 범위 밖 읽기 수정
+  - MSG_HTTP : header 이름 대소문자 무시 비교 수정 (r11272)
+  - server_system::audit_log, rate_limiter 추가
+- unit test / fuzz test : http/websocket 파서, admin, ssl loopback (r11276~r11278)
+
+2026.10.11
+- 빌드 : vcpkg 가 복사한 dll 이 IncrementalClean 으로 지워지던 문제 수정 (Directory.Build.targets) (r11279)
+- 빌드 : run_unit_tests.ps1 (windows), run_sanitizer_tests.sh (ASan/UBSan/TSan) 추가 (r11279~r11281)
+- fix : Nschedulable::process_advance_next_tick 이 다음 tick 이 max 일 때 넘치던 문제 (UBSan) (r11280)
+- Nhttp_client : connect timeout 추가 (set_connect_timeout, 기본 10s, 504) (r11280)
+- admin : 원격 입력에 대한 assert 제거 (경고 로그로) (r11280)
+- fix (linux) : connect 실패 시 socket handle 을 epoll 에서 떼지 않아 같은 fd 로 다시 connect 하면 완료를 잃던 문제 (r11281)
+  - host_agent 가 admin_server 재시작 후 다시 접속하지 않던 원인
+- fix : archive::file 이 파일을 두 번 닫던 문제 (종료 시 double free) (r11281)
+- fix : io_context_threads / queue_list_threads 의 m_is_active data race (atomic) (r11281)
+- factory : TLS 통계를 relaxed atomic(statistics::stat_counter) 으로 (r11282)
+- atomics 점검 : race / 반전된 조건 수정 (r11283)
+  - fix : messageable::Nqueue 가 메시지를 잃던 문제 (flag 를 lock 밖에서 지움)
+  - fix : executor::queue_list 가 깨우기를 놓쳐 timeout 까지 기다리던 문제
+  - fix : executor::strand::post_at 조건 반전 (미래는 바로 실행, 과거는 예약), lock 없이 수정, 항상 false 반환
+  - fix : executable 실행 시간이 음수(start - now)로 누적되던 문제
+  - fix : group_peer::Narray::detach_peer 범위/존재 검사 반전
+  - fix : 반복 없는 weak CAS -> strong, http/tcp_crypt 가 CLOSED 를 CERTIFIED 로 덮어쓰던 문제, Isocket::m_disconnect_reason 비트 손실(fetch_or)
+  - singleton 생성 공개 순서 보장 (own_ptr::get_acquire / exchange_release)
+  - 참조 계수 : add_ref relaxed, release acq_rel
+  - 쓰지 않는 doss 통계, Isocket::m_io_pending_receive 삭제 - 헤더 변경 : 재빌드
+- post / message 마다 공유 참조 계수를 건드리지 않도록 변경 (r11284)
+  - system_executor::executor_ptr() (raw pointer), io_context post 가 object_ptr&& 의 참조를 넘겨받음
+  - Nmessage_transmitter : messageable 목록을 불변 snapshot 으로
+  - fix (epoll_direct) : post eventfd 를 lock 없이 닫던 문제, destroy 후 post 가 noexcept 함수에서 throw 하던 문제
+  - fix : Nmessage_transmitter_static::unregister_messageable_static 이 복사본을 지워 해제되지 않던 문제
+- log pipeline 재작성 (r11285~r11287)
+  - logger_hub_archive : lock-free MPSC queue, logger_hub : 자식 snapshot (lock 없음)
+  - Nlogger_async (logger_file, logger_console) : logger 별 lock-free queue, 실행 시 한꺼번에 씀
+  - logger_file 이 직접 파일을 씀 (1MB 버퍼), "instant_open", "instant_close_delay" 추가
+  - LOG_RECORD 가 실제로 pool 에서 재사용되도록 수정, trace 후 불변
+  - default logger : thread local cache
+  - log stream : CGDK::format (log 버퍼에 직접 format) - tutorials 는 std::format 과 모호해 CGDK::format 으로 명시
+  - UTF-8 : 2바이트 인코딩, surrogate pair, 디코더 범위 검사 수정
+  - AVX2 (실행 중 판정, util.cpu_feature.h) : pn_code, base64, websocket unmask, http header 검색
+  - string functions : std 우선(from_chars/to_chars), __from_string / __to_string / __zero_memory 삭제 - 동작 변경
+  - archive::file : 64KB 넘는 쓰기가 queue 버퍼를 넘치던 문제 수정
+  - fix : logger_console (windows) 출력이 pipe/file 로 redirect 되면 아무것도 쓰지 않던 문제 (WriteFile 사용)
+  - fix : logger_hub detach-all dead lock, archive::file open/post 실패 후 쓰기가 계속 queue 에 쌓이던 문제
+  - fix : Ilogger set_filter 와 로그 쓰기의 race (옛 filter 는 logger 가 파괴될 때까지 유지)
+- fix : 로그 record pool 이 파괴된 뒤(프로세스 종료) 로그를 남기면 assert 나던 문제, 그 로그는 버린다 (r11290)
+- fix (windows) : send 가 닫힌 handle 값을 재사용한 다른 socket 으로 갈 수 있던 문제 (handle 읽기/send TOCTOU) (r11291)
+  - iocp sendable 은 sending lock 안에서 handle 을 읽고 send, close 는 같은 lock 안에서 handle 을 INVALID_SOCKET 으로 교체
+  - fix : Ntcp_async 가 send_async 실패 시 pending 수/bytes 를 되돌리지 않던 문제
+  - fix : Ntcp_async_gather_buffered / Ntcp_crypt_async_gather_buffered 가 실패한 send 를 보낸 것으로 계산하던 문제
+
+2026.10.12
+- log : logger_slack 추가, logger factory(create_logger / register_logger_creator) 추가 (r11288)
+  - include "cgdk/sdk10/server.log.slack.h" (server.log.h 에는 포함되지 않음 : http/ssl 를 링크하지 않는 프로그램을 위해)
+  - bot token(chat.postMessage) 또는 incoming webhook, 완전 비동기
+  - logger_hub "child" 를 hub 가 소유 (예전엔 바로 파괴됨)
+  - tutorial : log.07.logger_slack
+- http_request / Nhttp_client 수정 (r11288)
+  - Content-Length 없는 응답, 204/304/HEAD, 1xx, Transfer-Encoding 처리, 요청 완료는 한 번만
+  - "Connection: close" 기본, websocket key 의 dangling string_view 수정
+- fix : connectable::Ntcp::disconnect 가 CERTIFIED / LOGINED socket 에서 아무것도 하지 않던 문제 (r11288)
+- fix (linux) : connect 중(SYN) 닫힌 socket 이 epoll 등록을 남겨 이후 connect 가 멈추던 문제 (r11288)
+- log : logger_socket / logger_syslog / logger_system 비동기(Nlogger_async), factory 기본 형식 "system"/"socket"/"syslog" (r11289)
+  - logger_socket 이 동작하지 않던 문제 수정 (socket 생성 전 enable_reconnect, 주소 키) - "remote_endpoint" { "address", "port" } 사용
+- 빌드 (linux) : unit_test.server_system.service 링크 수정 (net.socket.http / crypt / openssl) (r11292)
+- fix : socket sustain 이 해제된/파괴 중인 socket 을 호출하던 문제 (heap-use-after-free) (r11293)
+  - lock 안에서 참조를 잡아 복사하고(Ireferenceable::add_ref_if_alive) lock 밖에서 처리
+- socket sustain : 공통 시간 제한 추가 (r11294~r11296)
+  - Nsocket_sustain::set_sustain_timeout(sTIMEOUT, ...) : connecting / certify / idle / keepalive ping
+  - DISCONNECT_REASON_SUSTAIN_TIMEOUT (0x15) 추가, server_system::http_timeout 삭제
+  - disconnect reason : 사용자 코드(DISCONNECT_REASON_MASK_USER)는 처음 값을 유지 (예전엔 두 코드가 OR 되어 다른 코드가 됨) - 동작 변경
+  - fix (windows) : receive 가 lock 없이 handle 을 읽고 recv 하던 문제 (handle TOCTOU)
+  - fix : manager_disconnect / binder::manager::destroy 가 lock 안에서 참조 없이 raw pointer 를 호출하던 문제
+- doss : entity_transactable 의 transaction 실행을 coroutine::task 의 start 로 변경, 최대 queue 수 초과 시 예외, 실패 시 남은 transaction 정리(process_abort_transactions) (r11297~r11301)
+- logger_file : 재생성 크기/줄 수 계산을 atomic 으로, log stream 버퍼 증가를 1MB 이후 1.5배로 (r11297)
+
+2026.10.13
+- socket sustain : timeout 이 없는 socket 은 건너뜀, connecting timeout 을 connect 요청 시각부터 계산 (r11299)
+- coroutine : async_result 를 system/object/coroutine.async_result.h 로 옮김 (doss 헤더에서), initial/final_suspend 의 [[nodiscard]] 제거 (r11299)
+- query : co_execute_query / co_post_execute_query, odbc querier co_alloc_session / try_alloc_session, redis 세션 즉시 할당 (r11302~r11303)
+- query::rdb::odbc : 연결 keepalive 와 MySQL/MariaDB session wait_timeout 설정 추가 (r11308)
+  - "keepalive" { "enable", "interval"(기본 300s), "query"(기본 "SELECT 1") }, session_wait_timeout(기본 1800s)
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- chrono::tick::time_point(duration) 생성자를 explicit 으로 변경 (r11309) - 동작 변경
+  - fix : system_executor::post(executable, duration) 이 duration 을 시각으로 넘겨 바로 실행되던 문제 (now() + duration 으로)
+- coroutine : continuation executor 를 raw pointer 로, co_post 의 owner 를 promise 에 보관(감싸는 coroutine 없음), detached 수 atomic 순서 (r11310)
+- GCC/clang : 의존 이름 template 키워드 누락 수정 (_buffer_view, connectable_manager.list, string_function_ex) (r11308)
+- unit test : net_socket.kafka(mock), coroutine / executor 테스트 추가 (r11303, r11309, r11310)
+- CI : Jenkinsfile 을 r11281 내용으로 복원 (r11297 이 축소판으로 덮어씀), BUILD_TYPE All(Release + Debug) (r11304~r11307)
+- 빌드 : admin_server.console /wd2819 -> /wd4819, server.logger_file.h UTF-8 BOM 추가 (C4819) (r11311)
+
+2026.10.14
+- doss entity_transactable : transaction abort 때 요청한 session 이 지금 account 의 session 과 같을 때만 접속을 끊도록 수정 (r11312)
+  - 재접속으로 이미 바뀐 session, server 발 transaction(psession 없음)은 끊지 않는다
+  - closesocket 대신 disconnect (마지막 오류 메시지가 전달되도록)
+
+2026.10.15
+- acceptor 설정 "cryption" 추가 : { "enable": true/false } (true 면 PNCODE, 기본 NONE) (r11314)
+  - sSOCKET_ACCEPT_PARAMETER 에 cryption_type 추가 : 구조체 크기 변경, 사용하는 쪽 재빌드
+  - accept 용 socket 이 Icryptable 이면 acceptor 의 cryption type 적용(IOCP/epoll). tcp_crypt 계열은 인증 때 이 type 으로 cryptor 를 만들어 client 에 내려준다
+- coroutine : resume 안에서 스택이 깊으면(256KB) 기다리던 coroutine 을 post 로 resume (r11317)
+  - gcc -O0 은 symmetric transfer 를 꼬리 호출하지 않아 긴 'co_await task' 사슬이 Debug 에서 스택 overflow
+- windows 빌드 스크립트(_build.vs17/vs18.bat) 정리 (r11313, r11315)
+  - build 프로젝트가 없는 솔루션은 NuGet restore 를 건너뜀, rebuild 는 Clean 후 Build, msbuild 직렬(-m:1) 실행
+  - build/src/common/cgdk_code_analysis.targets, cgdk_static_library_symbols.props 추가
+
+2026.10.16
+- ODBC : prepared statement 재사용(soft parsing) (r11318)
+  - 같은 stmt handle 에 같은 SQL 이 이미 prepare 되어 있으면 SQLPrepare 생략
+  - session 에 prepared statement 캐시(SQL 텍스트 키, 최대 64개) : query 객체를 새로 alloc 해도 같은 session 의 같은 SQL 은 서버측 prepared statement 재사용
+  - 무효화 : SQLExecDirect, stmt handle regen, session reopen()/close()
+  - MySQL 계열 provider 접속 문자열에 NO_SSPS=0 추가(server-side prepared statement 명시 활성화)
+  - Nquery 멤버 추가 : 사용하는 쪽 재빌드
+
+2026.10.17
+- coroutine::async_result : set_exception() 추가(co_await 가 다시 던짐), async_result<void> 추가 (r11319)
+- CGASSERT 계열 동작 변경 (r11320, r11322) - 동작 변경
+  - CGASSERT_* 는 디버거가 붙어 있을 때만 그 자리에서 멈춘다(windows IsDebuggerPresent + __debugbreak, linux TracerPid + SIGTRAP). 예전에는 assert
+  - CGASSERT_FATAL(= assert) 추가. NDEBUG 에서는 빈 매크로
+  - raw 포인터 null 검사 뒤 역참조가 이어지는 CGASSERT_ERROR 63곳을 CGASSERT_FATAL 로(분석 경고 C6011 정리)
+  - "[CGDK10] '...lib' will be linked" #pragma message 제거(자동 링크 #pragma comment(lib) 는 그대로)
+- MFC 로그 창(CChild_logger_view, listbox_log) : 로그를 대기 큐에 모아 타이머(기본 50ms)로 옮김, 큐 상한(기본 10000, 넘치면 오래된 것을 버림) (r11325)
+  - flush_interval / queue_capacity / max_records_per_flush / dropped_count 추가, listbox_log 에 Ctrl+C(CopyToClipboard) / Ctrl+A(SelectAll)
+
+2026.10.18
+- server.service : api::manager_perfornamce_query -> api::manager_performance_query 이름 수정(파일명 포함) (r11321)
+  - 옛 이름 별칭 없음 : 사용하는 쪽 수정 필요
+- net.socket : 풀에서 재사용되는 socket 의 cryptor 를 초기화 : 암호화 socket 의 두 번째 접속이 실패하던 문제 수정 (r11323)
+  - acceptor 의 object_pool 이 socket 을 재사용해 이전 session 의 PN-code cryptor 가 남아 REQUEST_CERTIFICATION 복호화가 깨졌다
+  - process_prepare_socket 과 Ntcp_crypt::process_on_disconnect 에서 process_reset_cryptor()
+- crypt::pn_code : socket 의 cryptor / encryptor / decryptor 를 풀(Npoolable)에서 할당 (r11324)
+  - make_cryptor / make_encryptor / make_decryptor 가 *_pooled 를 만든다 : 접속마다 new/delete 하지 않음
+- acceptor : 좀비 socket 때문에 stop 이 끝나지 않던 문제 수정 (r11326)
+  - accept 완료 전에 이미 disconnect 처리가 끝난 socket 은 목록에 넣지 않음(count() 가 0 이 되지 않던 원인)
+  - process_close_socket : 지워지지 않는 좀비 socket 을 목록에서 직접 제거, 최대 30초 기다린 뒤 오류 로그 후 진행(NDEBUG 의 무한 루프 제거)
+
+2026.10.19
+- object_ptr / own_ptr 최적화와 참조 카운트 버그 수정 (r11327, r11328)
+  - object_ptr<Base> p = make_object<Derived>() 에서 템플릿 move 생성자가 원본을 비우지 않아 참조가 두 번 release 되던 문제
+  - own_ptr : exchange_release / force_casting_move 의 참조 누수, force_assign 의 nullptr 역참조 수정. adopt_ref 태그 생성자
+  - 비교 연산자를 C++20 operator== / operator<=> 로, nullptr 생성/대입/비교, ADL 용 자유 함수 swap
+  - pointer cast : rvalue object_ptr 캐스트는 참조를 이동(dynamic_cast 실패 시 원본 유지), rvalue own_ptr 캐스트는 delete, const_pointer_cast 추가
+  - detach() 가 raw 포인터 반환. 헤더 변경 : 사용하는 쪽 재빌드
+  - 회귀 테스트 unit_test.object.ptr 7개
+
+2026.10.20
+- ODBC querier : 세션 대기/취소/통계 수정 (r11329, r11330)
+  - alloc_session() 대기가 스택 변수를 참조하던 것 수정, 큐 항목이 호출 없이 해제되면 대기자가 eRESULT::CANCEL 을 받음(전에는 영구 대기)
+  - post() 실패 롤백이 이동된 executable 을 역참조해 죽던 문제. 결과는 실행 / 취소(on_cancel) / 호출자 예외 중 정확히 하나
+  - post_alloc_session(lambda, on_cancel), post_execute_query(command, lambda, on_cancel) 추가. co_post_alloc_session / co_alloc_session 은 취소되면 CANCEL 을 던짐
+  - QUEUED_QUERY, m_lockable_query, m_stack_sessions, m_queue_query 를 private 으로(파생 클래스가 풀 락을 잡고 기다리면 교착)
+  - 통계 processing / using_session / exist_session 을 현재값 게이지로. reset_statistics() 는 게이지를 지우지 않음 - 동작 변경
+- redis querier : 응답 유실·명령 미전송·세션 소유·통계·정지/시작 수정 (r11335, r11346)
+  - 공유(alloc_shared_session, post_execute_query 등)와 전용(alloc_session 등) 세션 소유 규칙 정리 : 같은 세션이 공유+전용, 전용 둘에게 가던 문제
+  - post_alloc_session() 응답 유실, 헤더 post_execute_query() 큐 경로가 명령 없이 응답만 부르던 문제
+  - 요청 push 와 send 를 세션 큐 락 안에서 : 공유 세션 동시 전송에서 응답이 다른 query 로 가던 경합
+  - _process_starting() 의 반대 조건으로 연결 중인 세션을 모두 해제하던 문제, stop 시 대기자는 eRESULT::CANCEL
+  - 대기열 FIFO : 공유 부하가 이어지면 전용 대기자가 세션을 받지 못하던 기아
+- containers::circular_list : 이동 대입 연산자 추가(전에는 복사), 복사 대입의 자기 대입 검사 (r11335) - 동작 변경
+- net.socket manager_reconnector::unregister_reconnector() : set.erase(raw 포인터)가 소멸 중인 socket 의 참조를 올렸다 내려 이중 해제하던 문제 수정 (r11346)
+- system SIMD (r11331)
+  - encode_string(UTF-8 <-> UTF-16/32, MBCS <-> wide) AVX2 ASCII 고속 경로(UTF-16 약 6배), get_checksum8/16/32 AVX2(checksum8 5~7배). runtime 에 cpu::is_avx2_supported 로 선택
+  - get_checksum 의 뒤집힌 길이 CGASSERT 수정(길이가 4의 배수면 0 을 반환했다)
+  - rapidjson SIMD : msvc RAPIDJSON_SSE42, gcc x86-64 RAPIDJSON_SSE2 (json parse 약 1.3배)
+- log : 16 thread 로그 경합 수정 (r11332, r11338)
+  - logger_hub 자식 스냅샷을 atomic<shared_ptr> 에서 lock-free raw 포인터로(옛 스냅샷은 hub 소멸까지 보관). producer 쪽 약 2.5배
+  - Ilogger::set_filter() 가 사용 중일 수 있는 옛 필터를 해제하던 use-after-free 수정 : 옛 필터는 logger 소멸까지 보관
+- object pool : TLS <-> 중앙 stack 을 chain(1~32개) 단위로 이동 (r11336, r11348)
+  - 로직 thread 가 할당하고 I/O thread 가 해제하는 패턴의 비용 감소(교차 thread alloc/free Linux 73.5 -> 18.3ns)
+  - locked_self_stack : chain 경계 ring 으로 O(1) 배치 pop, lock 을 std::mutex 에서 4B spin + atomic wait 로
+  - LOCKFREE_SELF_STACK 은 locked_self_stack 으로 원복(r11332 의 sharded_self_stack 교체 취소)
+  - 통계 overflow / wrap 수정, prepare() 의 뒤집힌 검사 삭제
+  - 풀이 먼저 해제된 뒤 반환된 객체를 삭제할 때 해제된 풀에 접근하던 use-after-free 수정(r11348)
+  - 레이아웃 변경 : CGDK lib 전체와 사용하는 쪽 재빌드
+- doss : transaction 을 단일 coroutine 으로 (co_request_transaction) (r11333, r11337) - 동작 변경
+  - Irepository 의 on_request_checkin / checkout / command / update 가 coroutine(co_await 로 db query 등, co_return 으로 결과)
+  - Itransactable 의 f_request / f_completion 과 Iexecutable 기반 제거, 결과는 coroutine::async_result 로
+  - session::co_checkin / co_checkout / co_request 추가(task<result_code>). 옛 checkin / checkout / request 는 fire-and-forget 래퍼
+  - session::destroy() use-after-free 수정, 헤드리스 gtest unit_test.server_service.doss 추가
+- buffer : 컨테이너 역직렬화 개수 검증(원격 DoS) (r11334)
+  - _extract_container_* / _front_* 가 패킷의 개수를 남은 크기 검증 없이 reserve()/resize() 하던 것 : 조작된 패킷 하나로 수 GB 할당. 초과 시 std::length_error
+  - _extract_container_span 의 음수 개수 overflow, _front_container_array 의 개수 0 front() 수정
+- executor::scheduler::cancel() 의 down-heap 에서 힙 순서가 깨지던 문제 수정 (r11334)
+- connectable_manager::list::alloc_iterator() 가 락 밖에서 begin()/end() 를 읽던 경합 수정 : 같은 socket 이 풀에 두 번 반환되던 문제 (r11339)
+  - 템플릿 헤더 : 사용하는 쪽 재빌드
+- io_context(linux epoll) : 적응형 event 배치, post 신호를 락 밖으로, fd generation 태그 (r11341)
+  - epoll_wait 한 번에 여러 event, 배치 크기는 thread 별 실행 시간 기준(EVENT_BATCH_DURATION 10us)
+  - epoll data.u64 = (generation << 32) | fd : 닫히고 같은 번호로 다시 등록된 fd 에 남은 event 를 버린다(옛 EPOLLHUP 이 새 접속을 끊을 수 있었다)
+  - pop_executable() 이 timeout 일 때 초기화되지 않은 event 를 쓰던 버그, Ntcp_async::QUEUE_SEND::clear() 미정의 수정
+  - post 처리량 61만 -> 266만/s
+- net.socket(linux epoll) : 송신 모으기(send cork), 수신 tail 창 재사용, 송신 vector<iovec> 큐 (r11345, r11349, r11358, r11361, r11362) - 동작 변경
+  - 받은 message 를 처리하는 동안 그 thread 가 그 socket 에 보내는 것을 모았다가 처리가 끝날 때 한 번에 send/sendmsg (Ntcp_async_gather, Ntcp_async_gather_buffered)
+  - on_message 에서 send 뒤 긴 작업을 하면 앞 응답이 그만큼 늦을 수 있다. 긴 작업 전에는 send_cork::flush()
+  - 수신 : event 마다 FIONREAD + 새 버퍼 대신 남은 데이터 뒤 빈 공간에 recv, recv 가 EAGAIN 일 때 add_size(-1) 버그 수정
+  - buffered : send 여러 번 뒤 closesocket(또는 on_message 예외)하면 첫 응답만 나가던 문제, 송신 큐 bytes 이중 집계, shutdown 이 남은 데이터를 버리던 문제 수정
+  - 송신 큐 한도에서 보내는 중인 묶음(EPOLLOUT 대기 잔량)을 뺌 : iocp 와 같은 의미(r11361). 한도보다 큰 send 뒤 다음 send 가 overflow 로 끊기던 문제
+  - 옛 send_cork 단일 슬롯 API(set_pending / pending / flush(Isendable*) 등) 삭제(r11362)
+  - Isendable vtable / 레이아웃 변경 : Linux 사용하는 쪽 재빌드
+- server.system.group 그룹 락 1단계 : leave_all / sender 를 락 밖에서, 락 순서 교착 수정 (r11343, r11344, r11347, r11350) - 동작 변경
+  - 락 순서 : 멤버 락 -> 입장 락 -> 그룹 락. leave_all, sender(group / observable / container / net::io::sender group_set·group_map)는 락 안 스냅샷, 락 밖 처리
+  - Nmap::process_enter(같은 키 교체) / array::member(자리 교체)의 그룹 -> 멤버 락 교착 수정
+  - array_seat 좌석 번호가 0번부터(전에는 1번부터), 좌석 할당 실패 시 MEMBER_FULL, seat.h 의 N-1개만 쓰던 문제
+  - array_sender::send_to(int, shared_buffer&&) 구현, observable / container 기반 클래스의 컴파일 오류 수정, Nmap::find_member(key) 모호성 제거
+- 그룹 락 2단계 : 그룹·멤버 락 안의 송신을 락 해제 때로 지연 (send_defer) (r11352, r11358) - 동작 변경
+  - system/object/send_defer.h 추가, 그룹·멤버 락 타입이 group_lock_object(recursive_mutex 파생, 가장 바깥 unlock 뒤 flush)
+  - close 직전, 예외, scoped_thread_block(동기 query 대기), 한도(1024개 / 64KB / 큐 절반)이면 먼저 보낸다
+  - Ntcp_async_gather(IOCP/epoll), Ntcp_async_gather_buffered 적용. 64멤버 그룹 8 thread 브로드캐스트 9,217 -> 92,291회/s
+  - 클래스 레이아웃 변경 : 사용하는 쪽 재빌드
+- 그룹 락 3단계 : 멤버 lazy copy-on-write 스냅샷 (r11351, r11354, r11359, r11360)
+  - server.group.member_snapshot.h 추가. group list / Nmap / array / array_seat, observable list/set/map, container list/set/map 에 get_member_snapshot() / for_each_member_snapshot() 등
+  - 각 _sender 의 send / send_except 가 스냅샷 사용 : 목록을 바꾸지 않는 사용자 락 구간 동안 다른 thread 의 브로드캐스트가 기다리지 않음
+  - array::member_capacity() 변경이 그룹 락을 잡는다
+- 소유권 없는 버퍼 뷰 버그 수정 (r11363)
+  - server.admin host_agent observable_websocket_host_info : 임시 shared_buffer 를 slicing 해 받아 반환된 블록을 가리키던 UAF
+  - server.http_api bank : append<char>(0) 이 수신 버퍼 body 끝 뒤 1바이트를 덮어쓰던 문제(rapidjson 길이 오버로드로)
+  - net.socket udp_resend::request_send : 호출자 원본 버퍼를 수정하고 null 을 역참조할 수 있던 것을 복사본으로
+
 2026.10.21
 - net::emergency 추가 : 비상용 acceptor(net::emergency::acceptor<T>)와 signal 처리기(net::emergency::manager)
   - acceptor는 system_executor와 완전히 분리된 자체 executor에서 동작하고, 접속한 socket마다 전용 executor(thread 1개)를 가지며 접속 종료 시 해당 executor는 제거된다.
@@ -43,6 +817,36 @@ tls pool의 garbage collection 처리 변경
 - executor::make_io_context_threads() 추가 : system_executor와 별개의 io_context executor(자체 iocp/epoll, thread)를 생성
 - acceptor::Ntcp::process_get_connectable_io_context() 추가 : accept되는 socket의 io_context를 지정하는 hook
 - examples/1.6.emergency_signal 추가
+- system_executor / Iexecutor : co_post() / co_execute() 를 post() / execute() 로 통합(coroutine 자동 판별) (r11365, r11366, r11367) - 동작 변경
+  - callable 이 coroutine::task<T> 를 돌려주면 그대로, 일반 함수면 coroutine 으로 감싸 post. execute 의 일반 함수는 바로 실행
+  - co_post / co_execute 는 삭제(별칭 없음) : 사용하는 쪽 수정 필요
+  - system_executor::post(callable, chrono::tick::time_point) / post(callable, chrono::tick::duration) 추가
+- net.socket(linux epoll) : 수신 버퍼 크기 요동 수정 (r11371, r11377)
+  - 작은 수신 1번에 최소 크기로 줄이고 다음 폭주에 다시 늘리던 요동(recv 당 약 700B)이 r11345 이후 큰 묶음 push 처리량 회귀의 수신 쪽 원인
+  - 창을 다 채워 받으면 8배로 늘리고, 줄이기는 연속 64번 작은 수신 뒤에만. receivable::Nstream 헤더 변경 : 사용하는 쪽 재빌드
+  - r11371 의 Linux 컴파일 오류(prepare_receive 의 if 조건)는 r11377 에서 수정
+- 정리 작업 (r11372~r11385)
+  - 흐름 제어 매크로(RETURN_IF 등)를 sendable 파일에서 if 문으로, CGASSERT(size != 0, false) -> CGASSERT_FATAL
+  - sendable 의 buffer.data() == nullptr 은 false 반환으로 통일(tcp_async_gather.rio 는 예외였음) (r11379)
+  - 식별자 오타 수정(r11384) : eRESULT::ALEADY_* -> ALREADY_*, sended -> sent, occure(d) -> occurred(통계 함수 이름, DISCONNECT_REASON_EXCEPTION_OCCURRED, 끊김 사유 문자열 포함)
+    - 옛 이름 [[deprecated]] 별칭 : eRESULT::ALEADY_* 3개, loggber_buffer, statistics_get_sended_message/bytes. 구조체 멤버·가상 함수는 별칭 없음
+    - 가상 함수 on_email_sended -> on_email_sent : 옛 이름으로 재정의한 클래스는 더 이상 불리지 않음 - 동작 변경
+  - dump_manager : is_excpetion_handling / enable(disable)_exception_handleing -> is_exception_handling / enable(disable)_exception_handling (옛 이름 deprecated 별칭) (r11382)
+  - 로그·예외 메시지 문자열의 오타 수정(실행 중 보이는 글자가 바뀜) (r11382)
+  - 파일 이름 오타 수정(svn mv, 옛 헤더 이름 없음) : gathering_queue_buffered, restorable.client, odbc.definitions, sha_buffer_serializable 등. tutorial object.ex02.encoding_decoding(출력 exe 이름 변경) (r11383)
+  - examples/1.6.emergency_signal : Linux CMake 의 없는 소스 파일 때문에 generate 가 실패하던 문제 (r11381)
+- linux 같은 host 접속을 UDS(Unix domain socket)로 (r11386~r11389)
+  - acceptor START_PARAMETER::enable_uds (context "enable_uds") : TCP 와 함께 추상 이름 "\0cgdk.tcp.<port>" UDS 로도 accept(listen 주소가 any/loopback 일 때)
+  - acceptor START_PARAMETER::uds_only (context "uds_only") : UDS 로만 accept(TCP 는 bind 만, listen 안 함). windows 는 경고 후 무시
+  - connect_requestable::Ntcp : loopback 접속이면 먼저 UDS 로 시도(전역 스위치 enable_uds_loopback, bind_endpoint 지정 시 안 함). 기본값은 r11440 에서 false
+  - net::sockaddr::is_unix() 추가, is_loopback() 은 UDS 도 true, api::socket::make_uds_address() 추가
+  - 구조체 크기 변경 : 사용하는 쪽 재빌드. tutorial socket.ex14.uds, 단위 테스트 test_uds.cpp
+- linux connect / accept epoll 수명 버그 수정 (r11386~r11388)
+  - connect() 가 즉시 성공(0)하면 epoll attach 없이 modify 만 해 수신을 못 받던 문제
+  - on_connect 직후 다른 thread 가 close 하면 재사용된 fd 번호의 다른 socket 이 SYN 에 멈추던 문제(접속 처리 중 close 는 큐잉)
+  - SYN/BINDED 에서 close 한 socket 의 소멸자가 재사용된 다른 socket 의 fd 를 닫던 문제
+  - connect_requestable 이 bind_endpoint 미지정이어도 bind(0) 하던 것 생략(TIME_WAIT 이 많으면 느리고 포트 고갈 시 실패)
+  - acceptor 를 stop 직후 해제하면 처리 중인 accept event 가 해제된 acceptor 를 쓰던 문제(executable_accept 가 object_ptr 로 잡음)
 
 2026.10.22
 - TCP socket option 추가 (sSOCKET_OPTION_TCP, Isocket::socket_option() / apply_socket_option()) : TCP_NODELAY, TCP_QUICKACK, SO_BUSY_POLL, TCP_NOTSENT_LOWAT, TCP Fast Open
@@ -55,6 +859,54 @@ tls pool의 garbage collection 처리 변경
   - linux : TCP_QUICKACK은 영구가 아니라 receivable이 recv마다 다시 설정한다. busy_poll은 socket별 값이라 epoll_wait 자체의 busy poll에는 영향이 없다. (net.core.busy_poll)
   - api::socket::set_tcp_quickack / set_busy_poll / set_tcp_notsent_lowat / set_tcp_fastopen / set_tcp_fastopen_connect / get_sysctl_tcp_fastopen 추가
   - 단위 테스트 unit_test.net_socket.http/test_socket_option.cpp, tutorial socket.ex15.socket_option 추가
+- io_uring 백엔드(linux, readiness) 추가 : epoll 과 런타임 선택 (r11393, r11417) - 기본은 epoll
+  - api::io_context_uring : IORING_OP_POLL_ADD 준비 이벤트 방식이라 socket 코드는 그대로. raw syscall(liburing 불필요), kernel 5.13+, 불가하면 epoll 로 fallback(경고)
+  - executor::io_backend / set_default_io_backend() / default_io_backend() / is_io_uring_available(), env CGDK_IO_URING=1. windows 는 무시
+  - io_context_threads START_PARAMETER::cpu_affinity(context "cpu_affinity"), make_io_context_threads(name, count, cpu), api::set_current_thread_affinity()
+  - r11417 : 제출한 thread 가 끝나 -ECANCELED 로 온 poll 을 다시 건다(system executor 의 post eventfd 가 죽어 post 가 더는 실행되지 않던 문제), detach 는 IORING_REGISTER_SYNC_CANCEL 로 poll 이 끝날 때까지 기다림(close 해도 listen·UDS 이름이 남던 문제)
+- Linux 소켓 성능 요소 (r11394~r11397, 인수인계 문서 1.11)
+  - socket()/accept4() 에 SOCK_NONBLOCK, SO_LINGER(0) 생략, SO_SNDBUF/SO_RCVBUF 기본 미설정(커널 autotuning. net::io::socket::Ntcp::enable_explicit_socket_buffer_size(true) 로 이전 동작) - 동작 변경
+  - acceptor "tcp_defer_accept"(초), "cpu_affinity"(SO_INCOMING_CPU 의 CPU 에 고정된 io_context 에 배정)
+  - UDP recvmmsg / sendmmsg. Linux UDP 가 수신을 전혀 못 하던 문제 수정(executable_socket 에 socket 이 연결되지 않았다)
+  - MSG_ZEROCOPY(io_uring 백엔드의 io_context 에서만, 16KB 이상 단일 버퍼). enable_zerocopy(false) 로 끔
+  - 접속 완료 처리 중인 SYN socket 을 다른 thread 가 close 하면 아무도 disconnect 를 끝내지 않아 stop 이 30초 기다리던 문제 (r11397)
+  - 단위 테스트 test_linux_io.cpp, 벤치 bench_linux_io.cpp
+- net.socket : 풀에서 재사용된 socket 이 이전 acceptor/접속의 socket_option 을 들고 있던 문제 수정 : 할당 직후 기본값으로 되돌림 (r11400)
+- net.socket : connect() 가 즉시 실패하면 on_fail_connect 없이 SYN 에 남고(linux) Ntcp_reconnect 가 재접속을 예약하지 않던 문제 수정 (r11404)
+  - 즉시 실패(ENETUNREACH, EADDRNOTAVAIL 등)도 on_fail_connect + CLOSED. Ntcp_reconnect 는 재접속 간격 뒤 재시도(windows ConnectEx 즉시 실패 포함)
+- connective::connector(linux) 수정 (r11405, r11406, r11413)
+  - connect() 전에 epoll 에 붙여 거짓 on_fail_connect / 이중 완료가 나던 문제 : connect() 후 attach
+  - loopback 접속을 UDS 로 : connect_requestable 과 같은 규칙과 스위치(enable_uds_loopback)
+  - bind(any:0) 생략 : TIME_WAIT 누적으로 EADDRINUSE 가 나고 그 실패가 통지 없이 묻히던 문제(부하 시 '접속 정체'). bind 실패도 on_fail_connect
+- net.socket(linux) : accept 된 socket 의 on_connect ~ epoll attach 사이 close 를 큐잉 : 닫힌 fd 번호가 재사용되어 다른 socket 을 attach 하던 창 제거 (r11414)
+- net.socket(linux) : acceptor stop 뒤 처리 중이던 accept 가 socket 을 목록에 넣어 파괴된 acceptor 를 부르던 문제("pure virtual method called") 수정 (r11418)
+  - process_close_socket 이 진행 중인 accept 가 끝나기를 기다림. acceptor 헤더 멤버 추가 : 사용하는 쪽 재빌드
+- net.socket(linux) : m_epoll_handle 을 atomic 으로 : close 완료와 소멸자가 같은 fd 를 두 번 close 해 socket 수 통계가 언더플로우하던 문제 수정 (r11439)
+  - 언더플로우되면 is_socket_count_overflowed() 가 항상 true 라 create_socket 이 EMFILE 로 거부했다
+- server.system.group : 그룹 락 안 사용자 콜백 교착, unregister UAF, 좌석 결함 수정 (r11402, r11409, r11410) - 동작 변경
+  - for_each_member / find_member(pred), container for_each / find_object, observable for_each / find_observer 가 스냅샷 위에서 락 밖으로 콜백(콜백 중 멤버가 이미 나갔을 수 있음)
+  - container / observable unregister_object(raw) / unsubscribe(raw) 의 UAF·이중 해제, map unregister_object_all 이 같은 키의 새 객체까지 지우던 문제
+  - 멤버가 있을 때 member_capacity 변경은 throwable::failure(INVALID_STATE)
+  - array::member(nullptr, seat) 는 자리 비우기(전에는 null 역참조), 범위 밖 seat 는 무시
+  - 헤더(.h/.inl) 변경 : 사용하는 쪽 재빌드
+- object_pool_tls / factory::object<T> : 종료 시점 누수와 풀(팩토리) 재생성 때 해제된 TLS data 사용 수정 (r11411, r11412) - 동작 변경
+  - sTLS_DATA 를 thread 가 소유(thread 종료 때 정리). close() 는 다른 thread 의 TLS 캐시를 즉시 지우지 않고 그 thread 의 다음 free/GC 나 종료 때 비움
+  - 같은 T 의 풀을 다시 만들면 지워진 TLS data 를 쓰던 heap-use-after-free, factory::object<T> 통계 TLS data 누수
+  - inline 템플릿 의미 변경 : CGDK lib 전체와 사용하는 쪽 재빌드
+- factory::object_pool<T>(비 TLS 풀) 삭제 : 사용되지 않았고 인스턴스화하면 컴파일되지 않았다 (r11415)
+- buffers/_buffer_unreal.h(UE 전용) 컨테이너 직렬화 결함 수정 : TSparseArray / TList / TLinkedList / TStaticArray / TSet 등 (r11408)
+  - 실제 UE 헤더로는 빌드하지 않음(모의 타입으로만 검증)
+- cmake : 한 소스 트리의 빌드 디렉터리 둘을 동시에 빌드하면 svn_version 단계가 실패하던 문제 수정 (r11403)
+- gcc 경고 0 정리, ARM 빌드 (r11426~r11436)
+  - zlib 소스에 -Wno-implicit-fallthrough, C++ 에 -Wno-virtual-move-assign(Ireferenceable 의 의도된 no-op 대입), net.io.Iaddress.h 는 #pragma 로
+  - aarch64 등 비 x86 Linux 에서 cpuid.h 빌드 오류 수정 (r11432)
+  - -O3 경고와 UB : socket_ssl.epoll 의 strict-aliasing 타입 펀닝, server_admin instance_service_local 의 Linux 미초기화 버퍼 (r11433)
+  - server.logger_file INITIALIZE_PARAMETER 기본값 {}, tutorial doss.simple client 의 doss 라이브러리 링크 누락 (r11434, r11436)
+- net.update 개선 (r11364, r11368, r11369, r11391)
+  - file_stream 파일 handle 캐싱, Nreceiver/Nsender 통계 atomic, file 리소스 블록 지연 로딩
+  - 리소스 참조(type: ref)로 서버 기동이 실패하던 문제, 이어받기 위치를 블록 경계로, 빈 파일 전송이 끝나지 않던 문제, 한글 파일명 인코딩 예외, 폴더 경로를 '/' 구분자로
+  - Nsender 송신 윈도우 : 여러 블록 in-flight + 미리 읽기, set_window_size()/get_window_size()(기본 4)
+  - Nreceiver : 수신 처리를 직렬 executor 큐로(md5·압축 해제·파일 I/O 를 network thread 밖에서, message 순서대로). r11391 은 빌드·실행 확인 없이 커밋됨
 
 2026.10.23
 - epoll_wait 자체의 busy poll (linux, kernel 6.9+ EPIOCSPARAMS)
@@ -102,6 +954,18 @@ tls pool의 garbage collection 처리 변경
 - MSG_ZEROCOPY(linux, readiness io_uring) : 송신 thread 가 소유자를 보관하기 전에 다른 thread 가 읽은 완료 통지를 잃던 문제 수정 (r11468, 인수인계 문서 1.21)
   - 보관 전에 통지된 송신은 보관하지 않고 바로 놓음 : zerocopy_pending_count() 가 0 이 되지 않고 버퍼가 socket 종료까지 남던 간헐 문제
   - Itcp_gather 헤더 멤버 추가 : 사용하는 쪽 재빌드
+- io_uring completion 백엔드 수정 3건 (r11448)
+  - fd 별 테이블을 생성 시점 soft RLIMIT_NOFILE(1024)로 잡아 그 뒤 fd >= 1024 의 제출이 실패하던 문제 : hard limit 기준(r11451 에서 chunk 표로 다시 바뀜)
+  - io_context_threads 의 임시 extra thread 는 ring 을 소유하지 않음(종료 때 그 thread 의 요청이 -ECANCELED 로 취소되므로). bind_worker(_is_transient)
+  - acceptor 정지 때 multishot ACCEPT 를 IORING_REGISTER_SYNC_CANCEL 로 기다림 : close 직후에도 포트/UDS 이름이 잠깐 살아 있던 문제. wait_cancelled_fd(_is_wait_delivery) 추가
+- io_uring completion 4단계 : provided buffer 무복사 수신(기본 on), ring 소유 worker 의 송신을 op 로(기본 off) (r11457)
+  - m_buffer_received 에 남은 데이터가 없으면 provided buffer 를 그 자리에서 process_packet. 메시지의 마지막 참조가 사라질 때 ring 에 반납(경계에 걸친 꼬리만 복사)
+  - CGDK_IO_URING_ZC_RECV=0 이면 끔. 앱이 메시지를 오래 잡으면 그만큼 buffer 가 반납되지 않는다
+  - 송신 op : CGDK_IO_URING_SEND_OP=1 또는 Ntcp_async_gather::enable_send_on_owner_ring(true) 로 켬. Iio_context::is_ring_owner(fd) 추가
+  - 헤더 변경 : 사용하는 쪽 재빌드
+- io_uring completion : acceptor stop 직후 listen socket 이 살아남던 좀비 listener 해결 (r11461)
+  - r11451 메시지에 적혔지만 커밋에 빠진 두 수정 복원 : pop_results() 의 flush_staged() 와 submit 을 같은 SQ 락 안에서, 다른 thread 의 SYNC_CANCEL 을 락 안에서
+  - acceptor stop 이 accept op 의 완료 전달까지 기다림(wait_cancelled_fd(fd, 1s, true))
 
 2026.10.24
 - executor::queue_list : 한꺼번에 들어온 post 를 thread 하나가 혼자 처리하던 문제 수정 (r11470, 인수인계 문서 1.22)
@@ -123,6 +987,10 @@ tls pool의 garbage collection 처리 변경
   - 블로킹하는 worker 의 ring 을 다른 worker 가 대신 실행(빌려주기). 막힌 executable 의 결과는 풀린 뒤 그 worker 가 순서대로 실행
   - CPU 를 오래 쓰는 handler 는 그대로(같은 ring 의 socket 이 그만큼 늦음) : completion 서버의 handler 는 짧게
   - 200 접속 중 하나가 300ms 블로킹할 때 다른 접속 최대 270ms -> 2ms. 헤더 변경 : 사용하는 쪽 재빌드
+- net.socket(linux epoll / io_uring readiness) : 접속 완료와 겹친 close 가 socket 을 닫지 못해 stop() 이 30초 기다리던 문제 수정 (r11483, 인수인계 문서 2. 남은 일 12)
+  - process_close_socket() 이 socket state 를 갈래마다 다시 읽어, 그 사이 SYN -> ESTABLISHED 가 되면 어느 갈래도 타지 않았다(fd 안 닫힘, disconnect 없음, 상대 쪽 연결 남음)
+  - state 를 한 번 읽어 갈래를 고르고, SYN 이었다가 접속된 socket 은 접속 완료 처리(is_close_after_connect)가 disconnect 를 끝낸다. windows 는 해당 없음. 헤더 변경 없음
+- unit test 간헐 실패 수정 (r11477, r11479, r11484) : send cork 테스트를 서버가 보낸 바이트로 판정, uds.many_sockets 가 acceptor 목록 등록을 기다림, io_uring fd 수를 안정된 뒤에 셈
 - io_uring completion : 한 acceptor 가 받은 socket 이 모두 listen socket 의 ring(thread 하나)에서 돌던 문제 수정 (r11487, 인수인계 문서 1.27)
   - accept 완료(CQE)에서 새 socket 을 worker 의 ring 에 round robin 으로 바인딩(전에는 accept handler 의 첫 제출 = listen ring)
   - 8 thread 벤치 completion : tcp 64B x32 2.5M -> 10.6M msg/s, uds 13.9M -> 25.1M, tcp 16B x256 878K -> 1.18M, 64KB x4 178K -> 210K
@@ -137,3 +1005,36 @@ tls pool의 garbage collection 처리 변경
   - zerocopy 가 고정하는 페이지는 사용자 단위 RLIMIT_MEMLOCK(같은 계정의 모든 프로세스가 나눠 씀)에 합산 : 넘으면 ENOBUFS 로 실패하고 연결이 끊겼다
   - ENOBUFS 뒤 그 socket 은 100ms 동안 zerocopy 를 쉼. Itcp_gather::zerocopy_fallback_count() 추가. Itcp_gather 헤더 변경 : 사용하는 쪽 재빌드
   - 실서버에서 zerocopy 를 쓰려면 ulimit -l(systemd LimitMEMLOCK)을 넉넉히
+- io_uring completion : Ntcp_async_gather_buffered(tcp_buffered<>, tcp_queue, redis session)의 송신을 SEND op 로 (r11494, 인수인계 문서 1.29)
+  - 전에는 buffered sendable 이 completion 을 지원하지 않아 이 socket 들은 completion executor 위에서도 통째로 readiness(POLL_ADD) 경로였다
+  - 송신은 epoll 과 같이 보내는 thread 가 직접 하고, socket 버퍼가 차면 EPOLLOUT 대기 대신 SENDMSG op. 큰 사용자 버퍼 하나는 SEND_ZC op(ENOBUFS 면 복사로 다시)
+  - 송신 큐 한도에서 op 로 보내는 중인 묶음은 세지 않음(epoll / windows 와 같음). sending_queued_bytes_now() 는 op 의 남은 바이트 포함
+  - gather 의 op 완료가 대기 바이트를 0 으로 되돌리지 않아 다 보낸 뒤에도 sending_queued_bytes_now() 가 남던 문제 수정(r11441 부터)
+  - 단위 테스트 unit_test.net_socket.http/test_uring_send.cpp 추가. tcp_async_gather_buffered 헤더 멤버 추가 : 사용하는 쪽 재빌드
+- send_defer::auto_scope (linux) : 실행기가 실행하는 executable 마다 한 socket 의 연속 송신을 자동으로 묶는다 (r11496) - 동작 변경
+  - r11345 이후 수신 handler(send cork)·그룹 락(send_defer) 밖의 송신은 메시지마다 send 가 나갔다 : tick 처럼 한 socket 에 연달아 보내는 코드가 CPU 1.7~4.5배
+  - 다른 socket 으로 넘어가면 앞 socket 것을, executable 이 끝나면 마지막 socket 것을 보낸다. send_defer::enable_auto() / is_auto_enabled() 추가
+  - 실행기 밖 thread(std::thread)와 windows 는 그대로(send_defer::scope 를 직접 쓴다)
+  - 주의 : 실행기 handler 가 socket 에 요청을 보낸 뒤 scoped_thread_block 없이 그 응답을 기다리면 요청이 아직 모여 있어 교착될 수 있다
+    => 그런 곳은 send_defer::flush() 또는 send_defer::enable_auto(false)
+  - 서버 us/msg (POKPUNG, 8 thread) 64 x 16 tick : HEAD 2.00 -> 0.23~0.26, 64 x 64 (410만/s 요청) : HEAD 181만 전달 -> 410만 전달
+  - 단위 테스트 unit_test.net_socket.http/test_send_defer_auto.cpp 추가. send_defer.h 변경 : 사용하는 쪽 재빌드
+- io_uring completion : CQE 배치 끝 송신(batch send defer) (r11497, 인수인계 문서 1.29)
+  - multishot RECV 의 CQE 마다 send cork 가 끝나 송신이 메시지당 0.76회(epoll 0.15)였다
+  - completion 배치(CQE 2개 이상) 안의 송신을 모아 배치 끝에 socket 마다 한 번 보낸다. 배치가 100us 넘게 돌면 그 전에 보낸다(BATCH_SEND_DEFER_DURATION)
+  - send_defer::begin_batch() / end_batch() / is_cork_age_checked() 추가. CGDK_IO_URING_BATCH_DEFER=0 이면 끔. epoll / readiness 는 변경 없음
+  - POKPUNG 8 thread completion tcp 64B x32 : 10.83M -> 17.71M msg/s (epoll 15.2~15.7M). send_defer.h 변경 : 사용하는 쪽 재빌드
+- executor::io_context(windows) : IOCP 완료를 GetQueuedCompletionStatusEx 로 여러 개씩 받아 실행 (r11499)
+  - 전에는 syscall 한 번에 완료 하나. 이제 최대 32개(MAX_EVENT_BATCH)를 한 번의 process_execute() 에서 실행
+  - 받는 수는 linux 와 같은 적응형 규칙(배치 하나의 실행 시간이 EVENT_BATCH_DURATION 10us 정도, 1~32) : 오래 걸리는 handler 뒤에 다른 완료가 묶이지 않음
+  - 하나가 exception 을 던져도 나머지를 실행하고 첫 exception 을 다시 던진다. 실패 판정은 OVERLAPPED_ENTRY::Internal(NTSTATUS)로 GetQueuedCompletionStatus 와 같음
+  - api::io_context_iocp_direct::pop_results() 추가(iocp_queued 에도). 헤더 함수·상수만 추가(멤버 변화 없음)
+  - Win32 마이크로벤치 : 소비 thread 1개 2.43 -> 3.85 M/s, 4개 1.73 -> 2.88 M/s
+- io_uring completion : connect 하는 TCP socket 도 ring 에 round robin 으로 바인딩 (r11507, 인수인계 문서 1.31)
+  - 전에는 connect post 를 실행한 worker 의 ring(post 는 깨운 ring 이 최대 16개씩 가져감) : 접속을 많이 여는 클라이언트의 socket 이 몇 thread 에 몰렸다
+  - submit_connect 가 제출 전에 accept 와 같은 방식으로 바인딩(io_context 에 카운터 하나, accept 와 다른 시작값 : 한 프로세스의 loopback 짝이 같은 ring 에 놓이지 않게)
+  - 즉시 연결되는 UDS 는 그대로(op 가 없음 : 첫 수신을 낸 worker 의 ring). 헤더는 private 함수 이름만 : 재빌드 불필요
+- from_string(address, port, hints) : "any" 가 받은 port 를 버리고 0 을 돌려주던 버그 수정 (r10167 부터) - 동작 변경
+  - hints 를 주지 않은 "any" 는 이제 address_v6::any() 에 받은 port. from_string(address, port, af_prefer) 와 같음
+  - 단위 테스트 unit_test.net_socket.http/test_sockaddr_from_string.cpp 추가. 헤더 변경 없음
+- system_executor(executor_system.h) : r11365 에서 깨진 한글 주석 11줄을 r11364 내용으로 복원 (주석만, 코드 변경 없음)

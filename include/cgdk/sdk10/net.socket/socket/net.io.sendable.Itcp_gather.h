@@ -52,6 +52,10 @@ public:
 	[[nodiscard]] size_t		maximum_depth_of_send_buffer_bytes() const noexcept { return this->m_bytes_max_queued; }
 			void				maximum_depth_of_send_buffer_bytes(std::size_t _size) noexcept;
 	[[nodiscard]] size_t		sending_queued_bytes_now() const noexcept { return this->process_get_sending_queued_bytes(); }
+	//! @brief the send queue limits back to the ones of the socket object. called by the acceptor / connector at each allocation of the
+	//!        socket (a socket from the pool kept the limits its last connection set). the first call keeps the limits it finds : the
+	//!        ones of the constructor. a socket's own limits : set in the constructor, on_request_accept() or on_alloc_connectable()
+			void				reset_send_queue_limit() noexcept;
 
 	static	void				default_maximum_depth_of_send_buffer(std::size_t _max) noexcept;
 	[[nodiscard]] static size_t default_maximum_depth_of_send_buffer() noexcept;
@@ -110,6 +114,8 @@ protected:
 protected:
 			std::size_t			m_bytes_max_queued;
 			std::size_t			m_max_depth_of_send_buffer;
+			std::size_t			m_bytes_max_queued_initial{ 0 };			// - the limits of the socket object (reset_send_queue_limit() : 0 = not kept yet)
+			std::size_t			m_max_depth_of_send_buffer_initial{ 0 };
 
 	static	std::size_t			m_s_default_max_queued_bytes;
 	static	std::size_t			m_s_default_max_queued_bytes_accepted;

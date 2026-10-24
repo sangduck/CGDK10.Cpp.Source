@@ -189,6 +189,26 @@ bool executor::io_context::process_post(object_ptr<Iexecutable>&& _pexecutable)
 	return this->m_io_context.post_executable(0, 0, std::move(_pexecutable)) != 0;
 }
 
+#if defined(__ANDROID__) || defined(__linux__)
+namespace
+{
+	// - io_uring completion : the sends of the handlers of a batch are deferred to its end (CGDK_IO_URING_BATCH_DEFER=0 : off)
+	bool _is_batch_send_deferred() noexcept
+	{
+		static const bool s_value = []()
+		{
+			const char* penv = std::getenv("CGDK_IO_URING_BATCH_DEFER");
+			return penv == nullptr || (penv[0] != '0' && penv[0] != 'f' && penv[0] != 'F' && penv[0] != 'n' && penv[0] != 'N');
+		}();
+
+		return s_value;
+	}
+
+	// - the sends deferred in a batch are sent before the next completion once the batch ran this long (a long handler)
+	constexpr auto BATCH_SEND_DEFER_DURATION = std::chrono::microseconds(100);
+}
+#endif
+
 bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [[maybe_unused]] intptr_t _option)
 {
 	//-----------------------------------------------------------------
@@ -293,15 +313,29 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 	//      workers that run the ring of this thread meanwhile : count_event is cut. api::io_context_uring_cq::thread_blocked())
 	api::io_context_uring_cq::BATCH batch{ array_result, &count_event, 0, this->m_io_context.completion_context(), api::io_context_uring_cq::current_batch() };
 
+	//      the outermost batch is published on the ring too : a worker finding one executable of it running long (CPU) lends the ring and
+	//      takes the rest (batch_next() : false, count_event cut. api::io_context_uring_cq::_lend_busy())
 	if (batch.pcontext != nullptr)
+	{
 		api::io_context_uring_cq::current_batch() = &batch;
+		api::io_context_uring_cq::batch_begin(batch);
+	}
+
+	// - io_uring completion : the sends of the batch are deferred and sent at its end (send_defer batch : like a group lock around the
+	//   batch). a socket gets a completion per arrival (multishot RECV) : the replies to the completions of a socket in a batch go out in
+	//   one send instead of one per completion (epoll reads them with one recv and sends once). a batch of one : the send cork of the socket
+	const bool is_batch_deferred = (batch.pcontext != nullptr && count_event > 1 && _is_batch_send_deferred() && send_defer::begin_batch());
+	auto tick_batch_flushed = tick_start;
 
 	for (int i = 0; i < count_event; ++i)
 	{
 		// declare)
 		const auto& result_event = array_result[i];
 
-		// - the result executing now
+		// - the result executing now (io_uring completion : claimed. the rest taken by a worker that lent the ring : the end)
+		if (i != 0 && batch.pring != nullptr && api::io_context_uring_cq::batch_next(batch, i) == false)
+			break;
+
 		batch.index = i;
 
 		// check)
@@ -311,6 +345,16 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 		{
 			// declare)
 			AUTO_RELEASE_EXECUTABLE	pexecutable(result_event.pexecutable);
+
+			// - the batch : what was deferred in it is sent before this one once the batch ran for a while (the start time of this one)
+			if (is_batch_deferred && pexecutable.m_start_time - tick_batch_flushed >= BATCH_SEND_DEFER_DURATION)
+			{
+				send_defer::flush();
+				tick_batch_flushed = pexecutable.m_start_time;
+			}
+
+			// - send defer (auto) : the consecutive sends of the executable to one socket are sent at once (at the switch to another socket / the end)
+			send_defer::auto_scope scope_send_defer;
 
 			// - call 'process_execute'
 			pexecutable.m_pexecutable->process_execute(result_event.result, result_event.param);
@@ -328,9 +372,16 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 		++count_executed;
 	}
 
+	// - the deferred sends of the batch
+	if (is_batch_deferred)
+		send_defer::end_batch();
+
 	// - the batch is not visible any more (the outer one of a handler pumping the executor again)
 	if (batch.pcontext != nullptr)
+	{
+		api::io_context_uring_cq::batch_end(batch);
 		api::io_context_uring_cq::current_batch() = batch.pouter;
+	}
 
 	// - io_uring : submits the re-arms this thread deferred while processing the batch (one io_uring_enter). epoll : nothing
 	//   io_uring_completion : writes them (submitted with the enter of the next pop_results())
@@ -367,14 +418,76 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 	// return)
 	return true;
 #else
+	// declare) 완료를 한 번에 여러 개 받는다. (GetQueuedCompletionStatusEx : syscall 한 번에 여러 개)
+	//   - 받은 것은 이 thread가 모두 실행하므로 하나가 오래 걸리면 뒤의 것이 기다린다. 그래서 받는 수를 실행 시간에 맞춘다.
+	//     (batch 하나의 실행 시간이 EVENT_BATCH_DURATION 정도가 되도록 한다 : linux 와 같은 규칙)
+	api::io_context::RESULT array_result[api::io_context::MAX_EVENT_BATCH];
+	static constexpr auto EVENT_BATCH_DURATION = std::chrono::microseconds(10);
+	thread_local int t_count_event_batch = 1;
+
+	// 1) get executables from io_context
+	const int count_event = this->m_io_context.pop_results(array_result, t_count_event_batch, _ticks_wait);
+
+	// - 실행 시작 시간
+	const auto tick_start = (count_event != 0) ? chrono::tick::now() : chrono::tick::time_point{};
+
 	// declare)
-	api::io_context::RESULT result_event;
+	std::size_t count_executed = 0;
+	std::exception_ptr pexception;
 
-	// 1) get executable from io_context 
-	this->m_io_context.pop_executable(result_event, _ticks_wait);
+	// 2) 'process_execute'
+	//    - 받은 것은 모두 실행한다. 하나가 exception을 던져도 나머지를 실행한 뒤 첫 exception을 다시 던진다.
+	//      (꺼낸 completion은 다시 오지 않는다 : 실행하지 않고 버리면 그 I/O의 executable이 완료되지 않는다)
+	for (int i = 0; i < count_event; ++i)
+	{
+		// declare)
+		const auto& result_event = array_result[i];
 
-	// check) 
-	if (result_event.is_valid() == false)
+		// check)
+		if (result_event.is_valid() == false)
+			continue;
+
+		try
+		{
+			// declare)
+			AUTO_RELEASE_EXECUTABLE	pexecutable(result_event.executable());
+
+			// - call 'process_execute'
+			pexecutable.m_pexecutable->process_execute(result_event.result(), result_event.param());
+		}
+		catch (...)
+		{
+			if (!pexception)
+				pexception = std::current_exception();
+
+			// continue)
+			continue;
+		}
+
+		// - count
+		++count_executed;
+	}
+
+	// 3) 다음에 받을 수를 정한다. (하나의 평균 실행 시간으로 EVENT_BATCH_DURATION을 채울 수 있는 수)
+	if (count_event != 0)
+	{
+		const auto tick_elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(chrono::tick::now() - tick_start).count();
+		const auto count_fit = (tick_elapsed > 0) ? (std::chrono::nanoseconds(EVENT_BATCH_DURATION).count() * count_event / tick_elapsed) : api::io_context::MAX_EVENT_BATCH;
+
+		// - 한번에 크게 바뀌지 않도록 이전 값과 평균한다.
+		t_count_event_batch = std::clamp(static_cast<int>((t_count_event_batch + std::min<int64_t>(count_fit, api::io_context::MAX_EVENT_BATCH) + 1) / 2), 1, api::io_context::MAX_EVENT_BATCH);
+	}
+
+	// statistics)
+	if (count_executed != 0)
+		this->m_statistics.now.count_execute.fetch_add(count_executed, std::memory_order_relaxed);		// - statistics (relaxed)
+
+	// reraise)
+	if (pexception)
+		std::rethrow_exception(pexception);
+
+	// check)
+	if (count_executed == 0)
 	{
 		// - process idle
 		this->process_idle();
@@ -382,18 +495,6 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 		// return)
 		return false;
 	}
-
-	// 2) 'process_execute'
-	{
-		// declare)
-		AUTO_RELEASE_EXECUTABLE	pexecutable(result_event.executable());
-
-		// - call 'process_execute'
-		pexecutable.m_pexecutable->process_execute(result_event.result(), result_event.param());
-	}
-
-	// statistics)
-	this->m_statistics.now.count_execute.fetch_add(1, std::memory_order_relaxed);		// - statistics (relaxed)
 
 	// return)
 	return true;

@@ -275,7 +275,7 @@ net::sockaddr from_string(const std::string_view _address, uint16_t _port, const
 		else if (strncasecmp(address.c_str(), "any", 9) == 0)
 #endif
 		{
-			return net::sockaddr{ net::ip::address_v6::any(), 0 };
+			return net::sockaddr{ net::ip::address_v6::any(), _port };
 		}
 	}
 

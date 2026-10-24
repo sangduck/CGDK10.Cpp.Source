@@ -14,8 +14,8 @@
 //
 //  1. post : from threads that own no ring (the rings are woken through their eventfd)
 //  2. readiness : the attach / set_event / detach interface of the sockets (polls on the bound ring), a closed fd number reused
-//  3. ops : recv / send (zero copy) / sendmsg (gather) / accept (multishot : the accepted sockets bound round robin) / connect / cancel /
-//     cancel_fd / wait_cancelled_fd
+//  3. ops : recv / send (zero copy) / sendmsg (gather) / accept (multishot : the accepted sockets bound round robin) / connect (the
+//     connecting sockets bound round robin) / cancel / cancel_fd / wait_cancelled_fd
 //  4. the executor stopped while ops are in flight : every submit reference is released
 //  5. the ops and the polls submitted by short lived threads
 //  6. multishot recv + provided buffers : a completion per arrival, the buffers given back by any thread, the buffers run out
@@ -793,6 +793,114 @@ TEST(io_context_uring_cq, op_accept_binds_the_accepted_sockets_round_robin)
 
 	EXPECT_TRUE(pexecutor->submit_cancel_fd(fd_listen));
 	EXPECT_TRUE(cq_wait_until([&]() { return paccept->count.load() == count_client + 1; })) << "the final CQE of the accept";
+	::close(fd_listen);
+
+	pexecutor->stop();
+}
+
+// - a connecting socket is bound round robin by submit_connect. bound by its CONNECT op instead : it went to the ring of the worker
+//   running the connect post (a client opening many connections : the posts are taken up to 16 at a time by the ring woken)
+//   . 4 workers, 32 CONNECT ops submitted by one worker (an executable posted once) : each connect completes on the owner of the ring
+//     of its socket => 4 threads, 8 sockets each
+namespace
+{
+	// - a CONNECT op : the thread that ran its completion
+	class cq_connect_executable : virtual public Iexecutable
+	{
+	public:
+		intptr_t				result = 1;
+		std::thread::id			thread;
+		std::atomic<int>		count{ 0 };
+
+		virtual intptr_t process_execute(intptr_t _result, size_t /*_param*/) override
+		{
+			this->result = _result;
+			this->thread = std::this_thread::get_id();
+			++this->count;
+			return 0;
+		}
+	};
+
+	// - posted once : submits the CONNECT op of every socket on the worker running it (like the connect posts of a client)
+	class cq_connect_all_executable : virtual public Iexecutable
+	{
+	public:
+		executor::Iio_context_threads* pio_context = nullptr;
+		sockaddr_in				address{};
+		std::vector<int>		fds;
+		std::vector<object_ptr<cq_connect_executable>> connects;
+		std::atomic<int>		count_submitted{ -1 };
+
+		virtual intptr_t process_execute(intptr_t /*_result*/, size_t /*_param*/) override
+		{
+			int count = 0;
+			for (std::size_t i = 0; i < this->fds.size(); ++i)
+			{
+				if (this->pio_context->submit_connect(this->fds[i], reinterpret_cast<const sockaddr*>(&this->address), sizeof(this->address), this->connects[i].get()))
+					++count;
+			}
+			this->count_submitted = count;
+			return 0;
+		}
+	};
+}
+
+TEST(io_context_uring_cq, op_connect_binds_the_sockets_round_robin)
+{
+	if (executor::is_io_uring_completion_available() == false)
+		GTEST_SKIP() << "the io_uring completion backend is not available on this kernel (6.0+)";
+
+	constexpr int count_thread = 4;
+	constexpr int count_client = 32;
+
+	auto pexecutor = cq_make_executor("uring_cq connect round robin", count_thread);
+	ASSERT_TRUE(pexecutor.exist());
+	cq_count_io_uring_fd_settled();
+
+	uint16_t port = 0;
+	const int fd_listen = cq_listen(port);
+	ASSERT_GE(fd_listen, 0);
+
+	// 1) the CONNECT ops of 32 sockets, submitted by one worker
+	auto pconnect_all = make_object<cq_connect_all_executable>();
+	pconnect_all->pio_context = pexecutor.get();
+	pconnect_all->address.sin_family = AF_INET;
+	pconnect_all->address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	pconnect_all->address.sin_port = htons(port);
+
+	for (int i = 0; i < count_client; ++i)
+	{
+		const int fd = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+		ASSERT_GE(fd, 0);
+		pconnect_all->fds.push_back(fd);
+		pconnect_all->connects.push_back(make_object<cq_connect_executable>());
+	}
+
+	ASSERT_TRUE(pexecutor->post(object_ptr<Iexecutable>(pconnect_all.get())));
+	ASSERT_TRUE(cq_wait_until([&]() { return pconnect_all->count_submitted.load() >= 0; }));
+	EXPECT_EQ(pconnect_all->count_submitted.load(), count_client);
+
+	// 2) every connect completes (the backlog of the listen socket takes them : no accept) on the owner of the ring of its socket
+	auto& connects = pconnect_all->connects;
+	ASSERT_TRUE(cq_wait_until([&]() { return std::all_of(connects.begin(), connects.end(), [](auto& _p) { return _p->count.load() == 1; }); }));
+
+	std::map<std::thread::id, int> sockets_of_thread;
+	for (auto& pconnect : connects)
+	{
+		EXPECT_EQ(pconnect->result, 0);
+		++sockets_of_thread[pconnect->thread];
+	}
+
+	int max_sockets = 0;
+	for (const auto& [id, count] : sockets_of_thread)
+		max_sockets = std::max(max_sockets, count);
+
+	EXPECT_EQ(sockets_of_thread.size(), static_cast<std::size_t>(count_thread)) << "the connecting sockets ran on " << sockets_of_thread.size() << " of " << count_thread << " workers (max " << max_sockets << " sockets on one)";
+	EXPECT_LE(max_sockets, count_client / count_thread + 1);
+
+	// 3) close
+	for (const int fd : pconnect_all->fds)
+		::close(fd);
 	::close(fd_listen);
 
 	pexecutor->stop();

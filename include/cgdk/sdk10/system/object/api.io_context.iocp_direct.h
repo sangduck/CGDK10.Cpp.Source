@@ -48,7 +48,10 @@ public:
 			bool				post_executable(uint32_t _bytes_transferred, uintptr_t _completion_key, Iexecutable* _pexecutable) noexcept;
 			bool				post_executable(uint32_t _bytes_transferred, uintptr_t _completion_key, object_ptr<Iexecutable>&& _pexecutable) noexcept;
 			void				pop_executable(RESULT& _result, chrono::tick::duration _ticks_wait) noexcept;
+			int					pop_results(RESULT* _presult, int _max_result, chrono::tick::duration _ticks_wait) noexcept;
 			[[nodiscard]] size_t queued_count() const noexcept { return 0; }
+
+	static	constexpr int		MAX_EVENT_BATCH = 32;
 };
 
 

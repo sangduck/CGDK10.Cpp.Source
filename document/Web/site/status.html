@@ -6,13 +6,13 @@
 <title>미구현 · 알려진 문제 · CGDK10 기술 문서</title>
 <meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - 소스 기준 기술 설명·빌드·릴리즈 노트">
 <link rel="icon" href="assets/CGCII_logo.PNG">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div class="layout">
 <aside>
   <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
-  <div class="ver">Game Server Engine</div>
+  <div class="ver"><span class="tag">Game Server Engine</span><span class="since">since 1998</span></div>
   <ul>
     <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
     <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
@@ -53,7 +53,9 @@
 </ul>
 <div class="note warn">인수인계 문서의 남은 일 (2026-10-22)</div>
 <ul>
-  <li><b>io_uring completion 모드</b> — IORING_OP_RECV/SEND + provided buffer 로 송수신 계층을 다시 써야 syscall 이득. WSL2 loopback 에서는 epoll 보다 느림. 실 NIC 재측정 필요.</li>
+  <li><b>io_uring completion 모드</b> — 송수신 op 전환은 끝남(RECV / multishot + provided buffer / SENDMSG / SEND_ZC, buffered 포함 r11494, CQE 배치 끝 송신 r11497). 32 코어 공정 벤치에서 epoll 보다 빠름(tcp 64B x32 +14%, UDS +78%). 남은 것 : 8 코어·실 NIC 재측정, ASan / valgrind, 기본값은 아직 epoll.</li>
+  <li><b>completion 소유 worker 송신 op</b>(<code>CGDK_IO_URING_SEND_OP=1</code>, 기본 off) — 제출 전(staging)의 송신 op 를 같은 handler 의 graceful close 가 shutdown + cancel 로 지워 데이터를 잃을 수 있음. 켜지 말 것.</li>
+  <li><b>풀 재사용 socket 의 송신 한도</b> — <code>maximum_depth_of_send_buffer(n)</code> / <code>_bytes(n)</code> 를 socket 에 걸면 풀로 돌아간 객체가 다음 접속에서도 그 값을 가진다(<code>process_reset_sendable</code> 은 SO_SNDBUF 만 되돌림, Windows 도 같음).</li>
   <li><b>io_uring 간헐 실패</b> — 전체 스위트 3회 중 1회 재접속 관리자가 첫 실패 뒤 재시도 안 함, accept socket 정리 10 s 초과. <code>uds.reconnect</code> 간헐 실패, <code>uds.uds_only</code> 중 pure virtual call 1회(양 백엔드). epoll 은 3회 모두 통과.</li>
   <li><b>Windows TFO</b> — SYN 에 데이터를 싣는 접속+첫 send API 미구현. Linux TFO connect 거절이 <code>on_disconnect</code> 로 오는 것과 Ntcp_reconnect 재접속 예약의 관계 미확인.</li>
   <li><b>그룹</b> — <code>on_member_*</code> 안에서 다른 멤버 락을 잡으면 교착. 규칙으로만 막음.</li>

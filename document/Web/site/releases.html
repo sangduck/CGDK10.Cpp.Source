@@ -6,13 +6,13 @@
 <title>릴리즈 노트 · CGDK10 기술 문서</title>
 <meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - 소스 기준 기술 설명·빌드·릴리즈 노트">
 <link rel="icon" href="assets/CGCII_logo.PNG">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div class="layout">
 <aside>
   <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
-  <div class="ver">Game Server Engine</div>
+  <div class="ver"><span class="tag">Game Server Engine</span><span class="since">since 1998</span></div>
   <ul>
     <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
     <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
@@ -43,6 +43,16 @@
 <h1 id="releases">릴리즈 노트</h1>
 <p class="muted">출처: <code>release_note.txt</code>(항목 머리 <code>&lt;rev&gt;(&lt;yyyy.mm.dd&gt;)</code> 또는 날짜), <code>document/handover/CGDK10.handover.2026-10.md</code>, svn 로그.</p>
 
+<div class="rel">
+<h3>2026.10.24 <span class="mono">r11487 ~ r11497</span> (io_uring completion 만)</h3>
+<ul>
+  <li><b>CQE 배치 끝 송신</b> (r11497) — completion 실행기가 CQE 배치를 <code>send_defer</code> 배치(<code>begin_batch / end_batch</code>)로 묶어 배치 안 같은 소켓의 송신을 끝에 한 번 보낸다. cork 나이 상한·그룹 락 release flush 유지, 100 µs 중간 flush, <code>CGDK_IO_URING_BATCH_DEFER=0</code> 으로 끔. 32 코어 tcp 64B x32 completion 11.0M → 18.0M msg/s(epoll 15.9M). <b>send_defer.h 변경 → 재빌드.</b></li>
+  <li><b>buffered 송신의 completion 지원</b> (r11494) — <code>tcp_buffered</code> / <code>tcp_queue</code> / redis session 이 completion 실행기에서도 readiness 로 돌던 것 : SENDMSG / SEND_ZC op. gather op 완료가 대기 바이트를 되돌리지 않던 버그. <code>test_uring_send.cpp</code> 8개. <b>헤더 멤버 추가 → 재빌드.</b></li>
+  <li><b>zerocopy ENOBUFS</b> (r11490) — 사용자 memlock 한도로 MSG_ZEROCOPY / SEND_ZC 가 ENOBUFS 면 복사로 다시 보냄(연결을 닫던 문제).</li>
+  <li><b>Linux acceptor 의 io_context</b> (r11489) — accept 한 socket 에 system executor 대신 acceptor 의 io_context(Windows 와 같은 순서). acceptor 에 executor 를 준 서버는 접속이 그 executor 로 옮겨간다.</li>
+  <li><b>accept socket 의 ring 분산</b> (r11487) — completion 에서 한 acceptor 의 socket 이 listen ring(thread 하나)에 모두 묶이던 것을 accept CQE 에서 round robin. 벤치도 서버를 case 의 executor 에 올리도록 수정(이전 수치는 서버가 epoll).</li>
+</ul>
+</div>
 <div class="rel">
 <h3>2026.10.22 <span class="mono">r11391 ~ r11415</span></h3>
 <ul>

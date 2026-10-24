@@ -57,15 +57,15 @@ namespace CGDK
 /**
 
  @class		Default
- @brief		ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç´ï¿½ ï¿½âº» executorï¿½Ì´ï¿½.
+ @brief		³»ºÎÀûÀ¸·Î ÀÚµ¿ »ý¼ºµÇ´Â ±âº» executorÀÌ´Ù.
  @todo		
  @ref		
  @details	\n
- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ç´ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ã³ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ç´ï¿½ ï¿½Ì±ï¿½ï¿½ï¿½ executorï¿½Ì´ï¿½.
- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ executorï¿½ï¿½ SingleExecutorï¿½ï¿½ schedulable_managerï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½.
- ï¿½âº»ï¿½ï¿½ï¿½ï¿½ï¿½Î´ï¿½ ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç³ï¿½ ï¿½Ê±ï¿½È­ï¿½ï¿½ ï¿½Ê¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ initialize_instance()ï¿½ï¿½ È£ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½.
- ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ post(...)ï¿½Ô¼ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ register_schedulableï¿½ï¿½ Schedulerï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½.
- ï¿½Ò¸ï¿½Ã³ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ç±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù¸ï¿½ Ã³ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿äµµ ï¿½ï¿½ï¿½ï¿½.
+ ³»ºÎÀûÀ¸·Î »ç¿ëµÇ´Â ¸ðµç ½ÇÇàÃ³¸®¿¡ »ç¿ëµÇ´Â ½Ì±ÛÅÏ executorÀÌ´Ù.
+ ³»ºÎÀûÀ¸·Î ´ÙÁß ¾²·¹µå executor¿Í SingleExecutor¿Í schedulable_manager¸¦ °¡Áö°í ÀÖ´Ù.
+ ±âº»ÀûÀ¸·Î´Â ÀÚµ¿»ý¼ºµÇ³ª ÃÊ±âÈ­±â ÇÊ¿äÇÒ °æ¿ì initialize_instance()¸¦ È£ÃâÇØ ÃÊ±âÈ­ÇÒ ¼öµµ ÀÖ´Ù.
+ ½ÇÇà¿äÃ»Àº post(...)ÇÔ¼ö·Î °¡´ÉÇÏ¸ç register_schedulable·Î Scheduler¿¡ µî·ÏÇÒ ¼öµµ ÀÖ´Ù.
+ ¼Ò¸êÃ³¸®µµ ÀÚµ¿À¸·Î µÇ±â ¶§¹®¿¡ ´Ù¸¥ Ã³¸®¸¦ ÇØÁÙ ÇÊ¿äµµ ¾ø´Ù.
 
 
   configure
@@ -111,11 +111,11 @@ public:
 	static	bool				start_thread_observer();
 	static	bool				stop_thread_observer() noexcept;
 
-	// - system executorï¿½ï¿½ raw pointer (ï¿½ï¿½ï¿½ï¿½ count ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ : postï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ threadï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ countï¿½ï¿½ ï¿½Ã¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Êµï¿½ï¿½ï¿½)
-	//   destroyï¿½Ç¾îµµ ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê°ï¿½ system_executorï¿½ï¿½ ï¿½Ò¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï¹Ç·ï¿½(m_vector_executor_retired) ï¿½ï¿½ï¿½ï¿½ ï¿½ß¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê´Â´ï¿½.
-	//   (destroyï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ postï¿½ï¿½ handleï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¾ï¿½ falseï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ø´ï¿½)
+	// - system executorÀÇ raw pointer (ÂüÁ¶ count ¾øÀÌ ¾´´Ù : postÇÒ ¶§¸¶´Ù ¸ðµç thread°¡ °°Àº ÂüÁ¶ count¸¦ ¿Ã¸®°í ³»¸®Áö ¾Êµµ·Ï)
+	//   destroyµÇ¾îµµ °´Ã¼´Â ÇØÁ¦ÇÏÁö ¾Ê°í system_executor°¡ ¼Ò¸êµÉ ¶§±îÁö º¸°üÇÏ¹Ç·Î(m_vector_executor_retired) ¾²´Â Áß¿¡ ÇØÁ¦µÇÁö ¾Ê´Â´Ù.
+	//   (destroyµÈ µÚÀÇ post´Â handleÀÌ ´ÝÇô ÀÖ¾î false¸¦ µ¹·ÁÁØ´Ù)
 	[[nodiscard]] static executor::Iio_context* executor_ptr() { auto p = m_s_instance.m_psystem_executor.get_acquire(); if (p == nullptr) { initialize_instance(); p = m_s_instance.m_psystem_executor.get_acquire(); } return p; }
-	[[nodiscard]] static executor::Iio_context* executor_ptr_peek() noexcept { return m_s_instance.m_psystem_executor.get_acquire(); }	// - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê´Â´ï¿½. (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ : ï¿½ï¿½ï¿½ï¿½ ï¿½ß¿ï¿½ ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Êµï¿½ï¿½ï¿½)
+	[[nodiscard]] static executor::Iio_context* executor_ptr_peek() noexcept { return m_s_instance.m_psystem_executor.get_acquire(); }	// - ¸¸µéÁö ¾Ê´Â´Ù. (ºñ±³ÇÒ ¶§ : Á¾·á Áß¿¡ ´Ù½Ã ¸¸µéÁö ¾Êµµ·Ï)
 
 	static	bool				post(object_ptr<Iexecutable>&& _pexecutable) { auto pexecutor = executor_ptr(); return (pexecutor != nullptr) ? pexecutor->post(std::move(_pexecutable)) : false; }
 	static	bool				post(const object_ptr<Iexecutable>& _pexecutable) { return post(object_ptr<Iexecutable>(_pexecutable)); }
@@ -205,7 +205,7 @@ private:
 			own_ptr<schedulable_manager_t> m_pschedulable_manager;
 			object_ptr<factory_sustain_t> m_pschedulable_factory_garbage_collection;
 			object_ptr<thread_observer_t> m_pschedulable_thread_observer;
-			std::vector<own_ptr<executor::Iio_context>> m_vector_executor_retired;	// - destroyï¿½ï¿½ system executor (executor_ptr()ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ö¾ï¿½ ï¿½Ò¸ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½)
+			std::vector<own_ptr<executor::Iio_context>> m_vector_executor_retired;	// - destroyµÈ system executor (executor_ptr()·Î ¾²´Â ÁßÀÏ ¼ö ÀÖ¾î ¼Ò¸êµÉ ¶§ ÇØÁ¦ÇÑ´Ù)
 			std::recursive_mutex m_lockable_lock;
 			int					m_init_param = static_cast<int>(CGEXECUTOR_AUTO);
 

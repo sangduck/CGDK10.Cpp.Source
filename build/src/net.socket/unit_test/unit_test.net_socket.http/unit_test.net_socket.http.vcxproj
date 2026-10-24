@@ -145,6 +145,7 @@
     <ClCompile Include="test_ssl_loopback.cpp" />
     <ClCompile Include="test_http_client_timeout.cpp" />
     <ClCompile Include="test_socket_option.cpp" />
+    <ClCompile Include="test_sockaddr_from_string.cpp" />
     <ClCompile Include="test_connect_requestable.cpp" />
     <ClCompile Include="test_emergency.cpp" />
     <ClCompile Include="pch.cpp">

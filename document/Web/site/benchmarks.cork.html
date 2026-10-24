@@ -6,13 +6,13 @@
 <title>send cork · 서버 push · CGDK10 기술 문서</title>
 <meta name="description" content="CGDK10 Linux epoll 송신 묶기 벤치 - send cork(echo) 와 send_defer::scope(tick push), 원본 r11340 대비 HEAD r11478">
 <link rel="icon" href="assets/CGCII_logo.PNG">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div class="layout">
 <aside>
   <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
-  <div class="ver">Game Server Engine</div>
+  <div class="ver"><span class="tag">Game Server Engine</span><span class="since">since 1998</span></div>
   <ul>
     <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
     <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
@@ -40,7 +40,7 @@
   </ul>
 </aside>
 <main>
-<h1 id="cork">send cork · 서버 push <small>Linux epoll · echo 와 tick push · 원본 r11340 대비 HEAD r11478</small></h1>
+<h1 id="cork">send cork · 서버 push <small>Linux epoll · echo 와 tick push · 원본 r11340 대비 HEAD r11478 · 자동 묶기 r11496</small></h1>
 <p>epoll 송신을 묶어 보내는 두 장치를 원본(r11340, epoll 최적화 전)과 비교했다. <b>send cork</b> 는 수신 처리 중 같은 소켓에 보내는 응답을 모은다(자동). <b><code>send_defer::scope</code></b> 는 수신 handler 밖, 예를 들어 tick 스레드의 송신을 모은다(호출하는 쪽이 범위를 연다). 알고리즘은 <a href="socket.send.html">send 최적화</a> 에 있다.</p>
 
 <div class="note"><b>요약</b>
@@ -48,7 +48,8 @@
   <li><b>echo 파이프라인(64 연결 × 16 개)</b> : HEAD 에서 cork 를 켜면 2,435만 ~ 2,559만 msg/s, 0.31 ~ 0.33 µs/msg. 끄면 270만 ~ 299만, 원본 buffered 는 1,013만 · 0.79 µs. syscall 은 메시지당 0.25(끄면 1.19).</li>
   <li><b>ping-pong · 64 KB</b> : 모을 것이 없어 cork 를 켜도 꺼도 같다. 원본 대비 ping-pong 처리량 +24 ~ 27 %, CPU −20 % 는 수신 경로 개선에서 온다.</li>
   <li><b>handler 가 send 뒤에 일할 때</b> : 네 시나리오 모두 cork 켬이 처리량 · p50 · p99 가 가장 좋다. 200 µs 상한(r11471) 의 손해는 보이지 않았다.</li>
-  <li><b>tick push(handler 밖)</b> : cork 대상이 아니다. scope 없이 보내면 소켓당 16 개 이상에서 원본 buffered 보다 CPU 1.7 ~ 4.5 배, 410만/s 요청에 55 % 만 전달한다. <b>소켓별 <code>send_defer::scope</code></b> 면 원본보다도 CPU 2 ~ 5 배 적고 서버 쪽 지연은 그대로다.</li>
+  <li><b>tick push(handler 밖)</b> : cork 대상이 아니다. r11478 까지는 scope 없이 보내면 소켓당 16 개 이상에서 원본 buffered 보다 CPU 1.7 ~ 4.5 배, 410만/s 요청에 55 % 만 전달했다. <b>소켓별 <code>send_defer::scope</code></b> 면 원본보다도 CPU 2 ~ 5 배 적고 서버 쪽 지연은 그대로다.</li>
+  <li><b>자동 묶기(r11496)</b> : tick 을 실행기에서 돌리면 <code>send_defer::auto_scope</code> 가 소켓별 scope 와 같은 효과를 코드 수정 없이 낸다. 102만/s 에서 서버 CPU 가 r11478 대비 1/3 ~ 1/18, 410만/s 요청을 전부 전달(0.11 ~ 0.12 µs/msg). echo 는 변화 없음.</li>
 </ul></div>
 
 <h4 class="sec">측정 구성</h4>
@@ -127,6 +128,25 @@ for (auto&amp; psocket : sockets)
     for (auto&amp; msg : pending_of(psocket))
         psocket-&gt;send(msg);
 }</pre>
+<p>r11496 부터 실행기에서 실행되는 tick 은 이 scope 가 없어도 같은 방식으로 묶인다(아래). 위 코드는 실행기 밖 thread(<code>std::thread</code>)에서 보낼 때 필요하다.</p>
+
+<h4 class="sec">tick push : 자동 묶기 (r11496)</h4>
+<p>2026-10-24, r11496(<code>send_defer::auto_scope</code>). 실행기가 executable 하나를 실행할 때마다 자동 범위를 열고, 그 안의 그룹 락 · send cork 밖 send 를 소켓별로 모은다. 다른 소켓으로 넘어가면 앞 소켓 것을, 범위가 끝나면 마지막 소켓 것을 보낸다. tick 을 system executor 에서 실행, 서버 8 thread, 바쁜 대기 클라이언트, 깨끗한 3회 중앙값. 칸은 서버 µs/msg.</p>
+<table class="bench wrap">
+<tr><th>연결 × K</th><th>원본 buffered (r11340)</th><th>r11478 (자동 없음)</th><th class="hl">r11496 자동 (b / g)</th><th>r11478 + 수동 소켓별 scope</th></tr>
+<tr><td>256 × 4 (102만/s)</td><td>2.08</td><td>2.27</td><td class="hl"><b>0.67 / 0.66</b></td><td>0.67</td></tr>
+<tr><td>64 × 16 (102만/s)</td><td>0.99</td><td>2.00</td><td class="hl"><b>0.26 / 0.23</b></td><td>0.23</td></tr>
+<tr><td>16 × 64 (102만/s)</td><td>0.48</td><td>2.36</td><td class="hl"><b>0.13 / 0.13</b></td><td>0.12</td></tr>
+<tr><td>64 × 64 (410만/s 요청)</td><td>410만 전달 · 0.37</td><td>181만 전달 · 1.78</td><td class="hl"><b>410만 전달 · 0.11 ~ 0.12</b></td><td>-</td></tr>
+<tr><td>256 × 1</td><td>-</td><td>2.39 · p50 5.4 µs</td><td class="hl">2.26 ~ 2.43 · p50 7.8 µs</td><td>-</td></tr>
+</table>
+<ul>
+  <li>syscall/msg(64 × 16) : r11478 1.10 → r11496 0.18.</li>
+  <li>자동 묶기는 수동 소켓별 scope 와 같은 수준이다. 소켓당 1 개(256 × 1)면 묶을 것이 없어 CPU 는 같고 p50 이 2.4 µs 늘었다.</li>
+  <li>실행기 밖 thread 의 tick 은 전후가 같다(자동 범위가 열리지 않음). echo(cork 켬) ping-pong 32 / 256 · 파이프라인 · 64 KB 는 기준과 같은 범위였다.</li>
+  <li><b>주의</b> : 실행기 handler 가 요청을 보낸 뒤 <code>scoped_thread_block</code> 없이 그 응답을 기다리면 요청이 아직 모여 있어 교착될 수 있다. 그런 곳은 <code>send_defer::flush()</code> 를 부르거나 <code>send_defer::enable_auto(false)</code> 로 끈다.</li>
+  <li>검증 : Linux epoll · io_uring 두 모드에서 단위 테스트 전부 통과(<code>test_send_defer_auto.cpp</code> 4 개 포함 : 소켓 섞어 보내기, tick 묶음, 1 개씩, 보내고 closesocket, 예외, 다른 thread 와 동시 송신 × gather / buffered × 자동 켬 / 끔).</li>
+</ul>
 
 <h4 class="sec">재현</h4>
 <ul>
@@ -135,7 +155,7 @@ for (auto&amp; psocket : sockets)
 </ul>
 <p>관련 문서 : <a href="socket.send.html">send 최적화</a>, <a href="benchmarks.push.html">큰 묶음 push 처리량</a>, <a href="group.html">Group system</a>, <a href="benchmarks.html">벤치마크</a>.</p>
 
-<footer>CGDK10 · 소스 기준 정리 (r11478, 2026-10-24) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+<footer>CGDK10 · 소스 기준 정리 (r11496, 2026-10-24) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
 </main>
 </div>
 </body>

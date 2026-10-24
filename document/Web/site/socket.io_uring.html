@@ -6,13 +6,13 @@
 <title>io_uring 백엔드 · Linux 벤치 · CGDK10 기술 문서</title>
 <meta name="description" content="CGDK10 (CGC.II.) C++ 서버 엔진 - Linux io_uring 백엔드의 구조와 설계 경위, epoll 대비 벤치마크">
 <link rel="icon" href="assets/CGCII_logo.PNG">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div class="layout">
 <aside>
   <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
-  <div class="ver">Game Server Engine</div>
+  <div class="ver"><span class="tag">Game Server Engine</span><span class="since">since 1998</span></div>
   <ul>
     <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
     <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
@@ -41,7 +41,7 @@
 </aside>
 <main>
 <h1 id="io_uring">io_uring 백엔드 · Linux 벤치 <small>system/object/api.io_context.uring.{h,cpp}, executor.Iio_context.h, net.socket (Linux)</small></h1>
-<p><a href="socket.html">Socket system</a> 의 하위 문서. Linux 에서 epoll 대신 쓸 수 있는 io_uring 백엔드의 구조, 만들면서 만난 문제, 그리고 실 장비에서 epoll 과 비교한 벤치마크를 정리한다(r11393~r11446, 2026-10-22~23). 결론부터 : <b>기본은 epoll</b>. 준비(readiness) 모드는 thread 가 늘수록 뒤처지고, <b>완료(completion) 모드</b>는 multishot RECV 이후 접속 많은 소형 메시지(+27%)와 UDP(+44%)에서 epoll 을 넘지만, 접속당 메시지가 몰리는 패턴에서는 아직 14~39% 느리다(아래 completion 절).</p>
+<p><a href="socket.html">Socket system</a> 의 하위 문서. Linux 에서 epoll 대신 쓸 수 있는 io_uring 백엔드의 구조, 만들면서 만난 문제, 그리고 실 장비에서 epoll 과 비교한 벤치마크를 정리한다(r11393~r11446, 2026-10-22~23). 결론부터 : <b>기본은 epoll</b>. 준비(readiness) 모드는 thread 가 늘수록 뒤처지고, <b>완료(completion) 모드</b>는 서버도 같은 backend 로 잰 공정 벤치(배치 send defer r11497 이후)에서 8 · 16 thread 의 모든 케이스가 epoll 보다 빠르다(아래 "5단계" 와 "4 · 8 · 16 thread" 절). 그 앞의 표들은 벤치의 서버 socket 이 epoll 에서 돈 측정이라 클라이언트 쪽만 그 backend 였다.</p>
 
 <h3>켜는 법</h3>
 <ul>
@@ -81,6 +81,7 @@
 
 <h3>벤치마크 — 실 장비 (mistral)</h3>
 <p>mistral : Ubuntu 26.04, kernel 7.0, 32 CPU, gcc 15.2, Release. 같은 프로세스 안의 echo ping-pong(<code>bench_linux_io.cpp</code>, <code>CGDK_BENCH=3</code>), 전용 executor 4 / 8 thread. 기준선 r11392(변경 전)와 HEAD r11445 를 교대로 5라운드, 중앙값. 실 장비는 라운드 편차가 ±5% 안이다. 괄호는 r11392 epoll 대비.</p>
+<p class="muted">이 절부터 completion 4단계까지의 표(r11445 ~ r11463)는 벤치의 서버 socket 이 system executor(기본 epoll)에서 돈 측정이다(아래 "측정 방법 수정") : io_uring 열은 클라이언트만 io_uring 이었다.</p>
 <table class="bench">
 <tr><th class="lbl">케이스</th><th>thread</th><th>r11392 epoll</th><th class="hl">HEAD epoll</th><th>HEAD io_uring</th></tr>
 <tr><td class="lbl">tcp 16B x256 clients, window 1</td><td>4</td><td>455,772</td><td class="hl">439,690 (−4%)</td><td>316,378 (−31%)</td></tr>
@@ -168,11 +169,75 @@
   <li><b>무복사 수신</b>은 UDS +6%, 나머지는 노이즈 범위 : 기본 on.</li>
   <li><b>송신 op</b>는 창 16 패턴에서 −8% : 응답이 다음 enter 까지 기다리고 CQE 하나가 더 들어, 아낀 send syscall 보다 비싸다. 접속당 1개 왕복에서는 중립 : 기본 off(옵션).</li>
   <li>둘 다 켠 16B x256 은 +8%(epoll 대비 +20%)지만 3단계 쪽 편차가 커서(548K~717K) 확정하지 않는다.</li>
-  <li><b>epoll 과의 격차(64B x32 window 16 : −32%, UDS −35%)는 이 두 가지로 줄지 않는다.</b> 남은 비용은 접속당 메시지가 몰릴 때 CQE 단위로 처리하는 구조 쪽이다 : epoll 은 한 번 깨어나 recv 한 번에 여러 메시지를 읽지만, completion 은 도착마다 CQE 와 버퍼 하나를 쓴다. 후보 : 큰 provided buffer(지금 16KB), 연결이 많지 않을 때 RECV 를 multishot 대신 큰 창으로.</li>
+  <li><b>epoll 과의 격차(64B x32 window 16 : −32%, UDS −35%)는 이 두 가지로 줄지 않는다.</b> 남은 비용은 접속당 메시지가 몰릴 때 CQE 단위로 처리하는 구조 쪽이다 : epoll 은 한 번 깨어나 recv 한 번에 여러 메시지를 읽지만, completion 은 도착마다 CQE 와 버퍼 하나를 쓴다. 후보 : 큰 provided buffer(지금 16KB), 연결이 많지 않을 때 RECV 를 multishot 대신 큰 창으로. → 아래 5단계에서 원인(송신 쪽)을 찾아 고쳤다.</li>
+</ul>
+
+<h4>측정 방법 수정 : 위 표들의 서버는 epoll 이었다 (r11487, r11489)</h4>
+<ul>
+  <li>r11487 이전 <code>bench_linux_io.cpp</code> 의 서버 socket 은 case 의 executor 가 아니라 <b>system executor</b>(기본 epoll, 2 x 코어 + 2 thread)에서 돌았다. Linux acceptor 가 accept 한 socket 에 acceptor 의 io_context 대신 system executor 를 줬기 때문이다(r11489 에서 Windows 와 같게 수정 : hook → acceptor 의 io_context → system executor). 그래서 위 3·4단계 표의 "completion" 은 <b>클라이언트만</b> completion 이었다.</li>
+  <li>서버까지 completion 에 올리자 accept 된 socket 이 모두 listen socket 의 ring(thread 하나)에 묶이는 문제가 드러났다 : 첫 RECV 를 제출한 worker 의 ring 에 묶이는데 그게 accept 를 실행한 listen ring owner 였다. r11487 이 accept CQE 에서 그 fd 를 round robin ring 에 바인딩한다(tcp 64B x32 completion 2.48M → 10.58M, mistral).</li>
+  <li>이후 벤치는 서버·클라이언트 모두 case 의 executor 에서 돈다. 이 절 아래 수치만 completion 대 epoll 의 공정한 비교다.</li>
+</ul>
+
+<h4>5단계 : 송신 경로 — CQE 배치 끝 송신, buffered 의 SEND op (r11494, r11497)</h4>
+<ul>
+  <li><b>남은 격차의 원인은 송신이었다.</b> 공정한 벤치에서도 tcp 64B x32 window 16 은 epoll 의 −37%. <code>strace -c -f</code> 로 세면 epoll 은 recv 한 번이 창(16개)을 받아 <b>송신 1회에 메시지 ~6.6개</b>(sendto 0.15/msg), completion 은 multishot RECV 가 도착(세그먼트)마다 CQE 를 하나씩 내고 handler 의 send cork 가 CQE 하나로 끝나 <b>sendto 0.76/msg</b>. 수신 syscall 을 없앤 대신 송신 syscall 이 5배였다.</li>
+  <li><b>배치 send defer</b>(r11497, 기본 on, <code>CGDK_IO_URING_BATCH_DEFER=0</code> 으로 끔) : completion executor 가 CQE 배치(최대 32, 실행 10 µs 에 맞춰 적응) 전체를 <code>send_defer</code> 배치로 묶는다(<code>send_defer::begin_batch()</code> / <code>end_batch()</code>). 배치 안의 송신은 그룹 락 안처럼 모였다가 배치 끝에 socket 마다 한 번 나간다.
+    <ul>
+      <li>의미는 그대로 : 배치 안에서도 send cork 의 200 µs 나이 상한이 선다(<code>is_cork_age_checked()</code>), 배치 안의 그룹 락은 풀릴 때 자기 송신을 보낸다, close 직전의 flush(<code>process_flush_deferred_send_on_close</code>)와 <code>scoped_thread_block</code> 의 flush 도 그대로.</li>
+      <li>배치가 100 µs 넘게 돌면 다음 CQE 전에 모은 것을 보낸다 : 긴 handler 가 같은 배치의 다른 socket 송신을 붙잡는 상한. 이미 읽는 실행 시작 시각을 써서 clock 호출이 늘지 않는다.</li>
+      <li>CQE 하나짜리 배치는 기존 socket cork 그대로. epoll · readiness 경로는 바뀌지 않는다. 배치 안에서는 실행기 auto 묶기(<code>send_defer::auto_scope</code>, r11496)보다 배치가 넓게 묶는다.</li>
+    </ul>
+  </li>
+  <li><b>buffered 도 completion</b>(r11494) : <code>Ntcp_async_gather_buffered</code>(<code>tcp_buffered&lt;&gt;</code>, <code>tcp_queue</code>, redis querier session)는 completion 을 지원하지 않아 completion executor 위에서도 readiness(POLL_ADD)로 돌았다. 이제 gather 와 같이 직접 send + socket 버퍼가 차면 SENDMSG op(큐 앞 묶음, IOV_MAX 개까지), 큰 사용자 버퍼는 SEND_ZC op. op 로 옮긴 묶음은 송신 큐 한도에 세지 않는다(epoll 의 EPOLLOUT 대기분, Windows 의 WSASend 진행분과 같음). 같은 커밋에 gather op 완료가 대기 바이트를 되돌리지 않던 버그(<code>sending_queued_bytes_now()</code> 가 옛 값) 수정.</li>
+  <li><b>소유 worker 송신 op</b>(<code>CGDK_IO_URING_SEND_OP=1</code>)는 배치 send defer 와 같이 써도 손해라(tcp 64B 16.25M vs 17.29M, UDS 22.0M vs 29.4M) 기본 off 그대로. 켜면 아직 제출되지 않은 송신 op 를 같은 handler 의 graceful close 가 취소해 데이터를 잃을 수 있다(알려진 문제).</li>
+</ul>
+<p>32 코어 서버 A(Ubuntu 26.04, kernel 7.0), Release, executor 8 thread, 서버·클라이언트 모두 case 의 executor, r11496 / r11497 교대 5라운드 중앙값(msg/s). 괄호는 같은 판의 epoll 대비.</p>
+<table class="bench">
+<tr><th class="lbl">케이스</th><th>epoll r11496</th><th>epoll r11497</th><th>completion r11496</th><th class="hl">completion r11497 (배치 send defer)</th></tr>
+<tr><td class="lbl">tcp 64B x32, window 16</td><td>15,946,593</td><td>15,805,514</td><td>11,007,373 (−31%)</td><td class="hl">17,965,546 (+14%)</td></tr>
+<tr><td class="lbl">uds 64B x32, window 16</td><td>16,936,059</td><td>16,513,529</td><td>28,814,340 (+70%)</td><td class="hl">29,465,724 (+78%)</td></tr>
+<tr><td class="lbl">tcp 16B x256, window 1</td><td>1,061,541</td><td>1,049,849</td><td>1,563,704 (+47%)</td><td class="hl">1,556,107 (+48%)</td></tr>
+<tr><td class="lbl">tcp 64KB x4, window 2</td><td>190,692</td><td>190,339</td><td>184,285 (−3%)</td><td class="hl">160,976 (−15%)</td></tr>
+<tr><td class="lbl">udp 64B x16, window 32</td><td>476,282</td><td>477,928</td><td>688,836 (+45%)</td><td class="hl">683,340 (+43%)</td></tr>
+</table>
+<ul>
+  <li>배치 send defer 는 tcp 64B x32(socket 당 창이 깊은 파이프라인)를 +63% 올렸고 라운드 편차도 줄였다(r11496 7.0~12.5M → 17.7~20.0M). 끄면(<code>CGDK_IO_URING_BATCH_DEFER=0</code>) r11496 수준.</li>
+  <li>UDS, 16B x256(창 1), UDP 는 변화 없음. 64KB 는 두 판 모두 라운드 편차가 커서(136K~246K) 노이즈로 본다.</li>
+  <li>UDS 는 completion 이 epoll 보다 크게 빠르다 : UDS 는 send 가 싸고 한 번 쓰기가 상대 수신 큐에 바로 들어가 CQE 당 메시지가 많다(메시지당 CPU completion 0.29 µs vs epoll 0.49 µs).</li>
+  <li>테스트 : <code>uring_send.*</code>(8개 : tcp&lt;&gt; · tcp_buffered&lt;&gt; 의 socket 버퍼 가득, send 후 close, op 중 close · RST, 큐 한도). 상세 : 인수인계 문서 1.29.</li>
+</ul>
+
+<h4>4 · 8 · 16 thread 와 readiness, 구성별 (HEAD r11501)</h4>
+<p>5단계 표와 같은 공정 비교(서버 · 클라이언트 모두 case 의 executor)를 같은 CPU 의 다른 32 코어 서버 A 에서 thread 수와 readiness 까지 넓혀 쟀다. HEAD r11501(배치 send defer 포함), Release, 교대 5라운드 x 3초 중앙값(msg/s). 괄호는 epoll 대비. 16 thread 는 epoll 과 completion 만 쟀다. 구성별(단일 RECV · multishot 전환 끔) 표는 <a href="socket.recv.html">Receive 최적화</a>.</p>
+<table class="bench">
+<tr><th class="lbl">케이스</th><th>thread</th><th>epoll</th><th>io_uring (readiness)</th><th class="hl">io_uring (completion)</th></tr>
+<tr><td class="lbl">tcp 16B x256 clients, window 1</td><td>4</td><td>647,195</td><td>450,973 (−30%)</td><td class="hl">728,865 (+13%)</td></tr>
+<tr><td class="lbl">tcp 16B x256 clients, window 1</td><td>8</td><td>899,639</td><td>397,789 (−56%)</td><td class="hl">1,235,988 (+37%)</td></tr>
+<tr><td class="lbl">tcp 16B x256 clients, window 1</td><td>16</td><td>623,991</td><td>-</td><td class="hl">1,699,125 (+172%)</td></tr>
+<tr><td class="lbl">tcp 64B x32 clients, window 16</td><td>4</td><td>7,599,828</td><td>6,575,939 (−13%)</td><td class="hl">8,368,858 (+10%)</td></tr>
+<tr><td class="lbl">tcp 64B x32 clients, window 16</td><td>8</td><td>12,312,794</td><td>7,070,281 (−43%)</td><td class="hl">15,547,974 (+26%)</td></tr>
+<tr><td class="lbl">tcp 64B x32 clients, window 16</td><td>16</td><td>9,855,110</td><td>-</td><td class="hl">22,115,103 (+124%)</td></tr>
+<tr><td class="lbl">tcp 64KB x4 clients, window 2</td><td>4</td><td>284,248</td><td>125,046 (−56%)</td><td class="hl">136,818 (−52%)</td></tr>
+<tr><td class="lbl">tcp 64KB x4 clients, window 2</td><td>8</td><td>160,642</td><td>154,329 (−4%)</td><td class="hl">180,177 (+12%)</td></tr>
+<tr><td class="lbl">tcp 64KB x4 clients, window 2</td><td>16</td><td>109,259</td><td>-</td><td class="hl">169,719 (+55%)</td></tr>
+<tr><td class="lbl">udp 64B x16 sockets, window 32</td><td>4</td><td>594,049</td><td>608,190 (+2%)</td><td class="hl">633,008 (+7%)</td></tr>
+<tr><td class="lbl">udp 64B x16 sockets, window 32</td><td>8</td><td>419,057</td><td>561,171 (+34%)</td><td class="hl">600,712 (+43%)</td></tr>
+<tr><td class="lbl">udp 64B x16 sockets, window 32</td><td>16</td><td>292,593</td><td>-</td><td class="hl">584,767 (+100%)</td></tr>
+<tr><td class="lbl">uds 64B x32 clients, window 16</td><td>4</td><td>12,970,930</td><td>8,300,750 (−36%)</td><td class="hl">14,986,502 (+16%)</td></tr>
+<tr><td class="lbl">uds 64B x32 clients, window 16</td><td>8</td><td>15,220,425</td><td>7,070,929 (−54%)</td><td class="hl">24,877,841 (+63%)</td></tr>
+<tr><td class="lbl">uds 64B x32 clients, window 16</td><td>16</td><td>10,768,063</td><td>-</td><td class="hl">28,327,838 (+163%)</td></tr>
+</table>
+<ul>
+  <li><b>completion 은 thread 가 늘수록 앞선다</b> : 4 thread +7 ~ +16%, 8 thread +12 ~ +63%, 16 thread +55 ~ +172%. epoll 은 16 thread 에서 오히려 떨어지고(추정 : 공유 epoll fd 경합) completion 은 thread 마다 ring 이라 늘어난다. readiness 는 공유 ring 의 CQ 대기자 하나라 thread 가 늘수록 뒤처진다.</li>
+  <li>모든 thread 가 100% 라 처리량은 메시지당 CPU 로 정해진다(8 thread epoll / completion : tcp 64B 0.65 / 0.50 µs, uds 0.53 / 0.31 µs). 배치 send defer 로 데이터 세그먼트가 메시지당 0.125 개(창 16 개가 한 세그먼트)로 epoll 과 같아졌다(전에는 0.25).</li>
+  <li><b>64KB 4 thread 는 epoll 이 두 배</b> : 접속 4 개라 completion 은 ring 4 개(thread 4 개)에서만 돌고, 16KB 이상 단일 버퍼의 SEND_ZC 가 loopback 에서는 손해다(받는 쪽이 어차피 복사). zerocopy 를 끄면(<code>CGDK_BENCH_ZEROCOPY_THRESHOLD=1000000000</code>) completion 64KB 가 4 thread +28%, 8 thread +16% 오른다. 실 NIC 미측정이라 기본값은 그대로.</li>
+  <li><b>클라이언트 socket 의 분산</b> : CONNECT op 를 제출한 worker 의 ring 에 묶여 몰렸다(16B x256 8 thread : thread 당 11 ~ 85 개, 서버는 accept round robin 으로 32 개씩). r11507 부터 CONNECT op 도 accept 처럼 round robin 으로 묶는다(이 표는 그 전 판). 시제품 A/B 에서 16B x256 이 +11%(8 thread) · +31%(4 thread). 즉시 접속되는 UDS 클라이언트는 op 가 없어 해당 없다.</li>
+  <li>P 코어 8 개 + E 코어 16 개의 하이브리드 CPU 라 thread 가 놓이는 코어에 따라 같은 구성도 흔들린다(epoll tcp 64B 8 thread : 이 장비 11.9 ~ 14.0 M, 5단계 표의 장비 15.8 M). 몇 % 차이는 같다고 본다.</li>
 </ul>
 
 <h3>벤치마크 — 8 코어 장비 (Release, 참고)</h3>
-<p>HEAD r11463 Release. Ubuntu 24.04, kernel 6.8, 8 CPU, g++ 15.2. <code>CGDK_BENCH=3</code>, executor 4 thread, 구성을 교대로 3라운드 돌린 중앙값(msg/s). 괄호는 epoll 대비.</p>
+<p>HEAD r11463 Release. Ubuntu 24.04, kernel 6.8, 8 CPU, g++ 15.2. <code>CGDK_BENCH=3</code>, executor 4 thread, 구성을 교대로 3라운드 돌린 중앙값(msg/s). 괄호는 epoll 대비. <span class="muted">서버 socket 이 system executor(epoll)에서 돈 측정(completion 열은 클라이언트만). 다시 재지 않았다.</span></p>
 <table class="bench">
 <tr><th class="lbl">케이스</th><th>epoll</th><th>completion 단일 RECV</th><th class="hl">completion 기본값</th></tr>
 <tr><td class="lbl">tcp 16B x256 clients, window 1</td><td>240,510</td><td>250,143 (+4%)</td><td class="hl">245,375 (+2%)</td></tr>
@@ -189,8 +254,8 @@
 <h3>결론과 남은 일</h3>
 <ul>
   <li><b>기본은 epoll.</b> readiness io_uring(<code>CGDK_IO_URING=1</code>)은 공유 ring 에 CQ 대기자 하나라는 구조가 thread 수에 비례해 손해라 쓸 이유가 없다.</li>
-  <li><b>completion 모드</b>(<code>CGDK_IO_URING=completion</code>, thread 당 ring)는 multishot RECV 이후 접속 많은 소형 메시지(+27%)와 UDP(+44%)에서 epoll 을 넘지만, 접속당 메시지가 몰리는 패턴(64B x32, UDS)에서는 아직 14~39% 느리다. 서버 부하 형태에 따라 고를 옵션으로 두고, 기본값은 epoll 을 유지한다.</li>
-  <li>MSG_ZEROCOPY(<code>sendable::Itcp_gather</code>, 16KB 이상 단일 버퍼)는 io_uring 백엔드에서만 켜진다. epoll 에서는 통지 1건당 epoll_wait/epoll_ctl 이 더 들어 손해.</li>
+  <li><b>completion 모드</b>(<code>CGDK_IO_URING=completion</code>, thread 당 ring)는 accept socket 분산(r11487)과 배치 send defer(r11497) 이후 32 코어 공정 벤치에서 tcp 64B x32 +14%, UDS +78%, 16B x256 +48%, UDP +43% 로 epoll 을 넘는다(64KB 는 비슷). 남은 조건 : handler 는 짧게(한 ring 의 socket 은 owner thread 하나가 차례로 실행, 블로킹은 r11481 로 다른 worker 가 대신), 8 코어 장비·실 NIC 재측정. thread 수별로는 4 thread +7 ~ +16%(64KB 만 epoll 이 두 배), 16 thread +55 ~ +172%("4 · 8 · 16 thread" 절). 기본값은 아직 epoll 이다.</li>
+  <li>MSG_ZEROCOPY(<code>sendable::Itcp_gather</code>, 16KB 이상 단일 버퍼)는 io_uring 백엔드에서만 켜진다. epoll 에서는 통지 1건당 epoll_wait/epoll_ctl 이 더 들어 손해. loopback 에서는 completion 의 SEND_ZC 도 손해다(받는 쪽이 복사 : 64KB 를 복사로 보내면 +16 ~ +28%) : 실 NIC 에서 잴 것.</li>
   <li>acceptor <code>cpu_affinity</code>(<code>SO_INCOMING_CPU</code> 의 CPU 에 고정된 io_context 에 accept 소켓 배정)는 loopback 에서 측정할 수 없다(모두 같은 CPU). 실 NIC 의 RSS 큐 환경에서 재야 한다.</li>
 </ul>
 
@@ -202,7 +267,7 @@
   <li>상세 경위와 수치 : <code>document/handover/CGDK10.handover.2026-10.md</code> 1.11.</li>
 </ul>
 
-<footer>CGDK10 · 소스 기준 정리 (r11457, 2026-10-23) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+<footer>CGDK10 · 소스 기준 정리 (r11497, 2026-10-24) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
 </main>
 </div>
 </body>

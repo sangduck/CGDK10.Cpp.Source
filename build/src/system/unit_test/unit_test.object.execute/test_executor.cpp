@@ -1,5 +1,6 @@
 #include "pch.h"
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <set>
 #include <thread>
@@ -447,5 +448,48 @@ namespace CGDK
 		std::atomic<bool> is_executed{ false };
 		EXPECT_TRUE(pstrand->post_at(make_executable([&] { is_executed = true; }), chrono::tick::now() - 1s));
 		EXPECT_TRUE(wait_until([&] { return is_executed.load(); }, 1s));
+	}
+
+	// 14) make_executable(lambda) - the captures are released with the executable (not kept in the pool until it is reused)
+	TEST(CGDK10_executor, make_executable_releases_captures)
+	{
+		auto pcaptured = std::make_shared<int>(0);
+		std::atomic<int> count{ 0 };
+
+		// - posted : released when executed
+		for (int i = 0; i < 100; ++i)
+			EXPECT_TRUE(system_executor::post(make_executable([pcaptured, &count] { ++count; })));
+		EXPECT_TRUE(wait_until([&] { return count == 100 && pcaptured.use_count() == 1; }));
+
+		// - not executed : released with the last reference
+		{
+			auto pexecutable = make_executable([pcaptured, &count] { ++count; });
+			EXPECT_EQ(pcaptured.use_count(), 2);
+		}
+		EXPECT_EQ(pcaptured.use_count(), 1);
+
+		// - the same executable posted twice : the captures live until the last execution
+		count = 0;
+		{
+			auto pexecutable = make_executable([pcaptured, &count] { ++count; });
+			EXPECT_TRUE(system_executor::post(pexecutable));
+			EXPECT_TRUE(system_executor::post(pexecutable));
+		}
+		EXPECT_TRUE(wait_until([&] { return count == 2 && pcaptured.use_count() == 1; }));
+	}
+
+	// 15) make_executable - a move-only capture, the return value is the result of process_execute()
+	TEST(CGDK10_executor, make_executable_move_only_and_result)
+	{
+		std::atomic<int> value{ 0 };
+		auto pvalue = std::make_unique<int>(7);
+		EXPECT_TRUE(system_executor::post(make_executable([pvalue = std::move(pvalue), &value] { value = *pvalue; })));
+		EXPECT_TRUE(wait_until([&] { return value == 7; }));
+
+		auto pexecutable = make_executable([] { return 42; });
+		EXPECT_EQ(pexecutable->process_execute(0, 0), 42);
+		auto pexecutable_void = make_executable([&value] { value = 9; });
+		EXPECT_EQ(pexecutable_void->process_execute(0, 0), 0);
+		EXPECT_EQ(value.load(), 9);
 	}
 }

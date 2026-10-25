@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <optional>
 
 #if defined(_SYS_EPOLL_H)
 
@@ -173,7 +174,8 @@ intptr_t net::io::receivable::Nstream::process_complete_receivable( intptr_t _ev
 			//      exception이 나도 그때까지 모은 것은 보낸 뒤 접속을 끊는다.
 			std::size_t required_bytes;
 			{
-				net::io::send_cork cork(this);
+				std::optional<net::io::send_cork> cork;
+				if (this->send_cork_enabled() && net::io::send_cork::is_enabled()) cork.emplace(this);
 
 				required_bytes = this->process_packet(this->m_buffer_received, address_peer);
 			}

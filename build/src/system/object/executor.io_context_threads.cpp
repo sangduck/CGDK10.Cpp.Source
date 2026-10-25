@@ -145,7 +145,7 @@ result_code executor::io_context_threads::start(context& _context)
 	this->m_thread_priority = thread_priority;
 	this->m_is_thread_priority_warned = false;
 	this->m_count_threads_blocked = 0;
-	this->m_count_threads_extra_threshold = static_cast<int>(api::get_core_count());
+	this->m_count_threads_extra_threshold = (std::min)(static_cast<int>(api::get_core_count()), (std::max)(0, thread_count - 1));
 	this->m_count_threads_extra_active = 0;
 	this->m_count_threads_extra_exist = 0;
 	this->m_count_threads_extra_max = thread_count;

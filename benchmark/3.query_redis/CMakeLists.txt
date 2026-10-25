@@ -71,3 +71,15 @@ TARGET_LINK_LIBRARIES ( check_batch PRIVATE
 	rt
 	Threads::Threads
 )
+
+ADD_EXECUTABLE ( bench_resp_parser bench_resp_parser.cpp )
+TARGET_INCLUDE_DIRECTORIES ( bench_resp_parser PRIVATE ${CGDK_ROOT}/include )
+TARGET_LINK_DIRECTORIES ( bench_resp_parser PRIVATE ${CGDK_ROOT}/lib/cgdk/sdk10/${PLATFORM_OS} )
+TARGET_LINK_LIBRARIES ( bench_resp_parser PRIVATE
+    CGDK10.server.query.redis_linux.Release
+    CGDK10.server.query_linux.Release
+    CGDK10.net.socket_linux.Release
+    CGDK10.system.object_linux.Release
+    rt
+    Threads::Threads
+)

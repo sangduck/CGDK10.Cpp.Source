@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <optional>
 #include <cstdlib>
 
 #if defined(_SYS_EPOLL_H)
@@ -435,7 +436,8 @@ void net::io::receivable::Nstream::process_complete_receivable_cq(intptr_t _resu
 		// 5) process message (send cork : the sends of this thread to this socket while processing are sent at once at the end)
 		std::size_t required_bytes;
 		{
-			net::io::send_cork cork(this);
+			std::optional<net::io::send_cork> cork;
+			if (this->send_cork_enabled() && net::io::send_cork::is_enabled()) cork.emplace(this);
 
 			required_bytes = this->process_packet(this->m_buffer_received, address_peer);
 		}
@@ -583,7 +585,8 @@ void net::io::receivable::Nstream::_process_receive_in_place(executor::Iio_conte
 			// 3) process message (send cork : the sends of this thread to this socket while processing are sent at once at the end)
 			std::size_t required_bytes;
 			{
-				net::io::send_cork cork(this);
+				std::optional<net::io::send_cork> cork;
+				if (this->send_cork_enabled() && net::io::send_cork::is_enabled()) cork.emplace(this);
 
 				required_bytes = this->process_packet(buffer_place, address_peer);
 			}

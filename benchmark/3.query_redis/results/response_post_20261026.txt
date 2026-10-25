@@ -1,0 +1,156 @@
+CASE post1 post=off round=0 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=pipeline op=get size=16 callers=1 pipeline=1000 ops=3170000 ops_per_s=1584943 mean_us=630.9 p50_us=634.9 p95_us=651.3 p99_us=667.6 p999_us=798.7 cpu_us_per_op=1.193 cpu_cores=1.89 server_cores=0.33 errors=0 voluntary_cs_per_kop=9.57 involuntary_cs_per_kop=0.00
+REQUEST_LATENCY samples=3169781 mean_us=200.7 p50_us=195.6 p95_us=333.8 p99_us=354.3 p999_us=440.3
+POST_LATENCY samples=3170000 mean_us=0.244 p95_us=0.724 p99_us=1.064
+CASE post1 post=on round=0 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=pipeline op=get size=16 callers=1 pipeline=1000 ops=2873000 ops_per_s=1436461 mean_us=696.2 p50_us=692.2 p95_us=708.6 p99_us=725.0 p999_us=831.5 cpu_us_per_op=1.290 cpu_cores=1.85 server_cores=0.28 errors=0 voluntary_cs_per_kop=9.18 involuntary_cs_per_kop=0.00
+REQUEST_LATENCY samples=2872782 mean_us=274.8 p50_us=276.5 p95_us=428.0 p99_us=444.4 p999_us=522.2
+POST_LATENCY samples=2873000 mean_us=0.214 p95_us=0.612 p99_us=0.956
+CASE post4 post=off round=0 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=pipeline op=get size=16 callers=4 pipeline=1000 ops=7746000 ops_per_s=3872888 mean_us=1032.9 p50_us=970.8 p95_us=1417.2 p99_us=1728.5 p999_us=2179.1 cpu_us_per_op=1.797 cpu_cores=6.96 server_cores=0.75 errors=0 voluntary_cs_per_kop=20.33 involuntary_cs_per_kop=0.21
+REQUEST_LATENCY samples=7745118 mean_us=468.9 p50_us=448.5 p95_us=831.5 p99_us=1204.2 p999_us=1630.2
+POST_LATENCY samples=7745525 mean_us=0.312 p95_us=0.724 p99_us=2.352
+CASE post4 post=on round=0 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=pipeline op=get size=16 callers=4 pipeline=1000 ops=7818000 ops_per_s=3908884 mean_us=1023.3 p50_us=1011.7 p95_us=1171.5 p99_us=1302.5 p999_us=2146.3 cpu_us_per_op=1.839 cpu_cores=7.19 server_cores=0.72 errors=0 voluntary_cs_per_kop=17.70 involuntary_cs_per_kop=0.07
+REQUEST_LATENCY samples=7817277 mean_us=497.2 p50_us=497.7 p95_us=741.4 p99_us=856.1 p999_us=1482.8
+POST_LATENCY samples=7817534 mean_us=0.279 p95_us=0.580 p99_us=1.192
+CASE callback4 post=off round=0 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=async mode=sync op=get size=16 callers=1024 pipeline=1 ops=10360579 ops_per_s=5180145 mean_us=197.6 p50_us=193.5 p95_us=244.7 p99_us=259.1 p999_us=288.8 cpu_us_per_op=0.361 cpu_cores=1.87 server_cores=0.91 errors=0 voluntary_cs_per_kop=3.91 involuntary_cs_per_kop=0.02
+CASE callback4 post=on round=0 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=async mode=sync op=get size=16 callers=1024 pipeline=1 ops=10198677 ops_per_s=5099201 mean_us=200.8 p50_us=197.6 p95_us=226.3 p99_us=276.5 p999_us=342.0 cpu_us_per_op=0.439 cpu_cores=2.24 server_cores=0.91 errors=0 voluntary_cs_per_kop=3.91 involuntary_cs_per_kop=0.03
+CASE batch4 post=off round=0 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=batch mode=pipeline op=get size=16 callers=4 pipeline=1000 ops=11499000 ops_per_s=5749342 mean_us=695.7 p50_us=692.2 p95_us=716.8 p99_us=725.0 p999_us=798.7 cpu_us_per_op=0.077 cpu_cores=0.44 server_cores=0.94 errors=0 voluntary_cs_per_kop=4.88 involuntary_cs_per_kop=0.00
+CASE batch4 post=on round=0 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=batch mode=pipeline op=get size=16 callers=4 pipeline=1000 ops=11428000 ops_per_s=5713843 mean_us=699.9 p50_us=700.4 p95_us=725.0 p99_us=733.2 p999_us=798.7 cpu_us_per_op=0.078 cpu_cores=0.44 server_cores=0.94 errors=0 voluntary_cs_per_kop=5.03 involuntary_cs_per_kop=0.00
+CASE sync1 post=off round=0 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=sync op=get size=16 callers=1 pipeline=1 ops=75551 ops_per_s=37775 mean_us=26.4 p50_us=26.2 p95_us=27.3 p99_us=29.3 p999_us=35.1 cpu_us_per_op=15.940 cpu_cores=0.60 server_cores=0.28 errors=0 voluntary_cs_per_kop=3001.14 involuntary_cs_per_kop=0.41
+CASE sync1 post=on round=0 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=sync op=get size=16 callers=1 pipeline=1 ops=76515 ops_per_s=38257 mean_us=26.1 p50_us=26.0 p95_us=26.8 p99_us=29.1 p999_us=36.6 cpu_us_per_op=15.873 cpu_cores=0.61 server_cores=0.29 errors=0 voluntary_cs_per_kop=3001.23 involuntary_cs_per_kop=0.39
+CASE coroutine1 post=off round=0 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=default send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+CONFIG system_io_backend=0 system_threads=34
+RESULT client=cgdk variant=coroutine mode=sync op=get size=16 callers=1 pipeline=1 ops=92729 ops_per_s=46364 mean_us=21.5 p50_us=21.4 p95_us=21.9 p99_us=23.9 p999_us=28.8 cpu_us_per_op=9.114 cpu_cores=0.42 server_cores=0.34 errors=0 voluntary_cs_per_kop=1000.96 involuntary_cs_per_kop=0.29
+CASE coroutine1 post=on round=0 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=default send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+CONFIG system_io_backend=0 system_threads=34
+RESULT client=cgdk variant=coroutine mode=sync op=get size=16 callers=1 pipeline=1 ops=92559 ops_per_s=46278 mean_us=21.6 p50_us=21.6 p95_us=22.1 p99_us=23.4 p999_us=27.8 cpu_us_per_op=9.108 cpu_cores=0.42 server_cores=0.34 errors=0 voluntary_cs_per_kop=1001.35 involuntary_cs_per_kop=0.28
+CASE heavy4 post=off round=0 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=5.0
+RESULT client=cgdk variant=async mode=sync op=get size=16 callers=64 pipeline=1 ops=1177467 ops_per_s=588718 mean_us=108.7 p50_us=108.0 p95_us=112.1 p99_us=115.2 p999_us=156.7 cpu_us_per_op=5.802 cpu_cores=3.42 server_cores=0.34 errors=0 voluntary_cs_per_kop=62.23 involuntary_cs_per_kop=0.10
+CASE heavy4 post=on round=0 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=5.0
+RESULT client=cgdk variant=async mode=sync op=get size=16 callers=64 pipeline=1 ops=1164296 ops_per_s=582132 mean_us=109.9 p50_us=109.1 p95_us=113.2 p99_us=117.2 p999_us=166.9 cpu_us_per_op=5.872 cpu_cores=3.42 server_cores=0.34 errors=0 voluntary_cs_per_kop=62.21 involuntary_cs_per_kop=0.10
+CASE post1 post=on round=1 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=pipeline op=get size=16 callers=1 pipeline=1000 ops=2846000 ops_per_s=1422981 mean_us=702.7 p50_us=700.4 p95_us=716.8 p99_us=733.2 p999_us=831.5 cpu_us_per_op=1.303 cpu_cores=1.85 server_cores=0.28 errors=0 voluntary_cs_per_kop=9.32 involuntary_cs_per_kop=0.00
+REQUEST_LATENCY samples=2845943 mean_us=276.7 p50_us=280.6 p95_us=432.1 p99_us=448.5 p999_us=518.1
+POST_LATENCY samples=2845996 mean_us=0.219 p95_us=0.620 p99_us=0.964
+CASE post1 post=off round=1 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=pipeline op=get size=16 callers=1 pipeline=1000 ops=3260000 ops_per_s=1629993 mean_us=613.4 p50_us=610.3 p95_us=626.7 p99_us=643.1 p999_us=725.0 cpu_us_per_op=1.159 cpu_cores=1.89 server_cores=0.33 errors=0 voluntary_cs_per_kop=9.86 involuntary_cs_per_kop=0.00
+REQUEST_LATENCY samples=3260349 mean_us=189.2 p50_us=185.3 p95_us=309.2 p99_us=329.7 p999_us=370.7
+POST_LATENCY samples=3260806 mean_us=0.249 p95_us=0.740 p99_us=1.020
+CASE post4 post=on round=1 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=pipeline op=get size=16 callers=4 pipeline=1000 ops=7833000 ops_per_s=3916426 mean_us=1021.4 p50_us=1011.7 p95_us=1155.1 p99_us=1253.4 p999_us=1384.4 cpu_us_per_op=1.840 cpu_cores=7.21 server_cores=0.73 errors=0 voluntary_cs_per_kop=18.16 involuntary_cs_per_kop=0.13
+REQUEST_LATENCY samples=7832014 mean_us=494.5 p50_us=501.8 p95_us=741.4 p99_us=839.7 p999_us=962.6
+POST_LATENCY samples=7832401 mean_us=0.282 p95_us=0.588 p99_us=1.208
+CASE post4 post=off round=1 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=pipeline op=get size=16 callers=4 pipeline=1000 ops=7611000 ops_per_s=3805395 mean_us=1051.1 p50_us=987.1 p95_us=1433.6 p99_us=1794.0 p999_us=2211.8 cpu_us_per_op=1.835 cpu_cores=6.98 server_cores=0.74 errors=0 voluntary_cs_per_kop=19.60 involuntary_cs_per_kop=0.09
+REQUEST_LATENCY samples=7610574 mean_us=478.8 p50_us=456.7 p95_us=856.1 p99_us=1237.0 p999_us=1663.0
+POST_LATENCY samples=7610003 mean_us=0.311 p95_us=0.724 p99_us=2.024
+CASE callback4 post=on round=1 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=async mode=sync op=get size=16 callers=1024 pipeline=1 ops=10189208 ops_per_s=5094425 mean_us=201.0 p50_us=197.6 p95_us=230.4 p99_us=288.8 p999_us=354.3 cpu_us_per_op=0.445 cpu_cores=2.27 server_cores=0.91 errors=0 voluntary_cs_per_kop=3.91 involuntary_cs_per_kop=0.03
+CASE callback4 post=off round=1 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=async mode=sync op=get size=16 callers=1024 pipeline=1 ops=10349760 ops_per_s=5174712 mean_us=197.9 p50_us=197.6 p95_us=214.0 p99_us=242.7 p999_us=288.8 cpu_us_per_op=0.349 cpu_cores=1.80 server_cores=0.92 errors=0 voluntary_cs_per_kop=3.91 involuntary_cs_per_kop=0.00
+CASE batch4 post=on round=1 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=batch mode=pipeline op=get size=16 callers=4 pipeline=1000 ops=11461000 ops_per_s=5730358 mean_us=697.9 p50_us=700.4 p95_us=716.8 p99_us=733.2 p999_us=798.7 cpu_us_per_op=0.076 cpu_cores=0.44 server_cores=0.95 errors=0 voluntary_cs_per_kop=4.94 involuntary_cs_per_kop=0.00
+CASE batch4 post=off round=1 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=batch mode=pipeline op=get size=16 callers=4 pipeline=1000 ops=11444000 ops_per_s=5721799 mean_us=699.1 p50_us=700.4 p95_us=716.8 p99_us=725.0 p999_us=798.7 cpu_us_per_op=0.072 cpu_cores=0.41 server_cores=0.94 errors=0 voluntary_cs_per_kop=4.89 involuntary_cs_per_kop=0.00
+CASE sync1 post=on round=1 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=sync op=get size=16 callers=1 pipeline=1 ops=76409 ops_per_s=38203 mean_us=26.2 p50_us=26.0 p95_us=27.3 p99_us=29.1 p999_us=36.6 cpu_us_per_op=15.956 cpu_cores=0.61 server_cores=0.29 errors=0 voluntary_cs_per_kop=3001.45 involuntary_cs_per_kop=0.34
+CASE sync1 post=off round=1 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=sync op=get size=16 callers=1 pipeline=1 ops=75505 ops_per_s=37752 mean_us=26.5 p50_us=26.0 p95_us=27.3 p99_us=30.3 p999_us=50.4 cpu_us_per_op=16.001 cpu_cores=0.60 server_cores=0.29 errors=0 voluntary_cs_per_kop=3001.14 involuntary_cs_per_kop=0.58
+CASE coroutine1 post=on round=1 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=default send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+CONFIG system_io_backend=0 system_threads=34
+RESULT client=cgdk variant=coroutine mode=sync op=get size=16 callers=1 pipeline=1 ops=93528 ops_per_s=46763 mean_us=21.4 p50_us=21.4 p95_us=21.9 p99_us=23.4 p999_us=27.5 cpu_us_per_op=9.117 cpu_cores=0.43 server_cores=0.35 errors=0 voluntary_cs_per_kop=1001.23 involuntary_cs_per_kop=0.30
+CASE coroutine1 post=off round=1 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=default send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+CONFIG system_io_backend=0 system_threads=34
+RESULT client=cgdk variant=coroutine mode=sync op=get size=16 callers=1 pipeline=1 ops=93223 ops_per_s=46610 mean_us=21.4 p50_us=21.4 p95_us=21.9 p99_us=23.9 p999_us=29.3 cpu_us_per_op=9.107 cpu_cores=0.42 server_cores=0.35 errors=0 voluntary_cs_per_kop=1001.00 involuntary_cs_per_kop=0.32
+CASE heavy4 post=on round=1 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=5.0
+RESULT client=cgdk variant=async mode=sync op=get size=16 callers=64 pipeline=1 ops=1159873 ops_per_s=579918 mean_us=110.3 p50_us=110.1 p95_us=114.2 p99_us=118.3 p999_us=162.8 cpu_us_per_op=5.893 cpu_cores=3.42 server_cores=0.35 errors=0 voluntary_cs_per_kop=62.20 involuntary_cs_per_kop=0.11
+CASE heavy4 post=off round=1 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=5.0
+RESULT client=cgdk variant=async mode=sync op=get size=16 callers=64 pipeline=1 ops=1176193 ops_per_s=588080 mean_us=108.8 p50_us=108.0 p95_us=113.2 p99_us=116.2 p999_us=146.4 cpu_us_per_op=5.813 cpu_cores=3.42 server_cores=0.35 errors=0 voluntary_cs_per_kop=62.29 involuntary_cs_per_kop=0.13
+CASE post1 post=off round=2 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=pipeline op=get size=16 callers=1 pipeline=1000 ops=3226000 ops_per_s=1612953 mean_us=619.9 p50_us=618.5 p95_us=634.9 p99_us=643.1 p999_us=749.6 cpu_us_per_op=1.173 cpu_cores=1.89 server_cores=0.33 errors=0 voluntary_cs_per_kop=9.42 involuntary_cs_per_kop=0.00
+REQUEST_LATENCY samples=3226219 mean_us=197.7 p50_us=193.5 p95_us=325.6 p99_us=342.0 p999_us=391.2
+POST_LATENCY samples=3226319 mean_us=0.241 p95_us=0.740 p99_us=1.020
+CASE post1 post=on round=2 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=pipeline op=get size=16 callers=1 pipeline=1000 ops=2806000 ops_per_s=1402961 mean_us=712.7 p50_us=708.6 p95_us=733.2 p99_us=757.8 p999_us=888.8 cpu_us_per_op=1.319 cpu_cores=1.85 server_cores=0.28 errors=0 voluntary_cs_per_kop=9.56 involuntary_cs_per_kop=0.01
+REQUEST_LATENCY samples=2806003 mean_us=280.3 p50_us=284.7 p95_us=436.2 p99_us=456.7 p999_us=553.0
+POST_LATENCY samples=2805951 mean_us=0.223 p95_us=0.628 p99_us=0.972
+CASE post4 post=off round=2 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=pipeline op=get size=16 callers=4 pipeline=1000 ops=7638000 ops_per_s=3818891 mean_us=1047.5 p50_us=987.1 p95_us=1450.0 p99_us=1777.7 p999_us=2146.3 cpu_us_per_op=1.825 cpu_cores=6.97 server_cores=0.74 errors=0 voluntary_cs_per_kop=20.12 involuntary_cs_per_kop=0.05
+REQUEST_LATENCY samples=7637413 mean_us=478.2 p50_us=456.7 p95_us=856.1 p99_us=1237.0 p999_us=1564.7
+POST_LATENCY samples=7637264 mean_us=0.312 p95_us=0.724 p99_us=2.160
+CASE post4 post=on round=2 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=pipeline op=get size=16 callers=4 pipeline=1000 ops=7739000 ops_per_s=3869388 mean_us=1033.6 p50_us=1019.9 p95_us=1187.8 p99_us=1269.8 p999_us=1450.0 cpu_us_per_op=1.864 cpu_cores=7.21 server_cores=0.73 errors=0 voluntary_cs_per_kop=17.45 involuntary_cs_per_kop=0.14
+REQUEST_LATENCY samples=7739574 mean_us=498.4 p50_us=501.8 p95_us=749.6 p99_us=856.1 p999_us=987.1
+POST_LATENCY samples=7739924 mean_us=0.286 p95_us=0.604 p99_us=1.224
+CASE callback4 post=off round=2 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=async mode=sync op=get size=16 callers=1024 pipeline=1 ops=10261735 ops_per_s=5130692 mean_us=199.6 p50_us=195.6 p95_us=244.7 p99_us=259.1 p999_us=292.9 cpu_us_per_op=0.361 cpu_cores=1.85 server_cores=0.91 errors=0 voluntary_cs_per_kop=3.91 involuntary_cs_per_kop=0.02
+CASE callback4 post=on round=2 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=async mode=sync op=get size=16 callers=1024 pipeline=1 ops=10079066 ops_per_s=5039401 mean_us=203.2 p50_us=199.7 p95_us=236.5 p99_us=288.8 p999_us=350.2 cpu_us_per_op=0.450 cpu_cores=2.27 server_cores=0.90 errors=0 voluntary_cs_per_kop=3.91 involuntary_cs_per_kop=0.02
+CASE batch4 post=off round=2 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=batch mode=pipeline op=get size=16 callers=4 pipeline=1000 ops=11394000 ops_per_s=5696840 mean_us=702.1 p50_us=700.4 p95_us=716.8 p99_us=725.0 p999_us=798.7 cpu_us_per_op=0.071 cpu_cores=0.41 server_cores=0.94 errors=0 voluntary_cs_per_kop=4.99 involuntary_cs_per_kop=0.00
+CASE batch4 post=on round=2 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=batch mode=pipeline op=get size=16 callers=4 pipeline=1000 ops=11397000 ops_per_s=5698365 mean_us=701.8 p50_us=700.4 p95_us=725.0 p99_us=733.2 p999_us=806.9 cpu_us_per_op=0.074 cpu_cores=0.42 server_cores=0.94 errors=0 voluntary_cs_per_kop=4.95 involuntary_cs_per_kop=0.00
+CASE sync1 post=off round=2 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=sync op=get size=16 callers=1 pipeline=1 ops=76994 ops_per_s=38496 mean_us=26.0 p50_us=25.7 p95_us=26.8 p99_us=29.1 p999_us=34.6 cpu_us_per_op=15.787 cpu_cores=0.61 server_cores=0.29 errors=0 voluntary_cs_per_kop=3001.08 involuntary_cs_per_kop=0.30
+CASE sync1 post=on round=2 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+RESULT client=cgdk variant=shared mode=sync op=get size=16 callers=1 pipeline=1 ops=75707 ops_per_s=37852 mean_us=26.4 p50_us=26.2 p95_us=27.3 p99_us=29.6 p999_us=36.6 cpu_us_per_op=15.998 cpu_cores=0.61 server_cores=0.28 errors=0 voluntary_cs_per_kop=3001.06 involuntary_cs_per_kop=0.44
+CASE coroutine1 post=off round=2 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=default send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=0.0
+CONFIG system_io_backend=0 system_threads=34
+RESULT client=cgdk variant=coroutine mode=sync op=get size=16 callers=1 pipeline=1 ops=92209 ops_per_s=46104 mean_us=21.7 p50_us=21.6 p95_us=22.4 p99_us=24.2 p999_us=28.3 cpu_us_per_op=9.116 cpu_cores=0.42 server_cores=0.34 errors=0 voluntary_cs_per_kop=1001.19 involuntary_cs_per_kop=0.31
+CASE coroutine1 post=on round=2 exit=0
+CONFIG io_backend=0 io_threads=1 coroutine_executor=default send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=0.0
+CONFIG system_io_backend=0 system_threads=34
+RESULT client=cgdk variant=coroutine mode=sync op=get size=16 callers=1 pipeline=1 ops=92162 ops_per_s=46079 mean_us=21.7 p50_us=21.6 p95_us=22.1 p99_us=23.9 p999_us=27.8 cpu_us_per_op=9.166 cpu_cores=0.42 server_cores=0.34 errors=0 voluntary_cs_per_kop=1001.00 involuntary_cs_per_kop=0.28
+CASE heavy4 post=off round=2 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=0 response_executor=io callback_work_us=5.0
+RESULT client=cgdk variant=async mode=sync op=get size=16 callers=64 pipeline=1 ops=1173554 ops_per_s=586761 mean_us=109.0 p50_us=109.1 p95_us=113.2 p99_us=116.2 p999_us=156.7 cpu_us_per_op=5.818 cpu_cores=3.41 server_cores=0.35 errors=0 voluntary_cs_per_kop=62.33 involuntary_cs_per_kop=0.12
+CASE heavy4 post=on round=2 exit=0
+CONFIG io_backend=0 io_threads=4 coroutine_executor=none send_defer=1 request_window=8 resume_executor=default encode_on_session=1 post_response=1 response_executor=io callback_work_us=5.0
+RESULT client=cgdk variant=async mode=sync op=get size=16 callers=64 pipeline=1 ops=1163523 ops_per_s=581751 mean_us=110.0 p50_us=109.1 p95_us=113.2 p99_us=118.3 p999_us=162.8 cpu_us_per_op=5.876 cpu_cores=3.42 server_cores=0.35 errors=0 voluntary_cs_per_kop=62.19 involuntary_cs_per_kop=0.10

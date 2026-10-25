@@ -14,6 +14,8 @@
 //*****************************************************************************
 #pragma once
 #include <atomic>
+#include <cerrno>
+#include <limits>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -56,6 +58,15 @@ struct options
 	double		seconds = 3.0;
 	double		warmup = 0.5;
 	bool		populate = false;	// only fills the keys (SET) and exits
+	std::size_t request_send_window = 8;
+	std::string resume_executor = "default";
+	bool encode_on_session = true;
+    bool post_response = true;
+    std::string response_executor = "io";
+    double callback_work_us = 0;
+	bool post_latency = false;
+	bool		request_latency = false; // CGDK pipeline: also record each command from submission to callback
+	bool		enable_send_defer = true; // CGDK querier option; independent of the explicit --defer scope
 	bool		defer = false;		// cgdk : send_defer::scope around a batch (pipeline)
 };
 
@@ -85,6 +96,45 @@ inline options parse(int argc, char** argv)
 		else if (k == "warmup") o.warmup = std::atof(v.c_str());
 		else if (k == "populate") o.populate = true;
 		else if (k == "defer") o.defer = true;
+		else if (k == "post-response") {
+            bool enabled;
+            if (v == "on" || v == "true" || v == "1") enabled = true;
+            else if (v == "off" || v == "false" || v == "0") enabled = false;
+            else { std::fprintf(stderr, "invalid boolean option\n"); std::exit(2); }
+            o.post_response = enabled;
+        }
+        else if (k == "response-executor") {
+            if (v != "io" && v != "system" && v != "private") { std::fprintf(stderr, "invalid response executor\n"); std::exit(2); }
+            o.response_executor = v;
+        }
+        else if (k == "callback-work-us") { o.callback_work_us = std::atof(v.c_str()); if (o.callback_work_us < 0) std::exit(2); }
+        else if (k == "post-latency") o.post_latency = true;
+		else if (k == "encode-on-session") {
+            if (v == "on" || v == "true" || v == "1") o.encode_on_session = true;
+            else if (v == "off" || v == "false" || v == "0") o.encode_on_session = false;
+            else { std::fprintf(stderr, "invalid --encode-on-session\n"); std::exit(2); }
+        }
+		else if (k == "request-latency") o.request_latency = true;
+		else if (k == "request-window")
+		{
+			char* end = nullptr; errno = 0;
+			const auto count = std::strtoull(v.c_str(), &end, 10);
+			if (v.empty() || v.front() == '-' || *end || errno == ERANGE || count > (std::numeric_limits<std::size_t>::max)())
+			{ std::fprintf(stderr, "invalid --request-window\n"); std::exit(2); }
+			o.request_send_window = static_cast<std::size_t>(count);
+		}
+		else if (k == "resume-executor")
+		{
+			if (v != "default" && v != "system" && v != "private")
+			{ std::fprintf(stderr, "invalid --resume-executor\n"); std::exit(2); }
+			o.resume_executor = v;
+		}
+		else if (k == "send-defer")
+		{
+			if (v == "1" || v == "true" || v == "on") o.enable_send_defer = true;
+			else if (v == "0" || v == "false" || v == "off") o.enable_send_defer = false;
+			else { std::fprintf(stderr, "invalid --send-defer: %s\n", v.c_str()); std::exit(2); }
+		}
 		else { std::fprintf(stderr, "unknown option: %s\n", argv[i]); std::exit(2); }
 	}
 	// - large values : keep the key space under ~256MB
@@ -158,12 +208,14 @@ struct caller_stat
 {
 	histogram	latency;
 	uint64_t	ops = 0;
+	uint64_t total_ns = 0;
 
 	// - '_ops' commands completed together (a batch) after '_ns'
 	void complete(uint64_t _ns, uint64_t _ops = 1) noexcept
 	{
 		if (g_phase.load(std::memory_order_relaxed) != PHASE_MEASURE) return;
 		latency.record(_ns);
+		total_ns += _ns;
 		ops += _ops;
 	}
 };
@@ -201,6 +253,8 @@ template <class FJOIN>
 void run_and_report(const char* _client, const options& _o, std::vector<caller_stat>& _stats, FJOIN&& _join)
 {
 	std::this_thread::sleep_for(std::chrono::duration<double>(_o.warmup));
+	rusage switches0{};
+	getrusage(RUSAGE_SELF, &switches0);
 	const double cpu0 = cpu_seconds();
 	const double srv0 = server_cpu_seconds();
 	const auto t0 = clock::now();
@@ -209,21 +263,26 @@ void run_and_report(const char* _client, const options& _o, std::vector<caller_s
 	g_phase.store(PHASE_STOP);
 	const auto t1 = clock::now();
 	const double cpu1 = cpu_seconds();
+	rusage switches1{};
+	getrusage(RUSAGE_SELF, &switches1);
 	const double srv1 = server_cpu_seconds();
 	_join();
 
 	histogram h;
-	uint64_t ops = 0;
-	for (auto& s : _stats) { h.merge(s.latency); ops += s.ops; }
+	uint64_t ops = 0, total_ns = 0;
+	for (auto& s : _stats) { h.merge(s.latency); ops += s.ops; total_ns += s.total_ns; }
 
 	const double sec = std::chrono::duration<double>(t1 - t0).count();
 	const double cpu_us_per_op = (ops != 0) ? (cpu1 - cpu0) * 1e6 / static_cast<double>(ops) : 0.0;
 
-	std::printf("RESULT client=%s variant=%s mode=%s op=%s size=%d callers=%d pipeline=%d ops=%llu ops_per_s=%.0f p50_us=%.1f p99_us=%.1f p999_us=%.1f cpu_us_per_op=%.3f cpu_cores=%.2f server_cores=%.2f errors=%llu\n",
+	std::printf("RESULT client=%s variant=%s mode=%s op=%s size=%d callers=%d pipeline=%d ops=%llu ops_per_s=%.0f mean_us=%.1f p50_us=%.1f p95_us=%.1f p99_us=%.1f p999_us=%.1f cpu_us_per_op=%.3f cpu_cores=%.2f server_cores=%.2f errors=%llu voluntary_cs_per_kop=%.2f involuntary_cs_per_kop=%.2f\n",
 		_client, _o.variant.empty() ? "-" : _o.variant.c_str(), _o.mode.c_str(), _o.op.c_str(), _o.size, _o.callers, _o.pipeline,
 		static_cast<unsigned long long>(ops), static_cast<double>(ops) / sec,
-		h.percentile_us(0.50), h.percentile_us(0.99), h.percentile_us(0.999),
-		cpu_us_per_op, (cpu1 - cpu0) / sec, (srv0 < 0.0) ? -1.0 : (srv1 - srv0) / sec, static_cast<unsigned long long>(g_errors.load()));
+		h.total() ? double(total_ns) / h.total() / 1000.0 : 0.0,
+		h.percentile_us(0.50), h.percentile_us(0.95), h.percentile_us(0.99), h.percentile_us(0.999),
+		cpu_us_per_op, (cpu1 - cpu0) / sec, (srv0 < 0.0) ? -1.0 : (srv1 - srv0) / sec, static_cast<unsigned long long>(g_errors.load()),
+		ops ? (switches1.ru_nvcsw - switches0.ru_nvcsw) * 1000.0 / ops : 0.0,
+		ops ? (switches1.ru_nivcsw - switches0.ru_nivcsw) * 1000.0 / ops : 0.0);
 	std::fflush(stdout);
 }
 

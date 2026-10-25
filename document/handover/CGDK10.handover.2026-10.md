@@ -830,6 +830,21 @@ r11579 의 코드를 네 영역(io_uring completion, 실행기 · strand, window
   - r11592 : http query 의 chunk 마다 빈 std::function 호출(chunked 응답이 모두 502). r11593 : server.web 상태 줄 `HTTP/1.1 <code> <reason>`(전에는 이유 뒤 코드, 코드 0 은 500), folder 자식 해제, 빈 tail 송신 제거. 헤더 변경(`server_web.definitions_message.h`).
 - **헤더 변경 정리** : executor.strand.h, executor.queue_list(_threads).h, executor.io_context(_threads).h, Ischedulable.h, util.Icryptable.h, net.io.receivable.stream_crypt.h, net.io.sendable.tcp_crypt.async_gather_buffered.h, raw gather 두 개, net.io.sendable.tcp_async_gather(_buffered).h(linux), time_event 헤더 5개, server_web.definitions_message.h -> CGDK lib 전체와 gruma 재빌드.
 
+### 1.45 Redis 요청/응답 경로와 비교 결과 (r11623, 2026-10-26)
+
+- `execute_query`로 동기/코루틴 이름 통합. 입력은 호출 중 소유하고 세션이 전송 직전에 인코딩한다. `m_buffer_query`/`m_lockable_state_query` 대신 세대별 원자적 완료 상태와 wait/notify를 사용한다.
+- start에서 고정한 연결을 사용하고 stop에서 접근 가드를 닫아 실패시킨다. 일반 공유 연결 선택은 TLS 캐시/세션별 참조 가드이며 querier mutex가 없다. 전용/관리/대기열은 필요한 락이 남는다. TLS 캐시의 strong 참조는 닫힌 세션 객체를 thread의 다음 사용/종료까지 보존할 수 있지만 stop 후 새 요청은 거부한다.
+- circular_list 미전송/응답대기 큐를 유지한다. 개별 응답은 도착 즉시 완료하고 명시적 batch만 전체 결과를 모아 완료한다. batch 응답은 최대256개씩 매칭/통계를 합산한다. RESP memchr 적용, AVX2 미채택.
+- `post_execute_query` 사용자 callback post 기본 on. `START_PARAMETER.post_response=false`로 직접 처리, `presponse_executor` 미지정이면 Redis I/O. 동기 단건/배치 및 callback 없는 완료 통지는 직접 처리한다. 파싱/매칭은 I/O에 남는다. post가 모든 부하에서 빠른 것은 아니다(1연결 개별 등록 -11.8%, 4연결 +2.4%).
+- Redis 자동 send_cork/전용 옵션 제거. 공용 TCP의 cork 기능과 send_defer 옵션은 유지한다. coroutine은 편의성 제공이 목적이며 Redis I/O 기본/외부 executor 선택을 지원한다.
+- I/O worker 1개에서 callback 내 동기 Redis 요청이 진행되도록 여분 worker 활성화 임계값을 조정했다. 이 변화는 공용 executor 코드이므로 다른 사용자도 재빌드/회귀 확인 대상이다.
+- 최종 비교60회 모두 errors=0. GET16B: CGDK/hiredis 단건 동기38,344/54,425/s, 비동기1024·4연결5.077/5.177M/s, batch1000·1연결4.468/3.736M/s, 4연결5.698/5.700M/s. 최신 기본값으로 측정했다. loopback 밖의 성능을 보장하지 않는다.
+- 원본/요약/조건/정규화 소스 해시는 `benchmark/3.query_redis/results/clients_current_20261026.*`. post 비교42회는 `response_post_20261026.*`. `compare_clients.py --profile=current`로 동일60회 조건을 재실행한다. 생성 svn_version.h는 공개 해시 목록에서 제외한다.
+- 검증: Windows/Linux Release Redis 테스트 각각50개(동기 단건/배치의 inline 완료 포함), 실제 Redis 순서20000건, 혼합4800건, 1/4연결 affinity 각32000건 및 동시 요청 각12000건 오류0, callback 동기 요청/stop 및 stop/restart 통과. Windows Net/System, Linux Net/Query/Redis 격리 빌드. Windows 성능/전체 SDK/GRUMA 검증은 아니다.
+- Nstream/REQUEST_QUERY/Iquery/execute_result 등 공개 구조 변경으로 SDK 라이브러리와 모든 사용 프로그램을 함께 재빌드한다. 단건 동기 처리량/개별 비동기 p99 개선은 남아 있다. 별도 작업의 zerocopy 기준/벤치 주석 및 VS 경로 수정4개는 이번 제출에서 제외했다.
+
+---
+
 ## 2. 남은 일 (우선순위 순)
 
 1. ~~Ntcp_reconnect 즉시 실패 시 재접속 미예약~~ - 해결(r11404, 1.12).

@@ -47,10 +47,13 @@ class net::io::receivable::Nstream :
 	virtual public				net::io::Ipacketable
 {
 protected:
+			bool m_send_cork_enabled = true;
 			Nstream();
 	virtual	~Nstream() noexcept;
 
 public:
+			void send_cork_enabled(bool enabled) noexcept { this->m_send_cork_enabled = enabled; }
+	[[nodiscard]] bool send_cork_enabled() const noexcept { return this->m_send_cork_enabled; }
 			std::size_t			minimum_message_buffer_size(std::size_t _size) noexcept;
 	[[nodiscard]] std::size_t	minimum_message_buffer_size() noexcept;
 			std::size_t			maximum_message_buffer_size(std::size_t _size) noexcept;

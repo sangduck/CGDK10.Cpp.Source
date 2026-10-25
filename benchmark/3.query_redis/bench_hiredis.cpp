@@ -14,6 +14,9 @@
 //*****************************************************************************
 #include "bench_common.h"
 #include <hiredis/hiredis.h>
+#include <hiredis/async.h>
+#include <hiredis/adapters/poll.h>
+#include <memory>
 
 using namespace bench;
 
@@ -88,10 +91,104 @@ static void populate(const options& _o)
 	std::printf("populated %d keys x %d bytes\n", _o.keys, _o.size);
 }
 
+// Callback chains: one outstanding command per chain, shared over N connections.
+// The bundled poll adapter needs no third-party event-loop library.
+struct async_worker;
+struct async_chain
+{
+	async_worker* worker = nullptr;
+	caller_stat* stat = nullptr;
+	uint64_t n = 0;
+	uint64_t started = 0;
+	void post();
+};
+struct async_worker
+{
+	const options* opts = nullptr;
+	const std::vector<std::string>* keys = nullptr;
+	const std::string* value = nullptr;
+	redisAsyncContext* context = nullptr;
+	std::vector<async_chain> chains;
+	std::size_t active = 0;
+	bool disconnected = false;
+	std::thread thread;
+};
+static void async_reply(redisAsyncContext*, void* reply, void* data)
+{
+	auto& chain = *static_cast<async_chain*>(data);
+	const auto& o = *chain.worker->opts;
+	auto* r = static_cast<redisReply*>(reply);
+	const bool ok = r && (o.op == "get" ?
+		(r->type == REDIS_REPLY_STRING && r->len == static_cast<std::size_t>(o.size)) : r->type == REDIS_REPLY_STATUS);
+	if (!ok) g_errors.fetch_add(1, std::memory_order_relaxed);
+	chain.stat->complete(now_ns() - chain.started);
+	chain.post();
+}
+void async_chain::post()
+{
+	if (g_phase.load(std::memory_order_relaxed) == PHASE_STOP)
+	{
+		if (--worker->active == 0) redisAsyncDisconnect(worker->context);
+		return;
+	}
+	const auto& key = (*worker->keys)[(n++) % worker->keys->size()];
+	const bool get = worker->opts->op == "get";
+	const char* argv[] = { get ? "GET" : "SET", key.data(), worker->value->data() };
+	const size_t lengths[] = { 3, key.size(), worker->value->size() };
+	started = now_ns();
+	if (redisAsyncCommandArgv(worker->context, async_reply, this, get ? 2 : 3, argv, lengths) != REDIS_OK)
+	{
+		std::fprintf(stderr, "hiredis async submit failed\n");
+		std::exit(1);
+	}
+}
+static void run_async(const options& o)
+{
+	if (o.mode != "sync" || o.callers < 1) { std::fprintf(stderr, "async requires mode=sync and callers>0\n"); std::exit(2); }
+	const auto value = value_of(o.size);
+	std::vector<std::string> keys;
+	for (int i = 0; i < o.keys; ++i) keys.push_back(key_of(i));
+	const int count = std::max(1, std::min(o.sessions > 0 ? o.sessions : 1, o.callers));
+	std::vector<caller_stat> stats(o.callers);
+	std::vector<std::unique_ptr<async_worker>> workers;
+	for (int i = 0; i < count; ++i)
+	{
+		auto w = std::make_unique<async_worker>();
+		w->opts = &o; w->keys = &keys; w->value = &value;
+		workers.push_back(std::move(w));
+	}
+	for (int i = 0; i < o.callers; ++i)
+	{
+		auto& w = *workers[i % count];
+		w.chains.push_back(async_chain{ &w, &stats[i], static_cast<uint64_t>(i) * 7919, 0 });
+	}
+	for (auto& w : workers)
+		w->thread = std::thread([pw = w.get()] {
+			pw->context = redisAsyncConnect(pw->opts->host.c_str(), pw->opts->port);
+			if (!pw->context || pw->context->err || redisPollAttach(pw->context) != REDIS_OK)
+			{ std::fprintf(stderr, "hiredis async connect failed\n"); std::exit(1); }
+			pw->context->data = pw;
+			redisAsyncSetDisconnectCallback(pw->context, [](const redisAsyncContext* c, int status) {
+				auto* w = static_cast<async_worker*>(c->data);
+				w->disconnected = true;
+				if (status != REDIS_OK) g_errors.fetch_add(1, std::memory_order_relaxed);
+			});
+			redisAsyncSetConnectCallback(pw->context, [](const redisAsyncContext*, int status) {
+				if (status != REDIS_OK) { std::fprintf(stderr, "hiredis async connection failed\n"); std::exit(1); }
+			});
+			pw->active = pw->chains.size();
+			for (auto& chain : pw->chains) chain.post();
+			while (!pw->disconnected)
+				if (redisPollTick(pw->context, 0.1) < 0) { std::fprintf(stderr, "hiredis poll failed\n"); std::exit(1); }
+		});
+	run_and_report("hiredis.async", o, stats, [&] { for (auto& w : workers) w->thread.join(); });
+}
+
 int main(int argc, char** argv)
 {
 	auto o = parse(argc, argv);
 	if (o.populate) { populate(o); return 0; }
+	if (o.variant == "async") { run_async(o); return 0; }
 
 	std::vector<caller_stat> stats(o.callers);
 	std::vector<std::thread> threads;

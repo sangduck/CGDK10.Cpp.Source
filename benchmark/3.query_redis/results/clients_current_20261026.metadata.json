@@ -1,0 +1,23 @@
+{
+  "started": "2026-10-26T00:26:52+0900",
+  "host": "sakpung",
+  "kernel": "6.12.0-273.el10.x86_64",
+  "build": "/home/sangduck/redis_bench/codex_resume_window_20261025/bench-after",
+  "seconds": 2.0,
+  "warmup": 0.3,
+  "rounds": 3,
+  "cpus": "0-7,16-23",
+  "port": 6390,
+  "keys": 1024,
+  "hiredis_async_adapter": "poll",
+  "latency": "Per command for single/async chains; full group for pipeline. CPU includes all client threads.",
+  "profile": "current",
+  "source_base": "SVN r11622 + submitted Redis changes",
+  "post_response_default": true,
+  "synchronous_completion": "inline",
+  "redis_send_cork": "removed",
+  "redis_version": "8.2.10",
+  "hiredis_version": "1.3.0",
+  "redis_plus_plus_version": "1.3.15",
+  "boost_version": "1.90.0"
+}

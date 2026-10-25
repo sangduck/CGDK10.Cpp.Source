@@ -1,6 +1,18 @@
 #include "pch.h"
+#include <cstring>
 
 using namespace CGDK;
+
+namespace
+{
+	char* redis_resp_find_cr(char* first, char* last) noexcept
+	{
+		// Common short status replies avoid the library call.
+		for (unsigned i = 0; i < 4 && first < last; ++i, ++first)
+			if (*first == '\r') return first;
+		return static_cast<char*>(std::memchr(first, '\r', static_cast<std::size_t>(last - first)));
+	}
+}
 
 #define	BUFFER_MIN	4096
 
@@ -25,7 +37,14 @@ std::size_t net::io::packetable::Nresp::process_packet( shared_buffer& _buffer, 
 	const uint16_t TERMINAL_CHARACTER = ('\n' << 8) | '\r';
 
 	// check) _buffer.data_가 0이어서는 안된다.
-	THROW_IF(_buffer.data() == nullptr, throwable::failure(eRESULT::INVALID_ARGUMENT), LOG_DEBUG << "(err ) CGDK.net.socket: _buffer.data_ is nullptr. _buffer.size_: " << _buffer.size() << " " __CGFUNCTION__);
+	if (_buffer.data() == nullptr)
+	{
+		// log)
+		LOG_DEBUG << "(err ) CGDK.net.socket: _buffer.data_ is nullptr. _buffer.size_: " << _buffer.size() << " " __CGFUNCTION__;
+
+		// raise)
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
+	}
 
 	// check) _buffer->size_가 0이어서는 안된다.
 	CGASSERT_ERROR(_buffer.size() != 0)
@@ -69,16 +88,8 @@ std::size_t net::io::packetable::Nresp::process_packet( shared_buffer& _buffer, 
 			}
 
 			// - Message 사전 처리 프로세스를 호출
-			process_pre_message(this->m_msg_resp);
-
-			// - Message 처리 프로세스 호출
-			process_message(this->m_msg_resp);
-
-			// - reset msg_resp
+			count_message += static_cast<int>(this->process_resp_message(this->m_msg_resp, temp_buffer));
 			this->m_msg_resp.data.reset();
-
-			// - Packet 수증가.
-			++count_message;
 		}
 
 		// 2) pross message
@@ -97,33 +108,30 @@ std::size_t net::io::packetable::Nresp::process_packet( shared_buffer& _buffer, 
 
 				// check) 완전히 처리하지 못했다면(result==false일 경우) 처리하던 Redis객체를 저장해 놓고 끝낸다.
 				//        (데이터가 더 도착하면 이어서 처리하기 위해...)
-				BREAK_IF(result == false);
+				if (result == false)
+					break;
 
 				// - process pre-message
-				this->process_pre_message(this->m_msg_resp);
-
-				// - process message
-				this->process_message(this->m_msg_resp);
-
-				// - reset msg_resp
+				count_message += static_cast<int>(this->process_resp_message(this->m_msg_resp, temp_buffer));
 				this->m_msg_resp.data.reset();
 			}
 			else
 			{
 				// check) 
-				BREAK_IF(temp_buffer.size() < 6);
+				if (temp_buffer.size() < 6)
+					break;
 
 				// check) 
-				THROW_IF((*temp_buffer.data<uint32_t>() != CONST_PING) || (*temp_buffer.data<uint16_t>(4) != TERMINAL_CHARACTER), throwable::failure(eRESULT::INVALID_ARGUMENT));
+				if((*temp_buffer.data<uint32_t>() != CONST_PING) || (*temp_buffer.data<uint16_t>(4) != TERMINAL_CHARACTER))
+					throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
 				// - replay ping
 				this->send(buf_PONG);
 
 				temp_buffer += offset(6);
+				++count_message;
 			}
 
-			// - increase message count
-			++count_message;
 		}
 
 		// statistics) Receie받은 Message수를 증가.
@@ -135,7 +143,8 @@ std::size_t net::io::packetable::Nresp::process_packet( shared_buffer& _buffer, 
 		this->m_msg_resp.data.reset();
 
 		// check) 최대 메시지 크기보다 버퍼가 커진 경우 Exception을 던진다.
-		THROW_IF(temp_buffer.size() + BUFFER_MIN > MAX_TCP_MESSAGE_SIZE, throwable::failure(eRESULT::OVERFLOW_ERROR));
+		if(temp_buffer.size() + BUFFER_MIN > MAX_TCP_MESSAGE_SIZE)
+			throw throwable::failure(eRESULT::OVERFLOW_ERROR);
 
 		// reraise) an incomplete message returns false (it does not come here) : a parse error or an exception of
 		//          process_message(). swallowed, the partial state stayed (the replies were matched to the wrong queries)
@@ -175,7 +184,8 @@ bool do_extract_integer(buffer_view& _buffer, int64_t& _result)
 	bool is_negative = false;
 
 	// check)
-	RETURN_IF(pos_now >= pos_end, false);
+	if(pos_now >= pos_end)
+		return false;
 
 	// 2) get sign
 	if (*pos_now == '-')
@@ -191,18 +201,23 @@ bool do_extract_integer(buffer_view& _buffer, int64_t& _result)
 	for (;;)
 	{
 		// check) not complete yet
-		RETURN_IF(pos_now >= pos_end, false);
+		if(pos_now >= pos_end)
+			return false;
 
 		// - 값을 읽는다.
 		char temp_num = *pos_now;
 
-		BREAK_IF(temp_num == '\r');
+		// check)
+		if(temp_num == '\r')
+			break;
 
 		// check) 
-		THROW_IF(temp_num<'0' || temp_num>'9', throwable::failure(eRESULT::INVALID_ARGUMENT));
+		if(temp_num<'0' || temp_num>'9')
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
 		// check) overflow
-		THROW_IF(value > ((std::numeric_limits<int64_t>::max)() - 9) / 10, throwable::failure(eRESULT::INVALID_ARGUMENT));
+		if(value > ((std::numeric_limits<int64_t>::max)() - 9) / 10)
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
 		// - value...
 		value = value * 10 - '0' + temp_num;
@@ -212,13 +227,16 @@ bool do_extract_integer(buffer_view& _buffer, int64_t& _result)
 	}
 
 	// check) no digit
-	THROW_IF(pos_now == pos_begin + (is_negative ? 1 : 0), throwable::failure(eRESULT::INVALID_ARGUMENT));
+	if(pos_now == pos_begin + (is_negative ? 1 : 0))
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
 	// check) '\r' is the last byte received : '\n' is not here yet
-	RETURN_IF(pos_now + 1 >= pos_end, false);
+	if(pos_now + 1 >= pos_end)
+		return false;
 
 	// check) ...
-	THROW_IF(*(pos_now + 1) != '\n', throwable::failure(eRESULT::INVALID_ARGUMENT));
+	if(*(pos_now + 1) != '\n')
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
 	// 3) negative
 	if (is_negative)
@@ -246,23 +264,17 @@ bool do_extract_text(resp_data& _resp_data, shared_buffer& _buffer)
 	char* pos_now = pos_begin + 1;
 	char* pos_end = pos_begin + _buffer.size();
 
-	// 2) parsing integer value
-	for (;;)
-	{
-		// check) 끝까지 왔다면 0을 리턴한다.
-		RETURN_IF(pos_now >= pos_end, false);
-
-		BREAK_IF(*pos_now == '\r');
-
-		// - next
-		++pos_now;
-	}
+	pos_now = redis_resp_find_cr(pos_now, pos_end);
+	if (pos_now == nullptr)
+		return false;
 
 	// check) '\r' is the last byte received : '\n' is not here yet
-	RETURN_IF(pos_now + 1 >= pos_end, false);
+	if(pos_now + 1 >= pos_end)
+		return false;
 
 	// check) 문자열의 끝이 '\r\n'이 아니라면 exception을 던진다.
-	THROW_IF(*(pos_now + 1) != '\n', throwable::failure(eRESULT::INVALID_ARGUMENT));
+	if(*(pos_now + 1) != '\n')
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 
 	// 3) set...
 	_buffer = buffer_base<char>{ static_cast<std::size_t>(pos_end - pos_now - 2), pos_now + 2 };
@@ -292,7 +304,8 @@ bool do_process_resp_parsing_bulk_string(resp_data& _resp_data, shared_buffer& _
 		auto result = do_extract_integer(_buffer, len_bulk_string);
 
 		// check) 
-		RETURN_IF(result == false, false);
+		if(result == false)
+			return false;
 
 		// - null bulk string ("$-1\r\n") : no data and no '\r\n' after it
 		//   (2 bytes were skipped as its '\r\n' : they were the head of the next reply and the replies got out of order)
@@ -304,7 +317,8 @@ bool do_process_resp_parsing_bulk_string(resp_data& _resp_data, shared_buffer& _
 		}
 
 		// check) the length + '\r\n' must not overflow
-		THROW_IF(len_bulk_string > static_cast<int64_t>(0x7fffffff), throwable::failure(eRESULT::INVALID_ARGUMENT));
+		if(len_bulk_string > static_cast<int64_t>(0x7fffffff))
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 	}
 	// 1-2) m_posProcess=2이면 [문자열]의 길이는 읽어낸 것이므로...
 	else
@@ -331,7 +345,8 @@ bool do_process_resp_parsing_bulk_string(resp_data& _resp_data, shared_buffer& _
 		const uint16_t terminal_resp = ('\n' << 8) | '\r';
 	
 		// check) 문자열의 마지막에 '\r\n'이 아니라면 잘못된 것이므로 Exception을 던진다.
-		THROW_IF(*_buffer.data<const uint16_t>(len_bulk_string) != terminal_resp, throwable::failure(eRESULT::INVALID_ARGUMENT));
+		if(*_buffer.data<const uint16_t>(len_bulk_string) != terminal_resp)
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT);
 	
 		// - 둘쨋줄을 읽어낸다.
 		pos_str = _buffer.data();
@@ -348,9 +363,7 @@ bool do_process_resp_parsing_bulk_string(resp_data& _resp_data, shared_buffer& _
 
 	// 5) 결과를 저장한다. Bulk String을 추가한다. (len_bulk_string가 0보다는 커야한다.)
 	if (len_bulk_string > 0)
-	{
 		_resp_data.str_value = std::string_view(pos_str, static_cast<uint32_t>(len_bulk_string));
-	}
 	_resp_data.buf_store = _buffer ^ buffer_view{ pos_begin, static_cast<std::size_t>(_buffer.data() - pos_begin) };
 
 	// return) 
@@ -369,16 +382,15 @@ bool do_process_resp_parsing_array(resp_data& _resp_data, shared_buffer& _buffer
 		auto result = do_extract_integer(_buffer, count);
 
 		// check) 만약 Line을 다 완성하지 못했으면 끝낸다
-		RETURN_IF(result == false, false);
+		if(result == false)
+			return false;
 
 		// check) 여기서는 반드시 비어 있어야 한다.
 		CGASSERT_ERROR(_resp_data.vector_child.empty());
 
 		// 3) std::verter를 Reserve한다.
 		if (count > 0)
-		{
 			_resp_data.vector_child.reserve(static_cast<std::size_t>((std::min)(count, int64_t(1024))));
-		}
 	}
 	else
 	{
@@ -396,7 +408,8 @@ bool do_process_resp_parsing_array(resp_data& _resp_data, shared_buffer& _buffer
 
 			// check) 완전히 처리하지 못했다면 처리하던 Redis객체를 저장해 놓고 끝낸다.
 			//        (나머지 데이터가 더 도착하면 이어서 처리하기 위해...)
-			RETURN_IF(result == false, false);
+			if(result == false)
+				return false;
 		}
 
 		// - count를 나누기 2한다.

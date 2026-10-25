@@ -124,6 +124,14 @@ public:
 
 		return true;
 	}
+	//! @brief observes the current grouping context without flushing or changing its socket.
+	[[nodiscard]] static bool has_grouping_context(const void* socket) noexcept
+	{
+		if (t_count_suspend != 0) return false;
+		if (t_depth != 0 && (t_depth_batch != 0 || s_enable.load(std::memory_order_relaxed))) return true;
+		return socket != nullptr && (t_psocket_cork == socket ||
+			(t_depth_auto != 0 && s_enable_auto.load(std::memory_order_relaxed)));
+	}
 	//! @brief the token of this thread (the sendable keeps it as the owner of the deferred sends)
 	[[nodiscard]] static const void* token() noexcept { return &t_depth; }
 

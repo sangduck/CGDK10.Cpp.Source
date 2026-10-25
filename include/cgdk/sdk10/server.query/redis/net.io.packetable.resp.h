@@ -33,6 +33,12 @@ class net::io::packetable::Nresp :
 	virtual public				net::io::Isender
 {
 protected:
+	virtual std::size_t process_resp_message(sMESSAGE_RESP& _msg, shared_buffer& /*_remaining*/)
+	{
+		this->process_pre_message(_msg);
+		this->process_message(_msg);
+		return 1;
+	}
 	virtual	void				process_pre_message(sMESSAGE_RESP& /*_msg*/) {}
 	virtual	std::size_t			process_packet( shared_buffer& _buffer, const net::sockaddr& _address) override;
 	virtual	void				process_reset_packetable() noexcept override;

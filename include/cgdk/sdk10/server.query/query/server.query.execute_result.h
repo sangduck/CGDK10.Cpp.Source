@@ -131,11 +131,11 @@ namespace CGDK::query
 
 		protected:
 				execute_base() noexcept = default;
-				execute_base(execute_base&& _move) noexcept : m_function(std::exchange(_move.m_function, nullptr)), m_start(std::exchange(_move.m_start, nullptr)), m_result(std::move(_move.m_result)), m_exception(std::exchange(_move.m_exception, nullptr)) {}
+				execute_base(execute_base&& _move) noexcept : m_function(std::exchange(_move.m_function, nullptr)), m_start(std::exchange(_move.m_start, nullptr)), m_result(std::move(_move.m_result)), m_exception(std::exchange(_move.m_exception, nullptr)), m_resume_executor(std::move(_move.m_resume_executor)), m_preserve_custom_executor(_move.m_preserve_custom_executor) {}
 				execute_base(const execute_base& _copy) : m_result((_copy._ensure(), _copy.m_result)) {}
 				~execute_base() noexcept(false) { this->_ensure_at_destruction(); }
 
-				execute_base&		operator = (execute_base&& _move) { if (this != &_move) { this->_ensure(); this->m_function = std::exchange(_move.m_function, nullptr); this->m_start = std::exchange(_move.m_start, nullptr); this->m_result = std::move(_move.m_result); this->m_exception = std::exchange(_move.m_exception, nullptr); } return *this; }
+				execute_base&		operator = (execute_base&& _move) { if (this != &_move) { this->_ensure(); this->m_function = std::exchange(_move.m_function, nullptr); this->m_start = std::exchange(_move.m_start, nullptr); this->m_result = std::move(_move.m_result); this->m_exception = std::exchange(_move.m_exception, nullptr); this->m_resume_executor = std::move(_move.m_resume_executor); this->m_preserve_custom_executor = _move.m_preserve_custom_executor; } return *this; }
 				execute_base&		operator = (const execute_base& _copy) { if (this != &_copy) { this->_ensure(); _copy._ensure(); this->m_result = _copy.m_result; } return *this; }
 
 		public:
@@ -164,7 +164,13 @@ namespace CGDK::query
 					try
 					{
 						// - the coroutine is resumed on its executor (posted) when the request is completed
-						auto on_complete = [ppromise]() { (void)ppromise->_resume_on(ppromise->executor().get()); };
+						auto selected = std::move(this->m_resume_executor);
+						if (this->m_preserve_custom_executor && ppromise->executor().exist() &&
+							ppromise->executor().get() != static_cast<Iexecutor*>(system_executor::executor_ptr_peek())) selected.reset();
+						auto on_complete = [ppromise, selected = std::move(selected)]() {
+							if (selected.exist()) ppromise->executor(selected);
+							(void)ppromise->_resume_on(ppromise->executor().get());
+						};
 
 						// - start (the coroutine may be resumed already after it. nothing is touched any more)
 						if constexpr (std::is_void_v<TRESULT>)
@@ -269,6 +275,8 @@ namespace CGDK::query
 			mutable	start_type			m_start;
 			mutable	storage_type		m_result {};
 					std::exception_ptr	m_exception;
+					object_ptr<Iexecutor> m_resume_executor;
+					bool m_preserve_custom_executor = false;
 		#if defined(CGDK_SYSTEM_COROUTINE)
 					coroutine::promise_base* m_ppromise = nullptr;
 		#endif
@@ -293,7 +301,11 @@ namespace CGDK::query
 		// 2) deferred
 		//    - _function : executes it synchronously (without 'co_await')
 		//    - _start    : starts it asynchronously ('co_await'). if empty, _function is executed on the system_executor
-		static	execute_result		deferred(function_type&& _function, start_type&& _start = nullptr) noexcept { execute_result temp; temp.m_function = std::move(_function); temp.m_start = std::move(_start); return temp; }
+		static	execute_result		deferred(function_type&& _function, start_type&& _start = nullptr, object_ptr<Iexecutor> _executor = nullptr, bool _preserve_custom_executor = false) noexcept { execute_result temp; temp.m_function = std::move(_function); temp.m_start = std::move(_start); temp.m_resume_executor = std::move(_executor); temp.m_preserve_custom_executor = _preserve_custom_executor; return temp; }
+
+	public:
+			execute_result& resume_on(const object_ptr<Iexecutor>& executor) & noexcept { this->m_resume_executor = executor; this->m_preserve_custom_executor = false; return *this; }
+			execute_result&& resume_on(const object_ptr<Iexecutor>& executor) && noexcept { this->m_resume_executor = executor; this->m_preserve_custom_executor = false; return std::move(*this); }
 
 	public:
 			execute_result() noexcept = default;
@@ -328,7 +340,11 @@ namespace CGDK::query
 		// 1) already executed
 		static	execute_result		executed() noexcept { return execute_result(); }
 		// 2) deferred
-		static	execute_result		deferred(function_type&& _function, start_type&& _start = nullptr) noexcept { execute_result temp; temp.m_function = std::move(_function); temp.m_start = std::move(_start); return temp; }
+		static	execute_result		deferred(function_type&& _function, start_type&& _start = nullptr, object_ptr<Iexecutor> _executor = nullptr, bool _preserve_custom_executor = false) noexcept { execute_result temp; temp.m_function = std::move(_function); temp.m_start = std::move(_start); temp.m_resume_executor = std::move(_executor); temp.m_preserve_custom_executor = _preserve_custom_executor; return temp; }
+
+	public:
+			execute_result& resume_on(const object_ptr<Iexecutor>& executor) & noexcept { this->m_resume_executor = executor; this->m_preserve_custom_executor = false; return *this; }
+			execute_result&& resume_on(const object_ptr<Iexecutor>& executor) && noexcept { this->m_resume_executor = executor; this->m_preserve_custom_executor = false; return std::move(*this); }
 
 	public:
 			execute_result() noexcept = default;

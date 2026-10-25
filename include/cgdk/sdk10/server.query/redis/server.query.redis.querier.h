@@ -44,11 +44,21 @@ public:
 				int					count_session = 32;
 				int					wait_seconds = 0;	// waits until the sessions are connected (or failed). 0: 5 seconds, < 0: not waited
 				object_ptr<executor::Iio_context> pio_context;
+				// External send_defer scopes/auto/cork may hold query sends until their end.
+				// false: flush this session immediately; the internal request window still coalesces sends.
+				bool enable_send_defer = true;
+				bool encode_on_session = true;
+                // Post asynchronous user callbacks; synchronous completion stays inline.
+                bool post_response = true;
+                object_ptr<Iexecutor> presponse_executor; // Empty: Redis I/O executor.
+				std::size_t request_send_window = 8; // 0: disable the outstanding-request gate
+				// Empty: prefer Redis I/O, retaining an explicitly bound coroutine executor.
+				object_ptr<Iexecutor> pcoroutine_executor;
 			};
 
 			// Commands use the same blank-separated syntax as post_execute_query().
-			// All inputs are encoded before returning; views need not outlive this call.
-			// One session/queue entry/send per batch; results retain input order.
+			// Inputs are owned before returning; RESP encoding runs on the selected session.
+			// A batch retains one ordered reply group; queued commands may share a send.
 			// On stop, received replies are retained and unfinished replies are NONE_.
 			// Callback runs once, outside locks, possibly inline on cancellation/failure.
 			// Empty/invalid input or a stopped querier throws before accepting the batch.
@@ -61,9 +71,6 @@ public:
 			// A string selects a single query. A span/vector/array of strings
 			// selects the batch overload. Sync results use result()[index].
 			void post_execute_query(std::span<const std::string> _commands, batch_callback _response);
-			[[nodiscard]] object_ptr<redis::query> execute_query_sync(std::span<const std::string_view> _commands);
-			[[nodiscard]] object_ptr<redis::query> execute_query_sync(std::span<const std::string> _commands);
-			[[nodiscard]] object_ptr<redis::query> execute_query_sync(std::initializer_list<std::string_view> _commands) { return this->execute_query_sync(std::span<const std::string_view>(_commands.begin(), _commands.size())); }
 			execute_result<object_ptr<redis::query>> execute_query(std::span<const std::string_view> _commands);
 			execute_result<object_ptr<redis::query>> execute_query(std::span<const std::string> _commands);
 			execute_result<object_ptr<redis::query>> execute_query(std::initializer_list<std::string_view> _commands) { return this->execute_query(std::span<const std::string_view>(_commands.begin(), _commands.size())); }
@@ -77,19 +84,12 @@ public:
 			result_code			start(const START_PARAMETER& _parameter) { context temp; temp=buffer_view((char*)&_parameter, sizeof(START_PARAMETER)); return this->start(temp); }
 
 			//    - execute_query()      : without 'co_await' executed as before. with 'co_await' the coroutine is resumed when the response is received. (execute_result)
-			//    - execute_query_sync() : always executed at once (waits for the response)
 			template <class TQUERY = query>
 			std::enable_if_t<std::is_base_of_v<redis::Iquery, TQUERY>, execute_result<object_ptr<TQUERY>>>
 								execute_query(std::string_view _command);
 			template <class TQUERY, class TA, class... TARGS>
 			std::enable_if_t<std::is_base_of_v<redis::Iquery, TQUERY>, execute_result<object_ptr<TQUERY>>>
 								execute_query(const std::string_view _format, TA _first, TARGS... _args);
-			template <class TQUERY = query>
-			std::enable_if_t<std::is_base_of_v<redis::Iquery, TQUERY>, object_ptr<TQUERY>>
-								execute_query_sync(std::string_view _command);
-			template <class TQUERY, class TA, class... TARGS>
-			std::enable_if_t<std::is_base_of_v<redis::Iquery, TQUERY>, object_ptr<TQUERY>>
-								execute_query_sync(const std::string_view _format, TA _first, TARGS... _args);
 			template <class TQUERY>
 			execute_result<object_ptr<TQUERY>> _execute_query_deferred(std::string&& _command);
 			template<class TQUERY>
@@ -143,7 +143,8 @@ public:
 					//    (주의: 이 호출 뒤에 awaiter 멤버를 건드리면 안 된다. 이미 resume되었을 수 있다.)
 					//    - the queued one is resumed once : by free_session() with a session, or without a session when it is released
 					//      without being called (the querier is destroyed, ...) -> await_resume() throws eRESULT::CANCEL
-					auto presume = std::make_shared<resume_once>(ppromise);
+					auto resume = this->m_pquerier->coroutine_resume_policy();
+					auto presume = std::make_shared<resume_once>(ppromise, std::move(resume.first), resume.second);
 					bool is_allocated = false;
 					try
 					{
@@ -157,8 +158,7 @@ public:
 					}
 					if (is_allocated)
 					{
-						presume->dismiss();
-						(void)ppromise->_resume_on(ppromise->executor().get());
+						presume->resume();
 					}
 				}
 				[[nodiscard]] auto	await_resume() -> object_ptr<TQUERY> { THROW_IF(this->m_pquery->get_session().empty(), throwable::failure(eRESULT::CANCEL, 0, std::string_view("session allocation is canceled"))); return std::move(this->m_pquery); }
@@ -167,12 +167,16 @@ public:
 				class resume_once
 				{
 				public:
-					explicit		resume_once(coroutine::promise_base* _ppromise) noexcept : m_ppromise(_ppromise) {}
+					explicit		resume_once(coroutine::promise_base* _ppromise, object_ptr<Iexecutor> executor, bool preserve) noexcept : m_ppromise(_ppromise), m_executor(std::move(executor))
+						{
+							if (preserve && _ppromise->executor().exist() && _ppromise->executor().get() != static_cast<Iexecutor*>(system_executor::executor_ptr_peek())) m_executor.reset();
+						}
 									~resume_once() noexcept { this->resume(); }
-					void			resume() noexcept { if (auto ppromise = std::exchange(this->m_ppromise, nullptr); ppromise != nullptr) ppromise->_resume_here_or_on_executor(); }
+					void			resume() noexcept { if (auto ppromise = std::exchange(this->m_ppromise, nullptr); ppromise != nullptr) { if (m_executor.exist()) { ppromise->executor(m_executor); (void)ppromise->_resume_on(m_executor.get()); } else ppromise->_resume_here_or_on_executor(); } }
 					void			dismiss() noexcept { this->m_ppromise = nullptr; }
 				private:
 					coroutine::promise_base* m_ppromise;
+						object_ptr<Iexecutor> m_executor;
 				};
 
 					querier*	m_pquerier;
@@ -198,6 +202,14 @@ public:
 			[[nodiscard]] std::enable_if_t<std::is_base_of_v<Iquery, TQUERY>, object_ptr<TQUERY>>
 								alloc_shared_query() { auto pquery = make_object<TQUERY>(); this->alloc_shared_session(pquery); return pquery;}
 protected:
+			[[nodiscard]] object_ptr<redis::query> _execute_query_sync(std::span<const std::string_view> _commands);
+			[[nodiscard]] object_ptr<redis::query> _execute_query_sync(std::span<const std::string> _commands);
+			template <class TQUERY = query>
+			std::enable_if_t<std::is_base_of_v<redis::Iquery, TQUERY>, object_ptr<TQUERY>>
+								_execute_query_sync(std::string_view _command);
+			template <class TQUERY, class TA, class... TARGS>
+			std::enable_if_t<std::is_base_of_v<redis::Iquery, TQUERY>, object_ptr<TQUERY>>
+								_execute_query_sync(const std::string_view _format, TA _first, TARGS... _args);
 	virtual	void				process_execute_query(Iserver_query* _pquery);
 	virtual	void				process_post_execute_query(Iserver_query* _pquery);
 	virtual	void				process_execute_query(Iquery* _pquery);
@@ -235,12 +247,46 @@ protected:
 			//   fairness  : a new shared one does not go ahead of the waiting ones (FIFO) : the session a dedicated one waits for is drained.
 			//               a blocked shared one (alloc_shared_session()) shares a session in the stack after 100ms. (it may hold a shared
 			//               query of that session itself : not waited forever)
-			//   spread    : a thread uses the session [its index % the stack size] (the shared queries of a thread go to one session
-			//               while the stack does not change : its posts are sent and answered in order). it was always the front one :
+			//   spread    : external callers use session [thread index % stack size] (their shared queries go to one session
+			//               while the stack does not change : their posts are sent and answered in order). it was always the front one :
 			//               the other sessions (and their io threads) were not used by the shared queries.
 			//               a dedicated one waits (FIFO) until a session in the stack is drained when the shared ones use all of them.
-			object_ptr<session>	process_get_shared_session() noexcept { SCOPED_LOCK(this->m_lockable_query) { return this->m_sessions_stack[_get_thread_index() % this->m_sessions_stack.size()]; } }
+			// Async posts made by a response callback reuse its shared session.
+			// The callback's live query reference prevents dedicated allocation.
+			struct callback_scope
+			{
+				callback_scope(querier* owner, session* psession, bool may_reuse) noexcept
+					: owner(owner), psession(psession), previous(t_callback_scope), may_reuse(may_reuse) { t_callback_scope = this; }
+				~callback_scope() noexcept { t_callback_scope = previous; }
+				callback_scope(const callback_scope&) = delete;
+				callback_scope& operator=(const callback_scope&) = delete;
+				querier* owner;
+				session* psession;
+				callback_scope* previous;
+				bool may_reuse;
+				// Only a seed callback chooses a new home. Keep it alive and pinned
+				// so all posts in that callback retain their ordering.
+				object_ptr<session> selected_session;
+				object_ptr<Iquery> selected_query;
+			};
+			static inline thread_local callback_scope* t_callback_scope = nullptr;
+			bool try_alloc_callback_session(Iquery* query);
+            bool try_alloc_fixed_session(Iquery* query);
+            void open_fixed_routes(std::vector<object_ptr<session>> sessions);
+            void close_fixed_routes() noexcept;
+            void ensure_fixed_routes_open() const {
+                THROW_IF(this->m_fixed_routes_enabled.load(std::memory_order_acquire) &&
+                    ((this->m_route_access.load(std::memory_order_acquire) & routes_closed) || !this->process_is_running()), throwable::failure(eRESULT::NOT_READY));
+            }
+            static constexpr uint64_t routes_closed = uint64_t(1) << 63;
+            std::atomic<uint64_t> m_route_access{routes_closed};
+            std::atomic<bool> m_fixed_routes_enabled{false};
+            std::atomic<uint64_t> m_route_epoch{0};
+            std::vector<object_ptr<session>> m_fixed_sessions;
+			object_ptr<session> process_get_shared_session_locked() noexcept { return this->m_sessions_stack[_get_thread_index() % this->m_sessions_stack.size()]; }
+			object_ptr<session> process_get_shared_session() noexcept { SCOPED_LOCK(this->m_lockable_query) { return this->process_get_shared_session_locked(); } }
 	static	std::size_t			_get_thread_index() noexcept { static std::atomic<std::size_t> s_count_thread{ 0 }; thread_local const std::size_t t_index = s_count_thread.fetch_add(1, std::memory_order_relaxed); return t_index; }
+
 			object_ptr<session>	process_take_unused_session() noexcept;	// a session no query uses taken out of the stack. empty if there is none
 			struct QUEUED_QUERY
 			{
@@ -275,6 +321,11 @@ protected:
 			std::vector<object_ptr<session>>	m_sessions_stack;
 			std::vector<object_ptr<session>>	m_sessions_registered;	// all the sessions registered (in the stack or dedicated)
 			circular_list<QUEUED_QUERY> m_queue_query;
+			std::atomic<bool> m_has_queued_query{false};
+			std::atomic<std::size_t> m_next_callback_session{0};
+			object_ptr<Iexecutor> m_pcoroutine_executor;
+			bool m_preserve_coroutine_executor = true;
+			std::pair<object_ptr<Iexecutor>, bool> coroutine_resume_policy();
 
 			object_ptr<executor::Iio_context>	m_pio_context;
 			own_ptr<executor::Iio_context>		m_pio_context_own;
@@ -288,7 +339,7 @@ protected:
 
 template <class TQUERY>
 std::enable_if_t<std::is_base_of_v<query::redis::Iquery, TQUERY>, object_ptr<TQUERY>>
-query::redis::querier::execute_query_sync(std::string_view _command)
+query::redis::querier::_execute_query_sync(std::string_view _command)
 {
 	// check) 
 	THROW_IF(this->get_object_state() != eOBJECT_STATE::RUNNING && this->get_object_state() != eOBJECT_STATE::START_PENDING, throwable::failure(eRESULT::NOT_READY, 0, std::string_view("querier is not started")));
@@ -305,7 +356,7 @@ query::redis::querier::execute_query_sync(std::string_view _command)
 
 template <class TQUERY, class TA, class... TARGS>
 std::enable_if_t<std::is_base_of_v<query::redis::Iquery, TQUERY>, object_ptr<TQUERY>>
-query::redis::querier::execute_query_sync(const std::string_view _format, TA _first, TARGS... _args)
+query::redis::querier::_execute_query_sync(const std::string_view _format, TA _first, TARGS... _args)
 {
 	// check) _format shouldn't be nullptr
 	CGASSERT_ERROR(_format.empty() == false);
@@ -332,7 +383,7 @@ query::redis::querier::execute_query(std::string_view _command)
 {
 	// 1) out of a coroutine: executed at once (same as before)
 	if (!is_deferred_execution())
-		return execute_result<object_ptr<TQUERY>>::executed(this->execute_query_sync<TQUERY>(_command));
+		return execute_result<object_ptr<TQUERY>>::executed(this->_execute_query_sync<TQUERY>(_command));
 
 	// 2) in a coroutine: deferred
 	return this->_execute_query_deferred<TQUERY>(std::string(_command));
@@ -344,7 +395,7 @@ query::redis::querier::execute_query(const std::string_view _format, TA _first, 
 {
 	// 1) out of a coroutine: executed at once (same as before)
 	if (!is_deferred_execution())
-		return execute_result<object_ptr<TQUERY>>::executed(this->execute_query_sync<TQUERY>(_format, _first, _args...));
+		return execute_result<object_ptr<TQUERY>>::executed(this->_execute_query_sync<TQUERY>(_format, _first, _args...));
 
 	// 2) in a coroutine: deferred
 	return this->_execute_query_deferred<TQUERY>(std::vformat(_format, std::make_format_args(_first, _args...)));
@@ -356,19 +407,20 @@ query::execute_result<object_ptr<TQUERY>> query::redis::querier::_execute_query_
 	// - 'co_await' sends the request and resumes the coroutine when the response is received
 	auto pquerier = object_ptr<querier>(this);
 	std::string command_sync(_command);
+	auto resume = this->coroutine_resume_policy();
 
 	return execute_result<object_ptr<TQUERY>>::deferred(
-		[pquerier, command = std::move(command_sync)]() { return pquerier->template execute_query_sync<TQUERY>(command); },
+		[pquerier, command = std::move(command_sync)]() { return pquerier->template _execute_query_sync<TQUERY>(command); },
 		[pquerier, command = std::move(_command)](object_ptr<TQUERY>& _result, std::function<void()>&& _on_complete)
 		{
 			// check)
 			THROW_IF(pquerier->get_object_state() != eOBJECT_STATE::RUNNING && pquerier->get_object_state() != eOBJECT_STATE::START_PENDING, throwable::failure(eRESULT::NOT_READY, 0, std::string_view("querier is not started")));
 
-			auto pquery = pquerier->template alloc_shared_query<TQUERY>();
-			pquery->_set_function_on_complete(std::move(_on_complete));
+			auto pquery = make_object<TQUERY>();
+			if (!pquerier->try_alloc_fixed_session(pquery.get()) && !pquerier->try_alloc_callback_session(pquery.get())) pquerier->alloc_shared_session(pquery);
 			_result = pquery;
-			pquery->post_execute_query(std::string(command));
-		});
+			pquery->_process_post_execute_query(command, nullptr, std::move(_on_complete));
+		}, std::move(resume.first), resume.second);
 }
 
 #if defined(__cpp_impl_coroutine)
@@ -381,7 +433,7 @@ query::redis::querier::co_execute_query(std::string_view _command)
 		return this->co_post_execute_query<TQUERY>(_command);
 
 	// 2) 이 thread에서 바로 실행한다. (응답까지 블로킹. 'co_await'해도 suspend하지 않는다)
-	return execute_result<object_ptr<TQUERY>>::executed(this->execute_query_sync<TQUERY>(_command));
+	return execute_result<object_ptr<TQUERY>>::executed(this->_execute_query_sync<TQUERY>(_command));
 }
 
 template <class TQUERY, class TA, class... TARGS>
@@ -393,7 +445,7 @@ query::redis::querier::co_execute_query(const std::string_view _format, TA _firs
 		return this->co_post_execute_query<TQUERY>(_format, _first, _args...);
 
 	// 2) 이 thread에서 바로 실행한다. (응답까지 블로킹. 'co_await'해도 suspend하지 않는다)
-	return execute_result<object_ptr<TQUERY>>::executed(this->execute_query_sync<TQUERY>(_format, _first, _args...));
+	return execute_result<object_ptr<TQUERY>>::executed(this->_execute_query_sync<TQUERY>(_format, _first, _args...));
 }
 #endif
 
@@ -407,23 +459,40 @@ query::redis::querier::post_execute_query(std::string_view _command, std::functi
 	// 1) 새로운 Query를 생성한다.
 	auto pquery = make_object<TQUERY>();
 
+	if (this->try_alloc_fixed_session(pquery.get()) || this->try_alloc_callback_session(pquery.get()))
+	{
+		pquery->_process_post_fresh_query(_command, [xpquery=std::move(pquery), xresponse=std::move(_response)]() {
+			xresponse(xpquery);
+		});
+		return;
+	}
+
 	SCOPED_LOCK_NAMED(this->m_lockable_query, cs)
 	{
+        this->ensure_fixed_routes_open();
 		// - 이 있을 경우 하나의 session을 얻는다.
 		//   (not ahead of the waiting ones : the session a dedicated one waits for is not used by new shared ones any more)
 		if (this->m_sessions_stack.empty() == false && this->m_queue_query.empty())
 		{
 			// - get session
-			auto psession = this->process_get_shared_session();
+			const auto scope = t_callback_scope;
+			auto psession = scope && scope->owner == this && !scope->may_reuse ?
+				this->m_sessions_stack[this->m_next_callback_session++ % this->m_sessions_stack.size()] :
+				this->process_get_shared_session_locked();
 
 			// - set session to query (in the lock. a dedicated query must not take it while it is not set yet)
 			pquery->set_session(psession);
+			if (scope && scope->owner == this && !scope->may_reuse)
+			{
+				scope->selected_session = psession;
+				scope->selected_query = pquery;
+			}
 
 			// - lock leave
 			SCOPED_LOCK_LEAVE(cs);
 
 			// - post session
-			pquery->_process_post_execute_query(std::string(_command), [xpquery=std::move(pquery), xresponse=std::move(_response)]() {
+			pquery->_process_post_fresh_query(_command, [xpquery=std::move(pquery), xresponse=std::move(_response)]() {
 					xresponse(xpquery);
 				});
 		}
@@ -442,7 +511,7 @@ query::redis::querier::post_execute_query(std::string_view _command, std::functi
 			temp_query.is_shared = true;
 			temp_query.f_execute = [pquery, command = std::string(_command), response = std::move(_response)]()
 				{
-					pquery->_process_post_execute_query(std::string(command), [pquery, response]()
+					pquery->_process_post_fresh_query(command, [pquery, response]()
 						{
 							response(pquery);
 						});
@@ -450,6 +519,7 @@ query::redis::querier::post_execute_query(std::string_view _command, std::functi
 
 			// 2) 먼저 Push한다.
 			this->m_queue_query.push_back(std::move( temp_query));
+			this->m_has_queued_query.store(true, std::memory_order_release);
 		}
 	}
 }

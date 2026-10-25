@@ -1187,3 +1187,21 @@ tls pool의 garbage collection 처리 변경
   - REQUEST_QUERY 구조와 공개 헤더가 바뀐다. Redis 라이브러리와 해당 헤더를 사용하는 프로그램을 재빌드해야 한다.
   - 기술적 설명 아래 Redis 문서를 추가하고 비교 로그도 게시했다: http://192.168.0.92:8080/query.redis.html
   - 웹사이트 파일29개는 기존 파일을 백업한 뒤 교체하고 HTTP200과 SHA256 일치를 확인했다.
+
+2026.10.26 - Redis 세션 처리 분산, 응답 옵션과 최종 비교 (r11623)
+- 공개 동기/배치 이름을 execute_query로 통합. coroutine은 작성 편의성을 위한 API이며 기본 Redis I/O executor 및 외부 executor 선택을 지원한다.
+- query의 m_buffer_query/m_lockable_state_query를 제거하고 요청 세대/원자적 완료 상태와 atomic wait/notify로 중복 완료·재사용을 제어한다. 요청 버퍼는 세션 요청 항목이 소유한다.
+- 명령 입력은 호출 중 소유하고 세션에서 전송 직전 묶어 인코딩한다. circular_list 송신/미전송 큐를 유지하고 개별 응답은 도착 즉시 처리한다. 전체 응답을 기다리는 vector 큐 방식은 사용하지 않는다.
+- start에서 공유 연결 목록을 고정하고 stop에서 접근을 닫는다. 정상 공유 요청의 연결 선택은 querier mutex 대신 세션 접근 가드/TLS 캐시를 사용한다. 전용·관리·대기열 동기화는 유지한다.
+- RESP는 memchr 기반 파서를 적용하고 명시적 batch 수신은 최대256개 응답 매칭/통계를 묶는다. AVX2는 실제 경로에서 채택하지 않았다.
+- post_execute_query의 사용자 응답 callback은 post하는 것이 기본이다. START_PARAMETER.post_response=false로 직접 처리하며 presponse_executor가 비어 있으면 Redis I/O를 사용한다. 동기 execute_query 완료는 post 없이 직접 처리한다. 파싱·매칭 자체는 I/O에 남는다.
+- Redis 자동 send_cork 및 전용 설정/벤치 옵션을 제거. 공용 TCP 기능과 send_defer 설정은 유지한다.
+- I/O worker가 한 개여도 블로킹 콜백의 동기 Redis 요청을 처리할 여분 worker를 활성화하도록 임계값을 조정한다.
+- 최종 GET16B 비교 60회(각3회 중앙값, SAKPUNG GCC15 Release/epoll/Redis8.2.10):
+  단건 동기 CGDK38,344/s vs hiredis54,425/s, 개별 비동기1024·4연결 CGDK5,077,493/s vs hiredis5,177,391/s.
+  batch1000·1연결 CGDK4,468,357/s vs hiredis3,735,873/s vs Boost4,052,886/s.
+  batch1000·4연결 CGDK5,697,843/s vs hiredis5,700,374/s vs Boost5,704,849/s. batch CPU/명령은 CGDK0.073us vs hiredis0.129us.
+- post on/off 42회도 보존: 1연결 개별 등록은 on에서 -11.8%, 4연결은 +2.4%. 기본값은 사용자 요청에 따라 비동기 on이며 모든 부하에서 성능 향상을 보장하지 않는다.
+- Windows/Linux Redis 테스트 각각50개 및 실제 Redis 순서/혼합/동시 요청/stop/restart 검증 통과. 전체 SDK/GRUMA 빌드나 원격 Redis 성능 검증은 아니다.
+- benchmark/3.query_redis에 최신 원본/요약/조건/소스 해시와 --profile=current 재실행 경로를 추가했다. 이전 날짜의 비교는 당시 구현의 기록이다.
+- Nstream/REQUEST_QUERY/Iquery/execute_result 등 공개 헤더·상태 구조 변경: Net/System/Query/Redis 라이브러리 및 모든 사용 프로그램을 함께 재빌드해야 한다. 기존 바이너리와 혼용하지 않는다.

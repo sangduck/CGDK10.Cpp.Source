@@ -2,6 +2,7 @@
 #include <charconv>
 #include <cstring>
 #include <span>
+#include <optional>
 
 using namespace CGDK;
 
@@ -10,114 +11,131 @@ query::redis::Iquery::~Iquery()
 {
 }
 
+namespace {
+constexpr uint64_t query_phase_mask = 7;
+constexpr uint64_t query_idle = 0, query_preparing = 1, query_pending = 2;
+constexpr uint64_t query_finishing = 3, query_done = 4, query_resetting = 5;
+bool query_busy(uint64_t value) noexcept { const auto phase = value & query_phase_mask; return phase != query_idle && phase != query_done; }
+}
+void query::redis::Iquery::_wait_request(uint64_t generation, bool notify_executor)
+{
+    auto current = this->m_request_completion.load(std::memory_order_acquire);
+    if ((current & ~query_phase_mask) != generation || !query_busy(current)) return;
+    std::optional<scoped_thread_block> thread_block;
+    if (notify_executor) thread_block.emplace();
+    while ((current & ~query_phase_mask) == generation && query_busy(current)) {
+        this->m_request_completion.wait(current, std::memory_order_acquire);
+        current = this->m_request_completion.load(std::memory_order_acquire);
+    }
+}
 void query::redis::Iquery::wait()
 {
-	SCOPED_LOCK_NAMED(this->m_lockable_state_query, cs)
-	{
-		// check)
-		RETURN_IF(this->m_state_query != eOBJECT_STATE::REQUESTING,);
-
-		// 1) wait
-		this->m_cv_complete.wait(cs);
-	}
+    const auto current = this->m_request_completion.load(std::memory_order_acquire);
+    this->_wait_request(current & ~query_phase_mask);
 }
-
-void query::redis::Iquery::process_set_session(session* _psession)
+uint64_t query::redis::Iquery::_reserve_idle(bool may_wait)
 {
-	SCOPED_LOCK(this->m_lockable_state_query)
-	{
-		// check) 같은 session이면 여기서 끝낸다.
-		RETURN_IF(this->m_psession == _psession);
-
-		// check) 
-		CGASSERT_ERROR(this->m_state_query == eOBJECT_STATE::NONE);
-
-		// 1) 기존 session이 있으면 그걸 먼저 해제해준다.
-		if (this->m_psession.exist())
-			this->m_psession->release_query_reference();
-
-		// 2) 새로운 session을 설정한다.
-		this->m_psession = _psession;
-
-		// 3) set state
-		this->m_state_query = eOBJECT_STATE::READY;
-
-		// 4) 새로 설정된 SEssion의 QueryReference 카운트를 증가시킨다.
-		if (_psession != nullptr)
-		{
-			_psession->add_query_reference();
-		}
-	}
+    auto current = this->m_request_completion.load(std::memory_order_acquire);
+    for (;;) {
+        if (query_busy(current)) { THROW_IF(!may_wait, throwable::failure(eRESULT::NOT_READY)); this->_wait_request(current & ~query_phase_mask); current = this->m_request_completion.load(std::memory_order_acquire); continue; }
+        if (this->m_request_completion.compare_exchange_weak(current, (current & ~query_phase_mask) | query_resetting, std::memory_order_acq_rel)) return current;
+    }
 }
-
+void query::redis::Iquery::_release_idle(uint64_t previous) noexcept
+{
+    this->m_request_completion.store(previous, std::memory_order_release);
+    this->m_request_completion.notify_all();
+}
+uint64_t query::redis::Iquery::_begin_request(bool require_ready)
+{
+    auto current = this->m_request_completion.load(std::memory_order_acquire);
+    for (;;) {
+        THROW_IF(query_busy(current), throwable::failure(eRESULT::NOT_READY));
+        const auto generation = (current & ~query_phase_mask) + 8;
+        if (!this->m_request_completion.compare_exchange_weak(current, generation | query_preparing, std::memory_order_acq_rel)) continue;
+        const auto state = this->m_state_query.load(std::memory_order_relaxed);
+        if (this->m_psession.empty() || (state != eOBJECT_STATE::READY && (require_ready || state != eOBJECT_STATE::PROCESSED))) {
+            this->_release_idle(current);
+            throw throwable::failure(eRESULT::NOT_READY);
+        }
+        this->m_result.reset();
+        return generation;
+    }
+}
+void query::redis::Iquery::_publish_request(uint64_t generation) noexcept
+{
+    this->m_state_query.store(eOBJECT_STATE::REQUESTING, std::memory_order_relaxed);
+    this->m_request_completion.store(generation | query_pending, std::memory_order_release);
+}
+void query::redis::Iquery::_abort_request(uint64_t generation) noexcept
+{
+    auto expected = generation | query_pending;
+    if (!this->m_request_completion.compare_exchange_strong(expected, generation | query_preparing, std::memory_order_acq_rel)) return;
+    this->m_function_on_complete = nullptr;
+    this->m_state_query.store(eOBJECT_STATE::READY, std::memory_order_relaxed);
+    this->_release_idle(generation | query_idle);
+}
+void query::redis::Iquery::process_set_session(session* session)
+{
+    const auto previous = this->_reserve_idle();
+    if (this->m_psession == session) { this->_release_idle(previous); return; }
+    auto old = std::move(this->m_psession);
+    this->m_psession = session;
+    if (session) session->add_query_reference();
+    this->m_state_query.store(eOBJECT_STATE::READY, std::memory_order_relaxed);
+    this->_release_idle(previous & ~query_phase_mask);
+    if (old.exist()) old->release_query_reference();
+}
 void query::redis::Iquery::close_query() noexcept
 {
-	SCOPED_LOCK(this->m_lockable_state_query)
-	{
-		// check) 
-		RETURN_IF(this->m_state_query != eOBJECT_STATE::PROCESSED && this->m_state_query != eOBJECT_STATE::REQUESTING);
-
-		// 1) reset
-		this->m_buffer_query.clear();
-		this->m_result.reset();
-
-		// 2) set 
-		this->m_state_query = eOBJECT_STATE::READY;
-	}
+    const auto previous = this->_reserve_idle();
+    if (this->m_state_query.load(std::memory_order_relaxed) == eOBJECT_STATE::PROCESSED) {
+        this->m_result.reset();
+        this->m_state_query.store(eOBJECT_STATE::READY, std::memory_order_relaxed);
+    }
+    this->_release_idle(previous & ~query_phase_mask);
 }
-
 void query::redis::Iquery::process_response()
 {
-	SCOPED_LOCK(this->m_lockable_state_query)
-	{
-		// check)
-		RETURN_IF(this->m_state_query!= eOBJECT_STATE::REQUESTING);
-
-		// 2) set state
-		this->m_state_query = eOBJECT_STATE::PROCESSED;
-
-		// 3) requesting
-		this->m_cv_complete.notify_one();
-	}
-
-	// - coroutine) resume the coroutine awaiting this request
-	this->_process_on_complete();
+    auto current = this->m_request_completion.load(std::memory_order_acquire);
+    if ((current & query_phase_mask) != query_pending) return;
+    const auto generation = current & ~query_phase_mask;
+    if (!this->m_request_completion.compare_exchange_strong(current, generation | query_finishing, std::memory_order_acq_rel)) return;
+    auto complete = std::exchange(this->m_function_on_complete, nullptr);
+    this->m_state_query.store(eOBJECT_STATE::PROCESSED, std::memory_order_release);
+    this->_release_idle(generation | query_done);
+    if (complete) complete();
 }
-
 void query::redis::Iquery::process_execute_query()
 {
-	// 1) set query state
-	this->m_state_query = eOBJECT_STATE::PROCESSED;
+    this->process_response();
 }
-
 void query::redis::Iquery::process_reset_session() noexcept
 {
-	SCOPED_LOCK(this->m_lockable_state_query)
-	{
-		// check) session이 없으면 그냥 여기서 끝낸다.
-		RETURN_IF(this->m_psession.empty());
-
-		// 1) close query
-		this->close_query();
-
-		// 2) session의 Query Reference를 줄인다.
-		this->m_psession->release_query_reference();
-
-		// 3) session 리셋
-		this->m_psession.reset();
-
-		// 4) set state
-		this->m_state_query = eOBJECT_STATE::NONE;
-	}
-	
-	// 5) Notify하기
-	this->_process_notify_to_requestor();
+    const auto previous = this->_reserve_idle();
+    auto old = std::move(this->m_psession);
+    this->m_result.reset(); this->m_function_on_complete = nullptr;
+    this->m_state_query.store(eOBJECT_STATE::NONE, std::memory_order_relaxed);
+    this->_release_idle(previous & ~query_phase_mask);
+    if (old.exist()) old->release_query_reference();
+    this->_process_notify_to_requestor();
+}
+void query::redis::Iquery::_set_function_on_complete(std::function<void()>&& complete)
+{
+    const auto previous = this->_reserve_idle(false);
+    this->m_function_on_complete = std::move(complete);
+    this->_release_idle(previous);
+}
+void query::redis::Iquery::_process_on_complete()
+{
+    this->process_response();
 }
 
 void query::redis::Iquery::_process_notify_to_requestor() noexcept
 {
 	// check) requestor가 없으면 끝낸다.
-	RETURN_IF(this->m_prequestor.empty())
+	if(this->m_prequestor.empty())
+		return;
 
 	// 1) ProcessCompleteQuery를 호출한다.
 	try
@@ -132,269 +150,191 @@ void query::redis::Iquery::_process_notify_to_requestor() noexcept
 	this->m_prequestor.reset();
 }
 
-shared_buffer generate_redis_command(std::string_view _command)
+shared_buffer generate_redis_command(std::string_view command)
 {
-	// - the arguments are separated by blanks (' ', '\t'). the whole '_command' is read (no length limit, no '\0' end)
-	//   (it was written to a fixed 4KB buffer : a longer command was cut at 4096 characters and written past the buffer)
-	const auto is_blank = [](char _c) noexcept { return _c == ' ' || _c == '\t'; };
-	const auto count_digits = [](std::size_t _value) noexcept { std::size_t n = 1; while (_value >= 10) { _value /= 10; ++n; } return n; };
-	const auto write_number = [](char* _pos, std::size_t _value) noexcept { return std::to_chars(_pos, _pos + 20, _value).ptr; };
-
-	// 1) count the arguments and the bytes ('$<length>\r\n<argument>\r\n' each)
-	std::size_t count = 0;
-	std::size_t size_arguments = 0;
-	for (std::size_t pos = 0; pos < _command.size();)
+	std::string_view local[16];
+	std::vector<std::string_view> overflow;
+	std::size_t count = 0, bytes = 0;
+	const auto blank = [](char c) { return c == ' ' || c == '\t'; };
+	const auto digits = [](std::size_t n) { std::size_t d = 1; while (n >= 10) { n /= 10; ++d; } return d; };
+	const auto add = [&bytes](std::size_t n) {
+		THROW_IF(n > (std::numeric_limits<std::size_t>::max)() - bytes, throwable::failure(eRESULT::OVERFLOW_ERROR));
+		bytes += n;
+	};
+	for (std::size_t pos = 0; pos < command.size();)
 	{
-		while (pos < _command.size() && is_blank(_command[pos]))
-			++pos;
-		if (pos == _command.size())
-			break;
-
-		const auto pos_begin = pos;
-		while (pos < _command.size() && !is_blank(_command[pos]))
-			++pos;
-
-		const auto length = pos - pos_begin;
-		size_arguments += 1 + count_digits(length) + 2 + length + 2;
+		while (pos < command.size() && blank(command[pos])) ++pos;
+		if (pos == command.size()) break;
+		const auto begin = pos;
+		while (pos < command.size() && !blank(command[pos])) ++pos;
+		auto argument = command.substr(begin, pos - begin);
+		if (count < 16) local[count] = argument;
+		else overflow.push_back(argument);
 		++count;
+		add(argument.size());
+		add(digits(argument.size()) + 5);
 	}
-
-	// check) no argument
 	THROW_IF(count == 0, throwable::failure(eRESULT::INVALID_ARGUMENT, 0, std::string_view("redis command has no argument")));
-
-	// 2) alloc ('*<count>\r\n' + the arguments)
-	const auto size_command = 1 + count_digits(count) + 2 + size_arguments;
-	auto buf_command = alloc_shared_buffer(size_command);
-	char* str_now = buf_command.data<char>();
-
-	// 3) write head
-	*(str_now++) = '*';
-	str_now = write_number(str_now, count);
-	*(str_now++) = '\r';
-	*(str_now++) = '\n';
-
-	// 4) write arguments
-	for (std::size_t pos = 0; pos < _command.size();)
+	add(digits(count) + 3);
+	auto buffer = alloc_shared_buffer(bytes);
+	char* out = buffer.data<char>();
+	const auto number = [&out, end = out + bytes](std::size_t n) { out = std::to_chars(out, end, n).ptr; };
+	*out++ = '*'; number(count); *out++ = '\r'; *out++ = '\n';
+	for (std::size_t i = 0; i < count; ++i)
 	{
-		while (pos < _command.size() && is_blank(_command[pos]))
-			++pos;
-		if (pos == _command.size())
-			break;
-
-		const auto pos_begin = pos;
-		while (pos < _command.size() && !is_blank(_command[pos]))
-			++pos;
-
-		const auto length = pos - pos_begin;
-		*(str_now++) = '$';
-		str_now = write_number(str_now, length);
-		*(str_now++) = '\r';
-		*(str_now++) = '\n';
-		memcpy(str_now, _command.data() + pos_begin, length);
-		str_now += length;
-		*(str_now++) = '\r';
-		*(str_now++) = '\n';
+		const auto argument = i < 16 ? local[i] : overflow[i - 16];
+		*out++ = '$'; number(argument.size()); *out++ = '\r'; *out++ = '\n';
+		std::memcpy(out, argument.data(), argument.size()); out += argument.size();
+		*out++ = '\r'; *out++ = '\n';
 	}
-
-	// check)
-	CGASSERT_ERROR(static_cast<std::size_t>(str_now - buf_command.data<char>()) == size_command);
-
-	// 5) set size
-	buf_command.add_size(size_command);
-
-	// return)
-	return buf_command;
+	CGASSERT_ERROR(static_cast<std::size_t>(out - buffer.data<char>()) == bytes);
+	buffer.add_size(bytes);
+	return buffer;
 }
 
-void query::redis::Iquery::execute_query_sync(std::string_view _command)
+void query::redis::Iquery::_process_execute_query(std::string_view command)
 {
-	// check) _pquery must not be nullptr
-	CGASSERT_ERROR(_command.empty() == false);
-
-	// check) throw exception if _pquery is nullptr
-	THROW_IF(_command.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT, 0, std::string_view("parameter '_command' is nullptr")));
-
-	// 1) process execute
-	_process_execute_query(_command);
+    std::string owned(command);
+    const auto generation = this->_begin_request();
+    this->_publish_request(generation);
+    try {
+        CGDK::query::redis::session::REQUEST_QUERY request;
+        request.pquery = this;
+        scoped_thread_block thread_block;
+        this->m_psession->post_command(std::move(request), std::move(owned), false);
+        this->_wait_request(generation, false);
+    } catch (...) { this->_abort_request(generation); throw; }
 }
-
-void query::redis::Iquery::_process_execute_query(std::string_view _command)
+void query::redis::Iquery::post_execute_query(std::string&& command, std::function<void()>&& response)
 {
-	// check) _pquery must not be nullptr
-	CGASSERT_ERROR(_command.empty() == false);
-
-	// 1) generate redis command
-	auto buf_query = generate_redis_command(_command);
-
-	SCOPED_LOCK_NAMED(this->m_lockable_state_query, cs)
-	{
-		// check) 
-		CGASSERT_ERROR(this->m_state_query == eOBJECT_STATE::READY);
-
-		// check) must be prepare
-		THROW_IF(this->m_state_query != eOBJECT_STATE::READY, throwable::failure(eRESULT::NOT_READY));
-
-		// 2) set query
-		this->m_buffer_query = buf_query;
-
-		try
-		{
-			// 3) ...
-			this->m_state_query = eOBJECT_STATE::REQUESTING;
-
-			// declare) 
-			CGDK::query::redis::session::REQUEST_QUERY request_info;
-			request_info.pquery = this;
-			request_info.buf_request = std::move(buf_query);
-
-			// notify) thread block
-			scoped_thread_block thread_block;
-
-			// 4) query를 요구한다.
-			this->m_psession->execute_query(std::move(request_info));
-
-			// - wait for the response (the state is changed by process_response())
-			while (this->m_state_query == eOBJECT_STATE::REQUESTING)
-				this->m_cv_complete.wait(cs);
-		}
-		catch (throwable::failure& /*_e*/)
-		{
-			// - set state (roll back) 
-			this->m_state_query = eOBJECT_STATE::READY;
-
-			// reraise) 
-			throw;
-		}
-		catch (...)
-		{
-			// - set state (roll back) 
-			this->m_state_query = eOBJECT_STATE::READY;
-
-			// reraise) 
-			throw;
-		}
-	}
+    this->_process_post_execute_query(command, std::move(response));
 }
-
-void query::redis::Iquery::post_execute_query(std::string&& _command, std::function<void()>&& _response)
+void query::redis::Iquery::_process_post_execute_query(std::string_view command, std::function<void()>&& response, std::function<void()>&& complete)
 {
-	// check) _pquery must not be nullptr
-	CGASSERT_ERROR(_command.empty() == false);
-
-	// check) throw exception if _pquery is nullptr
-	THROW_IF(_command.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT, 0, std::string_view("parameter '_command' is nullptr")));
-
-	// 1) post execute query
-	this->_process_post_execute_query(std::move(_command), std::move(_response));
+    std::string owned(command);
+    const auto generation = this->_begin_request(false);
+    if (complete) this->m_function_on_complete = std::move(complete);
+    CGDK::query::redis::session::REQUEST_QUERY request;
+    request.pquery = this; request.response = std::move(response);
+    request.callback_affinity = querier::t_callback_scope != nullptr;
+    this->_publish_request(generation);
+    try { this->m_psession->post_command(std::move(request), std::move(owned), true); }
+    catch (...) { this->_abort_request(generation); throw; }
 }
 
-void query::redis::Iquery::_process_post_execute_query(std::string&& _command, std::function<void()>&& _response)
-{
-	// check) _pquery must not be nullptr
-	CGASSERT_ERROR(_command.empty() == false);
-
-	// 1) generate redis command
-	auto buf_query = generate_redis_command(_command);
-
-	SCOPED_LOCK_NAMED(this->m_lockable_state_query, cs)
-	{
-		// check) 
-		CGASSERT_ERROR(this->m_state_query >= eOBJECT_STATE::READY);
-
-		// check) must be prepare
-		THROW_IF(this->m_state_query < eOBJECT_STATE::READY, throwable::failure(eRESULT::NOT_READY));
-
-		// 1) query command를 작성한다.
-		if (this->m_state_query == eOBJECT_STATE::READY)
-		{
-			// - query string
-			this->m_buffer_query = buf_query;
-
-			// - set state
-			this->m_state_query = eOBJECT_STATE::REQUESTING;
-		}
-
-		try
-		{
-			// 2) set request query
-			CGDK::query::redis::session::REQUEST_QUERY request_info;
-			request_info.pquery = this;
-			request_info.buf_request = std::move(buf_query);
-			request_info.response = std::move(_response);
-
-			// - no scoped_thread_block : the post does not wait for the response. (it flushed the deferred sends : a send system
-			//   call per command, and the thread block of the executor per command. the sends of the posts are deferred now like
-			//   any send : auto_scope in an executable, send_defer::scope out of it)
-
-			// 3) query를 요구한다.
-			this->m_psession->execute_query(std::move(request_info));
-		}
-		catch (...)
-		{
-			// - rollback state
-			this->m_state_query = eOBJECT_STATE::READY;
-
-			// reraise)
-			throw;
-		}
-	}
-}
-
-shared_buffer generate_redis_batch(std::span<const std::string_view> commands)
+static shared_buffer generate_redis_batch_impl(std::span<const std::string_view> commands, std::vector<std::size_t>* boundaries)
 {
 	const auto blank = [](char c) { return c == ' ' || c == '\t'; };
 	const auto digits = [](std::size_t n) { std::size_t d = 1; while (n >= 10) { n /= 10; ++d; } return d; };
 	const auto add = [](std::size_t& total, std::size_t n) {
-		THROW_IF(n > (std::numeric_limits<std::size_t>::max)() - total, throwable::failure(eRESULT::OVERFLOW_ERROR));
+		if(n > (std::numeric_limits<std::size_t>::max)() - total)
+			throw throwable::failure(eRESULT::OVERFLOW_ERROR);
 		total += n;
 	};
-	THROW_IF(commands.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
+
+	// check) 
+	if(commands.empty())
+		throw throwable::failure(eRESULT::INVALID_ARGUMENT);
+
 	std::size_t bytes = 0;
+	std::size_t local_counts[64];
+	std::vector<std::size_t> overflow_counts;
+	if (commands.size() > 64) overflow_counts.resize(commands.size() - 64);
+	std::size_t index = 0;
+	if (boundaries) { boundaries->clear(); boundaries->reserve(commands.size() + 1); boundaries->push_back(0); }
 	for (auto command : commands)
 	{
 		std::size_t count = 0;
 		for (std::size_t pos = 0; pos < command.size();)
 		{
-			while (pos < command.size() && blank(command[pos])) ++pos;
-			if (pos == command.size()) break;
+			while (pos < command.size() && blank(command[pos])) 
+				++pos;
+			if (pos == command.size()) 
+				break;
+
 			const auto start = pos;
-			while (pos < command.size() && !blank(command[pos])) ++pos;
+			while (pos < command.size() && !blank(command[pos])) 
+				++pos;
 			const auto length = pos - start;
 			add(bytes, length);
 			add(bytes, digits(length) + 5);
 			++count;
 		}
-		THROW_IF(count == 0, throwable::failure(eRESULT::INVALID_ARGUMENT));
+
+		if(count == 0)
+			throw throwable::failure(eRESULT::INVALID_ARGUMENT);
+
 		add(bytes, digits(count) + 3);
+		if (index < 64) local_counts[index] = count;
+		else overflow_counts[index - 64] = count;
+		++index;
 	}
+
 	auto buffer = alloc_shared_buffer(bytes);
 	char* out = buffer.data<char>();
 	const auto number = [&out, end = buffer.data<char>() + bytes](std::size_t n) {
 		out = std::to_chars(out, end, n).ptr;
 	};
+	index = 0;
 	for (auto command : commands)
 	{
-		std::size_t count = 0;
-		bool in_argument = false;
-		for (char c : command)
-		{
-			if (blank(c)) in_argument = false;
-			else if (!in_argument) { ++count; in_argument = true; }
-		}
+		const auto count = index < 64 ? local_counts[index] : overflow_counts[index - 64];
+		++index;
 		*out++ = '*'; number(count); *out++ = '\r'; *out++ = '\n';
 		for (std::size_t pos = 0; pos < command.size();)
 		{
-			while (pos < command.size() && blank(command[pos])) ++pos;
-			if (pos == command.size()) break;
+			while (pos < command.size() && blank(command[pos])) 
+				++pos;
+
+			if (pos == command.size()) 
+				break;
+
 			const auto start = pos;
-			while (pos < command.size() && !blank(command[pos])) ++pos;
+			while (pos < command.size() && !blank(command[pos]))
+				++pos;
+
 			const auto length = pos - start;
-			*out++ = '$'; number(length); *out++ = '\r'; *out++ = '\n';
+			*out++ = '$';
+			number(length);
+			*out++ = '\r';
+			*out++ = '\n';
+
 			std::memcpy(out, command.data() + start, length); out += length;
-			*out++ = '\r'; *out++ = '\n';
+
+			*out++ = '\r';
+			*out++ = '\n';
 		}
+		if (boundaries) boundaries->push_back(static_cast<std::size_t>(out - buffer.data()));
 	}
 	CGASSERT_ERROR(static_cast<std::size_t>(out - buffer.data<char>()) == bytes);
 	buffer.add_size(bytes);
 	return buffer;
+}
+
+query::execute_result<void> query::redis::Iquery::_execute_query_deferred(std::string&& _command)
+{
+	// - 'co_await' sends the request and resumes the coroutine when the response is received
+	auto pquery = object_ptr<Iquery>(this);
+	std::string command_sync(_command);
+	auto session = this->get_session();
+	auto resume = session.exist() ? session->coroutine_resume_policy() : std::pair<object_ptr<Iexecutor>, bool>{nullptr, true};
+
+	return execute_result<void>::deferred(
+		[pquery, command = std::move(command_sync)]() { pquery->_process_execute_query(command); },
+		[pquery, command = std::move(_command)](std::function<void()>&& _on_complete) { pquery->_process_post_execute_query(command, nullptr, std::move(_on_complete)); }, std::move(resume.first), resume.second);
+}
+
+
+void query::redis::Iquery::_process_post_fresh_query(std::string_view command, std::function<void()>&& response)
+{
+    this->_process_post_execute_query(command, std::move(response));
+}
+
+shared_buffer generate_redis_batch(std::span<const std::string_view> commands)
+{
+	return generate_redis_batch_impl(commands, nullptr);
+}
+shared_buffer generate_redis_batch_with_boundaries(std::span<const std::string_view> commands, std::vector<std::size_t>& boundaries)
+{
+	return generate_redis_batch_impl(commands, &boundaries);
 }

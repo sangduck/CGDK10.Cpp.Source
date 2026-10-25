@@ -13,11 +13,23 @@ executable::Nbatch::~Nbatch() noexcept
 
 size_t executable::Nbatch::executing_count() const noexcept
 {
-	// lock)
-	std::lock_guard cs(this->m_lockable_list_executable);
+	// return) the requested ones not completed yet (the size of the list reached 0 when the last one was taken, before it ran)
+	return this->m_count_executing.load(std::memory_order_acquire);
+}
 
-	// return) return size of executable list
-	return this->m_list_executable.size();
+void executable::Nbatch::_complete_one() noexcept
+{
+	// check) not the last one
+	if (this->m_count_executing.fetch_sub(1, std::memory_order_acq_rel) != 1)
+		return;
+
+	try
+	{
+		this->process_complete_execution();
+	}
+	catch (...)
+	{
+	}
 }
 
 void executable::Nbatch::queue_executable(object_ptr<Iexecutable>&& _pexecutable)
@@ -50,22 +62,46 @@ bool executable::Nbatch::request_execute(Iexecutor* _pexecutor)
 
 		// - get size
 		iSize = m_list_executable.size();
+
+		// - counted before the posts (one may complete before the next is posted)
+		this->m_count_executing.fetch_add(iSize, std::memory_order_acq_rel);
 	}
 
 	// 2) Executable의 개수만큼 executor를 실행시킨다.
+	//    (a post refused : that one is completed here. it would never run)
+	bool is_posted = true;
+
 	for(size_t i=0; i<iSize; ++i)
 	{
-		_pexecutor->post(this);
+		bool result = false;
+
+		try
+		{
+			result = _pexecutor->post(this);
+		}
+		catch (...)
+		{
+		}
+
+		if (result == false)
+		{
+			is_posted = false;
+			this->_complete_one();
+		}
 	}
 
-	// return) 
-	return true;
+	// return)
+	return is_posted;
 }
 
 intptr_t executable::Nbatch::process_execute(intptr_t _return, size_t _option)
 {
-	// declare) 
-	bool is_empty = false;
+	// declare) the execution is completed at the end (also when it throws)
+	struct COMPLETE_ONE
+	{
+		Nbatch* pbatch;
+		~COMPLETE_ONE() noexcept { pbatch->_complete_one(); }
+	} complete_one{ this };
 
 	object_ptr<Iexecutable> pexecutable;
 
@@ -73,28 +109,22 @@ intptr_t executable::Nbatch::process_execute(intptr_t _return, size_t _option)
 		// lock)
 		std::lock_guard cs(this->m_lockable_list_executable);
 
-		// 1) 하나를 줄인다.
-		pexecutable = this->m_list_executable.front();
-		this->m_list_executable.pop_front();
-
-		// 2) Empty인지 확인한다.
-		is_empty = this->m_list_executable.empty();
+		// 1) 하나를 줄인다. (cleared after the request : none)
+		if (this->m_list_executable.empty() == false)
+		{
+			pexecutable = std::move(this->m_list_executable.front());
+			this->m_list_executable.pop_front();
+		}
 	}
 
-	// check) 
+	// check)
 	if(pexecutable.empty())
 		return intptr_t(1);
 
 	// 3) 실행한다.
 	pexecutable->process_execute(_return, _option);
 
-	// 4) 모든 Executable이 실행되면 Signal시킨다.
-	if(is_empty)
-	{
-		process_complete_execution();
-	}
-
-	// return) 
+	// return)
 	return intptr_t(0);
 }
 

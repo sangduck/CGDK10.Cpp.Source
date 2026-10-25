@@ -132,8 +132,9 @@ void net::io::sendable::Ntcp_async::process_complete_sendable( uintptr_t /*_resu
 		this->m_bytes_pended -= _transferred_bytes;
 	}
 
-	// statistics) 
-	this->statistics_on_send_async();
+	// statistics) the overlapped send completed (statistics_on_send_async() was called here : the sends counted twice and
+	//             statistics_get_async_sending() never went back to 0 : statistics_get_now_async_io() of the socket stayed > 0)
+	this->statistics_on_decrease_async_sending();
 }
 
 void net::io::sendable::Ntcp_async::process_close_sender()

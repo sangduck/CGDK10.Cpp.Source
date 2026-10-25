@@ -51,7 +51,10 @@ public:
 public:
 			sEVENT_SETTING		m_event_setting;
 			sEVENT_STATUS		m_event_status;
-			object_ptr<entity>	m_pentity;
+			// - the entity it is registered in (set / cleared by the entity under its lock. not a reference : the entity owns the event.
+			//   was never set : unregister_event() / set_next_time() did nothing to the entity.
+			//   they use it without a reference : call them while the entity is alive (e.g. from process_event()))
+			std::atomic<entity*> m_pentity{ nullptr };
 			void				set_next_event_after_now();
 };
 

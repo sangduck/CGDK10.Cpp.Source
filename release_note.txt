@@ -1030,6 +1030,11 @@ tls pool의 garbage collection 처리 변경
   - 하나가 exception 을 던져도 나머지를 실행하고 첫 exception 을 다시 던진다. 실패 판정은 OVERLAPPED_ENTRY::Internal(NTSTATUS)로 GetQueuedCompletionStatus 와 같음
   - api::io_context_iocp_direct::pop_results() 추가(iocp_queued 에도). 헤더 함수·상수만 추가(멤버 변화 없음)
   - Win32 마이크로벤치 : 소비 thread 1개 2.43 -> 3.85 M/s, 4개 1.73 -> 2.88 M/s
+- net.socket : 풀에서 재사용된 socket 이 지난 접속의 송신 큐 한도를 그대로 갖던 문제 수정 (r11502, 인수인계 문서 2. 남은 일 21)
+  - 한 접속이 maximum_depth_of_send_buffer(n) / maximum_depth_of_send_buffer_bytes(n) 을 바꾸면 그 socket 이 다음 접속에서도 그 한도로 시작했다(windows / linux)
+  - Itcp_gather::reset_send_queue_limit() 추가 : acceptor 와 connector 가 풀에서 socket 을 꺼낸 직후 생성자에서 정한 한도로 되돌린다
+  - socket 마다 다른 한도는 생성자, on_request_accept(), on_alloc_connectable() 에서 정한다. connect_requestable 로 직접 쓰는 클라이언트는 대상 아님
+  - Itcp_gather 헤더 멤버 추가 : 사용하는 쪽 재빌드
 - io_uring completion : connect 하는 TCP socket 도 ring 에 round robin 으로 바인딩 (r11507, 인수인계 문서 1.31)
   - 전에는 connect post 를 실행한 worker 의 ring(post 는 깨운 ring 이 최대 16개씩 가져감) : 접속을 많이 여는 클라이언트의 socket 이 몇 thread 에 몰렸다
   - submit_connect 가 제출 전에 accept 와 같은 방식으로 바인딩(io_context 에 카운터 하나, accept 와 다른 시작값 : 한 프로세스의 loopback 짝이 같은 ring 에 놓이지 않게)
@@ -1038,3 +1043,147 @@ tls pool의 garbage collection 처리 변경
   - hints 를 주지 않은 "any" 는 이제 address_v6::any() 에 받은 port. from_string(address, port, af_prefer) 와 같음
   - 단위 테스트 unit_test.net_socket.http/test_sockaddr_from_string.cpp 추가. 헤더 변경 없음
 - system_executor(executor_system.h) : r11365 에서 깨진 한글 주석 11줄을 r11364 내용으로 복원 (주석만, 코드 변경 없음)
+- 주의 : Isocket::closesocket() 은 abortive close(SO_LINGER 0 -> RST)다 : 커널 송신 큐에 남은 데이터는 버려진다 (r11512, 인수인계 문서 1.32)
+  - 보낸 것을 상대가 다 받아야 하면 disconnect()(graceful)를 쓴다. send_defer_auto close 테스트가 간헐로 26/50 만 받던 원인(라이브러리 변경 없음, 테스트 수정)
+- make_executable(lambda) : std::function 없이 lambda 를 그대로 담고, 해제 때 캡처를 지운다 (r11516, 인수인계 문서 1.33) - 동작 변경
+  - 전에는 풀 객체가 소멸자 없이 돌아가 캡처(object_ptr, shared_ptr 등)가 그 객체를 다시 쓸 때까지 살아 있었다. move-only 캡처도 이제 된다
+  - linux 만들기+실행+해제 26 -> 10.5ns, windows 64B 캡처 56 -> 25ns
+  - 헤더만 변경(executable.make.h, common.h 에 <optional>) : 라이브러리 레이아웃 변화 없음, 이 헤더를 쓰는 코드는 다시 빌드해야 새 동작
+- unit test emergency.* (windows) : 테스트 포트가 Windows 제외 포트 범위(hyper-v / wsl 예약)와 겹쳐 실패하던 것 수정 : bind 해 보고 되는 포트를 쓴다 (r11516, 남은 일 22)
+- io_uring completion : CPU 를 오래 쓰는 handler 가 있어도 같은 ring 의 다른 socket 을 다른 worker 가 실행 (r11517, 인수인계 문서 1.34, 남은 일 17)
+  - r11481(블로킹 handler)과 같은 빌려주기 경로 : 같은 executable 이 2ms(BUSY_LEND) 넘게 돌면 다른 worker 가 그 ring 의 나머지 결과를 가져가 실행
+  - 순서는 유지(막힌 executable 뒤의 결과는 owner 에게). 모든 worker 가 쉬면 쉬는 owner 하나가 감시(1ms / 10ms)
+  - 200 접속 중 하나가 300ms CPU 를 쓸 때 다른 접속 최대 261~280ms -> 0.4~1.7ms. 처리량 변화는 흔들림 안(-0.8 ~ -1.6%)
+  - 헤더 변경(api.io_context.uring_cq.h) : 사용하는 쪽 재빌드. windows 변경 없음
+- buffers/_buffer_unreal.h(UE 전용) : 실제 UE 5.7 / 5.8 로 빌드·테스트, 컴파일 오류와 직렬화 결함 수정 (r11520, 인수인계 문서 1.35, 남은 일 6)
+  - 고치기 전에는 UE5 에서 컴파일되지 않았다(UE5 에 없는 TStringViewImpl). 이제 전방 선언 대신 엔진 헤더를 포함한다
+  - FString extract 가 (길이, 포인터) 순서의 deprecated 생성자 대신 TStringView 로 만든다. FStringView 는 TStringView<T>
+  - TMultiMap(KeyType/ValueType 없음), TSparseArray(ElementType private), TInlineAllocator 등 다른 할당자의 TArray 가 이제 컴파일된다
+  - TSharedPtr / TSharedRef / TObjectPtr 의 get_size_of·peek·null 처리 수정, FTouchKeySet 특수화 삭제(TSet 이 아님)
+  - UE 모듈에서는 cgdk/buffer 다음에 cgdk/buffers/_buffer_unreal.h 를 직접 포함한다. 검증 프로젝트 build/src/system/unit_test/unit_test.object.buffer.unreal (run_test.bat)
+- buffers : Ibuffer_serializable 의 peek(front<T>(offset))가 offset 을 전진시키지 않던 버그 수정 (r11520) - 동작 변경
+  - std::vector<serializable> 등을 peek 하면 첫 원소를 거듭 읽었다. 헤더만 변경(_buffer_common.h)
+- io_uring completion : 소유 worker 송신 op(CGDK_IO_URING_SEND_OP=1, 기본 off)에서 상대 FIN 과 같이 온 요청의 응답이 사라지던 문제 수정 (r11522, 인수인계 문서 1.36, 남은 일 21)
+  - 요청 handler 의 응답은 owner 의 다음 enter 까지 staged 인데, 같은 배치의 EOF 가 graceful close 로 shutdown + cancel 해 지웠다(기본 모드·disconnect() 는 무관)
+  - Iio_context::submit_staged(fd) 추가 : graceful close 가 shutdown 전에 그 ring 에 staged 된 op 를 제출한다
+  - 헤더 변경(executor.Iio_context.h virtual 추가, executor.io_context.h, api.io_context.uring{,_cq}.h) : 사용하는 쪽 재빌드. windows 변경 없음
+  - 단위 테스트 uring_send.send_then_disconnect_* 추가. ASan 빌드로 net_socket.http / system.object.execute 3 모드 통과(보고 0)
+- unit test bench_linux_io : 두 장비 사이 echo 벤치 bench.remote 추가 (r11523) : CGDK_BENCH_REMOTE=server / <서버 주소>, CGDK_BENCH_BACKEND
+  - 1GbE(POKPUNG / SAKPUNG)에서는 회선이 상한이라 zerocopy 켬/끔 차이가 보이지 않았다(서버 CPU 차이 노이즈 안). 판정에는 10GbE 이상 필요
+- linux zerocopy : 같은 host 의 상대(127.0.0.1, 자기 주소, 같은 host 컨테이너)로 가는 zerocopy 를 socket 별로 끈다 - copy check (r11525, 인수인계 문서 1.36, 남은 일 21)
+  - 같은 host 끼리는 커널이 어차피 복사해 pin + 통지 비용만 더해졌다. 커널이 복사했다고 보고한 송신이 연속 8번이면 그 socket 은 reset 까지 복사로 보낸다
+  - readiness 는 MSG_ZEROCOPY 통지의 ee_code, completion 은 IORING_SEND_ZC_REPORT_USAGE(kernel 6.2+)의 통지. 실 NIC 도 가끔 하나씩 보고하므로 첫 보고로는 끄지 않는다
+  - Itcp_gather::zerocopy_copied_count(), is_zerocopy_copied(), enable_zerocopy_copy_check(bool)(기본 on) 추가. Itcp_gather 헤더 멤버 추가 : 사용하는 쪽 재빌드
+  - loopback 64KB echo(POKPUNG 8 thread) : readiness 175K -> 269K, completion 158~186K -> 216K msg/s. 1GbE 실 NIC 는 zerocopy 그대로
+- executor::strand : destroy 가 기다리는 동안 락을 잡고 있던 문제, strand 의 executable 안에서 destroy 하면 멈추던 문제 수정 (인수인계 문서 1.37, 남은 일 14) - 동작 변경
+  - 다른 thread 가 처리 중이면 락을 잡은 채 1ms 씩 sleep 했다 : 그동안 post() 와 처리 끝 표시가 막혀 windows 는 post 최대 6.6초, linux 는 destroy 가 끝나지 않았다(60초 timeout)
+  - 이제 락을 놓고 기다린다(2ms yield 뒤 1ms sleep). 자기 executable 안의 destroy 는 기다리지 않고 돌아오고, 남은 executable 은 그 thread 가 순서대로 실행한다
+  - .cpp 만 변경(executor.strand.cpp) : 헤더 변경 없음, 재빌드 불필요(다시 링크)
+- linux api::get_core_count() : machine 의 CPU 수(hardware_concurrency) 대신 affinity(taskset, cpuset)와 cgroup CPU 한도(컨테이너 --cpus, CPUQuota) 중 작은 것 (인수인계 문서 1.37) - 동작 변경
+  - 실행기 기본 thread 수(core x2 + 2), acceptor prepare 수, redis 세션 수 등이 컨테이너에서 host CPU 수로 과다하던 것. 32 CPU host 의 docker --cpus=2 에서 32 -> 2
+  - .cpp 만 변경(api.system.linux.cpp). windows 는 그대로
+- windows tcp<> / tcp_buffered<> (Ntcp_async_gather, Ntcp_async_gather_buffered) : WSASend 를 송신 큐 락 밖에서 부른다 (인수인계 문서 1.38, 남은 일 14)
+  - 전에는 보내는 thread 가 큐 락을 잡은 채 WSASend 해 같은 socket 에 보내는 다른 thread 가 그동안 락에서 잠들었다
+  - 이제 큐 조작만 락 안, WSASend 는 밖(그 사이 다른 thread 는 큐에 쌓고 바로 돌아간다). 순서·중복 송신 보장은 그대로
+  - close 와의 handle 경합은 새 락(m_lockable_send_call) : handle 읽기 + WSASend / shutdown 과 close 의 handle 교체만 그 안
+  - 8 thread 가 socket 1개에 64B : 4.48M -> 14.85M msg/s, socket 32개에 나눠 : 0.68M -> 20.2M msg/s. echo(handler 안 송신)는 같음
+  - 헤더 멤버 추가(net.io.sendable.tcp_async_gather.h, net.io.sendable.tcp_async_gather_buffered.h) : CGDK lib 전체와 사용하는 쪽(gruma) 재빌드
+  - unit test send_defer_auto.* 를 windows 에서도 빌드, close_while_sending_{gather,buffered} 추가
+- windows 실행기도 executable 마다 send_defer::auto_scope 를 연다 : linux(r11496)와 같고 기본 켜짐 (인수인계 문서 1.39, 남은 일 14) - 동작 변경
+  - handler 안에서 같은 socket 으로 이어지는 송신은 handler 가 끝나거나 다른 socket 으로 보낼 때 한 번에 나간다(전에는 메시지마다 WSASend)
+  - tcp echo 64B x32 window16 : 2.38M -> 7.54M msg/s. 끄려면 send_defer::enable_auto(false)
+  - .cpp 만 변경(executor.io_context.cpp) + send_defer.h 주석 : 재빌드 불필요(다시 링크)
+- linux epoll UDP 수신 : 같은 socket 을 여러 thread 가 동시에 받을 때 스택 배열을 넘어 "stack smashing detected" 로 죽던 문제 수정 (인수인계 문서 1.40, 남은 일 23)
+  - recvmmsg 배치 수(1~32)가 plain int 라 g++ 가 2배 값을 저장한 뒤 32 로 다시 저장했다. 그 사이 다른 thread(EPOLLET)가 64 를 읽고 32칸 배열에 64개를 받았다
+  - 이제 atomic 으로 한 번에 저장하고 읽은 값을 1~32 로 묶는다. 드물다(바쁜 장비의 bench.epoll 300회 중 1회) : UDP socket 하나를 여러 thread 가 받는 서버가 해당
+  - 헤더 멤버 타입 변경(net.io.receivable.datagram.h, linux 만) : 사용하는 쪽 재빌드. windows 변경 없음
+  - 단위 테스트 linux_io.udp_receive_on_many_threads 추가(고치기 전 20/20 실패)
+- linux UDP 송신이 EPOLLOUT 을 잃고 영원히 멈추던 경쟁 수정 (인수인계 문서 1.41, r11538)
+  - EPOLLOUT 켜기 / 끄기의 epoll 등록이 송신 락 밖이라 늦은 '끄기'가 다음 thread 의 '켜기'를 덮었다 : 그 뒤 송신은 큐에만 쌓임
+  - 소켓 버퍼가 가득 찬(EAGAIN) 때만 해당. .cpp 만 변경
+- linux TCP : 상대가 많이 보내고 바로 닫으면 끝부분 메시지를 처리하지 않고 닫던 문제 수정 (1.41, r11539)
+  - 한 event 의 수신 횟수 한도(8)에서 끊은 뒤 FIN event 라 바로 닫았다(읽지 않은 데이터가 남아 RST). .cpp 만 변경
+- linux acceptor : fd 가 바닥나면(EMFILE / ENFILE) worker 가 listen socket 에서 CPU 를 다 쓰던 문제 수정 (1.41, r11540) - 동작 변경
+  - 이제 대기 접속을 받아 바로 닫는다(상대는 접속이 닫힌 것을 봄). .cpp 만 변경
+- linux epoll : EPOLLWAKEUP 제거, UDP 송신 배치의 malloc 제거, UDP 수신 recvmmsg 배치 최소 2, 등록 표 bucket 캐시 라인 정렬,
+  송수신 바이트 통계 시각을 coarse 시계로 (1.41, r11541~r11546). r11545 / r11546 은 헤더 변경 : 재빌드
+- linux epoll TCP 수신 버퍼를 메시지의 최대 2배로 잡던 계산 수정 (1.41, r11554)
+- windows UDP : port unreachable 보고(enable_report_connect_reset) 복구, 0 byte datagram 을 message 로, 수신 락 shared,
+  송신은 먼저 비overlapped sendto (1.41, r11548, r11549) - 동작 변경
+  - UDP fan-in 319K -> 741K, echo 342K -> 390K msg/s. 헤더 변경(net.io.Isocket.h) : CGDK lib 전체와 사용하는 쪽 재빌드
+- windows TCP 수신 버퍼 규칙을 epoll 과 같게(재사용, 64KB 상한, 줄임 지연) (1.41, r11550) : 64KB +5.8%. 헤더 변경 : 재빌드
+- windows 송신 완료가 async 송신 수를 줄이지 않아 acceptor stop 정리 / emergency acceptor 가 보낸 적 있는 socket 을 놓치던 문제 수정 (1.41, r11551)
+- linux io_uring completion : ring 의 공유 캐시 라인 분리, ring 별 op free list (1.41, r11552, r11553) : +1~12%, 단일 RECV 모드 +32~135%. .cpp 만 변경
+- 기본 io 백엔드를 io_uring completion 으로 (r11556) - 동작 변경
+  - 만들 수 없으면 epoll(kernel 6.0 전, kernel.io_uring_disabled, docker seccomp). CGDK_IO_URING=epoll 또는 executor::set_default_io_backend() 로 epoll
+  - io_context 를 처음 만들 때 백엔드와 io_uring 사용 여부를 info 로그로 (r11557)
+- linux epoll TCP 등록을 혼합 방식으로 : 작은 수신 EPOLLET, 큰 수신 중에만 EPOLLONESHOT (r11572) - 동작 변경
+  - 이벤트마다 하던 epoll_ctl(MOD) 가 없어져 작은 메시지 16 · 32 thread +48 ~ +97%, 8 thread +10%. 64KB 는 그대로
+  - 헤더 변경(net.io.Isocket.h) : CGDK lib 전체와 사용하는 쪽 재빌드
+- unit test bench : CGDK_BENCH_CONNECTIONS=100,1000 접속 수 케이스, bench.epoll 이 epoll 을 명시 (r11559)
+- executor::scheduler 점검 수정 (r11576) - 동작 변경
+  - stop() 이 Release 에서 thread 를 기다리지 않고 FAIL 로 끝날 수 있던 문제(대기 1000번이 sleep 없이 수십 us 에 끝남) : 이제 최대 10초 기다리고 join
+  - post_at() 이 멈춘 뒤 / 시작 전에는 false (전에는 버리면서 true : 멈춤을 건너 잠든 coroutine 이 다시 깨지 않았다)
+  - cancel() 이 지운 executable 을 큐 락 밖에서 해제 (소멸자가 같은 scheduler 에 post_at / cancel 하면 교착)
+  - 같은 executable 을 scheduler 두 개에 걸면 먼저 건 쪽 cancel 이 못 찾던 문제
+  - spin_wait(duration) 추가(기본 꺼짐) : 대기의 마지막 구간을 spin. windows 고해상도 타이머 지연(중앙값) 362~485us -> 15~27us(spin_wait(2ms))
+  - 헤더 변경(Iexecutable.h 는 모든 executable 의 배치) : CGDK lib 전체와 사용하는 쪽(gruma) 재빌드
+- executable::batch_wait : 마지막 것을 꺼낸 순간이 아니라 모두 실행된 뒤에 깨어난다, 깨우기 유실·(max)() 넘침 수정 (r11577). 헤더 변경 : 재빌드
+- executor::io_context runnext (r11578) - 동작 변경
+  - post 한 뒤 블로킹(scoped_thread_block, notify_blocked)하는 worker 의 슬롯을 공유 큐로 내보낸다 (전에는 handler 가 끝날 때까지 아무도 실행하지 못해 그것을 기다리면 교착)
+  - worker 가 하나인 executor 는 슬롯을 쓰지 않는다 : post 순서대로 실행
+  - windows(iocp)에도 같은 슬롯 : 자기 executor 로 이어 post 하는 체인 10만 번 4 worker 240ms -> 20ms. CGDK_RUNNEXT=0 으로 끔
+  - 헤더 변경(executor.io_context.h) : 재빌드
+- 전체 점검 수정 (r11582~r11620, 인수인계 1.44) - 동작 변경 포함
+  - io_uring completion : SEND_ZC 버퍼를 그 op 의 통지 뒤에 놓음(r11582), disable 중 끝난 accept 다시 걸기(r11583), lent ring 의 wake poll 다시 걸기(r11584), fd 취소 scan 중 옮겨진 op(r11585), memlock 초과 -ENOMEM 을 복사로 다시 보냄(r11588 : 전에는 socket 을 닫음), close 의 취소 scan 생략(r11590), LENT ring 의 handle 유지(r11591)
+  - strand : executor 정지 뒤 post 거부 처리와 destroy() 무한 대기(r11598), post_at 을 strand 의 executor 에서 실행 + 깨우기 하나(r11599), 큐 락 std::mutex(r11613)
+  - linux force_raise_exception 은 아무것도 하지 않음(r11600) : SIGUSR2 가 emergency 종료 handler 로 갈 수 있었다
+  - queue_list : stop 뒤 post 거부, execute_all 의 예외 처리(r11601). schedulable 포인터 락 · interval 포화(r11602). extra thread 계산(r11605)
+  - 블로킹하는 worker 가 들고 있던 묶음의 나머지를 다른 worker 가 실행(r11618)
+  - windows 기본 thread 수가 affinity · job CPU 한도를 따름(r11614)
+  - 암호화 socket(socket.crypt) : cryptor 락(r11594), ACCEPT 와 같이 온 암호문 · 수신 버퍼(r11595), 송신 flag reset · async 송신 수 · 락 안 암호화(r11596, r11597)
+  - raw gather 송신의 close / handle 재사용 경쟁(r11619), epoll 의 EPOLLOUT 재요청 유실(r11620), connector 의 효과 없는 SIO_LOOPBACK_FAST_PATH 제거(r11612)
+  - HTTP 서버 : chunk 크기 overflow, chunk 뒤 CRLF, Transfer-Encoding 대소문자, 잘못된 Content-Length 는 400, websocket 길이 wrap(r11586)
+  - time_event : unregister_event 조건 반대, heap 재정렬, stop 대기, reset_next_time, Ievent 의 entity 포인터, interval 0 무한 루프(r11587, r11603, r11604, r11609, r11611)
+  - redis RESP 파서 : 경계 읽기, 이어 받기, null bulk, 배열 응답(r11589). http query 의 chunked 응답 502(r11592). server.web 상태 줄 순서(r11593)
+  - 헤더 변경 다수(인수인계 1.44 의 목록) : CGDK lib 전체와 사용하는 쪽(gruma) 재빌드
+
+2026.10.25 - Redis 타입 기반 배치 API와 동기 실행, 비교 벤치마크
+- 문제: 기존 pipeline은 송신을 묶어도 명령마다 query 생성, 세션 선택, 큐 등록, 완료 통지를 반복했다.
+  - 명령 문자열 하나는 단건, 명령 문자열의 배열/벡터/span/initializer_list는 배치로 선택하는 오버로드를 추가했다.
+  - 비동기: post_execute_query(commands, callback). 전체 결과 vector<resp_data>를 입력 순서대로 한 번 전달한다.
+  - 동기: execute_query_sync(commands). 기존처럼 query 객체를 반환하며 result()가 ARRAY_, result()[i]가 각 응답이다.
+  - execute_query(commands)도 지원한다. 일반 문맥은 동기, CGDK coroutine의 co_await는 비동기 실행하며 지연 실행의 원본 문자열 수명을 보존한다.
+  - 배치마다 세션 선택/query 객체/요청 큐 노드/명령 RESP 버퍼를 하나씩 사용하고 송신 API를 한 번 호출한다. 커널 부분 송신, 응답별 파싱/큐 락/통계는 기존 경로를 사용한다.
+  - 동기 배치는 기존 shared 세션 할당(FIFO, 공유 대기 100ms fallback), scoped_thread_block, 조건 변수 predicate 대기를 사용한다. send_defer 범위 안에서도 대기할 수 있다.
+- 완료/오류/취소 계약
+  - 전체 명령을 인코딩한 뒤 등록한다. 빈 배치/빈 명령/공백뿐인 명령/정지된 querier는 예외로 거부하며 앞부분만 전송하지 않는다.
+  - Redis 오류는 해당 원소의 ERROR_로 남기고 뒤 응답도 수집한다. 진행 중 stop/연결 단절은 받은 응답을 보존하고 나머지를 NONE_으로 둔다.
+  - NONE_은 응답 미수신이며 서버 미실행을 보장하지 않는다. 연결이 끊긴 배치는 자동 재전송하지 않는다. 기존 단건 요청의 reconnect 정책은 유지한다.
+  - 수락된 비동기 배치 callback은 큐/querier 락 밖에서 한 번 호출한다. 동기 세션 할당 대기의 취소/전송 실패는 기존 동기 함수처럼 예외가 발생할 수 있다.
+  - 각 명령이 응답 하나를 만드는 pipeline용이며 transaction/바이너리 인자 API는 아니다.
+- Redis 임시 문자열 비동기 호출의 무한 재귀 수정
+  - post_execute_query(std::string&&, callback)의 forwarding이 자기 자신을 계속 호출했다. 문자열 처리 오버로드로 전달하도록 고쳤다.
+  - 수정 전 실제 호출이 45초 timeout으로 멈췄으며 일반/명시적 템플릿 호출 회귀 테스트를 추가했다.
+- 응답/수명 처리 정리
+  - 이미 잡은 세션 큐 락을 push/pop에서 다시 잡던 두 곳을 제거했다. 이 정리만의 처리량 차이는 약 -1~+2%로 작았다.
+  - const resp_data의 operator[]를 추가해 동기 배치 결과를 읽을 수 있다.
+  - 세션이 없는 coroutine 결과 query도 풀 반환 시 NONE 상태로 초기화한다.
+- hiredis / redis-plus-plus / Boost.Redis 비교: benchmark/3.query_redis
+  - SAKPUNG Ryzen 9 8945HX, GCC15.2.1 Release, Redis8.2.10, hiredis1.3.0, redis-plus-plus1.3.15, Boost1.90.0.
+  - 8조건 x 6방식 x 3회 = 144회 모두 errors=0. 1024 keys, 준비0.5초+측정2초, 같은 연결 수, CPU 배치를 고정하고 실행 순서를 교차했다.
+  - GET16B/배치100/연결1 중앙값: hiredis 2,188,205/s, redis++ 1,750,701/s, Boost.Redis 2,200,878/s, CGDK 기존 944,519/s, 비동기 배치 2,261,440/s, 동기 배치 2,230,584/s.
+  - GET16B/배치1000/연결1: hiredis 3,682,378/s, Boost.Redis 4,060,426/s, CGDK 비동기 4,409,884/s, 동기 4,333,383/s.
+  - 한 건씩 왕복할 때는 hiredis 53,864/s > CGDK 기존 44,614/s. GET256KB는 hiredis 15,225/s, CGDK 비동기 15,160/s로 비슷하다. 연결4/배치1000은 Redis CPU가 상한에 가까워 hiredis가 약간 빠르다.
+  - p50/p99는 배치 전체 완료 시간이고 명령 수로 나눈 지연시간이 아니다. Boost.Redis도 요청 생성부터 시간을 재도록 맞췄다. CPU는 I/O worker를 포함한 클라이언트 프로세스 전체다.
+  - 현재 Redis 소스/벤치마크는 재컴파일했으며 다른 SDK 및 제3자 라이브러리는 기존 설치를 재사용했다. SDK HEAD 전체 재빌드, Windows 실성능, io_uring 모드별 성능 검증을 뜻하지 않는다.
+  - 소스와 실행 스크립트: benchmark/3.query_redis/compare_clients.py, CMakeLists.txt, run_bench.sh, bench_*.cpp, check_batch.cpp.
+  - 원시 로그/지표/소스 해시: results/clients_compare_20261025.{txt,md,sources.sha256}.
+- 검증
+  - Windows v145 x64 Redis 라이브러리 Debug/Release: 컴파일 경고/오류0. Windows Redis 테스트11개, Linux server_query 테스트27개 통과.
+  - 실제 Redis에서 세션1/4개 각각12,000건을 동기/비동기로 교차 검증. 오류/순서/타입 선택/128KB 값/입력 수명/전용 세션 대기/부분 stop/연결 단절/callback 재진입/coroutine을 확인했다.
+  - 격리 테스트 프로젝트의 기존 project reference에서 발생하는 MSB8028은 공유 IntDir 빌드 경고이며 라이브러리 컴파일 경고와 구분한다.
+- 배포/재빌드
+  - REQUEST_QUERY 구조와 공개 헤더가 바뀐다. Redis 라이브러리와 해당 헤더를 사용하는 프로그램을 재빌드해야 한다.
+  - 기술적 설명 아래 Redis 문서를 추가하고 비교 로그도 게시했다: http://192.168.0.92:8080/query.redis.html
+  - 웹사이트 파일29개는 기존 파일을 백업한 뒤 교체하고 HTTP200과 SHA256 일치를 확인했다.

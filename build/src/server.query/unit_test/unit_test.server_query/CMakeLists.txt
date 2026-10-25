@@ -77,6 +77,8 @@ pch.cpp
 
 #CGDK/License
 test_query.cpp
+test_redis_resp.cpp
+test_http_query.cpp
 )
 
 
@@ -110,8 +112,16 @@ ADD_EXECUTABLE(${BUILD_NAME}.${BUILD_TYPE} ${SRC_FILES})
 TARGET_LINK_LIBRARIES( ${BUILD_NAME}.${BUILD_TYPE}
 	${GTEST_LIBRARIES}
 	${GTEST_MAIN_LIBRARIES}
+	CGDK10.server.query.redis_linux.${BUILD_TYPE}
+	CGDK10.server.query.http_linux.${BUILD_TYPE}
 	CGDK10.server.query_linux.${BUILD_TYPE}
+	CGDK10.net.socket.http_linux.${BUILD_TYPE}
+	CGDK10.net.socket.crypt_linux.${BUILD_TYPE}
+	CGDK10.net.socket_linux.${BUILD_TYPE}
 	CGDK10.system.object_linux.${BUILD_TYPE}
+	CGDK10.system.util.crypt_linux.${BUILD_TYPE}
+	crypto
+	ssl
 	rt
 	pthread
 )

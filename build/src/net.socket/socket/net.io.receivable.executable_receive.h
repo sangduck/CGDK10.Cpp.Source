@@ -42,6 +42,27 @@ public:
 	[[nodiscard]] LPDWORD 		reset_and_get_ptr_bytes_reiced() noexcept { this->m_bytes_received = 0; return &m_bytes_received; }
 	[[nodiscard]] LPDWORD 		reset_and_get_ptr_flags() noexcept { this->m_flags = 0; return &m_flags; }
 
+	// - the buffer of the next receive : this one again when nothing else refers to it (the message was not kept) and it is large enough,
+	//   a new one otherwise (a buffer of the message size per datagram was allocated before : 64KB by default)
+			void				prepare_receive_buffer(std::size_t _size)
+			{
+				const auto plower = static_cast<char*>(const_cast<void*>(this->m_buffer.get_lower_bound()));
+				if (this->m_buffer.is_source_unique() && plower != nullptr && static_cast<std::size_t>(static_cast<const char*>(this->m_buffer.get_upper_bound()) - plower) >= _size)
+				{
+					this->m_buffer.set_data(plower);
+					this->m_buffer.set_size(_size);
+				}
+				else
+				{
+					this->m_buffer = alloc_shared_buffer(_size) ^ _size;
+				}
+				this->m_wsabuf = WSABUF{ static_cast<ULONG>(_size), this->m_buffer.data() };
+			}
+
+	// - the status of the completed receive (OVERLAPPED::Internal : the NTSTATUS of the I/O). the completion result of the io_context is
+	//   only 0 / 1 (GetQueuedCompletionStatusEx) and the last error of the thread is not the one of this I/O
+	[[nodiscard]] LONG			io_status() const noexcept { return static_cast<LONG>(static_cast<ULONG>(this->Internal)); }
+
 private:
 	virtual	intptr_t			process_execute( intptr_t _result, std::size_t _param) override;
 

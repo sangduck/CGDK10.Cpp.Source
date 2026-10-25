@@ -243,19 +243,22 @@ bool net::io::sendable::Ntcp_async_gather_buffered_raw::process_sendable(const b
 	if(_buffer.data() == nullptr || _buffer.size() == 0)
 		return false;
 
-	// check) 
-	if(this->socket_state() < eSOCKET_STATE::ESTABLISHED)
-		return false;
-
-	// 1) get socket native handle
-	auto handle_socket = this->native_handle();
-
-	// check) 
-	if(handle_socket == INVALID_SOCKET)
-		return false;
+	// declare)
+	CGSOCKET handle_socket;
 
 	SCOPED_LOCK(this->m_lockable_sending)
 	{
+		// check) (in the lock : a close swaps the handle before its reset clears the flag)
+		if(this->socket_state() < eSOCKET_STATE::ESTABLISHED)
+			return false;
+
+		// 1) get socket native handle
+		handle_socket = this->native_handle();
+
+		// check) 
+		if(handle_socket == INVALID_SOCKET)
+			return false;
+
 		// 2) 전송 처리 중(m_flag_sending이 signal된 상태(true))라면 queuing 처리만 하고 끝낸다.
 		if (this->m_flag_sending == true)
 		{
@@ -282,10 +285,8 @@ bool net::io::sendable::Ntcp_async_gather_buffered_raw::process_sendable(const b
 
 		// 3) set flag_sending true
 		this->m_flag_sending = true;
-	}
 
-	// 1) queuing to sending buffer
-	{
+		// 4) queuing to sending buffer (in the lock : a reset of a close meanwhile clears it and the flag under the same lock)
 		// check) 
 		CGASSERT_FATAL(this->m_queue_sending.count_node == 0);
 		CGASSERT_FATAL(this->m_queue_sending.capacity_node != 0);
@@ -311,6 +312,9 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::process_complete_sendabl
 	this->statistics_on_send_bytes(_transferred_bytes);
 	this->statistics_on_send_message((_transferred_bytes != 0) ? this->m_queue_sending.count_message : 0);
 
+	// statistics) the overlapped send completed (it was never decreased : statistics_get_now_async_io() of a socket that had sent stayed > 0)
+	this->statistics_on_decrease_async_sending();
+
 	// check)
 	if(this->m_queue_sending.count_message == 0)
 		return;
@@ -321,7 +325,11 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::process_complete_sendabl
 	SCOPED_LOCK_NAMED(this->m_lockable_sending, cs)
 	{
 		// 1) clear seding queue
-		this->m_queue_sending.buffer_reset();
+		//    (under m_lockable_send_call : the completion may come before the sending thread returns from WSASend)
+		SCOPED_LOCK(this->m_lockable_send_call)
+		{
+			this->m_queue_sending.buffer_reset();
+		}
 
 		// declare)
 		auto handle = this->native_handle();
@@ -347,13 +355,7 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::process_complete_sendabl
 
 			// - shutdown if send_disconnected
 			if (this->socket_state() == eSOCKET_STATE::SEND_DISCONNECTED)
-			{
-				// - set linger Option for graceful disconnect
-				api::socket::set_linger_option(handle, 0);
-
-				// - send shutdown
-				api::socket::shutdown(handle, SD_SEND);
-			}
+				this->_process_shutdown_send();
 
 			// return)
 			return;
@@ -381,11 +383,22 @@ bool net::io::sendable::Ntcp_async_gather_buffered_raw::process_sendable_async(C
 	// declare) 
 	DWORD bytes_sent = 0;
 
-	// 3) send~
-	auto result = api::socket::send_async(_handle_socket, _array_wsabuffer, _count_buffer, &bytes_sent, this->m_pexecutable_send_buffer_list.get());
+	// 3) send~ (the handle is read and WSASend is called under m_lockable_send_call : the close swaps the handle under it.
+	//    _handle_socket was read out of it : closed and made again for another socket meanwhile, that socket got the data)
+	bool result = false;
+	bool is_closed = false;
+	SCOPED_LOCK(this->m_lockable_send_call)
+	{
+		const auto handle_socket = this->native_handle();
+
+		if (handle_socket == _handle_socket && handle_socket != INVALID_SOCKET)
+			result = api::socket::send_async(handle_socket, _array_wsabuffer, _count_buffer, &bytes_sent, this->m_pexecutable_send_buffer_list.get());
+		else
+			is_closed = true;
+	}
 
 	// check) result가 false이고 WOULD BLOCK이 아닐 때만 전송 실패이다.
-	if (result == false && api::get_last_error() != WSA_IO_PENDING)
+	if (result == false && (is_closed || api::get_last_error() != WSA_IO_PENDING))
 	{
 		// statistics)
 		this->statistics_on_error_send();
@@ -429,15 +442,23 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::process_close_sender()
 	}
 
 	if (do_shutdown)
+		this->_process_shutdown_send();
+}
+
+void net::io::sendable::Ntcp_async_gather_buffered_raw::_process_shutdown_send() noexcept
+{
+	// - the handle is read under m_lockable_send_call (the close swaps the handle under it)
+	SCOPED_LOCK(this->m_lockable_send_call)
 	{
-		// - get handle
-		auto handle = this->native_handle();
+		const auto handle_socket = this->native_handle();
 
-		// - linger Option을 Graceful disconnect로 설정한다.
-		api::socket::set_linger_option(handle, 0);
+		RETURN_IF(handle_socket == INVALID_SOCKET);
 
-		// - 접속을 종료한다.
-		api::socket::shutdown(handle, SD_SEND);
+		// - linger Option : graceful disconnect
+		api::socket::set_linger_option(handle_socket, 0);
+
+		// - shutdown
+		api::socket::shutdown(handle_socket, SD_SEND);
 	}
 }
 
@@ -446,7 +467,11 @@ void net::io::sendable::Ntcp_async_gather_buffered_raw::process_reset_sendable()
 	// 1) ...
 	SCOPED_LOCK(this->m_lockable_sending)
 	{
-		this->_process_prepare_send_buffers();
+		// - m_queue_sending : under m_lockable_send_call, after the sending thread returned from WSASend
+		SCOPED_LOCK(this->m_lockable_send_call)
+		{
+			this->_process_prepare_send_buffers();
+		}
 	}
 
 	// 2) reset socket option

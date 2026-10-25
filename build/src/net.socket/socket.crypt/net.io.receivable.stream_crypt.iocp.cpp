@@ -57,10 +57,16 @@ intptr_t net::io::receivable::Nstream_crypt::process_complete_receivable( intptr
 		// statistics) socket의 receive통계.
 		this->statistics_on_receive_bytes(_transferred);
 
+		// declare) the received bytes were taken as plain (no cryptor)
+		bool is_plain = false;
+
 		// 1) 복호화 처리
 		{
 			// - receive 받은 shared_buffer를 얕은 복사한다. (막 받은 buffer)
 			shared_buffer temp_source = this->m_buffer_received ^ buffer_view(this->m_wsabuf_receiving.buf, static_cast<uint32_t>(_transferred));
+
+			// - no cryptor : taken as plain (the cryptor may be set while they are processed : process_decrypt_received_after)
+			is_plain = this->get_cryptor().empty();
 
 			// - 복호화한다. (receive Encrypt를 수행하는 함수.)
 			auto buf_decrypt = this->process_decryptor(temp_source);
@@ -84,7 +90,7 @@ intptr_t net::io::receivable::Nstream_crypt::process_complete_receivable( intptr
 					memcpy(buf_new.data(), this->m_buffer_received.data(), buffer_received_size);
 
 				// - [새_수신_버퍼]를 [수신_버퍼](m_wsabuf_receiving)에 설정한다.
-				this->m_wsabuf_receiving = WSABUF{ static_cast<ULONG>(_transferred), buf_new.data()};
+				this->m_wsabuf_receiving = WSABUF{ static_cast<ULONG>(_transferred), buf_new.data() + buffer_received_size };
 
 				// - [이미_수신한_데이터_버퍼]에 버퍼를 설정한다.
 				buf_new ^= buffer_received_size; this->m_buffer_received = std::move(buf_new);
@@ -115,7 +121,20 @@ intptr_t net::io::receivable::Nstream_crypt::process_complete_receivable( intptr
 		net::sockaddr address_peer;
 
 		// 1) 일단 on_receive한다.(일반적으로 여기서 하는 역할은 거의 없다.)
-		this->process_on_receive(buffer_view{ this->m_wsabuf_receiving.buf + this->m_wsabuf_receiving.len, _transferred }, address_peer);
+		//    (the decrypted bytes : appended at m_wsabuf_receiving.buf. it was 'buf + len' : past the received bytes)
+		this->process_on_receive(buffer_view{ this->m_wsabuf_receiving.buf, _transferred }, address_peer);
+
+		// - the bytes taken as plain (process_decrypt_received_after)
+		if (is_plain)
+		{
+			this->m_preceived_plain_begin = this->m_wsabuf_receiving.buf;
+			this->m_preceived_plain_end = this->m_wsabuf_receiving.buf + _transferred;
+		}
+		else
+		{
+			this->m_preceived_plain_begin = nullptr;
+			this->m_preceived_plain_end = nullptr;
+		}
 
 		// 2) Process message를 수행한다.
 		//    - 여기서 Return해 오는 값은 다음 message를 받기 위해 다음에 필요로 하는 메모리 용량이다.
@@ -123,6 +142,10 @@ intptr_t net::io::receivable::Nstream_crypt::process_complete_receivable( intptr
 		//      따라서 m_buffer_received은 받은 데이터 그대로 사용하면 된다.
 		//    - Exception이 발생가능하다.
 		required_bytes = this->process_packet(this->m_buffer_received, address_peer);
+
+		// - done
+		this->m_preceived_plain_begin = nullptr;
+		this->m_preceived_plain_end = nullptr;
 
 		// check) 필요 message size가 최대 message buffer size보다 크면 exception을 던진다.
 		if (required_bytes > this->m_maximum_message_buffer_size)

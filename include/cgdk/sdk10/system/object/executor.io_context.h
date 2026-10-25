@@ -66,11 +66,32 @@ public:
 	virtual	bool				return_buffer(size_t _param) noexcept override { return this->m_io_context.return_buffer(_param); }
 	[[nodiscard]] virtual size_t provided_buffer_size() const noexcept override { return this->m_io_context.provided_buffer_size(); }
 	[[nodiscard]] virtual bool	is_ring_owner(CGHANDLE _fd) const noexcept override { return this->m_io_context.is_ring_owner(_fd); }
+	virtual	bool				submit_staged(CGHANDLE _fd) noexcept override { return this->m_io_context.submit_staged(_fd); }
 	virtual	bool				submit_cancel(Iexecutable* _pexecutable) noexcept override { return this->m_io_context.submit_cancel(_pexecutable); }
 	virtual	bool				submit_cancel_fd(CGHANDLE _fd) noexcept override { return this->m_io_context.submit_cancel_fd(_fd); }
 	virtual	bool				wait_cancelled_fd(CGHANDLE _fd, chrono::tick::duration _ticks_wait, bool _is_wait_delivery = true) noexcept override { return this->m_io_context.wait_cancelled_fd(_fd, _ticks_wait, _is_wait_delivery); }
 #endif
 	virtual	void				execute_all() noexcept;
+
+	// - runnext : this thread blocks (scoped_thread_block, api::Nthread::notify_blocked). the executable kept in the slot of this
+	//   thread goes to the shared queue and the posts of this thread go there until resumed (nested : the outermost one)
+	static	void				runnext_suspend() noexcept;
+	static	void				runnext_resume() noexcept;
+
+	// - batch handoff : the results this thread popped at once and executes in order (the batch of pop_results(), the posted executables
+	//   one post event executes). when this thread blocks (runnext_suspend) pfn_handoff hands the ones after index to the other workers
+	//   (they waited behind the blocked one). begin / end around the loop (nested : a handler pumping an executor again)
+			struct BATCH_HANDOFF
+			{
+				void			(*pfn_handoff)(BATCH_HANDOFF& _batch) noexcept { nullptr };
+				void*			pobject{ nullptr };
+				void*			presults{ nullptr };
+				int				count{ 0 };
+				int				index{ 0 };
+				BATCH_HANDOFF*	pouter{ nullptr };
+			};
+	static	void				batch_handoff_begin(BATCH_HANDOFF& _batch) noexcept;
+	static	void				batch_handoff_end(BATCH_HANDOFF& _batch) noexcept;
 
 protected:
 	virtual result_code			_process_initializing(context& _context) override;
@@ -89,6 +110,10 @@ protected:
 			// - a worker thread of this executor (linux io_uring_completion : binds a ring at its start, unbinds it at its end)
 			void				process_bind_worker(bool _is_transient = false) noexcept;
 			void				process_unbind_worker() noexcept;
+
+			// - runnext : the executable kept in the slot of this thread goes to the shared queue
+			void				_spill_runnext() noexcept;
+			[[nodiscard]] bool	_is_runnext_active() const noexcept;
 
 protected:
 			OBJ<api::io_context> m_io_context;

@@ -49,8 +49,15 @@ result_code schedulable::Ninitializable_startable::_process_stopping() noexcept
 
 result_code schedulable::Ninitializable_startable::_process_destroying() noexcept
 {
-	// 1) reset executor
-	this->m_pexecutor.reset();
+	// 1) reset executor (under m_lockable_pexecutor : executor() reads it from other threads. released outside the lock)
+	object_ptr<Iexecutor> pexecutor_old;
+	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_pexecutor);
+
+		pexecutor_old = std::move(this->m_pexecutor);
+	}
+	pexecutor_old.reset();
 
 	try
 	{

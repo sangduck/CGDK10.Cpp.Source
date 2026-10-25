@@ -551,7 +551,8 @@ void server::web::entity::folder::on_destroying()
 	}
 
 	// 2) 모든 Entity를 close시킨다.
-	for(auto& iter:m_map_child)
+	//    (the local map : m_map_child was swapped out above and is empty. the children were never destroyed)
+	for(auto& iter : mapChild)
 	{
 		// check) 
 		CGASSERT_ERROR(iter.second.exist());

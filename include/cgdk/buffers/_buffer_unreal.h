@@ -22,52 +22,26 @@
 //-----------------------------------------------------------------------------
 #if defined(UE_BUILD_DEBUG) || defined(UE_BUILD_DEVELOPMENT) || defined(UE_BUILD_TEST) || defined(UE_BUILD_SHIPPING)
 
-// FString
-class CORE_API FString;
+// - UE5 (UE 5.7, 5.8 로 빌드/테스트 : build/src/system/unit_test/unit_test.object.buffer.unreal) : FString, FStringView(TStringView), TArray, TStaticArray, TSparseArray, TList, TLinkedList,
+//                     TSet, TMap, TMultiMap, TSortedMap, TSharedPtr, TSharedRef
+//                     (전방 선언으로는 엔진 버전마다 다른 선언(TStringViewImpl 제거, 매크로로 만드는 TMap/TSet)을 따라갈 수 없으므로 엔진 헤더를 포함한다.)
+#include "CoreMinimal.h"
+#include "Containers/List.h"
+#include "Containers/SortedMap.h"
+#include "Containers/StaticArray.h"
+#include "Containers/SparseArray.h"
+#include "Containers/StringView.h"
+#include "Templates/SharedPointer.h"
 
-// FStringView
-template <typename CharType> 
-class TStringViewImpl;
+// - TObjectPtr (CoreUObject 모듈에 의존할 때만)
+#if __has_include("UObject/ObjectPtr.h") && __has_include("UObject/UObjectGlobals.h")
+	#include "UObject/ObjectPtr.h"
+	#include "UObject/UObjectGlobals.h"
+	#define	_CGDK_UE_OBJECT_PTR
+#endif
 
-
-// array - TArray, FArchiveDiffMap, FArrayReader, ... , VectorND
-template<typename InElementType, typename InAllocator>
-class TArray;
-
-// array - TStaticArray, TShaderResourceParameterArray
-template<typename InElementType, uint32 NumElements, uint32 Alignment>
-class TStaticArray;
-
-// array - TSparseArray
-template<typename InElementType, typename Allocator>
-class TSparseArray;
-
-// singly linked list - TList
-template<class ElementType>
-class TList;
-
-// doubly linked list - TLinkedList, TIntrusiveLinkedList, TLinkedList
-template<class ContainerType, class ElementType, template< class, class > class IteratorType>
-class TLinkedListBase;
-template <class ElementType>
-class TIntrusiveLinkedList;
-
-// doubly linked list - TDoubleLinkedList
-template <class ElementType>
-class TDoubleLinkedList;
-
-
-// set - TSet, 	FTouchKeySet
-template<typename InElementType, typename KeyFuncs, typename Allocator>
-class TSet;
-
-// map - TSortableMapBase, TMap, TMultiMap
-template<typename KeyType, typename ValueType, typename SetAllocator, typename KeyFuncs>
-class TMapBase;
-
-// sorted map - TSortedMap, FAssetDataTagMap
-template<typename KeyType, typename ValueType, typename ArrayAllocator, typename SortPredicate>
-class TSortedMap;
+// - sorted map - FAssetDataTagMap (CoreUObject/AssetRegistry/AssetDataTagMap.h)
+class FAssetDataTagMap;
 
 
 //-----------------------------------------------------------------------------
@@ -84,11 +58,10 @@ template<class T, class F = void> struct is_ue4_FString : public std::false_type
 template<class T> struct is_ue4_FString<T, std::enable_if_t<std::is_base_of_v<FString, T>>> : public std::true_type {};
 template <class T> constexpr bool is_ue4_FString_v = is_ue4_FString<T>::value;
 
-// 2) ue4 FStringView
+// 2) ue4 FStringView (UE5 : FStringView == TStringView<TCHAR>)
 template<class T, class F = void> struct is_ue4_FStringView : public std::false_type {};
-template<class A> struct is_ue4_FStringView<TStringViewImpl<A>, void> : public std::true_type {};
-template<>        struct is_ue4_FStringView<FStringView, void> : public std::true_type {};
-template <class T> constexpr bool is_ue4_FStringView_v = is_ue4_FStringView<T>();
+template<class A> struct is_ue4_FStringView<TStringView<A>, void> : public std::true_type {};
+template <class T> constexpr bool is_ue4_FStringView_v = is_ue4_FStringView<T>::value;
 
 // 3) array - TArray, FArchiveDiffMap, FArrayReader, ... , VectorND
 template<class T, class F = void> struct is_ue4_TArray : public std::false_type {};
@@ -117,10 +90,9 @@ template<class A1> struct is_ue4_TLinkedListBase<TLinkedList<A1>, void> : public
 template<class A1> struct is_ue4_TLinkedListBase<TIntrusiveLinkedList<A1>, void> : public std::true_type {};
 template <class T> constexpr bool is_ue4_TLinkedListBase_v = is_ue4_TLinkedListBase<T>::value;
 
-// 8) set - TSet, 	FTouchKeySet
+// 8) set - TSet (FTouchKeySet 은 TSet 이 아니라 SlateCore 의 FKey 두 개짜리 클래스다.)
 template<class T, class F = void> struct is_ue4_TSet : public std::false_type {};
 template<typename A1, typename A2, typename A3> struct is_ue4_TSet<TSet<A1, A2, A3>, void> : public std::true_type {};
-template<>			struct is_ue4_TSet<FTouchKeySet, void> : public std::true_type {};
 template <class T> constexpr bool is_ue4_TSet_v = is_ue4_TSet<T>::value;
 
 // 9) map - TSortableMapBase, TMap, TMultiMap
@@ -136,13 +108,17 @@ template<typename A1, typename A2, typename A3, typename A4> struct is_ue4_TSort
 template<>													 struct is_ue4_TSortedMap<FAssetDataTagMap, void> : public std::true_type {};
 template <class T> constexpr bool is_ue4_TSortedMap_v = is_ue4_TSortedMap<T>::value;
 
-// 11) element type - TList and TLinkedListBase have no ElementType typedef
-template<class T, class F = void> struct ue4_element_type { using type = typename T::ElementType; };
+// 11) element type - TList and TLinkedListBase have no ElementType typedef, TSparseArray::ElementType is private
+template<class T, class F = void> struct ue4_element_type { using type = std::remove_cvref_t<decltype(*std::declval<const T&>().begin())>; };
 template<class A1> struct ue4_element_type<TList<A1>, void> { using type = A1; };
 template<class A1, class A2, template< class, class > class A3> struct ue4_element_type<TLinkedListBase<A1, A2, A3>, void> { using type = A2; };
 template<class A1> struct ue4_element_type<TLinkedList<A1>, void> { using type = A1; };
 template<class A1> struct ue4_element_type<TIntrusiveLinkedList<A1>, void> { using type = A1; };
 template <class T> using ue4_element_type_t = typename ue4_element_type<T>::type;
+
+// 12) key/value type of map - TMultiMap has no KeyType/ValueType typedef
+template <class T> using ue4_map_key_t = std::remove_cvref_t<decltype((*std::declval<const T&>().begin()).Key)>;
+template <class T> using ue4_map_value_t = std::remove_cvref_t<decltype((*std::declval<const T&>().begin()).Value)>;
 
 
 //-----------------------------------------------------------------------------
@@ -156,7 +132,7 @@ namespace CGDK
 
 
 template<class B, class S, class T>
-_buffer_view<typename B::element_t> _ue4_append_FStringView(S& _s, const TStringViewImpl<T>& _object)
+_buffer_view<typename B::element_t> _ue4_append_FStringView(S& _s, const TStringView<T>& _object)
 {
 	using RET_T = _buffer_view<typename B::element_t>;
 
@@ -214,15 +190,20 @@ inline T _ue4_extract_FStringView(S& _s)
 	// 2) sizeOfData 구하기
 	auto size_data = static_cast<COUNT_T>(str_length * sizeof(typename T::ElementType) + sizeof(COUNT_T));
 
-	// 3) [원본_버퍼_포인터]와 [원본_버퍼_길이]를 [데이터_크기]만큼 이동시킨다. 
+	// 3) [원본_버퍼_포인터]와 [원본_버퍼_길이]를 [데이터_크기]만큼 이동시킨다.
 	_s += offset(size_data);
 
-	// return) [문자열_시작_포인터]을 리턴한다.
-	return T(str_string, static_cast<int32>(str_length) - 1);
+	// return) [문자열_시작_포인터]을 리턴한다. (NULL 제외)
+	//    - FString(int32 Len, const TCHAR* Str)는 인자 순서가 (길이, 포인터)이고 UE 5.4 부터 deprecated 이므로 TStringView 로 만든다.
+	if constexpr (is_ue4_FString_v<T>)
+		return T(TStringView<typename T::ElementType>(str_string, static_cast<int32>(str_length) - 1));
+	else
+		return T(str_string, static_cast<int32>(str_length) - 1);
 }
-inline size_t _ue4_size_of_FStringView(const FStringView& _object)
+template<class T>
+inline size_t _ue4_size_of_FStringView(const TStringView<T>& _object)
 {
-	return sizeof(COUNT_T) + (_object.Len() + 1) * sizeof(TCHAR);
+	return sizeof(COUNT_T) + (static_cast<size_t>(_object.Len()) + 1) * sizeof(T);
 }
 
 //-----------------------------------------------------------------------------
@@ -277,8 +258,17 @@ template<class B, class T>	class serializer_extract<B, TSharedPtr<T>, std::enabl
 									t->serialize_in(_s);
 									return t;
 								}
-								template<class D, class S> constexpr static void _do_extract(D& _dest, S& _s) 
+								template<class D, class S> constexpr static void _do_extract(D& _dest, S& _s)
 								{
+									auto empty = _s.template front<COUNT_T>();
+
+									if (empty == static_cast<COUNT_T>(-1))
+									{
+										_dest = D{};
+										_s.template extract<COUNT_T>();
+										return;
+									}
+
 									_dest = MakeShared<TX>();
 									_dest->serialize_in(_s);
 								}
@@ -318,13 +308,16 @@ template<class B, class T>	class serializer_peek<B, TSharedPtr<T>>
 								public:	using type = TSharedPtr<TX>;
 								template<class S> constexpr static type _do_peek(const S& _s, int64_t& _offset)
 								{
-									S tb =_s + static_cast<std::size_t>(_offset);
-									return MakeShared<TX>(tb.template extract<TSharedPtr<T>>());
+									S tb =_s + _offset;
+									auto temp = tb.template extract<TSharedPtr<TX>>();
+									_offset = tb.data() - _s.data();
+									return temp;
 								}
 								template<class D, class S> constexpr static void _do_peek(D& _dest, const S& _s, int64_t& _offset)
 								{
-									S tb =_s + static_cast<std::size_t>(_offset);
-									_dest = tb.template extract<TSharedPtr<T>>();
+									S tb =_s + _offset;
+									_dest = tb.template extract<TSharedPtr<TX>>();
+									_offset = tb.data() - _s.data();
 								}
 							};
 template<class T>			class serializer_size_of<TSharedPtr<T>>
@@ -336,17 +329,17 @@ template<class T>			class serializer_size_of<TSharedPtr<T>>
 									if (_object == nullptr)
 										return sizeof(COUNT_T);
 
-									return _object->get_size_of();
+									return CGDK::get_size_of(*_object);
 								}
 								template<class S> 
 								constexpr static std::size_t  _get_extract_size(const S& _buffer, int64_t& _offset) noexcept { CGDK_ASSERT_ERROR; return 0;}
 							};
 
-// 2A) TSharedRef<T>- Ibuffer_serializable
+// 2B) TSharedRef<T>- Ibuffer_serializable (null 이 될 수 없다.)
 template<class B, class T>	class serializer_append<B, TSharedRef<T>, std::enable_if_t<std::is_base_of_v<Ibuffer_serializable, T>>>
 							{	using TX = std::remove_const_t<T>;
 								public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_append(S& _s, const TSharedRef<T>& _data) { auto len_pre = _s.size(); if(_data != nullptr) {const_cast<TX*>(_data)->serialize_out(_s);} else { _s.template _append<COUNT_T>(COUNT_T(0)-1);} return type(_s.data() + len_pre, _s.size() - len_pre);}
+								template<class S> constexpr static type _do_append(S& _s, const TSharedRef<T>& _data) { auto len_pre = _s.size(); const_cast<TX&>(*_data).serialize_out(_s); return type(_s.data() + len_pre, _s.size() - len_pre);}
 							};
 template<class B, class T>	class serializer_extract<B, TSharedRef<T>, std::enable_if_t<std::is_base_of_v<Ibuffer_serializable, T>>>
 							{	using TX = std::remove_const_t<T>;
@@ -357,44 +350,57 @@ template<class B, class T>	class serializer_extract<B, TSharedRef<T>, std::enabl
 template<class B, class T>	class serializer_peek<B, TSharedRef<T>, std::enable_if_t<std::is_base_of_v<Ibuffer_serializable, T>>>
 							{	using TX = std::remove_const_t<T>;
 								public:	using type = TSharedRef<TX>;
-								template<class S> constexpr static type _do_peek(const S& _s, int64_t& _offset) { S tb =_s + static_cast<std::size_t>(_offset); type tx; tx->serialize_in(tb); return tx;}
-								template<class D, class S> constexpr static void _do_peek(D& _dest, const S& _s, int64_t& _offset) { S tb =_s + static_cast<std::size_t>(_offset); _dest->serialize_in(tb);}
+								template<class S> constexpr static type _do_peek(const S& _s, int64_t& _offset) { S tb =_s + _offset; type tx = MakeShared<TX>(); tx->serialize_in(tb); _offset = tb.data() - _s.data(); return tx;}
+								template<class D, class S> constexpr static void _do_peek(D& _dest, const S& _s, int64_t& _offset) { S tb =_s + _offset; _dest = MakeShared<TX>(); _dest->serialize_in(tb); _offset = tb.data() - _s.data();}
 							};
 template<class T>			class serializer_size_of<TSharedRef<T>, std::enable_if_t<std::is_base_of_v<Ibuffer_serializable, T>>>
 							{	using TX = std::remove_const_t<T>;
 								using type = TSharedRef<TX>;
 								public:
 								constexpr static std::size_t  _get_append_size(const type& _object) { return _object->get_size_of(); }
-								template<class S> 
+								template<class S>
 								constexpr static std::size_t  _get_extract_size(const S& _buffer, int64_t& _offset) noexcept { CGDK_ASSERT_ERROR; return 0;}
 							};
 
-// 2C) TObjectPtr<T>- Ibuffer_serializable
+// 2C) TObjectPtr<T>- Ibuffer_serializable (CoreUObject 모듈에 의존할 때만, null 은 [COUNT_T(-1)])
+#if defined(_CGDK_UE_OBJECT_PTR)
 template<class B, class T>	class serializer_append<B, TObjectPtr<T>, std::enable_if_t<std::is_base_of_v<Ibuffer_serializable, T>>>
 							{	using TX = std::remove_const_t<T>;
 								public:	using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_append(S& _s, const TObjectPtr<T>& _data) { auto len_pre = _s.size(); if(_data != nullptr) {const_cast<TX*>(_data)->serialize_out(_s);} else { _s.template _append<COUNT_T>(COUNT_T(0)-1);} return type(_s.data() + len_pre, _s.size() - len_pre);}
+								template<class S> constexpr static type _do_append(S& _s, const TObjectPtr<T>& _data) { auto len_pre = _s.size(); if(_data != nullptr) {const_cast<TX*>(_data.Get())->serialize_out(_s);} else { _s.template _append<COUNT_T>(COUNT_T(0)-1);} return type(_s.data() + len_pre, _s.size() - len_pre);}
 							};
 template<class B, class T>	class serializer_extract<B, TObjectPtr<T>, std::enable_if_t<std::is_base_of_v<Ibuffer_serializable, T>>>
 							{	using TX = std::remove_const_t<T>;
 								public:	using type = TObjectPtr<TX>;
-								template<class S> constexpr static type _do_extract(S& _s) { TObjectPtr<TX> t = NewObject<TX>(); t->serialize_in(_s); return t;}
-								template<class D, class S> constexpr static void _do_extract(D& _dest, S& _s) { _dest = NewObject<TX>(); _dest->serialize_in(_s);}
+								template<class S> constexpr static type _do_extract(S& _s) { type t; _do_extract(t, _s); return t;}
+								template<class D, class S> constexpr static void _do_extract(D& _dest, S& _s)
+								{
+									if (_s.template front<COUNT_T>() == static_cast<COUNT_T>(-1))
+									{
+										_dest = nullptr;
+										_s.template extract<COUNT_T>();
+										return;
+									}
+
+									_dest = NewObject<TX>();
+									_dest->serialize_in(_s);
+								}
 							};
 template<class B, class T>	class serializer_peek<B, TObjectPtr<T>, std::enable_if_t<std::is_base_of_v<Ibuffer_serializable, T>>>
 							{	using TX = std::remove_const_t<T>;
 								public:	using type = TObjectPtr<TX>;
-								template<class S> constexpr static type _do_peek(const S& _s, int64_t& _offset) { S tb =_s + static_cast<std::size_t>(_offset); type tx; tx->serialize_in(tb); return tx;}
-								template<class D, class S> constexpr static void _do_peek(D& _dest, const S& _s, int64_t& _offset) { S tb =_s + static_cast<std::size_t>(_offset); _dest->serialize_in(tb);}
+								template<class S> constexpr static type _do_peek(const S& _s, int64_t& _offset) { type tx; _do_peek(tx, _s, _offset); return tx;}
+								template<class D, class S> constexpr static void _do_peek(D& _dest, const S& _s, int64_t& _offset) { S tb =_s + _offset; serializer_extract<B, TObjectPtr<T>>::_do_extract(_dest, tb); _offset = tb.data() - _s.data();}
 							};
 template<class T>			class serializer_size_of<TObjectPtr<T>, std::enable_if_t<std::is_base_of_v<Ibuffer_serializable, T>>>
 							{	using TX = std::remove_const_t<T>;
 								using type = TObjectPtr<TX>;
 								public:
-								constexpr static std::size_t  _get_append_size(const type& _object) { return _object->get_size_of(); }
-								template<class S> 
+								constexpr static std::size_t  _get_append_size(const type& _object) { return (_object != nullptr) ? _object->get_size_of() : sizeof(COUNT_T); }
+								template<class S>
 								constexpr static std::size_t  _get_extract_size(const S& _buffer, int64_t& _offset) noexcept { CGDK_ASSERT_ERROR; return 0;}
 							};
+#endif
 
 
 //-----------------------------------------------------------------------------
@@ -415,7 +421,7 @@ template<class B, class T> class serializer_peek<B, T, std::enable_if_t<is_ue4_F
 							};
 template<class T>		    class serializer_size_of<T, std::enable_if_t<is_ue4_FString_v<T>>>
 							{	public:
-								constexpr static std::size_t  _get_append_size(const FString& _object)					{ return _ue4_size_of_FStringView(_object); }
+								constexpr static std::size_t  _get_append_size(const FString& _object)					{ return _ue4_size_of_FStringView<TCHAR>(_object); }
 							};
 
 //-----------------------------------------------------------------------------
@@ -423,8 +429,7 @@ template<class T>		    class serializer_size_of<T, std::enable_if_t<is_ue4_FStri
 //-----------------------------------------------------------------------------
 template<class B, class T> class serializer_append<B, T, std::enable_if_t<is_ue4_FStringView_v<T>>>
 							{	public: using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_append(S& _s, const FStringView& _data){ return _ue4_append_FStringView<B>(_s, _data);}
-								template<class S> constexpr static type _do_append(S& _s, FStringView&& _data)		{ return _ue4_append_FStringView<B>(_s, _data);}
+								template<class S> constexpr static type _do_append(S& _s, const T& _data)			{ return _ue4_append_FStringView<B>(_s, _data);}
 							};
 template<class B, class T> class serializer_extract<B, T, std::enable_if_t<is_ue4_FStringView_v<T>>>
 							{	using TX = std::remove_const_t<T>;
@@ -438,15 +443,15 @@ template<class B, class T> class serializer_peek<B, T, std::enable_if_t<is_ue4_F
 							};
 template<class T>		    class serializer_size_of<T, std::enable_if_t<is_ue4_FStringView_v<T>>>
 							{	public:
-								constexpr static std::size_t  _get_append_size(const FStringView& _object)				{ return _ue4_size_of_FStringView(_object); }
+								constexpr static std::size_t  _get_append_size(const T& _object)							{ return _ue4_size_of_FStringView(_object); }
 							};
 
 //-----------------------------------------------------------------------------
 // 3) ue4 - TArray
 //-----------------------------------------------------------------------------
-template <class S, class TELEMENT>
+template <class S, class TELEMENT, class TALLOCATOR>
 constexpr std::enable_if_t<!is_memcopyable<TELEMENT>::value, _buffer_view<typename S::element_t>>
-_ue4_append_TArray(S& _s, const TArray<TELEMENT>& _object)
+_ue4_append_TArray(S& _s, const TArray<TELEMENT, TALLOCATOR>& _object)
 {
 	using RET_T = _buffer_view<typename S::element_t>;
 
@@ -466,9 +471,9 @@ _ue4_append_TArray(S& _s, const TArray<TELEMENT>& _object)
 	// return)
 	return RET_T(_s.data() + len_old, _s.size() - len_old);
 }
-template <class S, class TELEMENT>
+template <class S, class TELEMENT, class TALLOCATOR>
 constexpr std::enable_if_t<is_memcopyable<TELEMENT>::value, _buffer_view<typename S::element_t>>
-_ue4_append_TArray(S& _s, const TArray<TELEMENT>& _object)
+_ue4_append_TArray(S& _s, const TArray<TELEMENT, TALLOCATOR>& _object)
 {
 	using RET_T = _buffer_view<typename S::element_t>;
 
@@ -548,8 +553,8 @@ size_t _ue4_size_of_TArray(const T& _object)
 template<class B, class T>
 							class serializer_append<B, T, std::enable_if_t<is_ue4_TArray_v<T>>>
 							{	public: using type = _buffer_view<typename B::element_t>;
-								template<class S> constexpr static type _do_append(S& _s, const T& _data)			{ return _ue4_append_TArray<S, typename T::ElementType>(_s, _data);}
-								template<class S> constexpr static type _do_append(S& _s, T&& _data)				{ return _ue4_append_TArray<S, typename T::ElementType>(_s, _data);}
+								template<class S> constexpr static type _do_append(S& _s, const T& _data)			{ return _ue4_append_TArray<S>(_s, _data);}
+								template<class S> constexpr static type _do_append(S& _s, T&& _data)				{ return _ue4_append_TArray<S>(_s, _data);}
 							};
 template<class B, class T>
 							class serializer_extract<B, T, std::enable_if_t<is_ue4_TArray_v<T>>>
@@ -710,7 +715,7 @@ _buffer_view<typename S::element_t> _ue4_append_TSparseArray(S& _s, const T& _ob
 
 	// 3) [데이터]들을 추가한다.
 	for (const auto& iter : _object)
-		_s.template _append<typename T::ElementType>(iter);
+		_s.template _append<ue4_element_type_t<T>>(iter);
 
 	// return)
 	return RET_T(_s.data() + len_old, _s.size() - len_old);
@@ -731,7 +736,7 @@ T _ue4_extract_TSparseArray(S& _s)
 		result.Reserve(size_data);
 
 		for (COUNT_T i = 0; i < size_data; ++i)
-			result.Add(_s.template _extract<typename T::ElementType>());
+			result.Add(_s.template _extract<ue4_element_type_t<T>>());
 	}
 
 	// return)
@@ -999,7 +1004,7 @@ _buffer_view<typename S::element_t> _ue4_append_TSet(S& _s, const T& _object)
 
 	// 4) [데이터]들을 추가한다.
 	for (const auto& iter : _object)
-		_s.template _append<typename T::ElementType>(iter);
+		_s.template _append<ue4_element_type_t<T>>(iter);
 
 	// return)
 	return RET_T(_s.data() + len_old, _s.size() - len_old);
@@ -1022,7 +1027,7 @@ T _ue4_extract_TSet(S& _s)
 
 		// - add
 		for (COUNT_T i = 0; i < size_data; ++i)
-			result.Add(_s.template _extract<typename T::ElementType>());
+			result.Add(_s.template _extract<ue4_element_type_t<T>>());
 	}
 
 	// return)
@@ -1095,8 +1100,8 @@ T _ue4_extract_TMap(S& _s)
 		// - add
 		for (auto i = 0; i < size_data; ++i)
 		{
-			auto key = _s.template _extract<typename T::KeyType>();
-			auto value = _s.template _extract<typename T::ValueType>();
+			auto key = _s.template _extract<ue4_map_key_t<T>>();
+			auto value = _s.template _extract<ue4_map_value_t<T>>();
 
 			result.Add(std::move(key), std::move(value));
 		}
@@ -1190,7 +1195,7 @@ template<class A1, uint32 A2, uint32 A3> class serializer_hash<TStaticArray<A1, 
 							};
 template<class T>			class serializer_hash<T, std::enable_if_t<is_ue4_TMapBase_v<T> || is_ue4_TSortedMap_v<T>>>
 							{	public:
-								template<class... V> [[nodiscard]] static constexpr uint64_t _get_hash() noexcept { return _buffer_hash::mix(_buffer_hash::FNV_OFFSET, _buffer_hash::KIND_MAP, _get_type_hash_of<typename T::KeyType, V...>(), _get_type_hash_of<typename T::ValueType, V...>()); }
+								template<class... V> [[nodiscard]] static constexpr uint64_t _get_hash() noexcept { return _buffer_hash::mix(_buffer_hash::FNV_OFFSET, _buffer_hash::KIND_MAP, _get_type_hash_of<ue4_map_key_t<T>, V...>(), _get_type_hash_of<ue4_map_value_t<T>, V...>()); }
 							};
 template<class T>			class serializer_hash<TSharedPtr<T>>
 							{	public:
@@ -1200,10 +1205,12 @@ template<class T>			class serializer_hash<TSharedRef<T>>
 							{	public:
 								template<class... V> [[nodiscard]] static constexpr uint64_t _get_hash() noexcept { return _buffer_hash::mix(_buffer_hash::FNV_OFFSET, _buffer_hash::KIND_NULLABLE, _get_type_hash_of<std::remove_cv_t<T>, V...>()); }
 							};
+#if defined(_CGDK_UE_OBJECT_PTR)
 template<class T>			class serializer_hash<TObjectPtr<T>>
 							{	public:
 								template<class... V> [[nodiscard]] static constexpr uint64_t _get_hash() noexcept { return _buffer_hash::mix(_buffer_hash::FNV_OFFSET, _buffer_hash::KIND_NULLABLE, _get_type_hash_of<std::remove_cv_t<T>, V...>()); }
 							};
+#endif
 }
 
 #endif

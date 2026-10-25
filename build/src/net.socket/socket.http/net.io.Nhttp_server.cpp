@@ -27,29 +27,6 @@ void net::io::Nhttp_server::process_on_disconnect(uint64_t _disconnect_reason, e
 		this->on_disconnect(_disconnect_reason);
 }
 
-shared_buffer message_web_error(uint32_t _error_code, const std::string_view _error_message)
-{
-	// 1) shared_buffer를 할당받는다.
-	auto temp_buffer = alloc_shared_buffer(4096);
-
-	// 2) Response head를 작성한다.
-	temp_buffer.append_text(CGDK::stream_string("HTTP/1.1 ", _error_message, " ", _error_code, "\r\n"));	// Protocol 버전 및 응답코드
-	temp_buffer.append_text("Server: CGCII/10.0.0\r\n"sv);		// Web Server Banner 정보
-	temp_buffer.append_text("Content-type:text/html\r\n"sv);	// MIME 타입
-	temp_buffer.append_text("Content-length:107\r\n"sv);		// HTTP Body 크기
-
-	// 3) Response Body (HTML) 만들기
-	temp_buffer.append_text("<html>"sv);						// HTML 시작
-	temp_buffer.append_text("<head></head>"sv);					// head 정보
-	temp_buffer.append_text("<title>Http Protocol</title>"sv);	// Title
-	temp_buffer.append_text("<body>"sv);						// Body 시작
-	temp_buffer.append_text("</body>"sv);						// Body 끝
-	temp_buffer.append_text("</html>\r\n"sv);					// HTML 끝
-
-	// return) 
-	return	temp_buffer;
-}
-
 shared_buffer message_web_socket_handshake(const std::string_view _websocket_protocol, const std::string_view _websocket_accept, const std::string_view _websocket_location = "ws://127.0.0.1")
 {
 	// 1) shared_buffer를 할당받는다.
@@ -316,7 +293,8 @@ size_t net::io::Nhttp_server::process_packet_websocket( shared_buffer& _buffer, 
 				// check) length보다 길이가 작으면 여기서 끝낸다.
 				//        주의!!) 이 BREAK문은 반드시 여기서 BREAK를 해야한다. 이유는 중복 Masking 처리를 방지하기 위해서이다.
 				//        (size가 mask(4 byte)보다 작을 수 있으므로 빼지 않고 더해서 비교한다.)
-				BREAK_IF(buf_apply.size() < sizeof(uint32_t) + length);
+				//        (overflow safe : with no body limit a 64 bit length near the max would wrap 'sizeof(uint32_t) + length')
+				BREAK_IF(buf_apply.size() < sizeof(uint32_t) || buf_apply.size() - sizeof(uint32_t) < length);
 
 				// declare) 
 				uint8_t	mask[4];
@@ -907,7 +885,11 @@ size_t net::io::Nhttp_server::process_parsing_http(shared_buffer _buffer)
 					continue;
 				}
 
-				if (this->m_max_body_size != 0 && this->m_chunked_body.size() + chunk_size > this->m_max_body_size)
+				// check) the size + CRLF must not overflow (a size near SIZE_MAX would wrap the checks below)
+				if (chunk_size > (std::numeric_limits<std::size_t>::max)() - 2 - this->m_chunked_body.size())
+					throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid chunk size"sv);
+
+				if (this->m_max_body_size != 0 && chunk_size > this->m_max_body_size - (std::min)(this->m_chunked_body.size(), this->m_max_body_size))
 					this->_throw_too_large("http chunked body"sv, this->m_chunked_body.size() + chunk_size, this->m_max_body_size);
 
 				this->m_chunk_size = chunk_size;
@@ -916,7 +898,11 @@ size_t net::io::Nhttp_server::process_parsing_http(shared_buffer _buffer)
 			// - data + CRLF
 			else if (this->m_chunk_state == 1)
 			{
-				BREAK_IF(rest.size() < this->m_chunk_size + 2);
+				BREAK_IF(rest.size() < this->m_chunk_size || rest.size() - this->m_chunk_size < 2);
+
+				// check) the data must be followed by CRLF
+				if (rest[this->m_chunk_size] != '\r' || rest[this->m_chunk_size + 1] != '\n')
+					throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid chunk data"sv);
 
 				this->m_chunked_body.append(rest.substr(0, this->m_chunk_size));
 				pos_now += this->m_chunk_size + 2;
@@ -1267,6 +1253,17 @@ void net::io::Nhttp_server::process_parsing_http_head(shared_buffer _buffer)
 	{
 		// declare) 
 		std::string_view temp_str_now;
+		bool is_content_length = false;
+
+		// - trims the spaces and tabs (OWS)
+		auto f_trim = [](std::string_view _value) -> std::string_view
+		{
+			while (_value.empty() == false && (_value.front() == ' ' || _value.front() == '\t'))
+				_value.remove_prefix(1);
+			while (_value.empty() == false && (_value.back() == ' ' || _value.back() == '\t'))
+				_value.remove_suffix(1);
+			return _value;
+		};
 
 		while ((temp_str_now = find_paragraph(temp_str_pos)).empty() == false)
 		{
@@ -1280,24 +1277,41 @@ void net::io::Nhttp_server::process_parsing_http_head(shared_buffer _buffer)
 			// - "Content-Length"인지 확인한다. (header 이름은 대소문자를 구분하지 않는다. 크기 제한)
 			if (__icompare(temp_param.key, "Content-Length"sv))
 			{
-				uint64_t content_length = 0;
-				std::from_chars(temp_param.value.data(), temp_param.value.data() + temp_param.value.size(), content_length);
-				if (this->m_max_body_size != 0 && content_length > this->m_max_body_size)
-					this->_throw_too_large("http body"sv, static_cast<std::size_t>(content_length), this->m_max_body_size);
+				// - digits only (an overflow or garbage is '400 Bad Request', not 0. the same value if repeated)
+				const auto value = f_trim(temp_param.value);
+				std::size_t content_length = 0;
+				const auto [ptr, ec] = std::from_chars(value.data(), value.data() + value.size(), content_length);
+				if (value.empty() || ec != std::errc() || ptr != value.data() + value.size())
+					throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "invalid content-length"sv);
+				if (is_content_length && content_length != m_msg_http_request.content_length_now)
+					throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "different content-lengths"sv);
 
-				m_msg_http_request.content_length_now = static_cast<std::size_t>(content_length);
+				if (this->m_max_body_size != 0 && content_length > this->m_max_body_size)
+					this->_throw_too_large("http body"sv, content_length, this->m_max_body_size);
+
+				is_content_length = true;
+				m_msg_http_request.content_length_now = content_length;
 			}
-			else if (temp_param.key == "Transfer-Encoding"sv)
+			// - "Transfer-Encoding" (case insensitive) : the last coding must be "chunked" (RFC 9112 6.3 : otherwise '400 Bad Request')
+			else if (__icompare(temp_param.key, "Transfer-Encoding"sv))
 			{
-				//if(str_now == "chunked")
-				{
-					m_msg_http_request.is_chunked = true;
-				}
+				auto value = temp_param.value;
+				if (const auto pos = value.rfind(','); pos != std::string_view::npos)
+					value = value.substr(pos + 1);
+
+				if (__icompare(f_trim(value), "chunked"sv) == false)
+					throw throwable::failure(eRESULT::INVALID_ARGUMENT, 400, "unsupported transfer-encoding"sv);
+
+				m_msg_http_request.is_chunked = true;
 			}
 
 			// - 추가한다.
 			m_msg_http_request.headers.push_back(temp_param);
 		}
+
+		// - "Transfer-Encoding" overrides "Content-Length" (RFC 9112 6.3. otherwise the body would be read both ways)
+		if (m_msg_http_request.is_chunked)
+			m_msg_http_request.content_length_now = 0;
 	}
 
 	// 5) buf_head를 설정한다.

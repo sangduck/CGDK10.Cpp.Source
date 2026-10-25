@@ -57,6 +57,9 @@ void net::io::receivable::Nstream::process_reset_receivable()
 
 	// 2) buffer를 setting한다.
 	this->m_wsabuf_receiving = WSABUF(static_cast<ULONG>(minimum_message_buffer_size()), m_buffer_received.data());
+
+	// 3) reset the shrink hysteresis
+	this->m_count_receive_small = 0;
 }
 
 bool net::io::receivable::Nstream::receive()
@@ -219,71 +222,18 @@ intptr_t net::io::receivable::Nstream::process_complete_receivable( intptr_t _re
 
 		//-----------------------------------------------------------------
 		// 3. buffer 체크한다.
-		//    1) required_bytes보다 남아 있는 receive 버퍼의 크기가 작다면
-		//       버퍼를 새로 할당한다.
-		//    2) 기존의 버퍼를 버리고 새로운 버퍼를 할당받는다.
-		//    3) 또 기존 receive 버퍼에 처리되지 않은 데이터가 있다면
-		//       새로 할당받은 버퍼에 복사를 해 넣는다.
+		//    - the rules of the epoll receive (_process_prepare_receive_buffer) : the buffer only this socket refers to is reused
+		//      (a new buffer and a copy of the data not processed at every wrap before), grown when a receive filled the window
 		//-----------------------------------------------------------------
-		// 1) m_wsabuf_receiving를 계산함.
-		this->m_wsabuf_receiving.buf += static_cast<ULONG>(_transferred);
-		this->m_wsabuf_receiving.len -= static_cast<ULONG>(_transferred);
+		// 1) prepare the buffer of the next receive
+		//    - the window filled : the free space was received whole and it was a half of the buffer or more (a small tail at the end of the
+		//      buffer filled is not a reason to grow it : the buffers grew to 64KB, -6% msg/s in the echo of 64B x32 clients)
+		const bool is_window_filled = _transferred >= this->m_wsabuf_receiving.len && (_transferred * 2) >= static_cast<std::size_t>(static_cast<const char*>(this->m_buffer_received.get_upper_bound()) - static_cast<const char*>(this->m_buffer_received.get_lower_bound()));
 
-		// 2) 받고자하는 message의 크기보다 message의 미수신 크기가 많으므로...(메모리를 새로 할당받는다.)
-		if(this->m_wsabuf_receiving.len < MINIMUM_REMAINED_RECEIVE_BUFFER || (this->m_buffer_received.size() + this->m_wsabuf_receiving.len) < required_bytes)
-		{
-			// - [Receiving buffer]의 원 크기를얻는다.
-			auto size_source = this->m_buffer_received.get_source()->size();
+		this->_process_prepare_receive_buffer(_transferred, is_window_filled, required_bytes);
 
-			// declare) 
-			std::size_t size_prepare;
-
-			// - [Receiving buffer]와 _transferred 크기 차이에 따라 할당할 버퍼 크기를 결정한다.
-			//   [Receiving buffer]의 할당 크기를 한번에 받은 경우 => 버퍼 크기를 8배로 늘린다.
-			if (_transferred == size_source)
-			{
-				size_prepare = _transferred * 8;
-			}
-			// [Receiving buffer]의 할당 크기의 절반 이상을 받았을 경우 => 이전 버퍼 크기를 유지한다.
-			else if (_transferred >= (size_source >> 1))
-			{
-				size_prepare = size_source;
-			}
-			// [Receiving buffer]의 할당 크기의 절반 이하일 경우 => _transferred 크기보다 크게만 할당한다.
-			else
-			{
-				size_prepare = this->m_minimum_message_buffer_size;
-				while (_transferred > size_prepare) size_prepare *= 8;
-			}
-
-			// - [최소_TCP_수신_버퍼_크기]보다는 크게 한다.
-			SATURATE_MAX(size_prepare, this->m_maximum_message_buffer_size);
-
-			// declare)
-			auto buffer_received_size = this->m_buffer_received.size();
-
-			// - 최소 [요구_버퍼_크기]+[이미_수신한_데이터_크기]보다는 커야 한다.
-			size_prepare = __select_max(size_prepare, required_bytes + buffer_received_size);
-
-			// - [새_수신_버퍼]를 [준비할_버퍼량] 크기만큼 할당한다.
-			//   exception) Memory 할당을 받지 못했을 경우라면... Error처리를 위해 Throw한다.
-			//   * Size가 Pool이 할당할 수 있는 최대 크기(일반적으로 256Kbytes)이상일 경우 발생한다.
-			//   * 메모리 부족으로 인해 더 이상 할당받지 못했을 경우에 뜬다.
-			auto buf_new = alloc_shared_buffer(size_prepare) ^ size_prepare;
-
-			// - [이미_수신한_데이터]를 [새_수신_버퍼]의 앞쪽에 복사한다.
-			// - 새로 할당된 buffer에 처리되지 않고 남은 Byte를 복사해 준다.
-			if(buffer_received_size != 0)
-			{
-				memcpy(buf_new.data(), this->m_buffer_received.data(), buffer_received_size);
-			}
-
-			// - [새_수신_버퍼]를 [수신_버퍼](m_wsabuf_receiving)에 설정한다.
-			this->m_wsabuf_receiving = WSABUF{ static_cast<ULONG>(buf_new.size() - buffer_received_size), buf_new.data() + buffer_received_size };
-
-			// - [이미_수신한_데이터_버퍼]에 버퍼를 설정한다.
-			buf_new ^= buffer_received_size; this->m_buffer_received = std::move(buf_new);
-		}
+		// 2) the next receive is made to the tail of the data not processed
+		this->m_wsabuf_receiving = WSABUF{ static_cast<ULONG>((std::min)(this->m_buffer_received.remained_size(), static_cast<std::size_t>(ULONG_MAX))), this->m_buffer_received.data() + this->m_buffer_received.size() };
 
 		// check) 
 		CGASSERT_ERROR(m_wsabuf_receiving.len != 0);
@@ -409,6 +359,116 @@ intptr_t net::io::receivable::Nstream::process_complete_receivable( intptr_t _re
 
 	// return) 
 	return intptr_t(0);
+}
+
+void net::io::receivable::Nstream::_process_prepare_receive_buffer(std::size_t _bytes_received, bool _is_window_filled, std::size_t _required_bytes)
+{
+	//-----------------------------------------------------------------
+	// the buffer of the next receive (the same rules as the epoll one : net.io.receivable.stream.epoll.cpp)
+	//
+	//  - m_buffer_received is the data not processed. the next receive is made to the free space after it (the window)
+	//  - the window filled => grown 8x (up to MAX_BYTES_RECEIVE_WINDOW_GROWN unless a message needs more). a buffer reused would stay as large
+	//  - the space too small (the next message does not fit, or less than MINIMUM_REMAINED_RECEIVE_BUFFER but for the rest of a message) :
+	//    1) the buffer only this socket refers to and large enough : the data moved to the front (no allocation)
+	//    2) else a new buffer, the data copied (a message passed to the application may still refer to the buffer : not overwritten)
+	//  - the buffer only this socket refers to shrinks after COUNT_SMALL_RECEIVES_TO_SHRINK small receives in a row
+	//  - _required_bytes : the size of the next message (the bytes of it received already included : not added to the data stored.
+	//    'required + stored' made a buffer up to twice the message)
+	//-----------------------------------------------------------------
+	// declare)
+	const auto bytes_stored = this->m_buffer_received.size();
+	const auto plower = static_cast<char*>(const_cast<void*>(this->m_buffer_received.get_lower_bound()));
+	const auto bytes_capacity = static_cast<std::size_t>(static_cast<const char*>(this->m_buffer_received.get_upper_bound()) - plower);
+	const auto is_unique = this->m_buffer_received.is_source_unique();
+
+	// 1) the size of the buffer
+	std::size_t size_prepare;
+
+	// - the window filled => 8x (up to MAX_BYTES_RECEIVE_WINDOW_GROWN : a larger buffer only for a message that large)
+	if (_is_window_filled)
+	{
+		size_prepare = bytes_capacity * 8;
+		SATURATE_MAX(size_prepare, MAX_BYTES_RECEIVE_WINDOW_GROWN);
+		size_prepare = __select_max(size_prepare, bytes_capacity);
+	}
+	// - a half of the buffer or more => the same size
+	else if (_bytes_received >= (bytes_capacity >> 1))
+	{
+		size_prepare = bytes_capacity;
+	}
+	// - less => larger than the bytes received
+	else
+	{
+		size_prepare = this->m_minimum_message_buffer_size;
+		while (_bytes_received > size_prepare) size_prepare *= 8;
+	}
+
+	// - the maximum
+	SATURATE_MAX(size_prepare, this->m_maximum_message_buffer_size);
+
+	// - the next message and MINIMUM_REMAINED_RECEIVE_BUFFER of free space must fit
+	const auto size_need = __select_max(_required_bytes, bytes_stored + MINIMUM_REMAINED_RECEIVE_BUFFER);
+	size_prepare = __select_max(size_prepare, size_need);
+
+	// 2) the shrink size of a buffer only this socket refers to : larger than 8x the bytes received and the next message with room
+	std::size_t size_shrink = this->m_minimum_message_buffer_size;
+	while (size_shrink <= _bytes_received * 8 || size_shrink < size_need + MINIMUM_REMAINED_RECEIVE_BUFFER) size_shrink *= 8;
+	SATURATE_MAX(size_shrink, this->m_maximum_message_buffer_size);
+	size_shrink = __select_max(size_shrink, size_need);
+
+	//    - hysteresis : only after COUNT_SMALL_RECEIVES_TO_SHRINK small receives in a row (a filled window or a receive of the shrink size resets the count)
+	const bool is_small = _is_window_filled == false && size_shrink < bytes_capacity;
+
+	if (is_small == false)
+		this->m_count_receive_small = 0;
+	else if (this->m_count_receive_small < COUNT_SMALL_RECEIVES_TO_SHRINK)
+		++this->m_count_receive_small;
+
+	const bool is_shrink = is_unique && is_small && this->m_count_receive_small >= COUNT_SMALL_RECEIVES_TO_SHRINK;
+
+	if (is_shrink)
+	{
+		size_prepare = size_shrink;
+		this->m_count_receive_small = 0;
+	}
+
+	// 3) the buffer again when it can be (no allocation)
+	//    - not when the window filled and it can grow (it would not grow : every receive would get only this size)
+	//    - a shrink takes the smaller buffer when it rewinds (no data stored / the space too small)
+	if (_is_window_filled == false || size_prepare <= bytes_capacity)
+	{
+		// - no data stored and only this socket refers to the buffer : from the front again (no copy)
+		if (bytes_stored == 0 && is_unique && is_shrink == false && this->m_buffer_received.data() != plower)
+			this->m_buffer_received.set_data(plower);
+
+		// check) the space is enough : as it is (the rest of a message being received fits : received even under MINIMUM_REMAINED_RECEIVE_BUFFER)
+		const auto bytes_remained = this->m_buffer_received.remained_size();
+		const bool is_fit = (bytes_stored + bytes_remained) >= _required_bytes && (bytes_remained >= MINIMUM_REMAINED_RECEIVE_BUFFER || (bytes_remained != 0 && bytes_stored != 0 && _required_bytes > bytes_stored));
+		RETURN_IF(is_fit && (is_shrink == false || bytes_stored != 0));
+
+		// - only this socket refers to it and it is large enough : the data moved to the front
+		if (is_unique && is_shrink == false && bytes_capacity >= _required_bytes && (bytes_capacity - bytes_stored) >= MINIMUM_REMAINED_RECEIVE_BUFFER)
+		{
+			::memmove(plower, this->m_buffer_received.data(), bytes_stored);
+			this->m_buffer_received.set_data(plower);
+			return;
+		}
+	}
+
+	// 4) a new buffer (an exception when it fails : the caller closes the socket)
+	//    - not just the size of the message (a copy of the message at every message when a few bytes of the next one came with it)
+	if (size_prepare < size_need + MINIMUM_REMAINED_RECEIVE_BUFFER && (size_need + MINIMUM_REMAINED_RECEIVE_BUFFER) <= this->m_maximum_message_buffer_size)
+		size_prepare = size_need + MINIMUM_REMAINED_RECEIVE_BUFFER;
+
+	auto buf_new = alloc_shared_buffer(size_prepare);
+
+	// - the data stored copied to the front
+	if (bytes_stored != 0)
+		::memcpy(buf_new.data(), this->m_buffer_received.data(), bytes_stored);
+
+	// - set
+	buf_new ^= bytes_stored;
+	this->m_buffer_received = std::move(buf_new);
 }
 
 void net::io::receivable::Nstream::process_clear_buffer() noexcept

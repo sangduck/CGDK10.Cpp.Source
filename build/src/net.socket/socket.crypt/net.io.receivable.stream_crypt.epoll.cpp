@@ -8,7 +8,7 @@ extern std::size_t	g_bytes_message_buffer_default_min_size;
 extern std::size_t	g_bytes_message_buffer_default_max_size;
 
 
-intptr_t net::io::receivable::Nstream_crypt::process_complete_receivable(intptr_t /*_result*/, std::size_t _transferred)
+intptr_t net::io::receivable::Nstream_crypt::process_complete_receivable(intptr_t /*_result*/, std::size_t /*_transferred*/)
 {
 	// check) 
 	CGASSERT_ERROR(this->socket_state() != eSOCKET_STATE::SYN);
@@ -61,12 +61,19 @@ intptr_t net::io::receivable::Nstream_crypt::process_complete_receivable(intptr_
 			// - set last error
 			this->m_last_socket_error = api::get_last_error();
 
-			// return) 
+			// return)
 			return EPOLLHUP;
 		}
 
+		// check) EAGAIN (nothing to receive now : it went on with -1 bytes)
+		if (bytes_transfered < 0)
+			return result_return;
+
 		// statistics)
 		this->statistics_on_receive_bytes(bytes_transfered);
+
+		// declare) the received bytes were taken as plain (no cryptor)
+		bool is_plain = false;
 
 		// 6) copy stored data to front of new buffer
 		if (this->m_buffer_received.size() != 0)
@@ -75,28 +82,33 @@ intptr_t net::io::receivable::Nstream_crypt::process_complete_receivable(intptr_
 		// ex) 복호화 처리
 		{
 			// - receive 받은 shared_buffer를 얕은 복사한다. (막 받은 buffer)
-			shared_buffer temp_source = buffer_receive ^ bytes_transfered;
+			//   (the received bytes are after the stored data : it was 'buffer_receive ^ bytes_transfered', the stored data (decrypted already)
+			//   decrypted again and the tail of the received bytes not decrypted when data was stored)
+			shared_buffer temp_source = buffer_receive ^ buffer_view(buffer_receive.data() + buffer_receive.size(), static_cast<std::size_t>(bytes_transfered));
+
+			// - no cryptor : taken as plain (the cryptor may be set while they are processed : process_decrypt_received_after)
+			is_plain = this->get_cryptor().empty();
 
 			// - 복호화한다. (receive Encrypt를 수행하는 함수.)
 			auto buf_decrypt = this->process_decryptor(temp_source);
 
 			// - get decrypted size
-			bytes_transfered = buf_decrypt.size();
+			bytes_transfered = static_cast<int>(buf_decrypt.size());
 
 			// - 복호화된 데이터 크기가 남음 buffer보다 크면 새로 생성 후 복사.
-			if (buffer_size < (this->m_buffer_received.size() + bytes_transfered))
+			//   (the stored data is copied to the new buffer : it was dropped, and the size came from the unused parameter _transferred)
+			if (buffer_receive.get_source()->size() < (buffer_receive.size() + buf_decrypt.size()))
 			{
-				// declare)
-				auto buffer_received_size = this->m_buffer_received.size();
-
-				// - 새로 만들 buffer의 크기
-				std::size_t size_prepare = buffer_received_size + _transferred;
-
-				buffer_receive = alloc_shared_buffer(size_prepare);
+				auto buf_new = alloc_shared_buffer(buffer_receive.size() + buf_decrypt.size());
+				buf_new.append(buffer_receive.size(), buffer_receive.data());
+				buffer_receive = std::move(buf_new);
 			}
 
-			// - 복호화된 데이터를 버퍼에 복사한다.
-			buffer_receive += buf_decrypt;
+			// - 복호화된 데이터를 버퍼에 복사한다. (no cryptor : the bytes are there already)
+			if (buf_decrypt.data() == buffer_receive.data() + buffer_receive.size())
+				buffer_receive.add_size(buf_decrypt.size());
+			else
+				buffer_receive += buf_decrypt;
 		}
 
 		//  debug)
@@ -110,7 +122,13 @@ intptr_t net::io::receivable::Nstream_crypt::process_complete_receivable(intptr_
 		net::sockaddr address_peer;
 
 		// 10) call process_on_receive (일반적으로 여기서 하는 역할은 거의 없다.)
-		this->process_on_receive(buffer_receive ^ bytes_transfered, address_peer);
+		//     (the received bytes : after the stored data. it was 'buffer_receive ^ bytes_transfered' : from the stored data)
+		char* preceived = buffer_receive.data() + buffer_receive.size() - bytes_transfered;
+		this->process_on_receive(buffer_view{ preceived, static_cast<std::size_t>(bytes_transfered) }, address_peer);
+
+		// - the bytes taken as plain (process_decrypt_received_after)
+		this->m_preceived_plain_begin = is_plain ? preceived : nullptr;
+		this->m_preceived_plain_end = is_plain ? preceived + bytes_transfered : nullptr;
 
 		// 11) process message
 		//    - 여기서 Return해 오는 값은 다음 message를 받기 위해 다음에 필요로 하는 메모리 용량이다.
@@ -118,6 +136,10 @@ intptr_t net::io::receivable::Nstream_crypt::process_complete_receivable(intptr_
 		//      따라서 buffer_receive은 받은 데이터 그대로 사용하면 된다.
 		//    - Exception이 발생가능하다.
 		required_bytes = this->process_packet(buffer_receive, address_peer);
+
+		// - done
+		this->m_preceived_plain_begin = nullptr;
+		this->m_preceived_plain_end = nullptr;
 
 		// check) 필요 message size가 최대 message buffer size보다 크면 exception을 던진다.
 		if(required_bytes > this->m_maximum_message_buffer_size)

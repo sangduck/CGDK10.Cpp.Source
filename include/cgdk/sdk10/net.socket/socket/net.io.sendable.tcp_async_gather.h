@@ -69,13 +69,16 @@ protected:
 	virtual	bool				process_sendable( const buffer_view _buffer, object_ptr<Ireferenceable>&& _powner, std::size_t _count_message, const net::sockaddr& _paddress) override;
 	virtual	void				process_complete_sendable( uintptr_t _result, std::size_t _transferred_bytes, std::size_t _transferred_message) override;
 #if defined(_WINSOCK2API_)
-			bool				process_sendable_async(CGSOCKET _handle_socket, const buffer_view _buffer, object_ptr<Ireferenceable>&& _powner, std::size_t _count_message);
 	virtual	std::size_t			process_get_sending_queued_bytes() const noexcept override;
+			// - sends m_queue_sending (the sending thread, out of m_lockable_sending : see m_lockable_send_call)
+			bool				_process_send_queue_sending() noexcept;
 #elif defined(_SYS_EPOLL_H)
 	virtual	uint32_t			process_recover_sendable(intptr_t _event, std::size_t _param);
 	virtual	std::size_t			process_get_sending_queued_bytes() const noexcept override;
 			void				_process_clear_send_buffers();
 			uint32_t			_process_send_queued(CGSOCKET _handle_socket, std::size_t _bytes_completed, std::size_t _count_completed);
+			// - shutdown(SD_SEND) of _handle_socket under m_lockable_send_call (not done when closed meanwhile)
+			void				_process_shutdown_send(CGSOCKET _handle_socket) noexcept;
 	static	constexpr uint32_t	SEND_QUEUED_FAILED = 0xffffffff;
 
 	// - io_uring completion (net.io.sendable.tcp_async_gather.uring.cpp) : the sends are still direct (send/sendmsg MSG_DONTWAIT by the
@@ -101,7 +104,12 @@ protected:
 			void				_process_send_deferred() noexcept;
 	virtual	void				process_close_sender() override;
 	virtual	void				process_reset_sendable() noexcept override;
+#if defined(_WINSOCK2API_)
+	virtual	lock_object*		process_get_lockable_sending() noexcept override { return &this->m_lockable_send_call; }
+#else
 	virtual	lock_object*		process_get_lockable_sending() noexcept override { return &this->m_lockable_sending; }
+	virtual	lock_object*		process_get_lockable_send_call() noexcept override { return &this->m_lockable_send_call; }
+#endif
 
 protected:
 	mutable	lock_object			m_lockable_sending;
@@ -120,7 +128,21 @@ protected:
 
 		#if defined(_WINSOCK2API_)
 			object_ptr<executable_send_buffer_list> m_pexecutable_send_buffer_list;
+			// - the messages of the WSASend in flight (its completion counts them : m_queue_sending may be cleared by a reset before it)
+			std::atomic<std::size_t> m_count_message_sending{ 0 };
+
+			// - the sending thread (m_flag_sending) calls WSASend out of m_lockable_sending : the other threads queue to m_queue_pending meanwhile
+			//   (they waited for the WSASend in the lock). m_lockable_send_call : the handle is read and WSASend / shutdown are called under it.
+			//   the close swaps the handle under it (process_get_lockable_sending) : a handle closed and made again for another socket is not
+			//   sent to. lock order : m_lockable_sending -> m_lockable_send_call (never the other way)
+			mutable	lock_object			m_lockable_send_call;
 		#elif defined(_SYS_EPOLL_H)
+			// - the sending thread (m_flag_sending) sends directly out of m_lockable_sending. m_lockable_send_call : the handle is checked, the
+			//   send system call is made and m_queue_sending is consumed under it (process_reset_sendable() clears m_queue_sending under it).
+			//   the close swaps the handle under it (process_get_lockable_send_call) : a handle closed and made again for another socket is
+			//   not sent to (io_uring completion closes the handle in process_close_socket). lock order : m_lockable_sending -> m_lockable_send_call
+			mutable	lock_object			m_lockable_send_call;
+
 			// - m_queue_sending is used only by the sending thread (m_flag_sending). it is sent from array_buffer[m_index_sending]
 			std::size_t			m_index_sending{ 0 };
 			// - remained in m_queue_sending while waiting for EPOLLOUT (under m_lockable_sending : duplicated EPOLLOUT check, sending_queued_bytes_now())
@@ -145,7 +167,8 @@ protected:
 				Ntcp_async_gather* m_psendable = nullptr;
 				::msghdr		m_msg{};
 				bool			m_is_reposted = false;			// - the completion of this op posted another one (the wait for the socket buffer continues)
-				std::vector<object_ptr<Ireferenceable>> m_owners_zerocopy;	// - the owners of the zerocopy buffers waiting for their notification (in order)
+				struct ZEROCOPY_OP { object_ptr<Ireferenceable> powner; bool is_failed = false; };	// - is_failed : its result was an error (-ENOBUFS / -ENOMEM : sent again as a copy) : its notification is not counted (copied)
+				std::vector<ZEROCOPY_OP> m_owners_zerocopy;	// - an entry per op : the owner of a SEND_ZC (empty : a SENDMSG) till its notification (in order)
 				QUEUE_SEND		m_queue_hold;
 			};
 			object_ptr<executable_sending> m_pexecutable_sending;

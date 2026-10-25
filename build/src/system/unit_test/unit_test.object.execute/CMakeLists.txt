@@ -81,6 +81,7 @@ test_executable.cpp
 test_executor.cpp
 test_schedulable.cpp
 test_time.cpp
+bench_post.cpp
 
 #io_uring completion backend (linux 6.0+ : skipped elsewhere)
 test_io_context_uring_cq.cpp

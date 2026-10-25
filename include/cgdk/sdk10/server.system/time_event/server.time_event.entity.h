@@ -48,6 +48,8 @@ public:
 			entity&				operator -= (Ievent* _pevent); 
 
 			void				process_notify_next_time_changed(time_event::Ievent* _pendity);
+			// - changes the next time of a registered event under the lock (rebuilds the heap, updates the entity in the manager)
+			void				process_set_event_next_time(time_event::Ievent* _pevent, chrono::time::utc::time_point _time_next) noexcept;
 
 protected:
 	virtual intptr_t			process_execute(intptr_t _return, size_t _param) override;
@@ -78,9 +80,9 @@ protected:
 
 inline void time_event::Ievent::unregister_event() noexcept
 {
-	auto pentity = this->m_pentity;
+	auto pentity = this->m_pentity.load(std::memory_order_acquire);
 	
-	RETURN_IF(pentity.empty());
+	RETURN_IF(pentity == nullptr);
 	
 	pentity->unregister_event(this);
 }

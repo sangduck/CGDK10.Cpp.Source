@@ -29,11 +29,15 @@
     <li class="sub"><a href="server.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="4.5" rx="1"/><rect x="2" y="9.5" width="12" height="4.5" rx="1"/><path d="M4.5 4.25h.01M4.5 11.75h.01"/></svg>Server system</a></li>
     <li class="sub"><a href="group.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 2.8a2.3 2.3 0 0 1 0 4.4M13.5 14c0-1.8-1-3.1-2.5-3.6"/></svg>Group system</a></li>
     <li class="sub"><a href="query.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Query system</a></li>
+    <li class="sub"><a href="query.redis.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Redis · 배치·성능</a></li>
     <li class="head"><a href="build.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-3.8 3.8L2.8 12.2a1.4 1.4 0 0 0 2 2l5.9-3.9a3 3 0 0 0 3.8-3.8l-2 2-2-2z"/></svg>빌드 · 플랫폼</a></li>
     <li class="head"><a href="tests.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5.5 8.2l2 2 3.2-4"/></svg>단위 테스트 · CI</a></li>
     <li class="head"><a href="benchmarks.html" class="cur"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V9M8 13.5V4M13 13.5V7"/><path d="M1.5 13.5h13"/></svg>벤치마크</a></li>
     <li class="sub"><a href="benchmarks.push.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4 3 3 6-6"/><path d="M10.5 5.5h4v4"/></svg>큰 묶음 push 처리량</a></li>
     <li class="sub"><a href="benchmarks.cork.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h8M2 11.5h5"/><path d="M12 9.5l2 2-2 2"/></svg>send cork · 서버 push</a></li>
+    <li class="sub"><a href="benchmarks.iocp.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="3" width="13" height="10" rx="1.5"/><path d="M4 8h6M8 6l2 2-2 2"/></svg>Windows IOCP 송신</a></li>
+    <li class="sub"><a href="benchmarks.linux.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 13.5h12"/><path d="M3.5 11V7M6.5 11V4M9.5 11V6M12.5 11V2.5"/></svg>Linux io 백엔드 비교</a></li>
+    <li class="sub"><a href="benchmarks.post.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h9"/><path d="M8 5l3 3-3 3"/><path d="M13.5 3v10"/></svg>executor post · runnext</a></li>
     <li class="head"><a href="samples.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4"/></svg>예제 · 튜토리얼</a></li>
     <li class="head"><a href="releases.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h5.5l6.5 6.5-5.5 5.5L2 8z"/><circle cx="5.2" cy="5.2" r=".9"/></svg>릴리즈 노트</a></li>
     <li class="head"><a href="status.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3M8 11.5h.01"/></svg>미구현 · 알려진 문제</a></li>
@@ -41,6 +45,7 @@
 </aside>
 <main>
 <h1 id="benchmarks">벤치마크 <small>Release 빌드 측정 모음</small></h1>
+<p class="note"><a href="query.redis.html#bench">Redis 클라이언트 6종 비교</a> — CGDK 단건·동기 배치·비동기 배치와 hiredis, redis-plus-plus, Boost.Redis의 144회 Release 측정.</p>
 <p>사이트에 실린 성능 수치를 한곳에 모았다. 모든 수치는 Release 빌드로 쟀다. 자세한 해석은 각 주제 문서에 있다.</p>
 
 <h4 class="sec">측정 원칙</h4>
@@ -136,6 +141,50 @@
 <tr><td>echo 파이프라인 64 × 16</td><td>1,013만/s · 0.79 µs</td><td>270만 ~ 299만/s · 2.7 ~ 3.0 µs (cork 끔)</td><td class="hl">2,435만 ~ 2,559만/s · 0.31 ~ 0.33 µs (cork 켬)</td></tr>
 <tr><td>echo ping-pong 256</td><td>139만/s · 5.75 µs</td><td>180만 ~ 184만/s</td><td class="hl">177만 ~ 182만/s</td></tr>
 <tr><td>tick push 64 × 64 (410만/s 요청)</td><td>410만 전달 · 0.71 µs</td><td>215만 ~ 225만 전달 (scope 없음)</td><td class="hl">410만 전달 · 0.36 ~ 0.39 µs (소켓별 scope)</td></tr>
+</table>
+
+<h4 class="sec">5-1. Windows IOCP 송신</h4>
+<p>Windows 11, Core Ultra 7 270K Plus(24 코어), 실행기 8 thread, loopback. r11529 와 r11531 을 번갈아 5라운드 돌린 중앙값이다. r11530 은 WSASend 를 송신 큐 락 밖으로 뺐고, r11531 은 실행기에 <code>send_defer::auto_scope</code> 를 넣었다. 자세한 표와 해석은 <a href="benchmarks.iocp.html">Windows IOCP 송신</a> 에 있다.</p>
+<table class="bench">
+<tr><th>시나리오</th><th>r11529</th><th class="hl">r11531</th></tr>
+<tr><td>echo 파이프라인 64 B × 32 × 16</td><td>238만/s · 3.27 µs</td><td class="hl">754만/s · 1.04 µs (auto_scope)</td></tr>
+<tr><td>8 thread → socket 1개 (fan-in)</td><td>404만/s</td><td class="hl">1,054만/s (락 밖 WSASend)</td></tr>
+<tr><td>8 thread → socket 32개 (fan-out)</td><td>69만/s · 16.6 µs</td><td class="hl">1,715만/s · 0.89 µs (락 밖 WSASend)</td></tr>
+<tr><td>ping-pong 256 · 64 KB · UDP</td><td colspan="2">변화 없음 (회차 범위 안)</td></tr>
+</table>
+
+<h4 class="sec">5-2. Linux io 백엔드 비교</h4>
+<p>Linux 32 코어(kernel 7.0), 서버 · 클라이언트 같은 백엔드, loopback, 교대 5라운드 중앙값. 기준 r11546(epoll 소소한 최적화 B2 ~ B5 뒤 HEAD). 결과로 기본 백엔드 io_uring completion(r11556 : 기본값 변경, 불가 시 epoll). epoll 은 혼합 등록 적용(r11572 : 작은 수신 EPOLLET, 큰 수신 중 ONESHOT, 16 · 32 thread +48 ~ +97%). 자세한 표 : <a href="benchmarks.linux.html">Linux io 백엔드 비교</a>.</p>
+<table class="bench">
+<tr><th>시나리오 (16 thread)</th><th>epoll</th><th>io_uring readiness</th><th class="hl">io_uring completion</th></tr>
+<tr><td>tcp echo 64 B × 32 × 16</td><td>1,235만/s · 0.71 µs</td><td>578만/s · 1.26 µs</td><td class="hl">2,752만/s · 0.16 µs</td></tr>
+<tr><td>uds echo 64 B × 32 × 16</td><td>1,287만/s</td><td>611만/s</td><td class="hl">3,733만/s</td></tr>
+<tr><td>tcp echo 16 B × 256</td><td>76만/s</td><td>37만/s</td><td class="hl">231만/s</td></tr>
+<tr><td>tcp echo 64 KB × 4 (4 thread)</td><td><b>32.1만/s</b></td><td>27.1만/s</td><td class="hl">20.9만/s</td></tr>
+<tr><td>udp echo 64 B × 16 × 32</td><td>35.6만/s</td><td>67.3만/s</td><td class="hl">72.4만/s</td></tr>
+</table>
+
+<h4 class="sec">5-3. executor post · runnext</h4>
+<p>handler 가 자기 executor 로 다음 일을 post 하는 사슬, i9-13900K, worker 8개. runnext 슬롯은 epoll r11560, io_uring 두 백엔드 r11565. 자세한 표는 <a href="benchmarks.post.html">executor post · runnext</a>.</p>
+<table class="bench">
+<tr><th>hops/s (사슬 1 / 8 / 32)</th><th>전</th><th class="hl">runnext</th></tr>
+<tr><td>io_uring completion (기본)</td><td>1.37M / 1.57M / 2.09M</td><td class="hl">12.1M / 49.9M / 76.6M</td></tr>
+<tr><td>io_uring readiness</td><td>0.52M / 0.59M / 2.07M</td><td class="hl">11.9M / 95.2M / 91.1M</td></tr>
+<tr><td>epoll</td><td>0.48M / 2.47M / 2.85M</td><td class="hl">13.5M / 53.2M / 99.1M</td></tr>
+<tr><td>외부 thread post · 깨우기 p50</td><td colspan="2">세 백엔드 모두 변화 없음</td></tr>
+</table>
+
+<h4 class="sec">5-4. scheduler post_at</h4>
+<p><code>executor::scheduler</code>(시각 지정 1회 실행) 가 자는 thread 를 더 이른 것이 올 때만 lock 밖에서 깨운다(r11569). cancel 은 인덱스 힙으로 O(log n)(r11571). thread T 개가 <code>post_at(now + [0, D))</code>, worker 1개 executor. 자세한 표와 cancel 방식 비교는 <a href="benchmarks.post.html#scheduler">executor post · runnext</a>.</p>
+<table class="bench">
+<tr><th>post_at /s (T · D)</th><th>전</th><th class="hl">후 (r11569)</th></tr>
+<tr><td>Windows 1 · 100 µs</td><td>3.7 ~ 3.8M</td><td class="hl">6.6 ~ 7.0M</td></tr>
+<tr><td>Windows 4 · 1 ms</td><td>3.5M</td><td class="hl">4.7 ~ 5.0M</td></tr>
+<tr><td>Linux 1 · 100 µs</td><td>3.0M</td><td class="hl">9.0 ~ 9.2M</td></tr>
+<tr><td>Linux 4 · 1 ms</td><td>3.6 ~ 3.7M</td><td class="hl">4.2M</td></tr>
+<tr><td>깨어나는 지연 p50</td><td colspan="2">변화 없음 (Linux 53 µs, Windows 약 480 µs)</td></tr>
+<tr><td>cancel (대기 10만, r11571)</td><td>Linux 3.1 µs · Windows 4.7 µs</td><td class="hl">36 ns · 54 ns</td></tr>
+<tr><td>post_at thread 4개 (r11571)</td><td colspan="2">r11569 보다 10 ~ 15% 낮음 (인덱스 쓰기)</td></tr>
 </table>
 
 <h4 class="sec">6. 로그</h4>

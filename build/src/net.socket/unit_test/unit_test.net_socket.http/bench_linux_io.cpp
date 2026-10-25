@@ -25,7 +25,10 @@
 //    in a row on a thread ("run" : about the messages of a receive) and the tcp counters per message (/proc/net : the whole network
 //    namespace)
 //  - CGDK_BENCH_CASES : runs the cases whose name has one of the comma separated parts only (CGDK_BENCH_CASES="tcp echo 64B,uds")
+//  - CGDK_BENCH_CONNECTIONS=100,1000 : TCP echo with that many connections (64B window16, 1KB window4, 64KB window1) instead of the usual cases
 //  - CGDK_BENCH_ZEROCOPY_THRESHOLD : Itcp_gather::zerocopy_threshold() of the run (a large value : the 64KB messages are copied)
+//  - two machines (a real NIC) : TEST(bench, remote) with CGDK_BENCH_REMOTE=server on one and CGDK_BENCH_REMOTE=<its address> on the
+//    other (CGDK_BENCH_BACKEND, CGDK_BENCH_REMOTE_* : see there)
 //  - the same file builds on the tree before these changes (the baseline of a comparison) : the io_uring part is left out there
 //-----------------------------------------------------------------------------
 #if defined(_SYS_EPOLL_H)
@@ -632,11 +635,38 @@ void lbn_run_all(const char* _backend, executor::Iio_context* _pio_context, int 
 	// - the workers of the executor started (completion : the rings bound. the sockets accepted before are spread over the rings bound then)
 	std::this_thread::sleep_for(300ms);
 
+	// - CGDK_BENCH_CONNECTIONS=100,1000 : the cases of that many TCP connections (64B window16, 1KB window4, 64KB window1) instead of
+	//   the cases below (each connection : a client socket and a server socket in this process => ulimit -n above 2 x connections)
+	if (const char* penv = std::getenv("CGDK_BENCH_CONNECTIONS"); penv != nullptr && *penv != 0)
+	{
+		for (const char* p = penv; *p != 0; )
+		{
+			const int count = std::atoi(p);
+
+			if (count > 0)
+			{
+				const auto name_64 = "tcp echo 64B x" + std::to_string(count) + " clients window16";
+				const auto name_1k = "tcp echo 1KB x" + std::to_string(count) + " clients window4";
+				const auto name_64k = "tcp echo 64KB x" + std::to_string(count) + " clients window1";
+				lbn_tcp_echo(name_64.c_str(), _backend, _pio_context, false, count, 64, 16, _seconds);
+				lbn_tcp_echo(name_1k.c_str(), _backend, _pio_context, false, count, 1024, 4, _seconds);
+				lbn_tcp_echo(name_64k.c_str(), _backend, _pio_context, false, count, 64 * 1024, 1, _seconds);
+			}
+
+			while (*p != 0 && *p != ',')
+				++p;
+			if (*p == ',')
+				++p;
+		}
+		return;
+	}
+
 	lbn_tcp_echo("tcp echo 64B x32 clients window16", _backend, _pio_context, false, 32, 64, 16, _seconds);
 	lbn_tcp_echo("tcp echo 64KB x4 clients window2", _backend, _pio_context, false, 4, 64 * 1024, 2, _seconds);
 	lbn_tcp_echo("uds echo 64B x32 clients window16", _backend, _pio_context, true, 32, 64, 16, _seconds);
 	lbn_tcp_echo("tcp echo 16B x256 clients window1", _backend, _pio_context, false, 256, 16, 1, _seconds);
 	lbn_udp_echo("udp echo 64B x16 sockets window32", _backend, _pio_context, 16, 64, 32, _seconds);
+	lbn_udp_echo("udp echo 64B x16 sockets window1", _backend, _pio_context, 16, 64, 1, _seconds);		// - a datagram per event
 }
 
 TEST(bench, epoll)
@@ -645,8 +675,13 @@ TEST(bench, epoll)
 	if (seconds == 0)
 		GTEST_SKIP() << "set CGDK_BENCH=<seconds> to run";
 
+	// - epoll asked (the default is io_uring completion since r11556)
+	const auto backend_before = executor::default_io_backend();
+	executor::set_default_io_backend(executor::io_backend::epoll);
 	auto pexecutor = executor::make_io_context_threads("bench epoll", lbn_threads());
+	executor::set_default_io_backend(backend_before);
 	ASSERT_TRUE(pexecutor.exist());
+	ASSERT_EQ(pexecutor->backend(), executor::io_backend::epoll);
 
 	lbn_run_all("epoll", pexecutor.get(), seconds);
 
@@ -662,9 +697,10 @@ TEST(bench, io_uring)
 	if (executor::is_io_uring_available() == false)
 		GTEST_SKIP() << "io_uring is not available on this kernel";
 
+	const auto backend_before = executor::default_io_backend();
 	executor::set_default_io_backend(executor::io_backend::io_uring);
 	auto pexecutor = executor::make_io_context_threads("bench io_uring", lbn_threads());
-	executor::set_default_io_backend(executor::io_backend::epoll);
+	executor::set_default_io_backend(backend_before);
 	ASSERT_TRUE(pexecutor.exist());
 
 	lbn_run_all("io_uring", pexecutor.get(), seconds);
@@ -683,9 +719,10 @@ TEST(bench, io_uring_completion)
 	if (executor::is_io_uring_completion_available() == false)
 		GTEST_SKIP() << "the io_uring completion backend is not available on this kernel";
 
+	const auto backend_before = executor::default_io_backend();
 	executor::set_default_io_backend(executor::io_backend::io_uring_completion);
 	auto pexecutor = executor::make_io_context_threads("bench io_uring_completion", lbn_threads());
-	executor::set_default_io_backend(executor::io_backend::epoll);
+	executor::set_default_io_backend(backend_before);
 	ASSERT_TRUE(pexecutor.exist());
 	ASSERT_EQ(pexecutor->backend(), executor::io_backend::io_uring_completion);
 
@@ -694,6 +731,261 @@ TEST(bench, io_uring_completion)
 	pexecutor->stop();
 }
 #endif
+
+//-----------------------------------------------------------------------------
+// two machines (a real NIC) : CGDK_BENCH_REMOTE=server on one, CGDK_BENCH_REMOTE=<the address of the server> on the other
+//
+//  - CGDK_BENCH : the seconds of a client round (the server serves rounds till CGDK_BENCH_REMOTE_LIFETIME seconds, 300 by default, or
+//    CGDK_BENCH_REMOTE_ROUNDS rounds)
+//  - CGDK_BENCH_BACKEND : epoll (default) / io_uring / completion. CGDK_BENCH_THREADS, CGDK_BENCH_ZEROCOPY_THRESHOLD as above
+//  - CGDK_BENCH_REMOTE_PORT (33900), CGDK_BENCH_REMOTE_SIZE (65536), CGDK_BENCH_REMOTE_CLIENTS (4), CGDK_BENCH_REMOTE_WINDOW (2)
+//  - CGDK_BENCH_REMOTE_SIZE over 256KB (the receive message buffer limit) : give it to the server too (the limit raised on both sides)
+//  - the server reports a round from its first connect to its last disconnect : the echoes, the cpu ("[bench-cpu]" : the process and the
+//    machine) and the zerocopy sends of its sockets (sent / fallback). the client reports its round like a case above
+//-----------------------------------------------------------------------------
+class lbn_remote_server_socket;
+
+namespace
+{
+	// - the server sockets connected in this round (taken by the report of the round)
+	std::mutex					g_lbn_lockable_remote;
+	std::vector<object_ptr<lbn_remote_server_socket>> g_lbn_remote_servers;
+}
+
+class lbn_remote_server_socket : public net::socket::tcp<>
+{
+public:
+			std::atomic<std::size_t> count_received{ 0 };
+			std::atomic<std::size_t> bytes_received{ 0 };
+
+protected:
+	virtual void				on_connect() override
+	{
+		std::lock_guard lock(g_lbn_lockable_remote);
+		g_lbn_remote_servers.push_back(object_ptr<lbn_remote_server_socket>(this));
+	}
+	virtual void				on_disconnect(uint64_t _disconnect_reason) override
+	{
+		// - a close by an error of this side (a send failure ...) : the reason and the errno
+		if (this->get_last_socket_error() != 0)
+		{
+			printf("[bench-remote] server socket closed : reason 0x%llx errno %d (%zu messages)\n", static_cast<unsigned long long>(_disconnect_reason), this->get_last_socket_error(), this->count_received.load());
+			fflush(stdout);
+		}
+	}
+	virtual result_code			on_message(sMESSAGE_NETWORK& _msg) override
+	{
+		this->count_received.fetch_add(1, std::memory_order_relaxed);
+		this->bytes_received.fetch_add(_msg.buf_message.size(), std::memory_order_relaxed);
+		this->send(_msg.buf_message);
+		return eRESULT::DONE;
+	}
+};
+
+class lbn_remote_acceptor : public net::acceptor<lbn_remote_server_socket>
+{
+protected:
+	[[nodiscard]] virtual object_ptr<executor::Iio_context> process_get_connectable_io_context(net::io::Iconnectable* /*_pconnectable*/) override { return this->io_context(); }
+};
+
+namespace
+{
+	const char* lbn_env(const char* _name, const char* _default)
+	{
+		const char* penv = std::getenv(_name);
+		return (penv != nullptr && *penv != 0) ? penv : _default;
+	}
+
+	object_ptr<executor::Iio_context_threads> lbn_make_remote_executor(std::string& _backend)
+	{
+		_backend = lbn_env("CGDK_BENCH_BACKEND", "epoll");
+		auto backend = executor::io_backend::epoll;
+	#if LIO_BENCH_HAS_URING
+		if (_backend == "io_uring")
+			backend = executor::io_backend::io_uring;
+	#endif
+	#if LIO_BENCH_HAS_URING_CQ
+		if (_backend == "completion")
+			backend = executor::io_backend::io_uring_completion;
+	#endif
+		const auto backend_before = executor::default_io_backend();
+		executor::set_default_io_backend(backend);
+		auto pexecutor = executor::make_io_context_threads("bench remote", lbn_threads());
+		executor::set_default_io_backend(backend_before);
+
+		if (const char* penv = std::getenv("CGDK_BENCH_ZEROCOPY_THRESHOLD"); penv != nullptr && *penv != 0)
+			net::io::sendable::Itcp_gather::zerocopy_threshold(static_cast<std::size_t>(std::strtoull(penv, nullptr, 10)));
+
+		// - a message over the receive message buffer limit (256KB by default) closes the socket : the limit of both sides raised
+		const auto size = static_cast<std::size_t>(std::strtoull(lbn_env("CGDK_BENCH_REMOTE_SIZE", "65536"), nullptr, 10));
+		if (size > net::io::receivable::default_message_buffer_max_size())
+			net::io::receivable::default_message_buffer_max_size(size);
+
+		return pexecutor;
+	}
+}
+
+void lbn_remote_server(executor::Iio_context* _pio_context, const char* _backend, uint16_t _port)
+{
+	auto pacceptor = make_own<lbn_remote_acceptor>();
+	pacceptor->io_context(_pio_context);
+
+	net::acceptor<lbn_remote_server_socket>::START_PARAMETER parameter;
+	parameter.local_endpoint = net::ip::tcp::endpoint{ net::ip::address_v4::any(), _port };
+	parameter.reallocate_port_at_duplicate_port_error = false;
+	parameter.enable_progress_log = false;
+	ASSERT_EQ(pacceptor->start(parameter), eRESULT::SUCCESS);
+	printf("[bench-remote] server %s listening on %u (%d threads, zerocopy threshold %zu)\n", _backend, pacceptor->local_endpoint().port(), lbn_threads(), net::io::sendable::Itcp_gather::zerocopy_threshold());
+	fflush(stdout);
+
+	const auto lifetime = std::chrono::seconds(std::atoi(lbn_env("CGDK_BENCH_REMOTE_LIFETIME", "300")));
+	const int rounds = std::atoi(lbn_env("CGDK_BENCH_REMOTE_ROUNDS", "0"));
+	const auto time_end = std::chrono::steady_clock::now() + lifetime;
+
+	for (int round = 0; (rounds == 0 || round < rounds) && std::chrono::steady_clock::now() < time_end; ++round)
+	{
+		// 1) the first connect of the round
+		if (lbn_wait_until([&]() { return pacceptor->count() != 0; }, std::chrono::duration_cast<std::chrono::milliseconds>(time_end - std::chrono::steady_clock::now())) == false)
+			break;
+
+		const auto time_begin = std::chrono::steady_clock::now();
+		const auto cpu_begin = lbn_take_cpu_snapshot();
+
+		// 2) the last disconnect
+		while (pacceptor->count() != 0)
+			std::this_thread::sleep_for(1ms);
+
+		const auto cpu_end = lbn_take_cpu_snapshot();
+		const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - time_begin).count();
+
+		std::vector<object_ptr<lbn_remote_server_socket>> sockets;
+		{
+			std::lock_guard lock(g_lbn_lockable_remote);
+			sockets.swap(g_lbn_remote_servers);
+		}
+
+		std::size_t count = 0, bytes = 0, zerocopy_sent = 0, zerocopy_fallback = 0, zerocopy_copied = 0, sockets_copied = 0;
+		for (auto& psocket : sockets)
+		{
+			count += psocket->count_received.exchange(0);
+			bytes += psocket->bytes_received.exchange(0);
+			zerocopy_sent += psocket->zerocopy_sent_count();
+			zerocopy_fallback += psocket->zerocopy_fallback_count();
+			zerocopy_copied += psocket->zerocopy_copied_count();
+			sockets_copied += psocket->is_zerocopy_copied() ? 1 : 0;
+		}
+
+		char text_case[64];
+		snprintf(text_case, sizeof(text_case), "remote server round %d (%zu sockets)", round, sockets.size());
+		lbn_report(text_case, _backend, count, bytes, seconds);
+		lbn_report_cpu(cpu_begin, cpu_end, count, seconds, {}, {});
+		printf("[bench-remote] zerocopy sent %zu fallback %zu copied %zu (zerocopy stopped on %zu sockets)\n", zerocopy_sent, zerocopy_fallback, zerocopy_copied, sockets_copied);
+		fflush(stdout);
+	}
+
+	pacceptor->stop();
+}
+
+void lbn_remote_client(executor::Iio_context* _pio_context, const char* _backend, const char* _address, uint16_t _port, int _seconds)
+{
+	const auto size = static_cast<std::size_t>(std::strtoull(lbn_env("CGDK_BENCH_REMOTE_SIZE", "65536"), nullptr, 10));
+	const int count_client = std::atoi(lbn_env("CGDK_BENCH_REMOTE_CLIENTS", "4"));
+	const int window = std::atoi(lbn_env("CGDK_BENCH_REMOTE_WINDOW", "2"));
+
+	lbn_begin_case();
+
+	// 1) clients
+	std::error_code error_code;
+	const auto address_server = net::ip::make_address_v4(_address, error_code);
+	ASSERT_FALSE(error_code) << "CGDK_BENCH_REMOTE : an IPv4 address";
+
+	std::vector<own_ptr<lbn_client_socket>> clients;
+	for (int i = 0; i < count_client; ++i)
+	{
+		auto psocket = make_own<lbn_client_socket>();
+		psocket->io_context(_pio_context);
+
+		sSOCKET_CONNECT_REQUEST_PARAMETER parameter_connect;
+		parameter_connect.remote_endpoint = net::ip::tcp::endpoint{ address_server, _port };
+		parameter_connect.enable_progress_log = false;
+		psocket->start(parameter_connect);
+		clients.push_back(std::move(psocket));
+	}
+	ASSERT_TRUE(lbn_wait_until([&]() { return std::all_of(clients.begin(), clients.end(), [](auto& _p) { return _p->is_connected.load(); }); }, 10000ms)) << "connect";
+
+	// 2) run
+	g_lbn_running = true;
+
+	const auto message = lbn_message(size);
+	for (auto& psocket : clients)
+		for (int w = 0; w < window; ++w)
+			ASSERT_TRUE(psocket->send(message));
+
+	const auto time_begin = std::chrono::steady_clock::now();
+	const auto cpu_begin = lbn_take_cpu_snapshot();
+	std::this_thread::sleep_for(std::chrono::seconds(_seconds));
+
+	std::size_t count = 0, bytes = 0, zerocopy_sent = 0, zerocopy_fallback = 0, zerocopy_copied = 0, sockets_copied = 0;
+	for (auto& psocket : clients)
+	{
+		count += psocket->count_received.load();
+		bytes += psocket->bytes_received.load();
+	}
+	const auto cpu_end = lbn_take_cpu_snapshot();
+	const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - time_begin).count();
+
+	// 3) stop
+	g_lbn_running = false;
+	std::this_thread::sleep_for(300ms);
+
+	for (auto& psocket : clients)
+	{
+		zerocopy_sent += psocket->zerocopy_sent_count();
+		zerocopy_fallback += psocket->zerocopy_fallback_count();
+		zerocopy_copied += psocket->zerocopy_copied_count();
+		sockets_copied += psocket->is_zerocopy_copied() ? 1 : 0;
+	}
+
+	char text_case[96];
+	snprintf(text_case, sizeof(text_case), "remote tcp echo %zuB x%d window%d", size, count_client, window);
+	lbn_report(text_case, _backend, count, bytes, seconds);
+	lbn_report_cpu(cpu_begin, cpu_end, count, seconds, {}, lbn_client_tids(clients));
+	printf("[bench-remote] zerocopy sent %zu fallback %zu copied %zu (zerocopy stopped on %zu sockets)\n", zerocopy_sent, zerocopy_fallback, zerocopy_copied, sockets_copied);
+	fflush(stdout);
+
+	for (auto& psocket : clients)
+		psocket->stop();
+	lbn_wait_until([&]() { return std::none_of(clients.begin(), clients.end(), [](auto& _p) { return _p->is_connected.load(); }); }, 10000ms);
+}
+
+TEST(bench, remote)
+{
+	const char* premote = std::getenv("CGDK_BENCH_REMOTE");
+	if (premote == nullptr || *premote == 0)
+		GTEST_SKIP() << "set CGDK_BENCH_REMOTE=server (or the address of the server) to run";
+
+	std::string backend;
+	auto pexecutor = lbn_make_remote_executor(backend);
+	ASSERT_TRUE(pexecutor.exist());
+
+	// - the backend of the executor (io_uring not available, kernel.io_uring_disabled of RHEL : epoll instead)
+#if LIO_BENCH_HAS_URING_CQ
+	const auto backend_now = pexecutor->backend();
+	backend = (backend_now == executor::io_backend::epoll) ? "epoll" : (backend_now == executor::io_backend::io_uring) ? "io_uring" : "completion";
+#endif
+
+	// - the workers of the executor started
+	std::this_thread::sleep_for(300ms);
+
+	const auto port = static_cast<uint16_t>(std::atoi(lbn_env("CGDK_BENCH_REMOTE_PORT", "33900")));
+
+	if (std::string_view(premote) == "server")
+		lbn_remote_server(pexecutor.get(), backend.c_str(), port);
+	else
+		lbn_remote_client(pexecutor.get(), backend.c_str(), premote, port, std::max(lbn_seconds(), 1));
+
+	pexecutor->stop();
+}
 
 }
 

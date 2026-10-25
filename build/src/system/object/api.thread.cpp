@@ -362,54 +362,13 @@ bool api::Nthread::force_raise_exception(const std::string_view& _message) noexc
 		}
 	}
 #elif defined(__linux__)
-	// Linux implementation: signal-based exception injection
-	{
-		// lock)
-		std::lock_guard lock(this->m_lockable_control);
-
-		// check) thread id is valid
-		if (this->m_statistics_thread.id_thread == THREAD_ID{})
-			return false;
-
-		// Store exception message in thread-local storage
-		static thread_local std::string exception_message;
-		exception_message = std::string(_message);
-
-		// Define signal handler
-		auto signal_handler = [](int /*_sig*/)
-		{
-			throw std::runtime_error(exception_message);
-		};
-
-		// 1) Setup signal handler
-		struct sigaction sa = {}, old_sa = {};
-		sa.sa_handler = signal_handler;
-		sigemptyset(&sa.sa_mask);
-		sa.sa_flags = 0;
-
-		if (::sigaction(SIGUSR2, &sa, &old_sa) == -1)
-			return false;
-
-		try
-		{
-			// 2) Send SIGUSR2 to the thread
-			pthread_t tid = this->m_statistics_thread.id_thread.load();
-			if (::pthread_kill(tid, SIGUSR2) != 0)
-			{
-				::sigaction(SIGUSR2, &old_sa, nullptr);
-				return false;
-			}
-
-			// 3) Restore original signal handler
-			::sigaction(SIGUSR2, &old_sa, nullptr);
-			return true;
-		}
-		catch (...)
-		{
-			::sigaction(SIGUSR2, &old_sa, nullptr);
-			return false;
-		}
-	}
+	// Linux : not supported (returns false). it installed a throwing SIGUSR2 handler, sent SIGUSR2 with pthread_kill() and restored the
+	// old handler right away : the signal is delivered asynchronously (often after the restore : the old handler ran instead), SIGUSR2
+	// is also the signal of the emergency terminate (net.emergency.manager) and of the dump manager, and throwing from a signal handler
+	// is undefined behavior (the thread is interrupted at any instruction, holding any lock). api::manager_thread::check_deadlock() logs
+	// and dumps a deadlocked thread : this only does nothing now (as on Windows, where the APC catches its own exception).
+	(void)_message;
+	return false;
 #else
 	// Unsupported platform
 	(void)_message;
@@ -503,6 +462,9 @@ void api::Nthread::notify_blocked() noexcept
 	if(this->m_pexecutor == nullptr)
 		return;
 
+	// - runnext : the slot of this thread goes to the shared queue (an executable posted before blocking is run by the other workers)
+	executor::io_context::runnext_suspend();
+
 	// 1) notify blocked
 	this->m_pexecutor->thread_blocked();
 
@@ -524,6 +486,9 @@ void api::Nthread::notify_unblocked() noexcept
 
 	// 1) notify unblocked
 	this->m_pexecutor->thread_unblocked();
+
+	// - runnext
+	executor::io_context::runnext_resume();
 
 	// 2) blocked == true;
 	this->m_is_blocked = false;

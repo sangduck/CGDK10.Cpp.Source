@@ -390,7 +390,7 @@ int server::web::entity::resource::process_request_file(sMESSAGE_HTTP_REQUEST& _
 	// 2) make http header
 	{
 		// - add response head
-		buf_head.append_text(CGDK::stream_string("HTTP/", 1, ".", 1, " ", "OK", " ", 200, "\r\n"));
+		buf_head.append_text(CGDK::stream_string("HTTP/", 1, ".", 1, " ", 200, " ", "OK"sv, "\r\n"));
 
 		// - get now
 		auto time_now = chrono::time::utc::now();
@@ -430,7 +430,6 @@ int server::web::entity::resource::process_request_file(sMESSAGE_HTTP_REQUEST& _
 	// 4) send http response message
 	psocket->send(buf_head);
 	psocket->send(m_buffer_data);
-	psocket->send(m_buffer_context_tail);
 
 	// return) 
 	return 0;
@@ -447,7 +446,7 @@ int server::web::entity::resource::process_request_image(sMESSAGE_HTTP_REQUEST& 
 	// 2) make http header
 	{
 		// - append http response header
-		buf_head.append_text(CGDK::stream_string("HTTP/", 1, ".", 1, " ", "OK"sv, " ", 200, "\r\n"));
+		buf_head.append_text(CGDK::stream_string("HTTP/", 1, ".", 1, " ", 200, " ", "OK"sv, "\r\n"));
 
 		// - get now
 		auto time_now = chrono::time::utc::now();
@@ -480,7 +479,6 @@ int server::web::entity::resource::process_request_image(sMESSAGE_HTTP_REQUEST& 
 	// 4) send http response message
 	psocket->send(buf_head);
 	psocket->send(m_buffer_data);
-	psocket->send(m_buffer_context_tail);
 
 	// return) 
 	return 0;
@@ -497,7 +495,7 @@ int server::web::entity::resource::process_request_audio(sMESSAGE_HTTP_REQUEST& 
 	// 2) make http header
 	{
 		// - add response head
-		buf_head.append_text(CGDK::stream_string("HTTP/", 1, ".", 1, " ", "OK"sv, " ", 200, "\r\n"));
+		buf_head.append_text(CGDK::stream_string("HTTP/", 1, ".", 1, " ", 200, " ", "OK"sv, "\r\n"));
 
 		// - get now
 		auto time_now = chrono::time::utc::now();
@@ -531,7 +529,6 @@ int server::web::entity::resource::process_request_audio(sMESSAGE_HTTP_REQUEST& 
 	// 4) send http response message
 	psocket->send(buf_head);
 	psocket->send(m_buffer_data);
-	psocket->send(m_buffer_context_tail);
 
 	// return) 
 	return 0;
@@ -548,7 +545,7 @@ int server::web::entity::resource::process_request_viedo(sMESSAGE_HTTP_REQUEST& 
 	// 2) make http header
 	{
 		// - add response head
-		buf_head.append_text(CGDK::stream_string("HTTP/", 1, ".", 1, " ", "OK"sv, " ", 200, "\r\n"));
+		buf_head.append_text(CGDK::stream_string("HTTP/", 1, ".", 1, " ", 200, " ", "OK"sv, "\r\n"));
 
 		// - get now
 		auto time_now = chrono::time::utc::now();
@@ -590,7 +587,6 @@ int server::web::entity::resource::process_request_viedo(sMESSAGE_HTTP_REQUEST& 
 	// 4) send http response message
 	psocket->send(buf_head);
 	psocket->send(m_buffer_data);
-	psocket->send(m_buffer_context_tail);
 
 	// 5) disconnect
 	psocket->disconnect();

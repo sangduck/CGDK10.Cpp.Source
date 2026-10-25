@@ -117,7 +117,8 @@ std::size_t net::io::sendable::Itcp_gather::default_maximum_queued_bytes_accepte
 //    the owner of the buffer is held in m_queue_zerocopy with the count.
 //  - the kernel notifies the completion of a range [ee_info, ee_data] on the error queue (recvmsg MSG_ERRQUEUE) : EPOLLERR.
 //    socket::Ntcp::process_execute_epoll() calls process_complete_error_queue() first : the notifications release the owners,
-//    anything else on the error queue (or no notification : a socket error) is an error as before.
+//    anything else on the error queue or a socket error (SO_ERROR) is an error as before. neither (the notifications were read already :
+//    a stale EPOLLERR) => not an error.
 //  - a send that fails (EAGAIN ...) is not counted by the kernel. a partial send is counted : the part sent is held.
 //  - the sender holds the owner after send() returns : another thread can read the notification of that send (EPOLLERR) first.
 //    the ids of a notification not held yet are remembered (m_zerocopy_id_notified_end) and their hold releases the owner at once.
@@ -161,7 +162,7 @@ bool net::io::sendable::Itcp_gather::_zerocopy_prepare(CGSOCKET _handle_socket) 
 int net::io::sendable::Itcp_gather::_zerocopy_send_flags(CGSOCKET _handle_socket, std::size_t _bytes, const object_ptr<Ireferenceable>& _powner) noexcept
 {
 	// check) enabled, large enough and an owner that keeps the buffer alive (not paused by an ENOBUFS)
-	if (_bytes < s_zerocopy_threshold.load(std::memory_order_relaxed) || _powner.empty() || s_enable_zerocopy.load(std::memory_order_relaxed) == false || this->_is_zerocopy_paused())
+	if (_bytes < s_zerocopy_threshold.load(std::memory_order_relaxed) || _powner.empty() || s_enable_zerocopy.load(std::memory_order_relaxed) == false || this->_is_zerocopy_paused() || this->is_zerocopy_copied())
 		return 0;
 
 	// check) available on this socket? (checked once)
@@ -212,6 +213,8 @@ void net::io::sendable::Itcp_gather::_zerocopy_reset() noexcept
 	this->m_zerocopy_is_notified_early = false;
 	this->m_zerocopy_state.store(0, std::memory_order_relaxed);
 	this->m_zerocopy_paused_until.store(0, std::memory_order_relaxed);
+	this->m_zerocopy_is_copied.store(false, std::memory_order_relaxed);
+	this->m_zerocopy_copied_in_a_row.store(0, std::memory_order_relaxed);
 }
 
 ssize_t net::io::sendable::Itcp_gather::_zerocopy_send(CGSOCKET _handle_socket, const void* _data, std::size_t _bytes, int& _flags) noexcept
@@ -241,6 +244,25 @@ void net::io::sendable::Itcp_gather::_zerocopy_pause() noexcept
 	this->m_zerocopy_count_fallback.fetch_add(1, std::memory_order_relaxed);
 }
 
+void net::io::sendable::Itcp_gather::_zerocopy_on_notified(std::size_t _count, bool _is_copied) noexcept
+{
+	// - a notification of _count zerocopy sends (readiness : a range, completion : one). copied ZEROCOPY_COPIED_TO_STOP times in a row (a peer
+	//   on this host : every send is copied) => no zerocopy on this socket till it is reset. a NIC reports a copy now and then (completion :
+	//   about one per connection, 1GbE r8169 2026-10-24) : one not copied starts the count again
+	if (_is_copied == false)
+	{
+		this->m_zerocopy_copied_in_a_row.store(0, std::memory_order_relaxed);
+		return;
+	}
+
+	this->m_zerocopy_count_copied.fetch_add(_count, std::memory_order_relaxed);
+
+	const auto in_a_row = this->m_zerocopy_copied_in_a_row.fetch_add(_count, std::memory_order_relaxed) + _count;
+
+	if (in_a_row >= ZEROCOPY_COPIED_TO_STOP && s_enable_zerocopy_copy_check.load(std::memory_order_relaxed))
+		this->m_zerocopy_is_copied.store(true, std::memory_order_relaxed);
+}
+
 bool net::io::sendable::Itcp_gather::process_complete_error_queue() noexcept
 {
 	// check) no zerocopy send on this socket => the EPOLLERR is an error
@@ -251,9 +273,6 @@ bool net::io::sendable::Itcp_gather::process_complete_error_queue() noexcept
 
 	// check)
 	RETURN_IF(handle_socket == INVALID_SOCKET, false);
-
-	// declare)
-	bool is_notified = false;
 
 	// 2) read the error queue
 	for (;;)
@@ -289,6 +308,10 @@ bool net::io::sendable::Itcp_gather::process_complete_error_queue() noexcept
 			const uint32_t id_begin = perror->ee_info;
 			const uint32_t length_range = perror->ee_data - perror->ee_info;
 
+			// - the kernel copied the data anyway (SO_EE_CODE_ZEROCOPY_COPIED : a peer on this host, a NIC without scatter-gather) : zerocopy
+			//   only adds the pinning and the notifications there. copied in a row, it stops on this socket (_zerocopy_send_flags) till it is reset
+			this->_zerocopy_on_notified(static_cast<std::size_t>(length_range) + 1, (perror->ee_code & SO_EE_CODE_ZEROCOPY_COPIED) != 0);
+
 			{
 				std::lock_guard lock(this->m_lockable_zerocopy);
 
@@ -307,15 +330,10 @@ bool net::io::sendable::Itcp_gather::process_complete_error_queue() noexcept
 					this->m_zerocopy_is_notified_early = true;
 				}
 			}
-
-			is_notified = true;
 		}
 	}
 
-	// check) no notification => an error of the socket (EPOLLERR without a notification) : the caller closes
-	RETURN_IF(is_notified == false, false);
-
-	// 4) notifications and an error at the same time? (SO_ERROR : the caller closes)
+	// 4) an error of the socket? (SO_ERROR : the caller closes)
 	int error_socket = 0;
 	socklen_t length_error = sizeof(error_socket);
 
@@ -325,6 +343,10 @@ bool net::io::sendable::Itcp_gather::process_complete_error_queue() noexcept
 		return false;
 	}
 
+	// - no notification and no error : the EPOLLERR is stale. tcp_poll() reports EPOLLERR for a socket error or a non-empty error queue only,
+	//   and the notifications it reported were read already : by the loop of an earlier event (EPOLLET / io_uring : the poll of another
+	//   thread reported them too) or the queue was read before this event was taken. closing here dropped a sound connection
+	//   (io_uring readiness : linux_io.tcp_stream_mixed_sizes, ~5% of the runs)
 	// return) handled
 	return true;
 }

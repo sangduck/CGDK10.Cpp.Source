@@ -179,14 +179,217 @@ void executor::io_context::process_unbind_worker() noexcept
 #endif
 }
 
+namespace
+{
+	// - runnext : an executable posted by a worker to its own executor while it executes a batch is kept in a slot of the thread and
+	//   executed right after the batch, before the next epoll_wait() / io_uring_enter() / GetQueuedCompletionStatusEx() (no lock, no
+	//   eventfd write / PostQueuedCompletionStatus, no wakeup of another worker : the next step of a handler stays on its thread).
+	//   all the backends (epoll r11560, io_uring, iocp)
+	//   - one slot : a new post takes the slot and the one in it goes to the shared queue (the other workers take it)
+	//   - the order of the posts is not kept : the last one may run before the earlier ones. not used on an executor of one worker
+	//     (its posts run in order)
+	//   - executed up to RUNNEXT_DURATION after the batch, then spilled to the shared queue (the events are not starved)
+	//   - a blocking thread (scoped_thread_block, api::Nthread::notify_blocked) spills the slot and does not use it until unblocked :
+	//     an executable posted before or while blocking is run by the other workers (a post waited for would never run otherwise)
+	//   - CGDK_RUNNEXT=0 : off
+	struct RUNNEXT
+	{
+		executor::io_context*	pexecutor{ nullptr };
+		Iexecutable*			pexecutable{ nullptr };
+	};
+	thread_local RUNNEXT t_runnext;
+
+	// - the blocking scopes of this thread (nested) and the executor of the slot suspended by the outermost one
+	thread_local int t_runnext_blocked = 0;
+	thread_local executor::io_context* t_runnext_suspended = nullptr;
+
+	constexpr auto RUNNEXT_DURATION = std::chrono::microseconds(20);
+
+	bool _is_runnext_enabled() noexcept
+	{
+		static const bool s_value = []()
+		{
+			const char* penv = std::getenv("CGDK_RUNNEXT");
+			return penv == nullptr || (penv[0] != '0' && penv[0] != 'f' && penv[0] != 'F' && penv[0] != 'n' && penv[0] != 'N');
+		}();
+
+		return s_value;
+	}
+
+	// - the batch this thread executes now (epoll, io_uring readiness, iocp : the results popped at once, executed in order by this
+	//   thread). a thread that blocks (runnext_suspend : scoped_thread_block, api::Nthread::notify_blocked) hands the results after the
+	//   one executing to the other workers : posted wrapped (with their result and param) and cleared in the batch. they waited behind
+	//   the blocked one, and the extra threads begun for the block could not run them. io_uring completion has its own
+	//   (api::io_context_uring_cq::thread_blocked() cuts the batch)
+	using BATCH_HANDOFF = executor::io_context::BATCH_HANDOFF;
+	thread_local BATCH_HANDOFF* t_pbatch_handoff = nullptr;
+
+	// - a result of a batch handed to the other workers (the reference of the result moves to it)
+	class executable_handoff : virtual public Iexecutable
+	{
+	public:
+		virtual ~executable_handoff() noexcept { if (this->pexecutable != nullptr) this->pexecutable->release(); }
+		virtual intptr_t process_execute(intptr_t, size_t) override
+		{
+			struct RELEASE { Iexecutable* p; ~RELEASE() { p->release(); } } release_executable{ std::exchange(this->pexecutable, nullptr) };
+			return release_executable.p->process_execute(this->result, this->param);
+		}
+
+		Iexecutable*			pexecutable{ nullptr };
+		intptr_t				result{ 0 };
+		size_t					param{ 0 };
+	};
+
+	// - posts one result (false : not posted, it stays in the batch)
+	bool _post_handoff(executor::io_context* _pexecutor, Iexecutable* _pexecutable, intptr_t _result, size_t _param) noexcept
+	{
+		// 1) the wrapper
+		object_ptr<executable_handoff> phandoff;
+		try
+		{
+			phandoff = make_object<executable_handoff>();
+		}
+		catch (...)
+		{
+			return false;
+		}
+
+		phandoff->pexecutable = _pexecutable;
+		phandoff->result = _result;
+		phandoff->param = _param;
+
+		// 2) post (the slot of this thread is suspended already : to the shared queue)
+		bool is_posted = false;
+		try
+		{
+			is_posted = static_cast<Iexecutor*>(_pexecutor)->post(object_ptr<Iexecutable>(phandoff.get()));
+		}
+		catch (...)
+		{
+		}
+
+		// check) not posted : the reference stays with the batch
+		if (is_posted == false)
+			phandoff->pexecutable = nullptr;
+
+		// return)
+		return is_posted;
+	}
+
+#if defined(__ANDROID__) || defined(__linux__)
+	void _handoff_batch(BATCH_HANDOFF& _batch) noexcept
+	{
+		auto* presults = static_cast<api::io_context::POP_RESULT*>(_batch.presults);
+
+		for (int i = _batch.index + 1; i < _batch.count; ++i)
+		{
+			auto& result = presults[i];
+
+			if (result.pexecutable != nullptr && _post_handoff(static_cast<executor::io_context*>(_batch.pobject), result.pexecutable, result.result, result.param))
+				result.pexecutable = nullptr;
+		}
+	}
+#else
+	void _handoff_batch(BATCH_HANDOFF& _batch) noexcept
+	{
+		auto* presults = static_cast<api::io_context::RESULT*>(_batch.presults);
+
+		for (int i = _batch.index + 1; i < _batch.count; ++i)
+		{
+			auto& result = presults[i];
+
+			if (result.is_valid() && _post_handoff(static_cast<executor::io_context*>(_batch.pobject), result.executable(), result.result(), result.param()))
+				result.pexecutable = nullptr;
+		}
+	}
+#endif
+}
+
+void executor::io_context::runnext_suspend() noexcept
+{
+	// check) nested : the outermost one suspended the slot
+	if (t_runnext_blocked++ != 0)
+		return;
+
+	// - the slot goes to the shared queue and is not used until runnext_resume() (not executing a batch : no slot)
+	if (t_runnext.pexecutor != nullptr)
+	{
+		t_runnext.pexecutor->_spill_runnext();
+		t_runnext_suspended = std::exchange(t_runnext.pexecutor, nullptr);
+	}
+
+	// - the rest of the batches of this thread go to the other workers (BATCH_HANDOFF. after the slot : posted to the shared queue)
+	for (auto* pbatch = t_pbatch_handoff; pbatch != nullptr; pbatch = pbatch->pouter)
+		pbatch->pfn_handoff(*pbatch);
+}
+
+void executor::io_context::batch_handoff_begin(BATCH_HANDOFF& _batch) noexcept
+{
+	_batch.pouter = t_pbatch_handoff;
+	t_pbatch_handoff = &_batch;
+}
+
+void executor::io_context::batch_handoff_end(BATCH_HANDOFF& _batch) noexcept
+{
+	t_pbatch_handoff = _batch.pouter;
+}
+
+void executor::io_context::runnext_resume() noexcept
+{
+	// check)
+	if (t_runnext_blocked <= 0)
+		return;
+
+	// check) nested
+	if (--t_runnext_blocked != 0)
+		return;
+
+	// - the slot of the batch again
+	if (t_runnext_suspended != nullptr)
+		t_runnext.pexecutor = std::exchange(t_runnext_suspended, nullptr);
+}
+
+bool executor::io_context::_is_runnext_active() const noexcept
+{
+	// - off (CGDK_RUNNEXT=0), a blocking thread pumping the executor (runnext_suspend), one worker (the posts run in order)
+	return _is_runnext_enabled() && t_runnext_blocked == 0 && this->m_statistics.now.thread_count.load(std::memory_order_relaxed) > 1;
+}
+
 bool executor::io_context::process_post(object_ptr<Iexecutable>&& _pexecutable)
 {
 	// check) _pexecutable가 NULL이면 Post를 던지지 않는다.
 	if(_pexecutable.empty())
 		return false;
 
+	// - runnext : a worker of this executor executing a batch
+	if (t_runnext.pexecutor == this)
+	{
+		// - the one in the slot goes to the shared queue
+		if (t_runnext.pexecutable != nullptr)
+			this->_spill_runnext();
+
+		// - kept in the slot (the reference moves to the slot)
+		t_runnext.pexecutable = _pexecutable.detach();
+
+		// return)
+		return true;
+	}
+
 	// 1) Post한다.
 	return this->m_io_context.post_executable(0, 0, std::move(_pexecutable)) != 0;
+}
+
+void executor::io_context::_spill_runnext() noexcept
+{
+	// - the executable of the slot to the shared queue (the queue add_refs it. the reference of the slot is released : also when
+	//   the post failed (destroyed))
+	auto pexecutable = std::exchange(t_runnext.pexecutable, nullptr);
+
+	if (pexecutable == nullptr)
+		return;
+
+	this->m_io_context.post_executable(0, 0, pexecutable);
+	pexecutable->release();
 }
 
 #if defined(__ANDROID__) || defined(__linux__)
@@ -279,6 +482,16 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 		}
 	};
 	//-----------------------------------------------------------------
+	// - runnext : the posts of this thread to this executor go to the slot of the thread while it executes (the outer one of a
+	//   handler pumping the executor again is kept and restored. the slot is executed or spilled before it is restored)
+	struct RUNNEXT_SCOPE
+	{
+		RUNNEXT					outer;
+		bool					is_active;
+		RUNNEXT_SCOPE(executor::io_context* _pexecutor, bool _is_active) noexcept : outer(t_runnext), is_active(_is_active) { if (is_active) t_runnext = RUNNEXT{ _pexecutor, nullptr }; }
+		~RUNNEXT_SCOPE() noexcept { if (is_active) { if (t_runnext.pexecutable != nullptr) t_runnext.pexecutor->_spill_runnext(); t_runnext = outer; } }
+	};
+	//-----------------------------------------------------------------
 
 	// check)
 	if(this->handle() == INVALID_CGHANDLE_VALUE)
@@ -327,6 +540,15 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 	const bool is_batch_deferred = (batch.pcontext != nullptr && count_event > 1 && _is_batch_send_deferred() && send_defer::begin_batch());
 	auto tick_batch_flushed = tick_start;
 
+	// - runnext (RUNNEXT_SCOPE)
+	RUNNEXT_SCOPE scope_runnext(this, count_event != 0 && this->_is_runnext_active());
+
+	// - the batch is handed to the other workers when a handler blocks (BATCH_HANDOFF. io_uring completion : its own)
+	BATCH_HANDOFF batch_handoff{ &_handoff_batch, this, array_result, count_event, 0, nullptr };
+	const bool is_batch_handoff = (batch.pcontext == nullptr && count_event > 1);
+	if (is_batch_handoff)
+		batch_handoff_begin(batch_handoff);
+
 	for (int i = 0; i < count_event; ++i)
 	{
 		// declare)
@@ -337,6 +559,7 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 			break;
 
 		batch.index = i;
+		batch_handoff.index = i;
 
 		// check)
 		CONTINUE_IF(result_event.pexecutable == nullptr);
@@ -372,6 +595,10 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 		++count_executed;
 	}
 
+	// - the batch ended
+	if (is_batch_handoff)
+		batch_handoff_end(batch_handoff);
+
 	// - the deferred sends of the batch
 	if (is_batch_deferred)
 		send_defer::end_batch();
@@ -395,6 +622,77 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 
 		// - 한번에 크게 바뀌지 않도록 이전 값과 평균한다.
 		t_count_event_batch = std::clamp(static_cast<int>((t_count_event_batch + std::min<int64_t>(count_fit, api::io_context::MAX_EVENT_BATCH) + 1) / 2), 1, api::io_context::MAX_EVENT_BATCH);
+	}
+
+	// 4) runnext : the executable posted to the slot (and the ones it posts in turn) for up to RUNNEXT_DURATION.
+	//    the rest goes to the shared queue (RUNNEXT_SCOPE) : the events of the other sockets are not delayed longer
+	//    - io_uring completion : each one is published on the ring of this thread as a batch of one, like the results of a batch (one
+	//      running long gets the ring lent : _lend_busy. one blocking lends it : thread_blocked()). the ring was not owned when it began
+	//      (lent) : the rest is spilled after it (pop_results() takes the ring back)
+	//    - io_uring : the re-arms staged by them are submitted by flush_pending() below
+	if (scope_runnext.is_active)
+	{
+		const auto tick_runnext = chrono::tick::now();
+
+		while (t_runnext.pexecutable != nullptr)
+		{
+			// check) ran long enough : the slot is spilled (RUNNEXT_SCOPE)
+			BREAK_IF(chrono::tick::now() - tick_runnext >= RUNNEXT_DURATION);
+
+			// declare) the reference of the slot moves to the result (released after the execution)
+			api::io_context::POP_RESULT result_slot;
+			result_slot.pexecutable = std::exchange(t_runnext.pexecutable, nullptr);
+			result_slot.result = 0;
+			result_slot.param = 0;
+
+			// - io_uring completion : published as a batch of one (an outer batch of a handler pumping the executor : not published)
+			int count_slot = 1;
+			api::io_context_uring_cq::BATCH batch_slot{ &result_slot, &count_slot, 0, batch.pcontext, batch.pouter };
+
+			if (batch_slot.pcontext != nullptr)
+			{
+				api::io_context_uring_cq::current_batch() = &batch_slot;
+				api::io_context_uring_cq::batch_begin(batch_slot);
+			}
+
+			const bool is_ring_lent = (batch_slot.pcontext != nullptr && batch_slot.pouter == nullptr && batch_slot.pring == nullptr);
+			bool is_executed = false;
+
+			try
+			{
+				// declare)
+				AUTO_RELEASE_EXECUTABLE	pexecutable(result_slot.pexecutable);
+
+				// - send defer (auto)
+				send_defer::auto_scope scope_send_defer;
+
+				// - call 'process_execute'
+				pexecutable.m_pexecutable->process_execute(0, 0);
+
+				is_executed = true;
+			}
+			catch (...)
+			{
+				if (!pexception)
+					pexception = std::current_exception();
+			}
+
+			if (batch_slot.pcontext != nullptr)
+			{
+				api::io_context_uring_cq::batch_end(batch_slot);
+				api::io_context_uring_cq::current_batch() = batch.pouter;
+			}
+
+			// - count
+			if (is_executed)
+				++count_executed;
+
+			// check) the ring of this thread is lent : the rest is spilled (RUNNEXT_SCOPE)
+			BREAK_IF(is_ring_lent);
+		}
+
+		// - io_uring : the re-arms of the executables of the slot (io_uring completion : written, submitted by the next pop_results())
+		this->m_io_context.flush_pending();
 	}
 
 	// statistics)
@@ -438,6 +736,15 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 	// 2) 'process_execute'
 	//    - 받은 것은 모두 실행한다. 하나가 exception을 던져도 나머지를 실행한 뒤 첫 exception을 다시 던진다.
 	//      (꺼낸 completion은 다시 오지 않는다 : 실행하지 않고 버리면 그 I/O의 executable이 완료되지 않는다)
+	// - runnext (RUNNEXT_SCOPE)
+	RUNNEXT_SCOPE scope_runnext(this, count_event != 0 && this->_is_runnext_active());
+
+	// - the batch is handed to the other workers when a handler blocks (BATCH_HANDOFF)
+	BATCH_HANDOFF batch_handoff{ &_handoff_batch, this, array_result, count_event, 0, nullptr };
+	const bool is_batch_handoff = (count_event > 1);
+	if (is_batch_handoff)
+		batch_handoff_begin(batch_handoff);
+
 	for (int i = 0; i < count_event; ++i)
 	{
 		// declare)
@@ -447,10 +754,15 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 		if (result_event.is_valid() == false)
 			continue;
 
+		batch_handoff.index = i;
+
 		try
 		{
 			// declare)
 			AUTO_RELEASE_EXECUTABLE	pexecutable(result_event.executable());
+
+			// - send defer (auto) : the consecutive sends of the executable to one socket are sent at once (at the switch to another socket / the end)
+			send_defer::auto_scope scope_send_defer;
 
 			// - call 'process_execute'
 			pexecutable.m_pexecutable->process_execute(result_event.result(), result_event.param());
@@ -468,6 +780,10 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 		++count_executed;
 	}
 
+	// - the batch ended
+	if (is_batch_handoff)
+		batch_handoff_end(batch_handoff);
+
 	// 3) 다음에 받을 수를 정한다. (하나의 평균 실행 시간으로 EVENT_BATCH_DURATION을 채울 수 있는 수)
 	if (count_event != 0)
 	{
@@ -476,6 +792,42 @@ bool executor::io_context::process_execute(chrono::tick::duration _ticks_wait, [
 
 		// - 한번에 크게 바뀌지 않도록 이전 값과 평균한다.
 		t_count_event_batch = std::clamp(static_cast<int>((t_count_event_batch + std::min<int64_t>(count_fit, api::io_context::MAX_EVENT_BATCH) + 1) / 2), 1, api::io_context::MAX_EVENT_BATCH);
+	}
+
+	// 4) runnext : the executable posted to the slot (and the ones it posts in turn) for up to RUNNEXT_DURATION.
+	//    the rest goes to the completion port (RUNNEXT_SCOPE) : the completions of the other sockets are not delayed longer
+	if (scope_runnext.is_active)
+	{
+		const auto tick_runnext = chrono::tick::now();
+
+		while (t_runnext.pexecutable != nullptr)
+		{
+			// check) ran long enough : the slot is spilled (RUNNEXT_SCOPE)
+			BREAK_IF(chrono::tick::now() - tick_runnext >= RUNNEXT_DURATION);
+
+			try
+			{
+				// declare) the reference of the slot moves to pexecutable (released after the execution)
+				AUTO_RELEASE_EXECUTABLE	pexecutable(std::exchange(t_runnext.pexecutable, nullptr));
+
+				// - send defer (auto)
+				send_defer::auto_scope scope_send_defer;
+
+				// - call 'process_execute'
+				pexecutable.m_pexecutable->process_execute(0, 0);
+			}
+			catch (...)
+			{
+				if (!pexception)
+					pexception = std::current_exception();
+
+				// continue)
+				continue;
+			}
+
+			// - count
+			++count_executed;
+		}
 	}
 
 	// statistics)

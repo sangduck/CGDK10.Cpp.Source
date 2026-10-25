@@ -44,6 +44,40 @@ bool net::io::sendable::Nudp::process_sendable( const buffer_view _buffer, objec
 
 
 	//-----------------------------------------------------------------
+	// 0. direct send : a WSASendTo without an OVERLAPPED (the socket is non-blocking)
+	//    - the datagram is copied to the socket buffer and completed here : no executable, no IOCP completion and no other thread per datagram
+	//      (process_complete_sendable() is called here as the completion did)
+	//    - failed (WSAEWOULDBLOCK : the socket buffer is full, an error ...) => the overlapped send below, as before
+	//    - not while overlapped sends are in flight : a datagram sent at once would pass the ones waiting for the socket buffer
+	//    - the handle is read and the system call is made under the receiving lock (shared : the close swaps the handle under it exclusive)
+	//-----------------------------------------------------------------
+	if (this->statistics_get_async_sending() == 0)
+	{
+		int bytes_sent = SOCKET_ERROR;
+
+		this->_call_receiving_shared([&](CGSOCKET _handle_socket)
+		{
+			bytes_sent = ::sendto(_handle_socket, reinterpret_cast<const char*>(_buffer.data()), static_cast<int>(_buffer.size()), 0, reinterpret_cast<const ::sockaddr*>(&_address), _address.length);
+			return bytes_sent != SOCKET_ERROR;
+		});
+
+		// check) sent
+		if (bytes_sent != SOCKET_ERROR)
+		{
+			// - counted as an overlapped send completed at once (the same statistics as the overlapped send and its completion)
+			this->statistics_on_increase_async_sending();
+			this->statistics_on_send_async();
+
+			// - complete
+			this->process_complete_sendable(0, static_cast<std::size_t>(bytes_sent), _count_message);
+
+			// return)
+			return true;
+		}
+	}
+
+
+	//-----------------------------------------------------------------
 	// 1. send준비를 한다.
 	//-----------------------------------------------------------------
 	// 1) Pool에서 executable를 할당받는다.
@@ -71,7 +105,9 @@ bool net::io::sendable::Nudp::process_sendable( const buffer_view _buffer, objec
 	// 2. Overlapped I/O로 send한다.
 	//-----------------------------------------------------------------
 	// 1) send 한다.
-	auto result = api::socket::send_to_async(this->native_handle(), &pexecutable->m_wsabuf, 1, nullptr, (::sockaddr*)&pexecutable->m_sockaddr, _address.length, pexecutable.get());
+	//    - the handle is read under the receiving lock (shared) with the call : the close swaps it under the lock (exclusive). it was read
+	//      without a lock : a send made after the close could go to a handle closed and made again for another socket
+	auto result = this->_call_receiving_shared([&](CGSOCKET _handle_socket) { return api::socket::send_to_async(_handle_socket, &pexecutable->m_wsabuf, 1, nullptr, (::sockaddr*)&pexecutable->m_sockaddr, _address.length, pexecutable.get()); });
 
 	// check) Result가 false면 send 못한거다..
 	if(result == false)

@@ -62,13 +62,14 @@ bool net::io::receivable::Nstream::prepare_receive()
 	// 설명) prepare_receive()에 EPOLLOUT이 설정될 수 있다. on_connect() 함수 내에서 send를 호출했을 경우 가능하다.
 
 	// 4) set epoll event 
-	this->set_epoll_event_flag(this->m_epoll_event_flag | (EPOLLONESHOT | EPOLLWAKEUP | EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR));
+	//    (EPOLLET : small receives. socket::Ntcp::process_execute_epoll switches it to EPOLLONESHOT while large receives come : Isocket.h)
+	this->set_epoll_event_flag(this->m_epoll_event_flag | (EPOLLET | EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR));
 
 	// return)
 	return true;
 }
 
-intptr_t net::io::receivable::Nstream::process_complete_receivable( intptr_t /*_result*/, std::size_t /*_transferred*/)
+intptr_t net::io::receivable::Nstream::process_complete_receivable( intptr_t _event, std::size_t /*_transferred*/)
 {
 	// check) 
 	CGASSERT_FATAL(this->socket_state() != eSOCKET_STATE::SYN);
@@ -186,8 +187,22 @@ intptr_t net::io::receivable::Nstream::process_complete_receivable( intptr_t /*_
 			this->_process_prepare_receive_buffer(bytes_received_event, is_window_filled, required_bytes);
 
 			// check) 창을 다 채우지 못했으면 지금 받을 데이터는 다 받았다. (너무 오래 붙잡지 않도록 횟수도 제한한다)
-			if (is_window_filled == false || count_receive >= MAX_RECEIVE_PER_EVENT)
+			//   the peer closed (EPOLLRDHUP / EPOLLHUP) : no limit. the event closes the socket after this function, so what is left in the
+			//   socket buffer would never be received (the messages sent just before a shutdown / close were lost, and closing with unread
+			//   data sends a RST). nothing arrives after the FIN : it ends at the end of the data.
+			//   a large receive (a filled window of 4KB+, 16KB+ in this event) : the socket goes EPOLLONESHOT (EPOLL_RECEIVE_LARGE : Isocket.h).
+			//   cut by the limit : EPOLL_RECEIVE_MORE (EPOLLET gives no new edge for the data left : the registration is re-armed)
+			if ((is_window_filled && static_cast<std::size_t>(bytes_transfered) >= 4096) || bytes_received_event >= 16384)
+				result_return |= EPOLL_RECEIVE_LARGE;
+
+			if (is_window_filled == false)
 				break;
+
+			if (count_receive >= MAX_RECEIVE_PER_EVENT && (_event & (EPOLLRDHUP | EPOLLHUP)) == 0)
+			{
+				result_return |= EPOLL_RECEIVE_MORE;
+				break;
+			}
 		}
 	}
 	catch (throwable::failure& _e)
@@ -298,7 +313,7 @@ void net::io::receivable::Nstream::_process_prepare_receive_buffer(std::size_t _
 	SATURATE_MAX(size_prepare, this->m_maximum_message_buffer_size);
 
 	// - 최소 [요구_버퍼_크기]+[이미_수신한_데이터_크기]보다는 커야 한다. (빈 공간도 MINIMUM_REMAINED_RECEIVE_BUFFER 이상)
-	const auto size_need = __select_max(_required_bytes + bytes_stored, bytes_stored + MINIMUM_REMAINED_RECEIVE_BUFFER);
+	const auto size_need = __select_max(_required_bytes, bytes_stored + MINIMUM_REMAINED_RECEIVE_BUFFER);	// - _required_bytes : the whole next message (its bytes stored already included : adding them made a buffer up to twice the message)
 	size_prepare = __select_max(size_prepare, size_need);
 
 	// 2) 이 socket만 참조하는 버퍼는 받는 양이 크게 줄었을 때만 줄인다. (버스트 뒤 큰 버퍼를 계속 붙잡지 않는다)

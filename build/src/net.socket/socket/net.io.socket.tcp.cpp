@@ -34,21 +34,28 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 		}
 
 		// - 받은 flag 제거
-		this->remove_epoll_event_flag(_event);
+		//   (EPOLLOUT only : the others stay in the mask. with EPOLLET an EPOLLIN may come while this thread processes : masked out by them, it was lost)
+		this->remove_epoll_event_flag(static_cast<uint32_t>(_event & EPOLLOUT));
+		//   (and from the mask given to the kernel : the edge of EPOLLOUT is taken. an EPOLLOUT posted again while this thread processes (a
+		//   writable socket : no new edge) made the same mask as registered and no MOD at the end : the event never came)
+		this->m_epoll_event_registered &= ~static_cast<uint32_t>(_event & EPOLLOUT);
 
 		// - event 처리 중으로 표시
 		this->m_epoll_event_processing_now = true;
 	}
 
-	// 1.1) EPOLLERR : the MSG_ZEROCOPY notifications come through the error queue (sendable::Ntcp_async_gather_buffered). handled => not an error
-	if ((_event & EPOLLERR) != 0 && this->m_psendable != nullptr && this->m_psendable->process_complete_error_queue())
-		_event &= ~static_cast<intptr_t>(EPOLLERR);
-
 	// declare)
 	uint32_t flag_epoll_event_added = 0;
+	bool is_receive_large = false;
+	bool is_receive_more = false;
 
 	for (;;)
 	{
+		// 1.1) EPOLLERR : the MSG_ZEROCOPY notifications come through the error queue (sendable::Ntcp_async_gather_buffered). handled => not an error
+		//      (every loop : with EPOLLET an EPOLLERR may be queued while this thread processes)
+		if ((_event & EPOLLERR) != 0 && this->m_psendable != nullptr && this->m_psendable->process_complete_error_queue())
+			_event &= ~static_cast<intptr_t>(EPOLLERR);
+
 		try
 		{
 			// 2) EPOLLOUT - event signaled on sendable
@@ -80,7 +87,13 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 
 				if (result != EPOLLHUP)
 				{
-					flag_epoll_event_added |= result;
+					// - a large receive (=> EPOLLONESHOT) / cut by the limit (=> re-armed : the data left gives no new edge)
+					if ((result & EPOLL_RECEIVE_LARGE) != 0)
+						is_receive_large = true;
+					if ((result & EPOLL_RECEIVE_MORE) != 0)
+						is_receive_more = true;
+
+					flag_epoll_event_added |= static_cast<uint32_t>(result & ~(EPOLL_RECEIVE_LARGE | EPOLL_RECEIVE_MORE));
 				}
 				else
 				{
@@ -107,10 +120,12 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 				this->m_epoll_event_flag_queued = 0;
 
 				// - remove processed events
-				this->remove_epoll_event_flag(_event);
+				this->remove_epoll_event_flag(static_cast<uint32_t>(_event & EPOLLOUT));
+				this->m_epoll_event_registered &= ~static_cast<uint32_t>(_event & EPOLLOUT);
 
 				// continue) EPOLLIN이나 EPOLLOUT이 있으면 다시한번 실행한다.
-				CONTINUE_IF((_event & (EPOLLIN | EPOLLOUT)) != 0);
+				//           (EPOLLERR too : the error queue at the top of the loop. EPOLLET delivers it while this thread processes)
+				CONTINUE_IF((_event & (EPOLLIN | EPOLLOUT | EPOLLERR)) != 0);
 			}
 
 			// 5-1) Neither EPOLLHUP nor EPOLLRDHUP
@@ -136,13 +151,32 @@ intptr_t net::io::socket::Ntcp::process_execute_epoll(intptr_t _event, std::size
 				// check) 이미 EPOLLOUT이 설정되어 있는데 신규로 EPOLLOUT의 설정이 될 수는 없다.
 				CGASSERT_ERROR(((this->get_epoll_event_flag() & EPOLLOUT) == 0) || ((flag_epoll_event_added & EPOLLOUT) == 0));
 
-				// - set flag
-				this->add_epoll_event_flag((EPOLLONESHOT | EPOLLWAKEUP | EPOLLHUP | EPOLLRDHUP | EPOLLERR) | flag_epoll_event_added);
+				// - the mode of the registration (Isocket.h) : EPOLLONESHOT while large receives come, EPOLLET for small ones
+				if (is_receive_large)
+				{
+					this->m_epoll_event_oneshot = true;
+					this->m_epoll_count_small_receive = 0;
+				}
+				else if (this->m_epoll_event_oneshot && (flag_epoll_event_added & EPOLLIN) != 0 && ++this->m_epoll_count_small_receive >= EPOLL_COUNT_SMALL_TO_EDGE)
+				{
+					this->m_epoll_event_oneshot = false;
+					this->m_epoll_count_small_receive = 0;
+				}
 
-				// - event를 설정한다.
+				// - set flag
+				this->remove_epoll_event_flag(EPOLLET | EPOLLONESHOT);
+				this->add_epoll_event_flag((this->m_epoll_event_oneshot ? EPOLLONESHOT : EPOLLET) | (EPOLLHUP | EPOLLRDHUP | EPOLLERR) | flag_epoll_event_added);
+
+				// - event를 설정한다. EPOLLET : the mask changed (EPOLLOUT, the mode) or a receive was cut (the MOD reports the data left)
 				//   (executable은 attach(또는 접속 완료 시 set_event)로 등록된 m_pexecutable_socket을 그대로 쓴다 : nullptr.
 				//    재등록마다 bucket을 unique lock하고 add_ref/release하지 않는다)
-				auto result = pio_context->set_event(epoll_handle, this->get_epoll_event_flag(), nullptr);
+				auto result = true;
+
+				if (this->m_epoll_event_oneshot || is_receive_more || this->get_epoll_event_flag() != this->m_epoll_event_registered)
+				{
+					result = pio_context->set_event(epoll_handle, this->get_epoll_event_flag(), nullptr);
+					this->m_epoll_event_registered = this->get_epoll_event_flag();
+				}
 
 				// check)
 				if (result == false)
@@ -430,14 +464,29 @@ bool net::io::socket::Ntcp::process_close_socket(uint64_t _disconnect_reason) no
 	//   completion completes the disconnect of the closed socket. none : completed below)
 	bool is_receiving_op = false;
 
+	// - the direct sends (out of the sending lock) read the handle and call send under m_lockable_send_call of the sendable : swapped
+	//   under it too (a send made after this sees INVALID_SOCKET : the handle closed and made again for another socket is not sent to)
+	auto* plockable_send_call = (this->m_psendable != nullptr) ? this->m_psendable->process_get_lockable_send_call() : nullptr;
+
 	if (this->is_io_completion())
 	{
 		if (auto plockable = (this->m_psendable != nullptr) ? this->m_psendable->process_get_lockable_sending() : nullptr; plockable != nullptr)
 		{
 			std::lock_guard lock(*plockable);
-			std::lock_guard lock_receiving(this->get_lockable_receiving());
-			handle_socket = this->native_handle(INVALID_SOCKET);
-			is_receiving_op = this->m_is_receiving_op;
+
+			if (plockable_send_call != nullptr)
+			{
+				std::lock_guard lock_send_call(*plockable_send_call);
+				std::lock_guard lock_receiving(this->get_lockable_receiving());
+				handle_socket = this->native_handle(INVALID_SOCKET);
+				is_receiving_op = this->m_is_receiving_op;
+			}
+			else
+			{
+				std::lock_guard lock_receiving(this->get_lockable_receiving());
+				handle_socket = this->native_handle(INVALID_SOCKET);
+				is_receiving_op = this->m_is_receiving_op;
+			}
 		}
 		else
 		{
@@ -445,6 +494,11 @@ bool net::io::socket::Ntcp::process_close_socket(uint64_t _disconnect_reason) no
 			handle_socket = this->native_handle(INVALID_SOCKET);
 			is_receiving_op = this->m_is_receiving_op;
 		}
+	}
+	else if (plockable_send_call != nullptr)
+	{
+		std::lock_guard lock_send_call(*plockable_send_call);
+		handle_socket = this->native_handle(INVALID_SOCKET);
 	}
 	else
 	{
@@ -495,6 +549,15 @@ bool net::io::socket::Ntcp::process_close_socket(uint64_t _disconnect_reason) no
 	{
 		// - hold를 한다.(disconnect 처리로 객체가 소멸되버릴 수도 있으므로...)
 		object_ptr<net::io::socket::Ntcp> phold(this);
+
+		// - io_uring completion, a graceful close : the ops staged on the ring of this thread (the sends of the ring owner as ops :
+		//   enable_send_on_owner_ring) are submitted before the shutdown. left staged, the cancel below drops them : a reply sent in the
+		//   handler of a request that came with the EOF of the peer was lost (a direct send is in the socket buffer already)
+		if (this->is_io_completion() && (this->m_disconnect_reason & (DISCONNECT_REASON_FAIL | DISCONNECT_REASON_ABORTIVE)) == 0)
+		{
+			if (auto* pio_context = this->m_pio_context.get(); pio_context != nullptr)
+				pio_context->submit_staged(static_cast<CGHANDLE>(handle_socket));
+		}
 
 		// - shutdown
 		api::socket::shutdown(handle_socket, SD_SEND);

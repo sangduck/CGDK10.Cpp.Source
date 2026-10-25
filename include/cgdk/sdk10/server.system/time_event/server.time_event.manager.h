@@ -89,8 +89,8 @@ class time_event::entity_manager :
 	virtual public				Nmessage_transmitter
 {
 public:
-	using iterator_t		 = std::set<object_ptr<time_event::Ientity> >::iterator;
-	using const_iterator_t = std::set<object_ptr<time_event::Ientity> >::const_iterator;
+	using iterator_t		 = std::set<object_ptr<time_event::Ientity>, std::less<>>::iterator;
+	using const_iterator_t = std::set<object_ptr<time_event::Ientity>, std::less<>>::const_iterator;
 
 protected:
 			entity_manager();
@@ -157,6 +157,9 @@ public:
 	virtual	bool				process_execute(chrono::tick::duration _ticks_wait, intptr_t _option) override;
 
 			void				process_notify_next_time_changed(time_event::Ientity* _ptime_entity);
+			// - changes the next time of an entity under the queue lock (moves it in the queue and wakes the thread if needed.
+			//   an entity not in the queue (executing or not registered) just keeps the time : it is pushed with it when rescheduled)
+			void				process_update_next_time(time_event::Ientity* _ptime_entity, chrono::time::utc::time_point _time_next) noexcept;
 
 	virtual	bool				process_attach(object_ptr<Ientity>&& _pentity) override;
 	virtual	bool				process_detach(Ientity* _pentity) noexcept override;
@@ -180,7 +183,8 @@ private:
 	mutable	lock_object			m_lockable_map_time_class;
 			std::map<std::string, std::function<own_ptr<time_event::Ientity>()>> m_map_time_class;
 	mutable	lock_object			m_lockable_set_time_entity;
-			std::set<object_ptr<Ientity>> m_set_time_entity;
+			// - std::less<> : find() by a raw pointer without making a temporary object_ptr (it re-referenced an entity in its final release)
+			std::set<object_ptr<Ientity>, std::less<>> m_set_time_entity;
 			uint64_t			m_id_entity_serial = 0;	// (locked by m_lockable_set_time_entity)
 			std::vector<Ientity*>	m_priorityqueue_time_entity;
 			std::mutex				m_lockable_priorityqueue;

@@ -5,8 +5,9 @@ namespace CGDK
 
 bool schedulable::Iexecutable::process_on_register()
 {
-	// 1) set next tick time
-	this->m_tick_next = chrono::tick::now() + this->m_tick_diff_execute;
+	// 1) set next tick time ((max)() when it overflows : an interval of (max)() is never. it wrapped to a time in the past)
+	auto tick_now = chrono::tick::now();
+	this->m_tick_next = (this->m_tick_diff_execute > chrono::tick::duration::zero() && tick_now > (chrono::tick::max)() - this->m_tick_diff_execute) ? (chrono::tick::max)() : tick_now + this->m_tick_diff_execute;
 
 	// 2) default executor
 	if (this->has_executor() == false)

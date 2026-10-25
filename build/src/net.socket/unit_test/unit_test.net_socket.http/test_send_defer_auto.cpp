@@ -10,7 +10,7 @@
 #include <vector>
 
 //-----------------------------------------------------------------------------
-// send_defer auto : the sends of an executable run by the executor (linux)
+// send_defer auto : the sends of an executable run by the executor (linux, windows)
 //
 //  - the executor opens a send_defer::auto_scope around each executable it runs : out of a group lock and a send cork, the
 //    consecutive sends of the executable to one socket are deferred, and sent when it sends to another socket or returns.
@@ -25,11 +25,17 @@
 //  5. disconnect : the same with disconnect() (graceful) : the messages arrive before the EOF
 //  6. exception  : an executable sends then throws : the messages arrive
 //  7. cross      : executables and a thread out of the executor send to the same sockets at once : the order per sender is kept
+//
+//  - send_defer_auto.close_while_sending : threads send to a socket while another thread closes it (windows : the sending thread
+//    calls WSASend out of the queue lock, the close swaps the handle under the lock of the send call). what arrives is in order
 //-----------------------------------------------------------------------------
-#if defined(_SYS_EPOLL_H)
+#if defined(_SYS_EPOLL_H) || defined(_WINSOCK2API_)
 
-#include <arpa/inet.h>
-#include <netinet/tcp.h>
+#if defined(_SYS_EPOLL_H)
+	#include <arpa/inet.h>
+	#include <netinet/tcp.h>
+	#include <sys/select.h>
+#endif
 
 namespace CGDK
 {
@@ -37,6 +43,28 @@ using namespace std::chrono_literals;
 
 namespace
 {
+#if defined(_WINSOCK2API_)
+	using sda_fd_t = SOCKET;
+	using sda_socklen_t = int;
+	constexpr sda_fd_t SDA_FD_INVALID = INVALID_SOCKET;
+	inline void sda_close_fd(sda_fd_t _fd) { ::closesocket(_fd); }
+#else
+	using sda_fd_t = int;
+	using sda_socklen_t = socklen_t;
+	constexpr sda_fd_t SDA_FD_INVALID = -1;
+	inline void sda_close_fd(sda_fd_t _fd) { ::close(_fd); }
+#endif
+
+	// - waits for data (or the EOF) on _fd at most _timeout
+	bool sda_wait_readable(sda_fd_t _fd, std::chrono::milliseconds _timeout)
+	{
+		fd_set set;
+		FD_ZERO(&set);
+		FD_SET(_fd, &set);
+		timeval timeout{ static_cast<long>(_timeout.count() / 1000), static_cast<long>((_timeout.count() % 1000) * 1000) };
+		return ::select(static_cast<int>(_fd + 1), &set, nullptr, nullptr, &timeout) > 0;
+	}
+
 	constexpr int			SDA_SOCKETS = 8;
 	constexpr std::size_t	SDA_MESSAGE_SIZE = 32;
 
@@ -120,8 +148,8 @@ namespace
 	uint16_t sda_peer_port(const object_ptr<net::io::Isocket>& _psocket)
 	{
 		sockaddr_in address{};
-		socklen_t length = sizeof(address);
-		if (::getpeername(static_cast<int>(_psocket->native_handle()), reinterpret_cast<sockaddr*>(&address), &length) != 0)
+		sda_socklen_t length = sizeof(address);
+		if (::getpeername(static_cast<sda_fd_t>(_psocket->native_handle()), reinterpret_cast<sockaddr*>(&address), &length) != 0)
 			return 0;
 		return ntohs(address.sin_port);
 	}
@@ -148,12 +176,13 @@ namespace
 
 		bool connect(uint16_t _port)
 		{
+		#if defined(_WINSOCK2API_)
+			this->m_fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		#else
 			this->m_fd = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
-			if (this->m_fd < 0)
+		#endif
+			if (this->m_fd == SDA_FD_INVALID)
 				return false;
-
-			timeval timeout{ 0, 100000 };
-			::setsockopt(this->m_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
 			sockaddr_in address{};
 			address.sin_family = AF_INET;
@@ -166,7 +195,7 @@ namespace
 		uint16_t local_port() const
 		{
 			sockaddr_in address{};
-			socklen_t length = sizeof(address);
+			sda_socklen_t length = sizeof(address);
 			if (::getsockname(this->m_fd, reinterpret_cast<sockaddr*>(&address), &length) != 0)
 				return 0;
 			return ntohs(address.sin_port);
@@ -176,7 +205,7 @@ namespace
 		bool is_eof_next() const
 		{
 			char byte;
-			return this->m_eof || ::recv(this->m_fd, &byte, 1, MSG_PEEK | MSG_DONTWAIT) == 0;
+			return this->m_eof || (sda_wait_readable(this->m_fd, 0ms) && ::recv(this->m_fd, &byte, 1, MSG_PEEK) == 0);
 		}
 
 		// - a message left deferred never arrives : the idle time ends the read and the count is short
@@ -189,14 +218,19 @@ namespace
 			while (this->m_data.size() < _count * SDA_MESSAGE_SIZE && this->m_eof == false
 				&& std::chrono::steady_clock::now() < time_end && std::chrono::steady_clock::now() - time_last < 300ms)
 			{
-				const auto result = ::recv(this->m_fd, buffer, sizeof(buffer), 0);
+				// - 100 ms at most a wait (the conditions above are checked again)
+				if (sda_wait_readable(this->m_fd, 100ms) == false)
+					continue;
+
+				const auto result = ::recv(this->m_fd, buffer, static_cast<int>(sizeof(buffer)), 0);
 				if (result > 0)
 				{
 					this->m_data.insert(this->m_data.end(), buffer, buffer + result);
 					time_last = std::chrono::steady_clock::now();
 				}
-				else if (result == 0)
+				else
 				{
+					// - the EOF, or the reset of the abortive close (windows : WSAECONNRESET)
 					this->m_eof = true;
 				}
 			}
@@ -234,13 +268,13 @@ namespace
 
 		void close()
 		{
-			if (this->m_fd >= 0)
-				::close(this->m_fd);
-			this->m_fd = -1;
+			if (this->m_fd != SDA_FD_INVALID)
+				sda_close_fd(this->m_fd);
+			this->m_fd = SDA_FD_INVALID;
 		}
 
 	public:
-		int					m_fd = -1;
+		sda_fd_t			m_fd = SDA_FD_INVALID;
 		std::vector<char>	m_data;
 		bool				m_eof = false;
 	};
@@ -308,7 +342,7 @@ void sda_check(bool _auto)
 	ASSERT_EQ(pacceptor->start(parameter), eRESULT::SUCCESS);
 	const auto port = pacceptor->local_endpoint().port();
 
-	auto run_case = [&](const char* _name, const std::function<void(const std::vector<object_ptr<net::io::Isocket>>&)>& _post, const std::vector<std::size_t>& _expected, sda_close _close)
+	auto run_case = [&](const char* _name, const std::function<void(const std::vector<object_ptr<net::io::Isocket>>&)>& _post, const std::vector<std::size_t>& _expected, sda_close _close, const std::function<void(const std::vector<object_ptr<net::io::Isocket>>&)>& _after_read = nullptr)
 	{
 		std::vector<sda_client> clients(SDA_SOCKETS);
 		for (auto& iter : clients)
@@ -376,6 +410,10 @@ void sda_check(bool _auto)
 			}
 		}
 
+		// - the checks on the server sockets after the reads (held by 'servers' till here)
+		if (_after_read)
+			_after_read(servers);
+
 		for (auto& iter : clients)
 			iter.close();
 		for (auto& iter : servers)
@@ -434,7 +472,8 @@ void sda_check(bool _auto)
 	//      by one, so the client of the socket 0 may not read meanwhile : its ACKs are delayed and the cwnd holds the rest (epoll, auto
 	//      off : 26 of 50 arrived = 16 quick ACKs + cwnd 10, 24 unsent in the kernel at the close, 2026-10-24) => a part arrives.
 	//    - checked : the 50 are given to the socket before the close (the deferred ones are sent by the close) : the sent statistics
-	//      right after closesocket() in the executable
+	//      right after closesocket() in the executable (linux). windows counts a message sent at the completion of its WSASend (it comes
+	//      after the close) : the statistics of the socket once the completions came (after the reads)
 	{
 		std::vector<std::size_t> expected(SDA_SOCKETS, 10);
 		expected[0] = 50;
@@ -452,12 +491,35 @@ void sda_check(bool _auto)
 				for (uint64_t k = 0; k < 50; ++k)
 					sda_send(servers[0], 7, k);
 				servers[0]->closesocket();
+			#if defined(_SYS_EPOLL_H)
 				pcount_sent->store(sda_sent_message(servers[0]));
+			#endif
 			}));
-		}, expected, sda_close::abortive);
+		}, expected, sda_close::abortive, [&](const auto& _servers)
+		{
+		#if defined(_WINSOCK2API_)
+			sda_wait_until([&]() { return sda_sent_message(_servers[0]) >= 50; }, 2000ms);
+			pcount_sent->store(sda_sent_message(_servers[0]));
+		#else
+			(void)_servers;
+		#endif
+		});
 
 		sda_wait_until([&]() { return pcount_sent->load() >= 0; });
-		EXPECT_EQ(pcount_sent->load(), 50) << "close (auto " << _auto << ")";
+
+	#if defined(_WINSOCK2API_)
+		// - windows, the auto off : the first message goes by a WSASend, the next ones wait for its completion in the queue. the abortive
+		//   close drops them (not given to the socket : the RST would drop them anyway). the auto on : the 50 go by one WSASend at the close
+		if (_auto == false)
+		{
+			EXPECT_GE(pcount_sent->load(), 1) << "close (auto " << _auto << ")";
+			EXPECT_LE(pcount_sent->load(), 50) << "close (auto " << _auto << ")";
+		}
+		else
+	#endif
+		{
+			EXPECT_EQ(pcount_sent->load(), 50) << "close (auto " << _auto << ")";
+		}
 	}
 
 	// 5) disconnect : the same with disconnect() (graceful : the FIN after the data)
@@ -516,6 +578,145 @@ void sda_check(bool _auto)
 		}).join();
 	}, std::vector<std::size_t>(SDA_SOCKETS, 10 * 40 + 400), sda_close::none);
 }
+
+//-----------------------------------------------------------------------------
+// close while sending : 4 threads send to a socket (no executor : the sending thread calls the send system call itself) while the test
+//   thread closes it. what arrives is in order per sender. a socket accepted right after the close gets nothing (a send of the closed
+//   socket never goes to a handle made again)
+//-----------------------------------------------------------------------------
+template <class TBASE>
+void sda_close_while_sending()
+{
+	using server_socket = sda_server_socket<TBASE>;
+	using acceptor_type = sda_acceptor<server_socket>;
+
+	auto pexecutor = executor::make_io_context_threads("send defer close test", 4);
+	own_ptr<acceptor_type> pacceptor;
+	sda_guard<acceptor_type> guard{ pacceptor, pexecutor };
+
+	ASSERT_TRUE(pexecutor.exist());
+
+	{
+		std::lock_guard lock(g_sda_lockable);
+		g_sda_servers.clear();
+	}
+
+	pacceptor = make_own<acceptor_type>();
+	pacceptor->io_context(pexecutor.get());
+
+	typename acceptor_type::START_PARAMETER parameter;
+	parameter.local_endpoint = net::ip::tcp::endpoint{ net::ip::address_v4::loopback(), sda_port() };
+	parameter.reallocate_port_at_duplicate_port_error = true;
+	parameter.enable_progress_log = false;
+	ASSERT_EQ(pacceptor->start(parameter), eRESULT::SUCCESS);
+	const auto port = pacceptor->local_endpoint().port();
+
+	constexpr int ROUNDS = 60;
+	constexpr int SENDERS = 4;
+
+	for (int round = 0; round < ROUNDS; ++round)
+	{
+		sda_client client;
+		ASSERT_TRUE(client.connect(port)) << "round " << round;
+		ASSERT_TRUE(sda_wait_until([&]() { std::lock_guard lock(g_sda_lockable); return g_sda_servers.size() == 1; })) << "round " << round << " accept";
+
+		object_ptr<net::io::Isocket> pserver;
+		{
+			std::lock_guard lock(g_sda_lockable);
+			pserver = g_sda_servers.front();
+			g_sda_servers.clear();
+		}
+
+		// 1) the senders (till a send fails : the close)
+		std::atomic<int> count_started{ 0 };
+		std::vector<std::thread> senders;
+		for (uint32_t t = 0; t < SENDERS; ++t)
+		{
+			senders.emplace_back([pserver, t, &count_started]()
+			{
+				++count_started;
+				for (uint64_t k = 0; k < 20000; ++k)
+				{
+					if (sda_send(pserver, t, k) == false)
+						break;
+				}
+			});
+		}
+
+		// 2) the close (after 0 ~ 1.5 ms of sending)
+		while (count_started.load() != SENDERS)
+			std::this_thread::yield();
+		std::this_thread::sleep_for(std::chrono::microseconds((round % 4) * 500));
+		pserver->closesocket();
+
+		// 3) a socket accepted right after the close
+		sda_client client_after;
+		ASSERT_TRUE(client_after.connect(port)) << "round " << round;
+
+		for (auto& iter : senders)
+			iter.join();
+
+		// 4) what arrived : in order per sender (a partial message at the end : cut by the reset)
+		client.read(SENDERS * 20000, 3000ms);
+		client.m_data.resize(client.m_data.size() - (client.m_data.size() % SDA_MESSAGE_SIZE));
+		std::string error;
+		EXPECT_TRUE(client.check_order(error)) << "round " << round << " : " << error;
+
+		client_after.read(1, 100ms);
+		EXPECT_EQ(client_after.m_data.size(), 0u) << "round " << round << " : the socket accepted after the close got data";
+
+		ASSERT_TRUE(sda_wait_until([&]() { std::lock_guard lock(g_sda_lockable); return g_sda_servers.size() == 1; })) << "round " << round << " accept after";
+		{
+			std::lock_guard lock(g_sda_lockable);
+			for (auto& iter : g_sda_servers)
+				iter->closesocket();
+			g_sda_servers.clear();
+		}
+		client.close();
+		client_after.close();
+		pserver.reset();
+
+		EXPECT_TRUE(sda_wait_until([&]() { return pacceptor->count() == 0; }, 10000ms)) << "round " << round << " connected yet " << pacceptor->count();
+	}
+}
+
+TEST(send_defer_auto, close_while_sending_gather)
+{
+	sda_close_while_sending<net::socket::tcp<>>();
+}
+
+TEST(send_defer_auto, close_while_sending_buffered)
+{
+	sda_close_while_sending<net::socket::tcp_buffered<>>();
+}
+
+#if defined(_WINSOCK2API_)
+// - the raw sendables (windows) : they call WSASend out of m_lockable_sending too, the close swaps the handle under m_lockable_send_call
+template <class TSENDABLE>
+class sda_raw_socket :
+	public						net::io::socket::tcp::Ndefault,
+	public						net::io::connectable::tcp::Ndefault,
+	public						net::io::connect_notify::tcp::Ndefault,
+	public						TSENDABLE,
+	public				 		net::io::send_request::tcp::Ndefault,
+	public						net::io::sender::tcp::Ndefault<uint32_t>,
+	public						net::io::receivable::tcp::Ndefault,
+	public						net::io::packetable::tcp::Ndefault<uint32_t>,
+	public						net::io::messageable::tcp::Ndefault
+{
+	virtual result_code			on_message(sMESSAGE_NETWORK& /*_msg*/) override { return eRESULT::BYPASS; }
+};
+
+TEST(send_defer_auto, close_while_sending_gather_raw)
+{
+	sda_close_while_sending<sda_raw_socket<net::io::sendable::Ntcp_async_gather_raw>>();
+}
+
+TEST(send_defer_auto, close_while_sending_buffered_raw)
+{
+	sda_close_while_sending<sda_raw_socket<net::io::sendable::Ntcp_async_gather_buffered_raw>>();
+}
+#endif
 
 TEST(send_defer_auto, gather)
 {

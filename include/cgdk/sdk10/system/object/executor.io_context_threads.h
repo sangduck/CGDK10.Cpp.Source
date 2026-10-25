@@ -76,6 +76,7 @@ protected:
 			int					m_count_threads_extra_active{ 0 };
 			int					m_count_threads_extra_exist{ 0 };
 			int					m_count_threads_extra_max{ 0 };
+			int					m_count_threads_extra_wake{ 0 };	// wakes of waiting extra threads not taken yet (counted as active when notified : a second thread_blocked() spawned nothing in the window)
 			std::mutex			m_cs_threads_extra;
 			std::condition_variable m_cv_threads_extra;
 			std::atomic<int>	m_thread_index{ 0 };

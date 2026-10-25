@@ -652,7 +652,7 @@ bool net::io::connect_requestable::Ntcp::process_request_connecting( const net::
 			}
 
 			// - 새로 생성한 socket을 executor에 붙인다.
-			auto result = io_context()->attach(handle_socket, pexecutable_connector, EPOLLONESHOT | EPOLLWAKEUP | EPOLLOUT | EPOLLERR);
+			auto result = io_context()->attach(handle_socket, pexecutable_connector, EPOLLONESHOT | EPOLLOUT | EPOLLERR);
 
 			// check) set_event에 실패했을 경우 Release한다.
 			if (result == false)

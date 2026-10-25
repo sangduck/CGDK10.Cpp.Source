@@ -330,6 +330,130 @@ TEST(http_parser, websocket_ping_is_not_a_message)
 }
 
 //-----------------------------------------------------------------------------
+// crafted requests (sizes near SIZE_MAX, header case, bad Content-Length)
+//-----------------------------------------------------------------------------
+TEST(http_parser, server_chunk_size_overflow)
+{
+	// - a chunk size near SIZE_MAX used to wrap 'body + size > max' and 'rest < size + 2' :
+	//   the whole rest was appended while moving 1 byte (memory grew quadratically) or the request never completed
+	for (std::size_t max_body : { std::size_t(0), std::size_t(16 * 1024 * 1024) })
+	{
+		for (std::string_view size_line : { "FFFFFFFFFFFFFFFF"sv, "FFFFFFFFFFFFFFFE"sv, "FFFFFFFFFFFFFFFD"sv })
+		{
+			auto psocket = make_own<test_http_server>();
+			psocket->set_http_limits(8192, max_body);
+			const std::string request = "POST /c HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n1\r\nA\r\n" + std::string(size_line) + "\r\n" + std::string(64, 'x');
+			EXPECT_ANY_THROW(psocket->feed(request)) << size_line << " max " << max_body;
+			EXPECT_TRUE(psocket->requests.empty()) << size_line << " max " << max_body;
+		}
+	}
+}
+
+TEST(http_parser, server_chunk_data_without_crlf)
+{
+	// - the chunk data must be followed by CRLF
+	auto psocket = make_own<test_http_server>();
+	EXPECT_ANY_THROW(psocket->feed("POST /c HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhelloXX0\r\n\r\n"));
+	EXPECT_TRUE(psocket->requests.empty());
+
+	// - split : the CRLF arrives later
+	auto psocket2 = make_own<test_http_server>();
+	EXPECT_NO_THROW(psocket2->feed_split("POST /c HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n0\r\n\r\n", 1));
+	ASSERT_EQ(psocket2->requests.size(), 1u);
+	EXPECT_EQ(psocket2->requests[0], "POST /c|hello");
+}
+
+TEST(http_parser, server_transfer_encoding_case_insensitive)
+{
+	for (std::string_view header : { "transfer-encoding: chunked"sv, "TRANSFER-ENCODING: Chunked"sv, "Transfer-Encoding: gzip, chunked"sv })
+	{
+		auto psocket = make_own<test_http_server>();
+		EXPECT_NO_THROW(psocket->feed("POST /c HTTP/1.1\r\n" + std::string(header) + "\r\n\r\n5\r\nhello\r\n0\r\n\r\nGET /n HTTP/1.1\r\n\r\n")) << header;
+		ASSERT_EQ(psocket->requests.size(), 2u) << header;
+		EXPECT_EQ(psocket->requests[0], "POST /c|hello") << header;
+		EXPECT_EQ(psocket->requests[1], "GET /n|") << header;
+	}
+
+	// - "Transfer-Encoding" overrides "Content-Length"
+	{
+		auto psocket = make_own<test_http_server>();
+		EXPECT_NO_THROW(psocket->feed("POST /c HTTP/1.1\r\nContent-Length: 3\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n0\r\n\r\n"));
+		ASSERT_EQ(psocket->requests.size(), 1u);
+		EXPECT_EQ(psocket->requests[0], "POST /c|hello");
+		EXPECT_EQ(psocket->pending_size(), 0u);
+	}
+
+	// - the last coding is not "chunked" : 400
+	{
+		auto psocket = make_own<test_http_server>();
+		EXPECT_ANY_THROW(psocket->feed("POST /c HTTP/1.1\r\nTransfer-Encoding: gzip\r\n\r\nabc"));
+		EXPECT_TRUE(psocket->requests.empty());
+	}
+}
+
+TEST(http_parser, server_invalid_content_length)
+{
+	// - an overflow or garbage used to be read as 0 (the body was then parsed as the next request)
+	for (std::string_view value : { "99999999999999999999999"sv, "abc"sv, "12abc"sv, ""sv, "-1"sv })
+	{
+		auto psocket = make_own<test_http_server>();
+		psocket->set_http_limits(8192, 0);
+		EXPECT_ANY_THROW(psocket->feed("POST /c HTTP/1.1\r\nContent-Length: " + std::string(value) + "\r\n\r\nGET /smuggled HTTP/1.1\r\n\r\n")) << value;
+		EXPECT_TRUE(psocket->requests.empty()) << value;
+	}
+
+	// - two different values : 400
+	{
+		auto psocket = make_own<test_http_server>();
+		EXPECT_ANY_THROW(psocket->feed("POST /c HTTP/1.1\r\nContent-Length: 3\r\nContent-Length: 5\r\n\r\nhello"));
+		EXPECT_TRUE(psocket->requests.empty());
+	}
+
+	// - spaces around and the same value repeated : accepted
+	{
+		auto psocket = make_own<test_http_server>();
+		EXPECT_NO_THROW(psocket->feed("POST /c HTTP/1.1\r\nContent-Length:  3 \t\r\nContent-Length: 3\r\n\r\nabc"));
+		ASSERT_EQ(psocket->requests.size(), 1u);
+		EXPECT_EQ(psocket->requests[0], "POST /c|abc");
+	}
+}
+
+// - a websocket frame header with a 64 bit length near the max (masked, any payload after it)
+static std::string make_frame_header_64(uint64_t _length, bool _is_masked)
+{
+	std::string frame;
+	frame.push_back(static_cast<char>(0x82));
+	frame.push_back(static_cast<char>((_is_masked ? 0x80 : 0x00) | 127));
+	for (int i = 7; i >= 0; --i)
+		frame.push_back(static_cast<char>((_length >> (i * 8)) & 0xff));
+	if (_is_masked)
+		frame.append("\x12\x34\x56\x78", 4);
+	frame.append(32, 'z');
+	return frame;
+}
+
+TEST(http_parser, websocket_length_overflow_no_limit)
+{
+	// - with no body limit 'sizeof(uint32_t) + length' wrapped and the mask was applied out of range
+	for (uint64_t length : { UINT64_MAX, UINT64_MAX - 1, UINT64_MAX - 3, UINT64_MAX - 31 })
+	{
+		auto psocket = make_own<test_http_server>();
+		psocket->set_websocket();
+		psocket->set_http_limits(8192, 0);
+		EXPECT_NO_THROW(psocket->feed(make_frame_header_64(length, true))) << length;
+		EXPECT_TRUE(psocket->websocket_messages.empty()) << length;
+		EXPECT_NE(psocket->pending_size(), 0u) << length;
+
+		auto pclient = make_own<test_http_client>();
+		pclient->set_websocket();
+		pclient->set_http_limits(8192, 0);
+		EXPECT_NO_THROW(pclient->feed(make_frame_header_64(length, true))) << length;
+		EXPECT_TRUE(pclient->websocket_messages.empty()) << length;
+		EXPECT_NE(pclient->pending_size(), 0u) << length;
+	}
+}
+
+//-----------------------------------------------------------------------------
 // client : response
 //-----------------------------------------------------------------------------
 TEST(http_parser, client_response)

@@ -1,4 +1,7 @@
 #include "pch.h"
+#include <charconv>
+#include <cstring>
+#include <span>
 
 using namespace CGDK;
 
@@ -131,67 +134,76 @@ void query::redis::Iquery::_process_notify_to_requestor() noexcept
 
 shared_buffer generate_redis_command(std::string_view _command)
 {
-	// definitions)
-	const int MAX_STRING_SIZE = 4096;
-	const int OFFSET = 8;
+	// - the arguments are separated by blanks (' ', '\t'). the whole '_command' is read (no length limit, no '\0' end)
+	//   (it was written to a fixed 4KB buffer : a longer command was cut at 4096 characters and written past the buffer)
+	const auto is_blank = [](char _c) noexcept { return _c == ' ' || _c == '\t'; };
+	const auto count_digits = [](std::size_t _value) noexcept { std::size_t n = 1; while (_value >= 10) { _value /= 10; ++n; } return n; };
+	const auto write_number = [](char* _pos, std::size_t _value) noexcept { return std::to_chars(_pos, _pos + 20, _value).ptr; };
 
-	// 1) alloc memory shared_buffer
-	auto bufTemp = alloc_shared_buffer(MAX_STRING_SIZE + OFFSET);
-
-	// declare) 
-	int count = 0;
-	char* str_now = bufTemp.data<char>() + OFFSET;
-	const char* str_end = _command.data() + MAX_STRING_SIZE;
-
-	for(const char* iter =_command.data(); *iter!=0 && iter<str_end; )
+	// 1) count the arguments and the bytes ('$<length>\r\n<argument>\r\n' each)
+	std::size_t count = 0;
+	std::size_t size_arguments = 0;
+	for (std::size_t pos = 0; pos < _command.size();)
 	{
-		// - trimming head
-		while(iter != str_end && *iter!=0 && (*iter == ' ' || *iter == '\t'))
-		{
-			++iter;
-		}
+		while (pos < _command.size() && is_blank(_command[pos]))
+			++pos;
+		if (pos == _command.size())
+			break;
 
-		// declare)
-		const char*	str_para = iter;
+		const auto pos_begin = pos;
+		while (pos < _command.size() && !is_blank(_command[pos]))
+			++pos;
 
-		// - find string end
-		while(iter != str_end && *iter!=0 && (*iter != ' ' && *iter != '\t'))
-		{
-			++iter;
-		}
-
-		// - get string length
-		int	param_length = static_cast<int>(iter - str_para);
-
-		// - append string length
-		*(str_now++) = '$';
-		str_now	+= snprintf(str_now, 256, "%d", param_length);
-		*(str_now++) = '\r';
-		*(str_now++) = '\n';
-
-		// - append string
-		memcpy(str_now, str_para, param_length);
-		str_now		+= param_length;
-		*(str_now++) = '\r';
-		*(str_now++) = '\n';
-
-		// - increase count
+		const auto length = pos - pos_begin;
+		size_arguments += 1 + count_digits(length) + 2 + length + 2;
 		++count;
 	}
 
-	// 4) write head
-	char* str_now_head = bufTemp.data<char>() + OFFSET-1;
-	*(str_now_head--) = '\n';
-	*(str_now_head--) = '\r';
+	// check) no argument
+	THROW_IF(count == 0, throwable::failure(eRESULT::INVALID_ARGUMENT, 0, std::string_view("redis command has no argument")));
 
-	for(int	i = count; i != 0; i /= 10)
+	// 2) alloc ('*<count>\r\n' + the arguments)
+	const auto size_command = 1 + count_digits(count) + 2 + size_arguments;
+	auto buf_command = alloc_shared_buffer(size_command);
+	char* str_now = buf_command.data<char>();
+
+	// 3) write head
+	*(str_now++) = '*';
+	str_now = write_number(str_now, count);
+	*(str_now++) = '\r';
+	*(str_now++) = '\n';
+
+	// 4) write arguments
+	for (std::size_t pos = 0; pos < _command.size();)
 	{
-		*(str_now_head--) = (i % 10)+'0';
-	}
-	*(str_now_head)	 = '*';
+		while (pos < _command.size() && is_blank(_command[pos]))
+			++pos;
+		if (pos == _command.size())
+			break;
 
-	// 5) set shared_buffer for output
-	return bufTemp ^ buffer_view{ str_now_head, static_cast<std::size_t>(str_now - str_now_head) };
+		const auto pos_begin = pos;
+		while (pos < _command.size() && !is_blank(_command[pos]))
+			++pos;
+
+		const auto length = pos - pos_begin;
+		*(str_now++) = '$';
+		str_now = write_number(str_now, length);
+		*(str_now++) = '\r';
+		*(str_now++) = '\n';
+		memcpy(str_now, _command.data() + pos_begin, length);
+		str_now += length;
+		*(str_now++) = '\r';
+		*(str_now++) = '\n';
+	}
+
+	// check)
+	CGASSERT_ERROR(static_cast<std::size_t>(str_now - buf_command.data<char>()) == size_command);
+
+	// 5) set size
+	buf_command.add_size(size_command);
+
+	// return)
+	return buf_command;
 }
 
 void query::redis::Iquery::execute_query_sync(std::string_view _command)
@@ -310,8 +322,9 @@ void query::redis::Iquery::_process_post_execute_query(std::string&& _command, s
 			request_info.buf_request = std::move(buf_query);
 			request_info.response = std::move(_response);
 
-			// notify) thread block
-			scoped_thread_block thread_block;
+			// - no scoped_thread_block : the post does not wait for the response. (it flushed the deferred sends : a send system
+			//   call per command, and the thread block of the executor per command. the sends of the posts are deferred now like
+			//   any send : auto_scope in an executable, send_defer::scope out of it)
 
 			// 3) query를 요구한다.
 			this->m_psession->execute_query(std::move(request_info));
@@ -325,4 +338,63 @@ void query::redis::Iquery::_process_post_execute_query(std::string&& _command, s
 			throw;
 		}
 	}
+}
+
+shared_buffer generate_redis_batch(std::span<const std::string_view> commands)
+{
+	const auto blank = [](char c) { return c == ' ' || c == '\t'; };
+	const auto digits = [](std::size_t n) { std::size_t d = 1; while (n >= 10) { n /= 10; ++d; } return d; };
+	const auto add = [](std::size_t& total, std::size_t n) {
+		THROW_IF(n > (std::numeric_limits<std::size_t>::max)() - total, throwable::failure(eRESULT::OVERFLOW_ERROR));
+		total += n;
+	};
+	THROW_IF(commands.empty(), throwable::failure(eRESULT::INVALID_ARGUMENT));
+	std::size_t bytes = 0;
+	for (auto command : commands)
+	{
+		std::size_t count = 0;
+		for (std::size_t pos = 0; pos < command.size();)
+		{
+			while (pos < command.size() && blank(command[pos])) ++pos;
+			if (pos == command.size()) break;
+			const auto start = pos;
+			while (pos < command.size() && !blank(command[pos])) ++pos;
+			const auto length = pos - start;
+			add(bytes, length);
+			add(bytes, digits(length) + 5);
+			++count;
+		}
+		THROW_IF(count == 0, throwable::failure(eRESULT::INVALID_ARGUMENT));
+		add(bytes, digits(count) + 3);
+	}
+	auto buffer = alloc_shared_buffer(bytes);
+	char* out = buffer.data<char>();
+	const auto number = [&out, end = buffer.data<char>() + bytes](std::size_t n) {
+		out = std::to_chars(out, end, n).ptr;
+	};
+	for (auto command : commands)
+	{
+		std::size_t count = 0;
+		bool in_argument = false;
+		for (char c : command)
+		{
+			if (blank(c)) in_argument = false;
+			else if (!in_argument) { ++count; in_argument = true; }
+		}
+		*out++ = '*'; number(count); *out++ = '\r'; *out++ = '\n';
+		for (std::size_t pos = 0; pos < command.size();)
+		{
+			while (pos < command.size() && blank(command[pos])) ++pos;
+			if (pos == command.size()) break;
+			const auto start = pos;
+			while (pos < command.size() && !blank(command[pos])) ++pos;
+			const auto length = pos - start;
+			*out++ = '$'; number(length); *out++ = '\r'; *out++ = '\n';
+			std::memcpy(out, command.data() + start, length); out += length;
+			*out++ = '\r'; *out++ = '\n';
+		}
+	}
+	CGASSERT_ERROR(static_cast<std::size_t>(out - buffer.data<char>()) == bytes);
+	buffer.add_size(bytes);
+	return buffer;
 }

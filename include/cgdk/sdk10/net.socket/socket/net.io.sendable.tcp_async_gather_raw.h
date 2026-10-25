@@ -73,6 +73,9 @@ protected:
 	virtual	std::size_t			process_get_sending_queued_bytes() const noexcept override;
 	virtual	void				process_close_sender() override;
 	virtual	void				process_reset_sendable() noexcept override;
+	// - the close swaps the handle under m_lockable_send_call (WSASend and shutdown are called under it, out of m_lockable_sending)
+	virtual	lock_object*		process_get_lockable_sending() noexcept override { return &this->m_lockable_send_call; }
+			void				_process_shutdown_send() noexcept;
 
 protected:
 			QUEUE_SEND			m_queue_pending;
@@ -81,6 +84,9 @@ protected:
 			object_ptr<executable_send_buffer_list> m_pexecutable_send_buffer_list;
 
 	mutable	lock_object			m_lockable_sending;
+			// - the handle is read and WSASend / shutdown are called under it (the close swaps the handle under it : a handle closed and made
+			//   again for another socket is not sent to). lock order : m_lockable_sending -> m_lockable_send_call
+	mutable	lock_object			m_lockable_send_call;
 			void				_process_prepare_send_buffers();
 };
 

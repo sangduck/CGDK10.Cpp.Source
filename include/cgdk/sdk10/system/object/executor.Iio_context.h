@@ -92,6 +92,9 @@ public:
 	[[nodiscard]] virtual size_t provided_buffer_size() const noexcept { return 0; }
 	//! @brief this thread owns the ring the fd is bound to (io_uring completion : an op submitted by it goes with its next enter, no wake)
 	[[nodiscard]] virtual bool	is_ring_owner(CGHANDLE _fd) const noexcept { static_cast<void>(_fd); return false; }
+	//! @brief this thread owns the ring the fd is bound to and an op of the fd is staged on it : the staged ops are submitted now (one
+	//!        io_uring_enter, no wait. a graceful close submits the sends of the owner before its shutdown). false : not the owner, none staged
+	virtual	bool				submit_staged(CGHANDLE _fd) noexcept { static_cast<void>(_fd); return false; }
 	//! @brief cancels every op of the executable / of the fd (IORING_OP_ASYNC_CANCEL : they complete with -ECANCELED and are delivered)
 	virtual	bool				submit_cancel(Iexecutable* _pexecutable) noexcept { static_cast<void>(_pexecutable); return false; }
 	virtual	bool				submit_cancel_fd(CGHANDLE _fd) noexcept { static_cast<void>(_fd); return false; }
@@ -129,11 +132,11 @@ public:
 namespace executor
 {
 	//-------------------------------------------------------------------------
-	// the event backend of the io_context executors (linux) : epoll (default), io_uring (readiness) or io_uring_completion.
+	// the event backend of the io_context executors (linux) : io_uring_completion (default since 2026-10-24), io_uring (readiness) or epoll.
 	//  - chosen when an io_context is created : set it before the executors start (the system_executor is created at its first use).
-	//    env CGDK_IO_URING=1 (true/on/uring) selects io_uring, CGDK_IO_URING=completion (cq/2) io_uring_completion.
+	//    env CGDK_IO_URING=1 (true/on/uring) selects io_uring, CGDK_IO_URING=completion (cq/2) io_uring_completion, CGDK_IO_URING=0 (false/off/epoll) epoll.
 	//  - io_uring that is not available (a kernel before 5.13, io_uring disabled) falls back to epoll (logged).
-	//    io_uring_completion needs 6.0+ (SEND_ZC, multishot accept, sync cancel) : falls back to epoll (logged).
+	//    io_uring_completion needs 6.0+ (SEND_ZC, multishot accept, sync cancel) : falls back to epoll (logged : once as info when it is the built-in default).
 	//  - windows : iocp (the option is ignored)
 	//-------------------------------------------------------------------------
 	void						set_default_io_backend(io_backend _backend) noexcept;

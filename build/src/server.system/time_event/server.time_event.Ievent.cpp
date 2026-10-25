@@ -5,23 +5,19 @@ using namespace CGDK;
 
 void CGDK::time_event::Ievent::set_next_time(chrono::time::utc::time_point _time_next) noexcept
 {
-	// check)
-	RETURN_IF(_time_next == this->m_event_status.time_next);
+	// 1) the entity it is registered in
+	auto pentity = this->m_pentity.load(std::memory_order_acquire);
 
-	// 1) change
-	this->m_event_status.time_next = _time_next;
-
-	// 2)
-	auto pentity = this->m_pentity;
-
-	// check)
-	RETURN_IF(pentity.empty());
-
-	// 2) notify to manager
-	if (this->m_event_status.state == eSTATE::RUN)
+	// 2) not registered : just set
+	if (pentity == nullptr)
 	{
-		pentity->process_notify_next_time_changed(this);
+		this->m_event_status.time_next = _time_next;
+		return;
 	}
+
+	// 3) registered : the entity changes it under its lock (the event is in its heap ordered by time_next.
+	//    it was written here without the lock, and the entity was notified only for an event state RUN that is never set)
+	pentity->process_set_event_next_time(this, _time_next);
 }
 
 void CGDK::time_event::Ievent::process_reset()

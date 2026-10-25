@@ -44,7 +44,7 @@ namespace CGDK
 //    send_defer::enable(false) stops deferring in the group lock.
 // 7. Do not wait for a response of a deferred request in the group lock.
 //    (call send_defer::flush() before waiting, or wait in a scoped_thread_block)
-// 8. auto (send_defer::auto_scope : the executor opens it around each executable it runs. linux)
+// 8. auto (send_defer::auto_scope : the executor opens it around each executable it runs. linux, windows)
 //    - out of a group lock and a send cork, the consecutive sends of the thread to one socket are deferred.
 //      they are sent when the thread sends to another socket, or when the executable returns.
 //      (a tick sending many messages to each socket : one send system call per socket instead of one per message)

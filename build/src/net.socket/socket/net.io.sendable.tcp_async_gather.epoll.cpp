@@ -264,8 +264,11 @@ bool net::io::sendable::Ntcp_async_gather::process_sendable(const buffer_view _b
 	//   SENDMSG op on it (submitted with its next enter : no send syscall). not sent directly : the op is the sending thread till it completes
 	if (this->is_io_completion() && (this->_is_zerocopy_op(bytes_requested, _powner) || this->_is_send_on_owner_ring(handle_socket)))
 	{
-		this->m_queue_sending.push_back(_buffer, std::move(_powner), bytes_requested, _count_messages);
-		this->m_queue_sending.bytes_data = bytes_requested;
+		SCOPED_LOCK(this->m_lockable_send_call)
+		{
+			this->m_queue_sending.push_back(_buffer, std::move(_powner), bytes_requested, _count_messages);
+			this->m_queue_sending.bytes_data = bytes_requested;
+		}
 
 		SCOPED_LOCK(this->m_lockable_sending)
 		{
@@ -285,7 +288,30 @@ bool net::io::sendable::Ntcp_async_gather::process_sendable(const buffer_view _b
 
 	// - MSG_ZEROCOPY for a large buffer (the io_uring backend : the owner is held until the kernel notifies the completion)
 	int flags_send = MSG_DONTWAIT | MSG_NOSIGNAL | this->_zerocopy_send_flags(handle_socket, bytes_requested, _powner);
-	const auto bytes_result = this->_zerocopy_send(handle_socket, _buffer.data(), bytes_requested, flags_send);
+	ssize_t bytes_result = 0;
+	bool is_closed = false;
+
+	// - the handle is checked and sent under m_lockable_send_call (closed meanwhile : the close swapped it under the lock)
+	SCOPED_LOCK(this->m_lockable_send_call)
+	{
+		is_closed = (handle_socket == INVALID_SOCKET || this->native_handle() != handle_socket);
+
+		if (is_closed == false)
+			bytes_result = this->_zerocopy_send(handle_socket, _buffer.data(), bytes_requested, flags_send);
+	}
+
+	// check) closed meanwhile => the queued sends are dropped
+	if (is_closed)
+	{
+		SCOPED_LOCK(this->m_lockable_sending)
+		{
+			this->_process_clear_send_buffers();
+			this->m_flag_sending = false;
+		}
+
+		// return)
+		return false;
+	}
 
 	// case) send completed~
 	if (bytes_result == static_cast<ssize_t>(bytes_requested))
@@ -369,6 +395,8 @@ bool net::io::sendable::Ntcp_async_gather::process_sendable(const buffer_view _b
 
 	// 3) 남은 것은 m_queue_sending에 넣고 EPOLLOUT을 기다린다. (socket 송신 버퍼가 찼다 : 바로 다시 보내도 EAGAIN이다)
 	//    - m_queue_sending은 보내는 thread(m_flag_sending)만 쓴다. 지금은 비어 있다.
+	//    (m_lockable_send_call 안 : process_reset_sendable()이 그 안에서 m_queue_sending을 비운다)
+	SCOPED_LOCK(this->m_lockable_send_call)
 	{
 		auto buf_remained = _buffer;
 		buf_remained += offset(static_cast<int64_t>(bytes_sent));
@@ -414,17 +442,29 @@ uint32_t net::io::sendable::Ntcp_async_gather::_process_send_queued(CGSOCKET _ha
 	// declare)
 	uint32_t result = 0;
 	bool is_shutdown = false;
+	bool is_closed = false;
 	msghdr msg_send{};
 
 	for (;;)
 	{
 		// 1) 보낼 것이 없으면 m_queue_pending에서 가져온다.
-		if (this->m_index_sending == this->m_queue_sending.array_node.size())
-		{
-			// - 보낸 buffer들의 owner를 release한다. (lock 밖에서. 용량은 남는다)
-			this->m_queue_sending.clear();
-			this->m_index_sending = 0;
+		bool is_sent_all;
 
+		SCOPED_LOCK(this->m_lockable_send_call)
+		{
+			is_sent_all = (this->m_index_sending == this->m_queue_sending.array_node.size());
+
+			// - 보낸 buffer들의 owner를 release한다. (m_lockable_sending 밖에서. 용량은 남는다)
+			//   (m_lockable_send_call 안 : close 뒤 process_reset_sendable()이 그 안에서 m_queue_sending을 비운다)
+			if (is_sent_all)
+			{
+				this->m_queue_sending.clear();
+				this->m_index_sending = 0;
+			}
+		}
+
+		if (is_sent_all)
+		{
 			// declare)
 			bool is_empty;
 
@@ -451,90 +491,105 @@ uint32_t net::io::sendable::Ntcp_async_gather::_process_send_queued(CGSOCKET _ha
 				break;
 		}
 
-		// 2) send (sendmsg는 한번에 IOV_MAX개의 buffer까지만 보낼 수 있다)
-		const auto index_end = this->m_index_sending + std::min<std::size_t>(this->m_queue_sending.array_node.size() - this->m_index_sending, CGDK_SEND_MAX_IOV);
+		// 2) send / 3) the part sent : m_lockable_send_call 안에서 한다. (close가 그 안에서 handle을 바꾸고, 그 뒤 process_reset_sendable()이
+		//    그 안에서 m_queue_sending을 비운다 : 닫힌 뒤 다시 만들어진 같은 번호의 handle로 보내지 않고, 비워진 queue를 읽지 않는다)
+		//    - SCOPED_LOCK은 if 문이다 : 안의 break / continue는 for 문에 걸리고 lock은 if 문을 빠져나갈 때 풀린다.
+		int error_code = 0;
 
-		const auto pbuffer_send = this->m_queue_sending.array_buffer.data() + this->m_index_sending;
-		const auto count_buffer = index_end - this->m_index_sending;
-
-		// - buffer가 하나면 send로 보낸다. (sendmsg보다 가볍다)
-		ssize_t bytes_result;
-		bool is_zerocopy = false;
-
-		// - io_uring completion : the thread that owns the ring of this socket sends with an op (the caller posts it like a full socket buffer)
-		if (this->is_io_completion() && this->_is_send_on_owner_ring(_handle_socket))
+		SCOPED_LOCK(this->m_lockable_send_call)
 		{
-			result = EPOLLOUT;
-			break;
-		}
+			// check) 그 사이 닫혔다. (close가 handle을 바꿨다 / process_reset_sendable()이 m_queue_sending을 비웠다)
+			if (_handle_socket == INVALID_SOCKET || this->native_handle() != _handle_socket || this->m_index_sending >= this->m_queue_sending.array_node.size())
+			{
+				is_closed = true;
+				break;
+			}
 
-		if (count_buffer == 1)
-		{
-			// - io_uring completion : a large buffer goes as a SEND_ZC op (not sent directly : the caller posts the op like a full socket buffer)
-			if (this->is_io_completion() && this->_is_zerocopy_op(pbuffer_send->iov_len, this->m_queue_sending.array_node[this->m_index_sending].powner))
+			// 2) send (sendmsg는 한번에 IOV_MAX개의 buffer까지만 보낼 수 있다)
+			const auto index_end = this->m_index_sending + std::min<std::size_t>(this->m_queue_sending.array_node.size() - this->m_index_sending, CGDK_SEND_MAX_IOV);
+
+			const auto pbuffer_send = this->m_queue_sending.array_buffer.data() + this->m_index_sending;
+			const auto count_buffer = index_end - this->m_index_sending;
+
+			// - buffer가 하나면 send로 보낸다. (sendmsg보다 가볍다)
+			ssize_t bytes_result;
+			bool is_zerocopy = false;
+
+			// - io_uring completion : the thread that owns the ring of this socket sends with an op (the caller posts it like a full socket buffer)
+			if (this->is_io_completion() && this->_is_send_on_owner_ring(_handle_socket))
 			{
 				result = EPOLLOUT;
 				break;
 			}
 
-			// - a large buffer : MSG_ZEROCOPY (the io_uring backend)
-			int flags_send = MSG_DONTWAIT | MSG_NOSIGNAL | this->_zerocopy_send_flags(_handle_socket, pbuffer_send->iov_len, this->m_queue_sending.array_node[this->m_index_sending].powner);
-
-			bytes_result = this->_zerocopy_send(_handle_socket, pbuffer_send->iov_base, pbuffer_send->iov_len, flags_send);
-			is_zerocopy = (bytes_result > 0) && (flags_send & MSG_ZEROCOPY) != 0;
-		}
-		else
-		{
-			msg_send.msg_iov = pbuffer_send;
-			msg_send.msg_iovlen = count_buffer;
-
-			bytes_result = ::sendmsg(_handle_socket, &msg_send, MSG_DONTWAIT | MSG_NOSIGNAL);
-		}
-
-		// 3) the part sent
-		if (bytes_result > 0)
-		{
-			// - zerocopy : the part sent is held until the kernel notifies
-			if (is_zerocopy)
-				this->_zerocopy_hold(buffer_view{ static_cast<char*>(pbuffer_send->iov_base), static_cast<std::size_t>(bytes_result) }, object_ptr<Ireferenceable>(this->m_queue_sending.array_node[this->m_index_sending].powner));
-
-			// declare)
-			auto bytes_left = static_cast<std::size_t>(bytes_result);
-
-			for (; this->m_index_sending < index_end; ++this->m_index_sending)
+			if (count_buffer == 1)
 			{
-				auto& buffer_now = this->m_queue_sending.array_buffer[this->m_index_sending];
-
-				// - 일부만 보냈다 => 남은 위치로 옮긴다.
-				if (bytes_left < buffer_now.iov_len)
+				// - io_uring completion : a large buffer goes as a SEND_ZC op (not sent directly : the caller posts the op like a full socket buffer)
+				if (this->is_io_completion() && this->_is_zerocopy_op(pbuffer_send->iov_len, this->m_queue_sending.array_node[this->m_index_sending].powner))
 				{
-					buffer_now.iov_base = static_cast<char*>(buffer_now.iov_base) + bytes_left;
-					buffer_now.iov_len -= bytes_left;
+					result = EPOLLOUT;
 					break;
 				}
 
-				// - 다 보냈다.
-				bytes_left -= buffer_now.iov_len;
+				// - a large buffer : MSG_ZEROCOPY (the io_uring backend)
+				int flags_send = MSG_DONTWAIT | MSG_NOSIGNAL | this->_zerocopy_send_flags(_handle_socket, pbuffer_send->iov_len, this->m_queue_sending.array_node[this->m_index_sending].powner);
 
-				const auto& node_now = this->m_queue_sending.array_node[this->m_index_sending];
-				_bytes_completed += node_now.bytes_data;
-				_count_completed += node_now.count_message;
+				bytes_result = this->_zerocopy_send(_handle_socket, pbuffer_send->iov_base, pbuffer_send->iov_len, flags_send);
+				is_zerocopy = (bytes_result > 0) && (flags_send & MSG_ZEROCOPY) != 0;
+			}
+			else
+			{
+				msg_send.msg_iov = pbuffer_send;
+				msg_send.msg_iovlen = count_buffer;
+
+				bytes_result = ::sendmsg(_handle_socket, &msg_send, MSG_DONTWAIT | MSG_NOSIGNAL);
 			}
 
-			// - 남은 bytes
-			this->m_queue_sending.bytes_data -= static_cast<std::size_t>(bytes_result);
+			// 3) the part sent
+			if (bytes_result > 0)
+			{
+				// - zerocopy : the part sent is held until the kernel notifies
+				if (is_zerocopy)
+					this->_zerocopy_hold(buffer_view{ static_cast<char*>(pbuffer_send->iov_base), static_cast<std::size_t>(bytes_result) }, object_ptr<Ireferenceable>(this->m_queue_sending.array_node[this->m_index_sending].powner));
 
-			// continue) 보내려던 것을 다 보냈으면 이어서 보낸다.
-			if(this->m_index_sending == index_end)
-				continue;
+				// declare)
+				auto bytes_left = static_cast<std::size_t>(bytes_result);
 
-			// - 덜 보냈다 => socket 송신 버퍼가 찼다. EPOLLOUT을 기다린다.
-			result = EPOLLOUT;
-			break;
+				for (; this->m_index_sending < index_end; ++this->m_index_sending)
+				{
+					auto& buffer_now = this->m_queue_sending.array_buffer[this->m_index_sending];
+
+					// - 일부만 보냈다 => 남은 위치로 옮긴다.
+					if (bytes_left < buffer_now.iov_len)
+					{
+						buffer_now.iov_base = static_cast<char*>(buffer_now.iov_base) + bytes_left;
+						buffer_now.iov_len -= bytes_left;
+						break;
+					}
+
+					// - 다 보냈다.
+					bytes_left -= buffer_now.iov_len;
+
+					const auto& node_now = this->m_queue_sending.array_node[this->m_index_sending];
+					_bytes_completed += node_now.bytes_data;
+					_count_completed += node_now.count_message;
+				}
+
+				// - 남은 bytes
+				this->m_queue_sending.bytes_data -= static_cast<std::size_t>(bytes_result);
+
+				// continue) 보내려던 것을 다 보냈으면 이어서 보낸다.
+				if(this->m_index_sending == index_end)
+					continue;
+
+				// - 덜 보냈다 => socket 송신 버퍼가 찼다. EPOLLOUT을 기다린다.
+				result = EPOLLOUT;
+				break;
+			}
+
+			// get last error
+			error_code = api::get_last_error();
 		}
-
-		// get last error
-		const auto error_code = api::get_last_error();
 
 		// 4-1) EWOULDBLOCK => EPOLLOUT을 기다린다.
 		if (error_code == EWOULDBLOCK || error_code == EINPROGRESS)	// - EINPROGRESS : a TCP Fast Open connect (TCP_FASTOPEN_CONNECT) without a cookie. the SYN is sent, the data waits for EPOLLOUT
@@ -575,6 +630,19 @@ uint32_t net::io::sendable::Ntcp_async_gather::_process_send_queued(CGSOCKET _ha
 		break;
 	}
 
+	// check) 그 사이 닫혔다 => 남은 것은 버린다. (닫은 쪽이 접속 종료를 처리한다)
+	if (is_closed)
+	{
+		SCOPED_LOCK(this->m_lockable_sending)
+		{
+			this->_process_clear_send_buffers();
+			this->m_flag_sending = false;
+		}
+
+		// - set result
+		result = SEND_QUEUED_FAILED;
+	}
+
 	// 5) EPOLLOUT을 기다리며 남은 것을 남긴다. (중복 EPOLLOUT 판별, sending_queued_bytes_now() : queue 한도에는 세지 않는다)
 	if (result == EPOLLOUT)
 	{
@@ -593,16 +661,26 @@ uint32_t net::io::sendable::Ntcp_async_gather::_process_send_queued(CGSOCKET _ha
 
 	// - shutdown if send_disconnected (모두 보냈을 때)
 	if (is_shutdown)
-	{
-		// - set linger Option for graceful disconnect
-		api::socket::set_linger_option(native_handle(), 0);
-
-		// - send shutdown
-		api::socket::shutdown(native_handle(), SD_SEND);
-	}
+		this->_process_shutdown_send(_handle_socket);
 
 	// return)
 	return result;
+}
+
+void net::io::sendable::Ntcp_async_gather::_process_shutdown_send(CGSOCKET _handle_socket) noexcept
+{
+	// - m_lockable_send_call 안에서 handle을 확인한다. (그 사이 닫혔으면 하지 않는다 : 같은 번호로 다시 만들어진 handle일 수 있다)
+	SCOPED_LOCK(this->m_lockable_send_call)
+	{
+		// check)
+		RETURN_IF(_handle_socket == INVALID_SOCKET || this->native_handle() != _handle_socket);
+
+		// - set linger Option for graceful disconnect
+		api::socket::set_linger_option(_handle_socket, 0);
+
+		// - send shutdown
+		api::socket::shutdown(_handle_socket, SD_SEND);
+	}
 }
 
 uint32_t net::io::sendable::Ntcp_async_gather::process_recover_sendable( intptr_t /*_event*/, std::size_t /*_param*/)
@@ -764,19 +842,23 @@ void net::io::sendable::Ntcp_async_gather::_process_clear_send_buffers()
 
 	this->m_queue_pending.clear();
 
-	// - io_uring completion : a SEND op in flight uses m_queue_sending (its iovecs, its buffers) => moved to the executable till the op ends
-	if (this->m_count_sending_op != 0 && this->m_pexecutable_sending.exist())
+	// - m_queue_sending : under m_lockable_send_call (the sending thread sends and consumes it under the lock out of m_lockable_sending)
+	SCOPED_LOCK(this->m_lockable_send_call)
 	{
-		auto& queue_hold = this->m_pexecutable_sending->m_queue_hold;
+		// - io_uring completion : a SEND op in flight uses m_queue_sending (its iovecs, its buffers) => moved to the executable till the op ends
+		if (this->m_count_sending_op != 0 && this->m_pexecutable_sending.exist())
+		{
+			auto& queue_hold = this->m_pexecutable_sending->m_queue_hold;
 
-		if (queue_hold.array_node.empty())
-			queue_hold.swap(this->m_queue_sending);
-		else
-			try { queue_hold.array_node.insert(queue_hold.array_node.end(), std::make_move_iterator(this->m_queue_sending.array_node.begin()), std::make_move_iterator(this->m_queue_sending.array_node.end())); } catch (...) {}
+			if (queue_hold.array_node.empty())
+				queue_hold.swap(this->m_queue_sending);
+			else
+				try { queue_hold.array_node.insert(queue_hold.array_node.end(), std::make_move_iterator(this->m_queue_sending.array_node.begin()), std::make_move_iterator(this->m_queue_sending.array_node.end())); } catch (...) {}
+		}
+
+		this->m_queue_sending.clear();
+		this->m_index_sending = 0;
 	}
-
-	this->m_queue_sending.clear();
-	this->m_index_sending = 0;
 	this->m_count_sending_parked = 0;
 	this->m_bytes_sending_parked = 0;
 
@@ -801,14 +883,9 @@ void net::io::sendable::Ntcp_async_gather::process_close_sender()
 		do_shutdown = !this->m_flag_sending;
 	}
 
+	// - linger Option을 Graceful disconnect로 설정하고 접속을 종료한다.
 	if (do_shutdown)
-	{
-		// - linger Option을 Graceful disconnect로 설정한다.
-		api::socket::set_linger_option(native_handle(), 0);
-
-		// - 접속을 종료한다.
-		api::socket::shutdown(native_handle(), SD_SEND);
-	}
+		this->_process_shutdown_send(this->native_handle());
 }
 
 void net::io::sendable::Ntcp_async_gather::process_reset_sendable() noexcept

@@ -9,6 +9,9 @@
 static constexpr std::size_t CGDK_CQE_FLAG_MORE = 1u << 1;
 static constexpr std::size_t CGDK_CQE_FLAG_NOTIF = 1u << 3;
 
+// - the res of the notification CQE of a SEND_ZC with IORING_SEND_ZC_REPORT_USAGE (6.2+) : IORING_NOTIF_USAGE_ZC_COPIED, the kernel copied the data
+static constexpr uint32_t CGDK_NOTIF_USAGE_ZC_COPIED = 1u << 31;
+
 #if defined(IOV_MAX)
 	static constexpr std::size_t CGDK_SEND_OP_MAX_IOV = IOV_MAX;
 #else
@@ -48,9 +51,34 @@ intptr_t net::io::sendable::Ntcp_async_gather_buffered::executable_sending::proc
 	// check)
 	RETURN_IF(psendable == nullptr, 0);
 
+	// declare) the owner released out of the lock
+	object_ptr<Ireferenceable> powner_release;
+
 	// 2) the result CQE (not the notification of a zerocopy send)
 	if ((_param & CGDK_CQE_FLAG_NOTIF) == 0)
 	{
+		// - the entry of this op in m_owners_zerocopy (the last one : one op waits for its result at a time). no notification
+		//   follows (a SENDMSG, a SEND_ZC that ended without F_MORE) => removed now. a SEND_ZC with F_MORE keeps its owner till
+		//   its notification. before the completion below : it may post the next op (another entry)
+		//   a SEND_ZC that failed with F_MORE (-ENOBUFS / -ENOMEM : sent again as a copy) : its notification still comes, reported copied
+		//   (nothing was sent from the pages) => not counted (as copied : ZEROCOPY_COPIED_TO_STOP of them turned zerocopy off for good. as sent)
+		SCOPED_LOCK(psendable->m_lockable_sending)
+		{
+			if (this->m_owners_zerocopy.empty() == false)
+			{
+				if ((_param & CGDK_CQE_FLAG_MORE) == 0)
+				{
+					powner_release = std::move(this->m_owners_zerocopy.back().powner);
+					this->m_owners_zerocopy.pop_back();
+				}
+				else if (_result < 0 && this->m_owners_zerocopy.back().is_failed == false)
+				{
+					this->m_owners_zerocopy.back().is_failed = true;
+					psendable->m_zerocopy_count_sent.fetch_sub(1, std::memory_order_relaxed);
+				}
+			}
+		}
+
 		if (psendable->_process_complete_send_op(_result))
 			this->m_is_reposted = true;
 
@@ -59,22 +87,36 @@ intptr_t net::io::sendable::Ntcp_async_gather_buffered::executable_sending::proc
 	}
 
 	// 3) the final CQE of the op : the kernel is done with the buffers
-	//    - the owner of the zerocopy buffer (the notifications come in the order of the sends)
+	//    - the notification : the owner of the oldest zerocopy buffer (the notifications come in the order of the sends. only the
+	//      SEND_ZC ops that ended with F_MORE are left in m_owners_zerocopy)
 	//    - the nodes of a socket reset while the op was in flight (when no op is in flight any more : a repost shares the executable)
 	container_t<QUEUE_SEND::NODE> queue_release;
 	const bool is_reposted = this->m_is_reposted;
 	this->m_is_reposted = false;
 
-	if (this->m_owners_zerocopy.empty() == false)
-		this->m_owners_zerocopy.erase(this->m_owners_zerocopy.begin());
+	bool is_failed = false;
 
 	SCOPED_LOCK(psendable->m_lockable_sending)
 	{
+		if ((_param & CGDK_CQE_FLAG_NOTIF) != 0 && this->m_owners_zerocopy.empty() == false)
+		{
+			is_failed = this->m_owners_zerocopy.front().is_failed;
+			powner_release = std::move(this->m_owners_zerocopy.front().powner);
+			this->m_owners_zerocopy.erase(this->m_owners_zerocopy.begin());
+		}
+
 		if (--psendable->m_count_sending_op == 0)
 			queue_release.swap(this->m_queue_hold);
 	}
 
 	queue_release.clear();
+	powner_release.reset();
+
+	// - the notification of a zerocopy send : copied by the kernel (a peer on this host : loopback, an address of this host, a local container.
+	//   a NIC without scatter-gather) zerocopy only adds the pinning and the notification. copied in a row, it stops on this socket till it is reset.
+	//   the notification of a SEND_ZC that failed (is_failed) : not counted
+	if ((_param & CGDK_CQE_FLAG_NOTIF) != 0 && is_failed == false)
+		psendable->_zerocopy_on_notified(1, (static_cast<uint32_t>(_result) & CGDK_NOTIF_USAGE_ZC_COPIED) != 0);
 
 	// statistics) the wait for the socket buffer is over (counted once per wait : a repost continues it)
 	if (is_reposted == false)
@@ -91,7 +133,7 @@ intptr_t net::io::sendable::Ntcp_async_gather_buffered::executable_sending::proc
 bool net::io::sendable::Ntcp_async_gather_buffered::_is_zerocopy_op(std::size_t _bytes, const object_ptr<Ireferenceable>& _powner) const noexcept
 {
 	// - a large buffer with an owner that keeps it alive, TCP over IP only (a UDS does not support it), not paused by an ENOBUFS
-	RETURN_IF(_bytes < s_zerocopy_threshold.load(std::memory_order_relaxed) || _powner.empty() || s_enable_zerocopy.load(std::memory_order_relaxed) == false || this->_is_zerocopy_paused(), false);
+	RETURN_IF(_bytes < s_zerocopy_threshold.load(std::memory_order_relaxed) || _powner.empty() || s_enable_zerocopy.load(std::memory_order_relaxed) == false || this->_is_zerocopy_paused() || this->is_zerocopy_copied(), false);
 
 	return this->address_family() == AF_INET || this->address_family() == AF_INET6;
 }
@@ -191,29 +233,29 @@ bool net::io::sendable::Ntcp_async_gather_buffered::_process_post_send_op() noex
 	this->m_count_io_inflight.fetch_add(1, std::memory_order_acq_rel);
 	++this->m_count_sending_op;
 
+	//    - an entry per op in m_owners_zerocopy (the owner of a SEND_ZC, empty for a SENDMSG) : the result CQE without F_MORE removes
+	//      it, a SEND_ZC with F_MORE keeps it till its notification (a repost of the same executable may complete before that)
+	try
+	{
+		pexecutable->m_owners_zerocopy.push_back(executable_sending::ZEROCOPY_OP{ is_zerocopy ? node_first.powner : object_ptr<Ireferenceable>(), false });
+	}
+	catch (...)
+	{
+		--this->m_count_sending_op;
+		this->m_count_io_inflight.fetch_sub(1, std::memory_order_acq_rel);
+		this->release();
+		this->_process_clear_send_buffers();
+		return false;
+	}
+
 	bool result;
 
 	if (is_zerocopy)
 	{
-		try
-		{
-			pexecutable->m_owners_zerocopy.push_back(node_first.powner);
-		}
-		catch (...)
-		{
-			--this->m_count_sending_op;
-			this->m_count_io_inflight.fetch_sub(1, std::memory_order_acq_rel);
-			this->release();
-			this->_process_clear_send_buffers();
-			return false;
-		}
-
 		result = pio_context->submit_send(static_cast<CGHANDLE>(handle_socket), pexecutable->m_iovec[0].iov_base, pexecutable->m_iovec[0].iov_len, MSG_NOSIGNAL, pexecutable, true);
 
 		if (result)
 			this->m_zerocopy_count_sent.fetch_add(1, std::memory_order_relaxed);
-		else
-			pexecutable->m_owners_zerocopy.pop_back();
 	}
 	else
 	{
@@ -227,6 +269,7 @@ bool net::io::sendable::Ntcp_async_gather_buffered::_process_post_send_op() noex
 	// check) the submit failed => the socket is closed (by a post : process_close_socket() takes the sending lock held here)
 	if (result == false)
 	{
+		pexecutable->m_owners_zerocopy.pop_back();
 		--this->m_count_sending_op;
 		this->m_count_io_inflight.fetch_sub(1, std::memory_order_acq_rel);
 		this->release();
@@ -292,7 +335,9 @@ bool net::io::sendable::Ntcp_async_gather_buffered::_process_complete_send_op(in
 
 		//    -ENOBUFS of a SEND_ZC op (the pages could not be pinned : RLIMIT_MEMLOCK of the user ...) : zerocopy pauses and the same
 		//    buffers go again as a SENDMSG (copied). an ENOBUFS while paused (a SENDMSG) is a failure
-		if (_result == -ENOBUFS && this->_is_zerocopy_paused() == false)
+		//    -ENOMEM the same : io_uring charges the pinned pages of a SEND_ZC to RLIMIT_MEMLOCK itself (__io_account_mem) and fails
+		//    the op with -ENOMEM when it runs out (the MSG_ZEROCOPY of a socket : -ENOBUFS). closed before (errno 12)
+		if ((_result == -ENOBUFS || _result == -ENOMEM) && this->_is_zerocopy_paused() == false)
 		{
 			this->_zerocopy_pause();
 			return this->_process_post_send_op();

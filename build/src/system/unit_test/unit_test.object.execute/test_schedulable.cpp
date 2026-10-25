@@ -294,4 +294,47 @@ namespace CGDK
 		EXPECT_GE(count_after, 5);
 		EXPECT_EQ(count.load(), count_after);
 	}
+
+	// 12) an interval of (max)() : never executed (now() + interval wrapped to a time in the past : executed at once, again and again)
+	TEST(CGDK10_schedulable, schedulable_interval_max_never)
+	{
+		// - registered with the interval
+		auto p = make_object<schedulable_counter>();
+		p->execute_interval((chrono::tick::duration::max)());
+		ASSERT_TRUE(system_executor::register_schedulable(p));
+		api::sleep_for(100ms);
+		EXPECT_EQ(p->count.load(), 0);
+
+		// - the interval set while registered
+		auto p_2 = make_object<schedulable_counter>();
+		p_2->execute_interval(1h);
+		ASSERT_TRUE(system_executor::register_schedulable(p_2));
+		p_2->execute_interval((chrono::tick::duration::max)());
+		api::sleep_for(100ms);
+		EXPECT_EQ(p_2->count.load(), 0);
+
+		EXPECT_TRUE(system_executor::unregister_schedulable(p));
+		EXPECT_TRUE(system_executor::unregister_schedulable(p_2));
+	}
+
+	// 13) schedulable_manager() read while other threads register / unregister the schedulable (it was read without a lock)
+	TEST(CGDK10_schedulable, schedulable_manager_read_while_registering)
+	{
+		auto p = make_object<schedulable_counter>();
+		p->execute_interval(1h);
+
+		std::atomic<bool> is_running{ true };
+		std::atomic<int> count_read{ 0 };
+		std::thread thread_read([&] { while (is_running) { if (p->schedulable_manager().exist()) ++count_read; } });
+
+		for (int i = 0; i < 2000; ++i)
+		{
+			ASSERT_TRUE(system_executor::register_schedulable(p));
+			ASSERT_TRUE(system_executor::unregister_schedulable(p));
+		}
+
+		is_running = false;
+		thread_read.join();
+		EXPECT_TRUE(p->schedulable_manager().empty());
+	}
 }

@@ -124,7 +124,7 @@ private:
 
  the io_context of linux : epoll (io_context_epoll_direct), io_uring (io_context_uring : readiness) or io_uring_completion
  (io_context_uring_cq : a ring per worker thread, the op API), chosen at create() by executor::default_io_backend()
- (set_default_io_backend(), env CGDK_IO_URING=1 / completion). a backend that is not available falls back to epoll.
+ (set_default_io_backend(), env CGDK_IO_URING=1 / completion / 0. the default : io_uring_completion). a backend that is not available falls back to epoll.
 
   - pop_results() : the backend neutral pop of the executor (the executable add_ref'd, its result and param).
     epoll / io_uring : pop_events() + get_result(). io_uring_completion : the ring of the worker thread.
@@ -186,6 +186,7 @@ public:
 			bool				return_buffer(size_t _param) noexcept { return (m_pcq) ? m_pcq->return_buffer(_param) : false; }
 	[[nodiscard]] size_t		provided_buffer_size() const noexcept { return (m_pcq) ? m_pcq->provided_buffer_size() : 0; }
 	[[nodiscard]] bool			is_ring_owner(CGHANDLE _fd) const noexcept { return (m_pcq) ? m_pcq->is_ring_owner(_fd) : false; }
+			bool				submit_staged(CGHANDLE _fd) noexcept { return (m_pcq) ? m_pcq->submit_staged(_fd) : false; }
 			bool				submit_cancel(Iexecutable* _pexecutable) noexcept { return (m_pcq) ? m_pcq->submit_cancel(_pexecutable) : false; }
 			bool				submit_cancel_fd(CGHANDLE _fd) noexcept { return (m_pcq) ? m_pcq->submit_cancel_fd(_fd) : false; }
 			bool				wait_cancelled_fd(CGHANDLE _fd, chrono::tick::duration _ticks_wait, bool _is_wait_delivery = true) noexcept { return (m_pcq) ? m_pcq->wait_cancelled_fd(_fd, _ticks_wait, _is_wait_delivery) : false; }

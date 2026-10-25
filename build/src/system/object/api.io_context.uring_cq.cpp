@@ -91,6 +91,8 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
+#include <sys/utsname.h>
+#include <cstdio>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <poll.h>
@@ -138,6 +140,7 @@ namespace
 	constexpr unsigned	PROBE_OP_SUPPORTED = 1u << 0;
 	constexpr uint8_t	SQE_FLAG_BUFFER_SELECT = 1u << 5;	// - IOSQE_BUFFER_SELECT
 	constexpr uint16_t	RECV_FLAG_MULTISHOT = 1u << 1;		// - IORING_RECV_MULTISHOT (the ioprio of a RECV, 6.0+)
+	constexpr uint16_t	SEND_ZC_FLAG_REPORT_USAGE = 1u << 3;	// - IORING_SEND_ZC_REPORT_USAGE (the ioprio of a SEND_ZC, 6.2+) : the notification CQE has IORING_NOTIF_USAGE_ZC_COPIED (bit 31 of its res) when the kernel copied the data
 	constexpr unsigned	CQE_FLAG_BUFFER = 1u << 0;			// - IORING_CQE_F_BUFFER : the buffer id in the upper 16 bits of the flags
 	constexpr unsigned	CQE_BUFFER_SHIFT = 16;
 	constexpr unsigned	REGISTER_PBUF_RING = 22;			// - IORING_REGISTER_PBUF_RING (5.19+)
@@ -156,6 +159,7 @@ namespace
 	constexpr uint8_t	OP_CANCELLED = 2;					// - cancelled while staged : delivered with -ECANCELED by the owner of the ring (RING::synthetic)
 	constexpr std::size_t MAX_POST_BATCH = 16;
 	constexpr std::size_t MAX_POOL_OP = 4096;
+	constexpr std::size_t MAX_RING_OP_FREE = 1024;		// - the free OP records kept by a ring (RING::ops_free : no lock of their own, the SQ lock of the op)
 
 	// - user_data
 	constexpr uint64_t	TAG_IGNORE = 0x80000000ull;			// - bit 31 of a poll user_data : a cancel / an update of a poll (dropped)
@@ -215,6 +219,11 @@ namespace
 	constexpr auto		BUSY_WATCH = std::chrono::milliseconds(10);
 	constexpr unsigned	BUSY_CHECK_POPS = 32;				// - a worker looks at the time (_check_busy) every this many pops (a batch takes ~10us : < BUSY_CHECK)
 	thread_local unsigned t_count_pop_busy = 0;
+
+	// - the adoptions of staged ops (_adopt_staged : the staged SQEs of a ring moved to another, counted under the locks of both). a cancel
+	//   that scans the rings one at a time scans again when it changed meanwhile (an op moved from a ring not scanned yet to one scanned
+	//   already was missed : submitted later against the closed fd number, reused by another socket). every io_context : rare
+	std::atomic<uint64_t> s_count_adopt{ 0 };
 
 	// - the batch word of a ring (RING::batch_word) : seq (bits 32~61) | end (16~31) | index (0~15)
 	constexpr uint64_t	BATCH_LENT = 1ull << 63;			// - the rest was taken by the worker that lent the ring (_lend_busy)
@@ -364,6 +373,24 @@ namespace
 	constexpr unsigned	HANDLE_CHUNK = 1u << HANDLE_CHUNK_SHIFT;
 	constexpr unsigned	HANDLE_CHUNK_COUNT = MAX_HANDLE >> HANDLE_CHUNK_SHIFT;
 	static_assert((MAX_HANDLE & (HANDLE_CHUNK - 1)) == 0);
+
+	// - the ioprio of a zerocopy send : IORING_SEND_ZC_REPORT_USAGE on 6.2+ (an older kernel fails the op with -EINVAL). the socket stops zerocopy when
+	//   the kernel reports a copy (a peer on this host : loopback, an address of this host, a local container. a NIC without scatter-gather)
+	uint16_t _zerocopy_send_ioprio() noexcept
+	{
+		static const uint16_t s_ioprio = []()
+		{
+			utsname name{};
+			int major = 0, minor = 0;
+
+			if (::uname(&name) != 0 || std::sscanf(name.release, "%d.%d", &major, &minor) != 2)
+				return static_cast<uint16_t>(0);
+
+			return (major > 6 || (major == 6 && minor >= 2)) ? SEND_ZC_FLAG_REPORT_USAGE : static_cast<uint16_t>(0);
+		}();
+
+		return s_ioprio;
+	}
 }
 
 api::io_context_uring_cq::HANDLE_ENTRY* api::io_context_uring_cq::_find_entry(CGHANDLE _handle) const noexcept
@@ -445,9 +472,17 @@ struct api::io_context_uring_cq::RING
 	std::size_t			size_cq = 0;
 	std::size_t			size_sqes = 0;
 
-	std::mutex			lockable_sq;
-	std::atomic<int>	state{ 0 };						// - STATE_ORPHAN (no owner : drained by the workers), STATE_OWNED (a worker is bound), STATE_DRAINING (a worker drains it)
+	// - read by every worker (_drain_orphans at each pop, the round robins, the post wakes), written rarely : a cache line of its own (it
+	//   shared one with lockable_sq, locked by the owner at every pop and by every thread staging on the ring)
+	alignas(64) std::atomic<int> state{ 0 };			// - STATE_ORPHAN (no owner : drained by the workers), STATE_OWNED (a worker is bound), STATE_DRAINING (a worker drains it)
+
+	// - the RING_GUARDs of the owner thread (a guard per pop, flush, op and buffer given back : not on the shared m_count_users. destroy()
+	//   adds them up)
+	alignas(64) std::atomic<int> count_users{ 0 };
+
+	alignas(64) std::mutex lockable_sq;
 	std::vector<OP*>	ops;							// - the ops not delivered yet : staged, in the kernel or cancelled while staged (under lockable_sq)
+	std::vector<OP*>	ops_free;						// - the OP records of this ring free for the next op (under lockable_sq : taken when an op is staged, given back by its final completion. m_pool_op past MAX_RING_OP_FREE)
 
 	// - the SQEs staged for the owner (a poll, an op : written by any thread under lockable_sq, moved into the SQ and submitted by
 	//   the owner with the enter of its next pop_results(). a ring without an owner : moved to the ring of the worker that drains it)
@@ -459,11 +494,11 @@ struct api::io_context_uring_cq::RING
 	std::vector<STAGED>	staged;
 	std::vector<OP*>	synthetic;						// - the ops cancelled while staged (OP_CANCELLED, still in ops) : delivered with -ECANCELED by the owner
 	std::atomic<bool>	is_wake_pending{ false };		// - a wake for the staged SQEs was written and the owner did not flush them yet (one wake till then)
-	std::atomic<bool>	is_waiting{ false };			// - the owner waits in the kernel for a completion (idle : a wake of the post queue is taken at once)
 	std::atomic<unsigned> index_bind_next{ 0 };			// - the round robin of the sockets accepted by the accept ops of this ring (_bind_round_robin)
 	std::atomic<unsigned> index_bind_connect{ 1 };		// - ring 0 : the round robin of the connecting sockets of the io_context (submit_connect). from 1 : see submit_connect
 	int					wake_fd = -1;					// - the wake eventfd : the other threads write it, the owner polls it (multishot : a CQE per write)
 	uint16_t			wake_generation = 0;			// - the generation of the poll of wake_fd armed last (under lockable_sq : an ended poll of an older owner is not armed again)
+	bool				is_wake_poll_lost = false;		// - the poll of wake_fd ended and was not armed again (under lockable_sq : its CQE taken by a worker draining the lent ring, or no SQE) : armed by the next pop_results() of the owner
 
 	// - lent (the owner blocks : thread_blocked). under lockable_lend (the state LENT <-> DRAINING_LENT / OWNED changes under it too)
 	std::mutex			lockable_lend;
@@ -474,6 +509,8 @@ struct api::io_context_uring_cq::RING
 
 	// - busy (the owner runs one executable long : CPU in user space). the outermost batch of the owner is published here (batch_begin /
 	//   batch_next : the owner only, the cut of _lend_busy by a CAS). a worker seeing the same executable running BUSY_LEND lends the ring
+	//   (with is_waiting : written by the owner at every result / wait, read by the other threads : a cache line apart from state)
+	alignas(64) std::atomic<bool> is_waiting{ false };	// - the owner waits in the kernel for a completion (idle : a wake of the post queue is taken at once)
 	std::atomic<uint64_t> batch_word{ 0 };				// - seq | end | index of the batch (end == index : none) | BATCH_LENT | BATCH_NESTED
 	std::atomic<const POP_RESULT*> batch_results{ nullptr };
 	uint32_t			batch_seq = 0;					// - the batches of the owner (a word seen twice is the same executable running)
@@ -483,7 +520,7 @@ struct api::io_context_uring_cq::RING
 
 	// - the provided buffer ring (submit_recv_multishot : registered at the first one on this ring, _prepare_pbuf()). the kernel takes
 	//   the buffers at the head, the buffers given back are written at the tail under lockable_pbuf by any thread (return_buffer)
-	std::mutex			lockable_pbuf;
+	alignas(64) std::mutex lockable_pbuf;
 	std::atomic<int>	pbuf_state{ 0 };				// - 0 : none, 1 : registered, -1 : the registration failed (not tried again : submit_recv_multishot() returns false)
 	PBUF_ENTRY*			pbuf_ring = nullptr;
 	std::size_t			size_pbuf_ring = 0;
@@ -493,8 +530,42 @@ struct api::io_context_uring_cq::RING
 	std::unique_ptr<std::atomic<uint8_t>[]> pbuf_out;	// - the buffer is out (its CQE taken, not given back yet) : a buffer given back twice is ignored
 	std::atomic<int>	pbuf_count_out{ 0 };
 
+	~RING() noexcept
+	{
+		for (auto* pop : ops_free)
+			delete pop;
+	}
+
 	// - the SQEs written but not submitted (the kernel consumes sq_head on io_uring_enter)
 	[[nodiscard]] unsigned pending() const noexcept { return sq_tail_local - __atomic_load_n(sq_head, __ATOMIC_ACQUIRE); }
+
+	// - a free OP record of this ring (under lockable_sq). nullptr : none (the caller takes one of the pool)
+	OP* take_free_op() noexcept
+	{
+		RETURN_IF(ops_free.empty(), nullptr);
+
+		auto* pop = ops_free.back();
+		ops_free.pop_back();
+
+		return pop;
+	}
+
+	// - an OP record given back to this ring (under lockable_sq). false : the list is full or no memory (the caller gives it to the pool)
+	bool give_free_op(OP* _pop) noexcept
+	{
+		RETURN_IF(ops_free.size() >= MAX_RING_OP_FREE, false);
+
+		try
+		{
+			ops_free.push_back(_pop);
+		}
+		catch (...)
+		{
+			return false;
+		}
+
+		return true;
+	}
 
 	// - a staged SQE (under lockable_sq). nullptr : no memory. the pointer is valid till the next stage()
 	io_uring_sqe* stage(OP* _pop) noexcept
@@ -524,7 +595,8 @@ struct api::io_context_uring_cq::RING
 
 		for (; count_flushed < staged.size(); ++count_flushed)
 		{
-			io_uring_sqe* psqe = alloc_sqe();
+			// - not zeroed : the staged SQE is copied over it whole
+			io_uring_sqe* psqe = alloc_sqe(false);
 
 			BREAK_IF(psqe == nullptr);
 
@@ -539,8 +611,8 @@ struct api::io_context_uring_cq::RING
 		staged.erase(staged.begin(), staged.begin() + static_cast<std::ptrdiff_t>(count_flushed));
 	}
 
-	// - the next SQE (under lockable_sq). nullptr : the SQ is full (after a submit)
-	io_uring_sqe* alloc_sqe() noexcept
+	// - the next SQE (under lockable_sq), zeroed unless _is_zero is false. nullptr : the SQ is full (after a submit)
+	io_uring_sqe* alloc_sqe(bool _is_zero = true) noexcept
 	{
 		if (pending() >= sq_entries)
 		{
@@ -553,7 +625,9 @@ struct api::io_context_uring_cq::RING
 		const unsigned index_sqe = sq_tail_local & sq_mask;
 		io_uring_sqe* psqe = &sqes[index_sqe];
 
-		std::memset(psqe, 0, sizeof(*psqe));
+		if (_is_zero)
+			std::memset(psqe, 0, sizeof(*psqe));
+
 		sq_array[index_sqe] = index_sqe;
 		++sq_tail_local;
 
@@ -856,18 +930,25 @@ struct api::io_context_uring_cq::RING
 struct api::io_context_uring_cq::RING_GUARD
 {
 	api::io_context_uring_cq&	self;
+	std::atomic<int>*		pcount;
 	bool					is_valid;
 
-	explicit RING_GUARD(api::io_context_uring_cq& _self) noexcept : self(_self), is_valid(false)
+	explicit RING_GUARD(api::io_context_uring_cq& _self) noexcept : self(_self), pcount(nullptr), is_valid(false)
 	{
-		self.m_count_users.fetch_add(1, std::memory_order_acq_rel);
+		// - a worker counts on its own ring (RING::count_users : every worker on m_count_users made its line bounce at every pop, op and
+		//   buffer given back), a thread without a ring on m_count_users. the same counter till the end of the guard (bind_worker() binds
+		//   inside one). seq_cst : the count before the read of the handle, destroy() invalidates the handle before it reads the counts
+		auto* pring = self._find_worker_ring();
+
+		pcount = (pring != nullptr) ? &pring->count_users : &self.m_count_users;
+		pcount->fetch_add(1, std::memory_order_seq_cst);
 
 		// - the rings are usable only while the handle is valid (destroy() invalidates it first)
-		is_valid = (self.m_handle_epoll != INVALID_CGHANDLE_VALUE);
+		is_valid = (self.m_handle_epoll.load(std::memory_order_seq_cst) != INVALID_CGHANDLE_VALUE);
 	}
 	~RING_GUARD() noexcept
 	{
-		self.m_count_users.fetch_sub(1, std::memory_order_acq_rel);
+		pcount->fetch_sub(1, std::memory_order_acq_rel);
 	}
 	RING_GUARD(const RING_GUARD&) = delete;
 	RING_GUARD& operator=(const RING_GUARD&) = delete;
@@ -1039,7 +1120,14 @@ result_code api::io_context_uring_cq::destroy() noexcept
 		for (unsigned i = 0; i < count_rings; ++i)
 			this->_send_wake(this->m_rings[i].get());
 
-		if (this->m_count_users.load(std::memory_order_acquire) == 0)
+		// - the guards of the threads without a ring and of the owners (RING::count_users. a ring created meanwhile : counted too)
+		int count_users = this->m_count_users.load(std::memory_order_seq_cst);
+		const unsigned count_rings_now = this->m_count_rings.load(std::memory_order_acquire);
+
+		for (unsigned i = 0; i < count_rings_now; ++i)
+			count_users += this->m_rings[i]->count_users.load(std::memory_order_seq_cst);
+
+		if (count_users == 0)
 			break;
 
 		std::this_thread::yield();
@@ -1282,7 +1370,12 @@ api::io_context_uring_cq::RING* api::io_context_uring_cq::_ring_of_handle(CGHAND
 
 			_pring_before = pring;
 
-			if (pring == pring_own || pring->state.load(std::memory_order_acquire) == STATE_OWNED)
+			// - an owner (OWNED, or LENT / DRAINING_LENT : its owner blocks or runs long for a moment. the ops staged on it meanwhile are
+			//   adopted and submitted by the worker that drains it) : stays. moved, the handle stayed on the ring of the submitter for good
+			//   (the round robin of the accepts and the connects undone, the ops of one socket on two rings)
+			const int state = pring->state.load(std::memory_order_acquire);
+
+			if (pring == pring_own || (state != STATE_ORPHAN && state != STATE_DRAINING))
 				return pring;
 
 			// - orphan : moved to the ring of this worker, or (a thread without a ring) to an owned ring (none owned : stays)
@@ -1403,7 +1496,7 @@ void api::io_context_uring_cq::bind_worker(bool _is_transient) noexcept
 	//    cancelled when that thread exited, its CQE does not arm it again : an older generation)
 	{
 		std::lock_guard lock(pring->lockable_sq);
-		pring->write_wake_poll();
+		pring->is_wake_poll_lost = (pring->write_wake_poll() == false);
 	}
 
 	// 3) the posts queued : this ring takes a part (the wake is found by its first pop_results()). also when the queue is signaled
@@ -1607,11 +1700,16 @@ bool api::io_context_uring_cq::_cancel_staged(RING* _pring, TMATCH&& _match) noe
 void api::io_context_uring_cq::_complete_op_final(OP* _pop) noexcept
 {
 	// - the final completion of an op (its last CQE, or its synthetic -ECANCELED) : out of the ops of its ring, the in-flight count
-	//   of its fd, the record freed. the executable is released by the caller (the executor after the delivery)
+	//   of its fd, the record freed (to the free list of its ring under the same lock : the pool lock was taken twice per op). the
+	//   executable is released by the caller (the executor after the delivery)
+	const CGHANDLE fd = _pop->fd;
+	bool is_kept;
+
 	{
 		std::lock_guard lock(_pop->pring->lockable_sq);
 
-		auto& ops = _pop->pring->ops;
+		auto* pring = _pop->pring;
+		auto& ops = pring->ops;
 
 		if (_pop->index < ops.size() && ops[_pop->index] == _pop)
 		{
@@ -1619,12 +1717,15 @@ void api::io_context_uring_cq::_complete_op_final(OP* _pop) noexcept
 			ops[_pop->index]->index = _pop->index;
 			ops.pop_back();
 		}
+
+		is_kept = pring->give_free_op(_pop);
 	}
 
-	if (auto* pentry = this->_find_entry(_pop->fd); pentry != nullptr)
-		pentry->inflight.fetch_sub(1, std::memory_order_acq_rel);
+	if (is_kept == false)
+		this->_free_op(_pop);
 
-	this->_free_op(_pop);
+	if (auto* pentry = this->_find_entry(fd); pentry != nullptr)
+		pentry->inflight.fetch_sub(1, std::memory_order_acq_rel);
 }
 
 void api::io_context_uring_cq::_adopt_staged(RING* _pring_from, RING* _pring_to) noexcept
@@ -1678,6 +1779,9 @@ void api::io_context_uring_cq::_adopt_staged(RING* _pring_from, RING* _pring_to)
 
 	_pring_from->staged.clear();
 	_pring_from->synthetic.clear();
+
+	// - a cancel scanning the rings meanwhile scans again (s_count_adopt)
+	s_count_adopt.fetch_add(1, std::memory_order_acq_rel);
 }
 
 void api::io_context_uring_cq::_deliver_synthetic(RING* _pring, POP_RESULT* _results, int& _count, int _max) noexcept
@@ -2078,12 +2182,7 @@ bool api::io_context_uring_cq::_submit_op_ex(CGHANDLE _fd, Iexecutable* _pexecut
 
 	RETURN_IF(pentry == nullptr, false);
 
-	// 1) the OP
-	OP* pop = this->_alloc_op();
-
-	RETURN_IF(pop == nullptr, false);
-
-	// 2) the ring of the fd
+	// 1) the ring of the fd
 	RING* pring;
 	{
 		std::lock_guard lock_handle(this->m_lockable_handle[static_cast<unsigned>(_fd) % HANDLE_STRIPES]);
@@ -2092,21 +2191,27 @@ bool api::io_context_uring_cq::_submit_op_ex(CGHANDLE _fd, Iexecutable* _pexecut
 		pring = this->_ring_of_handle(_fd, pring_before);
 	}
 
-	if (pring == nullptr || _prepare(pring) == false)
-	{
-		this->_free_op(pop);
-		return false;
-	}
+	RETURN_IF(pring == nullptr || _prepare(pring) == false, false);
 
-	pop->pexecutable = _pexecutable;
-	pop->fd = _fd;
-	pop->pring = pring;
-	pop->state = OP_STAGED;
-
-	// 3) the SQE : staged for the owner of the ring (an op belongs to the thread that submits it : a short lived thread must not).
-	//    the submit takes one reference : released by the executor after the delivery of the final CQE
+	// 2) the OP (a free one of the ring, taken under the SQ lock of the staging. none : the pool) and the SQE : staged for the owner of
+	//    the ring (an op belongs to the thread that submits it : a short lived thread must not). the submit takes one reference : released
+	//    by the executor after the delivery of the final CQE
 	{
 		std::lock_guard lock(pring->lockable_sq);
+
+		OP* pop = pring->take_free_op();
+
+		if (pop == nullptr)
+		{
+			pop = this->_alloc_op();
+
+			RETURN_IF(pop == nullptr, false);
+		}
+
+		pop->pexecutable = _pexecutable;
+		pop->fd = _fd;
+		pop->pring = pring;
+		pop->state = OP_STAGED;
 
 		try
 		{
@@ -2115,7 +2220,9 @@ bool api::io_context_uring_cq::_submit_op_ex(CGHANDLE _fd, Iexecutable* _pexecut
 		}
 		catch (...)
 		{
-			this->_free_op(pop);
+			if (pring->give_free_op(pop) == false)
+				this->_free_op(pop);
+
 			return false;
 		}
 
@@ -2124,7 +2231,10 @@ bool api::io_context_uring_cq::_submit_op_ex(CGHANDLE _fd, Iexecutable* _pexecut
 		if (psqe == nullptr)
 		{
 			pring->ops.pop_back();
-			this->_free_op(pop);
+
+			if (pring->give_free_op(pop) == false)
+				this->_free_op(pop);
+
 			return false;
 		}
 
@@ -2137,7 +2247,7 @@ bool api::io_context_uring_cq::_submit_op_ex(CGHANDLE _fd, Iexecutable* _pexecut
 		pentry->inflight.fetch_add(1, std::memory_order_acq_rel);
 	}
 
-	// 4) the owner submits it (the owner itself : with the enter of its next pop_results())
+	// 3) the owner submits it (the owner itself : with the enter of its next pop_results())
 	this->_wake_staged(pring);
 
 	return true;
@@ -2259,6 +2369,31 @@ bool api::io_context_uring_cq::is_ring_owner(CGHANDLE _fd) const noexcept
 	return pentry != nullptr && pentry->binding.load(std::memory_order_acquire) == static_cast<uint16_t>(pring->index + 1);
 }
 
+bool api::io_context_uring_cq::submit_staged(CGHANDLE _fd) noexcept
+{
+	// - the owner of the ring of the fd : the SQEs staged on it go into the SQ and are submitted now (what its next pop_results() does
+	//   first, without the wait). the ops of the fd staged by the owner (the sends of the ring owner as ops) are in the kernel when it
+	//   returns : a SEND on a writable socket is issued inline by the submit (its bytes are in the socket buffer, the shutdown of a
+	//   graceful close after it goes behind them). another thread, a lent ring (its borrower enters it) : nothing (false)
+	RING_GUARD guard(*this);
+
+	RETURN_IF(guard.is_valid == false || this->is_ring_owner(_fd) == false, false);
+
+	auto* pring = this->_find_worker_ring();
+
+	std::lock_guard lock(pring->lockable_sq);
+
+	RETURN_IF(pring->state.load(std::memory_order_acquire) != STATE_OWNED, false);
+	RETURN_IF(std::none_of(pring->staged.begin(), pring->staged.end(), [_fd](const auto& _entry) { return _entry.pop != nullptr && _entry.pop->fd == _fd; }), false);
+
+	pring->flush_staged();
+
+	if (pring->publish() != 0)
+		static_cast<void>(pring->submit());
+
+	return true;
+}
+
 size_t api::io_context_uring_cq::provided_buffer_out_count() const noexcept
 {
 	std::size_t count = 0;
@@ -2289,6 +2424,7 @@ bool api::io_context_uring_cq::submit_send(CGHANDLE _fd, const void* _buf, size_
 			_psqe->addr = reinterpret_cast<uint64_t>(_buf);
 			_psqe->len = static_cast<uint32_t>(_len);
 			_psqe->msg_flags = static_cast<uint32_t>(_msg_flags);
+			_psqe->ioprio = _zerocopy ? _zerocopy_send_ioprio() : static_cast<uint16_t>(0);
 		});
 }
 
@@ -2300,6 +2436,7 @@ bool api::io_context_uring_cq::submit_sendmsg(CGHANDLE _fd, const msghdr* _msg, 
 			_psqe->addr = reinterpret_cast<uint64_t>(_msg);
 			_psqe->len = 1;
 			_psqe->msg_flags = static_cast<uint32_t>(_msg_flags);
+			_psqe->ioprio = _zerocopy ? _zerocopy_send_ioprio() : static_cast<uint16_t>(0);
 		});
 }
 
@@ -2365,6 +2502,12 @@ bool api::io_context_uring_cq::submit_cancel_fd(CGHANDLE _fd) noexcept
 
 	RETURN_IF(guard.is_valid == false || _fd < 0, false);
 
+	// - no op of the fd (staged, in the kernel or not delivered yet : the in-flight count of its entry) : the rings are not scanned (every
+	//   close comes here)
+	const auto* pentry = this->_find_entry(_fd);
+
+	RETURN_IF(pentry == nullptr || pentry->inflight.load(std::memory_order_acquire) == 0, false);
+
 	return this->_cancel_ops([&](OP* _pop) { return _pop->fd == _fd; });
 }
 
@@ -2375,67 +2518,81 @@ bool api::io_context_uring_cq::_cancel_ops(TMATCH&& _match) noexcept
 	//   in the kernel => cancelled now. the owner of the ring : an async cancel each, written and submitted. another thread :
 	//   IORING_REGISTER_SYNC_CANCEL per op without a wait (the cancel runs in this thread at once and submits nothing : never an
 	//   enter of a ring this thread does not own. the cancelled op completes with -ECANCELED on its ring). true : one was found
+	//   the rings are scanned one at a time : scanned again when staged ops were adopted meanwhile (s_count_adopt : an op moved to a ring
+	//   scanned already. the ops found before are cancelled again : a staged one is not staged any more, a cancel of a request in the
+	//   kernel twice is harmless)
 	bool is_found = false;
 	const unsigned count_rings = this->m_count_rings.load(std::memory_order_acquire);
 	RING* pring_own = this->_find_worker_ring();
 	std::vector<uint64_t> user_data_cancel;
+	auto count_adopt = s_count_adopt.load(std::memory_order_acquire);
 
-	for (unsigned i = 0; i < count_rings; ++i)
+	for (;;)
 	{
-		auto* pring = this->m_rings[i].get();
-		bool is_staged = false;
-
-		user_data_cancel.clear();
-
+		for (unsigned i = 0; i < count_rings; ++i)
 		{
-			std::lock_guard lock(pring->lockable_sq);
+			auto* pring = this->m_rings[i].get();
+			bool is_staged = false;
 
-			// 1) the staged ops
-			is_staged = this->_cancel_staged(pring, _match);
+			user_data_cancel.clear();
 
-			// 2) the ops in the kernel
-			const bool is_own = (pring == pring_own);
-			bool is_written = false;
-
-			for (auto* pop : pring->ops)
 			{
-				CONTINUE_IF(pop->state != OP_SUBMITTED || _match(pop) == false);
+				std::lock_guard lock(pring->lockable_sq);
 
-				const uint64_t user_data_op = UD_OP | reinterpret_cast<uint64_t>(pop);
+				// 1) the staged ops
+				is_staged = this->_cancel_staged(pring, _match);
 
-				if (is_own)
+				// 2) the ops in the kernel
+				const bool is_own = (pring == pring_own);
+				bool is_written = false;
+
+				for (auto* pop : pring->ops)
 				{
-					io_uring_sqe* psqe = pring->alloc_sqe();
+					CONTINUE_IF(pop->state != OP_SUBMITTED || _match(pop) == false);
 
-					BREAK_IF(psqe == nullptr);
+					const uint64_t user_data_op = UD_OP | reinterpret_cast<uint64_t>(pop);
 
-					psqe->opcode = OPCODE_ASYNC_CANCEL;
-					psqe->fd = -1;
-					psqe->addr = user_data_op;
-					psqe->user_data = UD_IGNORE;
-					is_written = true;
+					if (is_own)
+					{
+						io_uring_sqe* psqe = pring->alloc_sqe();
+
+						BREAK_IF(psqe == nullptr);
+
+						psqe->opcode = OPCODE_ASYNC_CANCEL;
+						psqe->fd = -1;
+						psqe->addr = user_data_op;
+						psqe->user_data = UD_IGNORE;
+						is_written = true;
+					}
+					else
+					{
+						try { user_data_cancel.push_back(user_data_op); } catch (...) { break; }
+					}
 				}
-				else
-				{
-					try { user_data_cancel.push_back(user_data_op); } catch (...) { break; }
-				}
+
+				if (is_written)
+					pring->submit();
+
+				// 3) another thread : cancelled now, under the lock (the op can not complete and be freed meanwhile : its OP record is
+				//    reused by the next op, a cancel by its address after that would cancel another op. the owner never holds this lock
+				//    while it waits in the kernel)
+				for (const auto user_data_op : user_data_cancel)
+					this->_cancel_now(pring, user_data_op);
+
+				is_found = is_found || is_staged || is_written || (user_data_cancel.empty() == false);
 			}
 
-			if (is_written)
-				pring->submit();
-
-			// 3) another thread : cancelled now, under the lock (the op can not complete and be freed meanwhile : its OP record is
-			//    reused by the next op, a cancel by its address after that would cancel another op. the owner never holds this lock
-			//    while it waits in the kernel)
-			for (const auto user_data_op : user_data_cancel)
-				this->_cancel_now(pring, user_data_op);
-
-			is_found = is_found || is_staged || is_written || (user_data_cancel.empty() == false);
+			// 4) the synthetic completions : the owner of the ring is woken
+			if (is_staged)
+				this->_wake_staged(pring);
 		}
 
-		// 4) the synthetic completions : the owner of the ring is woken
-		if (is_staged)
-			this->_wake_staged(pring);
+		// 5) staged ops adopted meanwhile : scanned again
+		const auto count_adopt_now = s_count_adopt.load(std::memory_order_acquire);
+
+		BREAK_IF(count_adopt_now == count_adopt);
+
+		count_adopt = count_adopt_now;
 	}
 
 	return is_found;
@@ -2467,40 +2624,56 @@ bool api::io_context_uring_cq::wait_cancelled_fd(CGHANDLE _fd, chrono::tick::dur
 
 	RETURN_IF(guard.is_valid == false || _fd < 0 || static_cast<unsigned>(_fd) >= this->m_count_handles, false);
 
+	// - no op of the fd (staged, in the kernel or not delivered yet : the in-flight count of its entry) : done, the rings are not scanned
+	//   (every close comes here)
+	if (const auto* pentry = this->_find_entry(_fd); pentry == nullptr || pentry->inflight.load(std::memory_order_acquire) == 0)
+		return true;
+
 	const auto tick_deadline = chrono::tick::now() + _ticks_wait;
 	const unsigned count_rings = this->m_count_rings.load(std::memory_order_acquire);
 	bool is_done = true;
+	auto count_adopt = s_count_adopt.load(std::memory_order_acquire);
 
-	for (unsigned i = 0; i < count_rings; ++i)
+	for (;;)
 	{
-		auto* pring = this->m_rings[i].get();
-		bool is_op = false;
-		bool is_staged = false;
-
+		for (unsigned i = 0; i < count_rings; ++i)
 		{
-			std::lock_guard lock(pring->lockable_sq);
+			auto* pring = this->m_rings[i].get();
+			bool is_op = false;
+			bool is_staged = false;
 
-			is_staged = this->_cancel_staged(pring, [&](OP* _pop) { return _pop->fd == _fd; });
-
-			for (auto* pop : pring->ops)
 			{
-				if (pop->fd == _fd && pop->state == OP_SUBMITTED)
+				std::lock_guard lock(pring->lockable_sq);
+
+				is_staged = this->_cancel_staged(pring, [&](OP* _pop) { return _pop->fd == _fd; });
+
+				for (auto* pop : pring->ops)
 				{
-					is_op = true;
-					break;
+					if (pop->fd == _fd && pop->state == OP_SUBMITTED)
+					{
+						is_op = true;
+						break;
+					}
 				}
 			}
+
+			if (is_staged)
+				this->_wake_staged(pring);
+
+			CONTINUE_IF(is_op == false);
+
+			const auto ticks_left = tick_deadline - chrono::tick::now();
+
+			if (this->_sync_cancel(pring, 0, _fd, CANCEL_FLAG_FD | CANCEL_FLAG_ALL, (ticks_left > chrono::tick::duration::zero()) ? ticks_left : chrono::tick::duration(1ms)) != 0)
+				is_done = false;
 		}
 
-		if (is_staged)
-			this->_wake_staged(pring);
+		// - staged ops adopted meanwhile (an op moved to a ring scanned already) : scanned again (_cancel_ops)
+		const auto count_adopt_now = s_count_adopt.load(std::memory_order_acquire);
 
-		CONTINUE_IF(is_op == false);
+		BREAK_IF(count_adopt_now == count_adopt);
 
-		const auto ticks_left = tick_deadline - chrono::tick::now();
-
-		if (this->_sync_cancel(pring, 0, _fd, CANCEL_FLAG_FD | CANCEL_FLAG_ALL, (ticks_left > chrono::tick::duration::zero()) ? ticks_left : chrono::tick::duration(1ms)) != 0)
-			is_done = false;
+		count_adopt = count_adopt_now;
 	}
 
 	// - the delivery (a worker of this io_context delivers them itself : not waited for. _is_wait_delivery false : the caller needs
@@ -2698,8 +2871,12 @@ void api::io_context_uring_cq::_process_wake(RING* _pring, POP_RESULT* _results,
 void api::io_context_uring_cq::_process_wake_poll(RING* _pring, const void* _pcqe) noexcept
 {
 	// - a CQE of the poll of the wake eventfd : the count read (the next writes wake again). the poll ended (no F_MORE : its owner
-	//   exited, the kernel cancelled it) and it is the poll armed last on the ring of this thread => armed again (a worker draining
-	//   an orphan does not : the next owner arms its own at bind_worker())
+	//   exited, the kernel cancelled it, the CQ was full) and it is the poll armed last on the ring :
+	//   . the ring of this thread => armed again
+	//   . a lent ring (a worker drains it : its owner blocks) => armed by the next pop_results() of the owner (is_wake_poll_lost :
+	//     a poll belongs to the thread that submits it, and only the owner enters its ring. before, nobody armed it and the owner
+	//     got no wake any more : its staged ops and the posts waited for the timeout of its wait)
+	//   . an orphan (its worker left) => the next owner arms its own at bind_worker()
 	const auto& cqe = *static_cast<const io_uring_cqe*>(_pcqe);
 
 	if (cqe.res >= 0 && _pring->wake_fd >= 0)
@@ -2708,12 +2885,25 @@ void api::io_context_uring_cq::_process_wake_poll(RING* _pring, const void* _pcq
 		static_cast<void>(::eventfd_read(_pring->wake_fd, &value));
 	}
 
-	RETURN_IF((cqe.flags & CQE_FLAG_MORE) != 0 || _pring != this->_find_worker_ring());
+	RETURN_IF((cqe.flags & CQE_FLAG_MORE) != 0);
+
+	const bool is_owner = (_pring == this->_find_worker_ring());
 
 	std::lock_guard lock(_pring->lockable_sq);
 
-	if (static_cast<uint16_t>(cqe.user_data >> UD_WAKE_GENERATION_SHIFT) == _pring->wake_generation)
-		_pring->write_wake_poll();
+	RETURN_IF(static_cast<uint16_t>(cqe.user_data >> UD_WAKE_GENERATION_SHIFT) != _pring->wake_generation);
+
+	if (is_owner)
+	{
+		_pring->is_wake_poll_lost = (_pring->write_wake_poll() == false);
+	}
+	else
+	{
+		const int state = _pring->state.load(std::memory_order_acquire);
+
+		if (state == STATE_LENT || state == STATE_DRAINING_LENT)
+			_pring->is_wake_poll_lost = true;
+	}
 }
 
 void api::io_context_uring_cq::_process_cqe(RING* _pring, const void* _pcqe, POP_RESULT* _results, int& _count, int _max) noexcept
@@ -3467,9 +3657,14 @@ int api::io_context_uring_cq::pop_results(POP_RESULT* _results, int _max, chrono
 	//    of another thread runs in the kernel at once : an op written into the SQ and not entered yet was missed by it and submitted
 	//    after it. a multishot accept submitted so after the cancel of acceptor::stop() kept the closed listen socket listening
 	//    : uds.listen_name_and_release). the wait is a second enter below, out of the lock (only when nothing completed meanwhile)
+	//    the poll of the wake eventfd ended while the ring was lent (its CQE taken by a worker draining it) : armed again first
 	unsigned to_submit;
 	{
 		std::lock_guard lock(pring->lockable_sq);
+
+		if (pring->is_wake_poll_lost)
+			pring->is_wake_poll_lost = (pring->write_wake_poll() == false);
+
 		pring->flush_staged();
 
 		if (pring->publish() != 0)

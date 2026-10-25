@@ -1,7 +1,10 @@
 #include "pch.h"
 #include <atomic>
+#include <cstdio>
+#include <cstdlib>
 #include <mutex>
 #include <stdexcept>
+#include <thread>
 #include <vector>
 
 namespace CGDK
@@ -445,5 +448,324 @@ namespace CGDK
 
 		pentity->stop();
 		SUCCEED();
+	}
+
+	// 14) entity - unregister_event() removes a registered event (the condition was inverted : never removed)
+	TEST(CGDK10_time_event, entity_unregister_event)
+	{
+		auto pentity = make_own<time_event::entity>();
+
+		auto events_1 = time_event::make_event_iteration(chrono::time::utc::now() + 1h, 1h, 0, [](chrono::time::utc::time_point) -> result_code { return eRESULT::SUCCESS; });
+		auto events_2 = time_event::make_event_iteration(chrono::time::utc::now() + 2h, 1h, 0, [](chrono::time::utc::time_point) -> result_code { return eRESULT::SUCCESS; });
+		time_event::Ievent* pevent_1 = events_1[0].get();
+		time_event::Ievent* pevent_2 = events_2[0].get();
+
+		pentity->register_event(std::move(events_1[0]));
+		pentity->register_event(std::move(events_2[0]));
+		ASSERT_EQ(pentity->get_event_count(), 2u);
+		EXPECT_EQ(pentity->get_front_next_time(), pevent_1->event_status().time_next);
+
+		// - the front is removed : the next one becomes the front
+		auto time_2 = pevent_2->event_status().time_next;
+		pentity->unregister_event(pevent_1);
+		EXPECT_EQ(pentity->get_event_count(), 1u);
+		EXPECT_EQ(pentity->get_front_next_time(), time_2);
+		EXPECT_EQ(pentity->entity_status().time_next, time_2);
+
+		pentity->unregister_event(pevent_2);
+		EXPECT_EQ(pentity->get_event_count(), 0u);
+	}
+
+	// 14-1) entity - unregister_event() of an event not registered (it erased end() : undefined behavior)
+	TEST(CGDK10_time_event, entity_unregister_event_not_registered)
+	{
+		auto pentity = make_own<time_event::entity>();
+
+		auto events = time_event::make_event_iteration(chrono::time::utc::now() + 1h, 1h, 0, [](chrono::time::utc::time_point) -> result_code { return eRESULT::SUCCESS; });
+		pentity->register_event(std::move(events[0]));
+
+		auto pother = make_own<time_event::event>();
+		pentity->unregister_event(pother.get());
+		EXPECT_EQ(pentity->get_event_count(), 1u);
+	}
+
+	// 14-2) entity - an event unregistered while it is executing is not pushed again
+	TEST(CGDK10_time_event, entity_unregister_event_while_executing)
+	{
+		std::atomic<int> count{ 0 };
+		time_event::Ievent* pevent_raw = nullptr;
+
+		auto pentity = make_own<time_event::entity>();
+		auto events = time_event::make_event_iteration(chrono::time::utc::now() + 20ms, 20ms, 0, [&](chrono::time::utc::time_point) -> result_code
+		{
+			++count;
+			pentity->unregister_event(pevent_raw);
+			return eRESULT::SUCCESS;
+		});
+		pevent_raw = events[0].get();
+		pentity->register_event(std::move(events[0]));
+		pentity->start();
+
+		ASSERT_TRUE(wait_until([&] { return count.load() >= 1; }));
+		api::sleep_for(200ms);
+
+		EXPECT_EQ(count.load(), 1);
+		EXPECT_EQ(pentity->get_event_count(), 0u);
+
+		pentity->stop();
+	}
+
+	// - entities far in the future : the entity tested is pushed after them (deep in the heap of the manager)
+	static std::vector<own_ptr<time_event::entity_iteration<>>> make_far_entities(int _count)
+	{
+		std::vector<own_ptr<time_event::entity_iteration<>>> entities;
+		for (int i = 0; i < _count; ++i)
+		{
+			auto pentity = make_own<time_event::entity_iteration<>>();
+			pentity->set_event_time(chrono::time::utc::now() + 1h);
+			pentity->set_event_interval(1h);
+			pentity->set_event_function([](chrono::time::utc::time_point) -> result_code { return eRESULT::SUCCESS; });
+			pentity->start();
+			entities.push_back(std::move(pentity));
+		}
+		return entities;
+	}
+
+	// 15) entity - an earlier event registered on an entity deep in the heap is executed in time
+	//     (register_event() wrote time_next without moving the entity in the heap : executed after the front (1h))
+	TEST(CGDK10_time_event, entity_register_earlier_event_deep_in_heap)
+	{
+		auto entities = make_far_entities(31);
+
+		std::atomic<int> count{ 0 };
+		auto pentity = make_own<time_event::entity>();
+		auto events_far = time_event::make_event_iteration(chrono::time::utc::now() + 2h, 1h, 0, [](chrono::time::utc::time_point) -> result_code { return eRESULT::SUCCESS; });
+		pentity->register_event(std::move(events_far[0]));
+		pentity->start();
+		ASSERT_TRUE(is_registered(pentity.get()));
+
+		// - an earlier event
+		auto events = time_event::make_event_once(chrono::time::utc::now() + 50ms, [&](chrono::time::utc::time_point) -> result_code { ++count; return eRESULT::SUCCESS; });
+		pentity->register_event(std::move(events[0]));
+
+		EXPECT_TRUE(wait_until([&] { return count.load() == 1; }, 3s));
+
+		pentity->stop();
+		for (auto& iter : entities)
+			iter->stop();
+	}
+
+	// 16) Ientity::set_next_time() - an earlier time on a registered entity deep in the heap is executed in time
+	//     (it was written without moving the entity in the heap and the manager was not notified : state RUN)
+	TEST(CGDK10_time_event, entity_set_next_time_deep_in_heap)
+	{
+		auto entities = make_far_entities(31);
+
+		std::atomic<int> count{ 0 };
+		auto pentity = make_own<time_event::entity_iteration<>>();
+		pentity->set_event_time(chrono::time::utc::now() + 2h);
+		pentity->set_event_interval(1h);
+		pentity->set_event_times(1);
+		pentity->set_event_function([&](chrono::time::utc::time_point) -> result_code { ++count; return eRESULT::SUCCESS; });
+		pentity->start();
+		ASSERT_TRUE(is_registered(pentity.get()));
+
+		pentity->set_next_time(chrono::time::utc::now() + 50ms);
+
+		EXPECT_TRUE(wait_until([&] { return count.load() == 1; }, 3s));
+
+		pentity->stop();
+		for (auto& iter : entities)
+			iter->stop();
+	}
+
+	// 17) entity_manager - stop right after start does not hang (the stop flag was set out of the queue lock and
+	//     the thread could miss the wakeup between the check and the wait : on_stopping() waited forever)
+	TEST(CGDK10_time_event, manager_stop_right_after_start)
+	{
+		std::atomic<bool> done{ false };
+
+		std::thread thread_test([&]
+		{
+			for (int i = 0; i < 200; ++i)
+			{
+				time_event::entity_manager::reset_instance();
+				time_event::entity_manager::initialize_instance();
+			}
+			done = true;
+		});
+
+		if (!wait_until([&] { return done.load(); }, 60s))
+		{
+			ADD_FAILURE() << "entity_manager stop hung";
+			std::fflush(stdout);
+			std::_Exit(1);
+		}
+		thread_test.join();
+
+		EXPECT_TRUE(time_event::entity_manager::instance().exist());
+	}
+
+	// 18) sENTITY_STATUS::reset_next_time() resets time_next (it reset time_last_failed)
+	TEST(CGDK10_time_event, entity_status_reset_next_time)
+	{
+		time_event::sENTITY_STATUS status;
+		auto time_now = chrono::time::utc::now();
+		status.time_next = time_now;
+		status.time_last_failed = time_now;
+
+		status.reset_next_time();
+
+		EXPECT_EQ(status.time_next, chrono::time::utc::time_point(chrono::time::duration::zero()));
+		EXPECT_EQ(status.time_last_failed, time_now);
+	}
+
+	// 19) Ievent::unregister_event() from its own process_event() (m_pentity was never set : it did nothing)
+	TEST(CGDK10_time_event, event_unregister_itself)
+	{
+		std::atomic<int> count{ 0 };
+		time_event::Ievent* pevent_raw = nullptr;
+
+		auto pentity = make_own<time_event::entity>();
+		auto events = time_event::make_event_iteration(chrono::time::utc::now() + 20ms, 20ms, 0, [&](chrono::time::utc::time_point) -> result_code
+		{
+			++count;
+			pevent_raw->unregister_event();
+			return eRESULT::SUCCESS;
+		});
+		pevent_raw = events[0].get();
+		pentity->register_event(std::move(events[0]));
+		pentity->start();
+
+		ASSERT_TRUE(wait_until([&] { return count.load() >= 1; }));
+		api::sleep_for(200ms);
+
+		EXPECT_EQ(count.load(), 1);
+		EXPECT_EQ(pentity->get_event_count(), 0u);
+
+		pentity->stop();
+	}
+
+	// 20) Ievent::set_next_time() - an earlier time on a registered event is executed in time
+	//     (written without the entity lock and without rebuilding its heap, the entity was not notified : executed late)
+	TEST(CGDK10_time_event, event_set_next_time_earlier)
+	{
+		auto entities = make_far_entities(31);
+
+		std::atomic<int> count{ 0 };
+		auto pentity = make_own<time_event::entity>();
+		auto events_a = time_event::make_event_iteration(chrono::time::utc::now() + 2h, 1h, 0, [](chrono::time::utc::time_point) -> result_code { return eRESULT::SUCCESS; });
+		auto events_b = time_event::make_event_once(chrono::time::utc::now() + 3h, [&](chrono::time::utc::time_point) -> result_code { ++count; return eRESULT::SUCCESS; });
+		time_event::Ievent* pevent_b = events_b[0].get();
+		pentity->register_event(std::move(events_a[0]));
+		pentity->register_event(std::move(events_b[0]));
+		pentity->start();
+
+		pevent_b->set_next_time(chrono::time::utc::now() + 50ms);
+
+		EXPECT_TRUE(wait_until([&] { return count.load() == 1; }, 3s));
+
+		pentity->stop();
+		for (auto& iter : entities)
+			iter->stop();
+	}
+
+	// 21) Ievent::set_next_time() from its own process_event() is kept (the interval was added to it)
+	TEST(CGDK10_time_event, event_set_next_time_while_executing)
+	{
+		std::atomic<int> count{ 0 };
+		time_event::Ievent* pevent_raw = nullptr;
+
+		auto pentity = make_own<time_event::entity>();
+		auto events = time_event::make_event_iteration(chrono::time::utc::now() + 20ms, 1h, 0, [&](chrono::time::utc::time_point) -> result_code
+		{
+			if (++count == 1)
+				pevent_raw->set_next_time(chrono::time::utc::now() + 50ms);
+			return eRESULT::SUCCESS;
+		});
+		pevent_raw = events[0].get();
+		pentity->register_event(std::move(events[0]));
+		pentity->start();
+
+		EXPECT_TRUE(wait_until([&] { return count.load() >= 2; }, 3s));
+
+		pentity->stop();
+	}
+
+	// 22) an event kept after its entity is destroyed : unregister_event() / set_next_time() do nothing (m_pentity cleared)
+	TEST(CGDK10_time_event, event_entity_pointer_cleared)
+	{
+		object_ptr<time_event::Ievent> pevent_kept;
+		{
+			auto pentity = make_own<time_event::entity>();
+			auto events = time_event::make_event_iteration(chrono::time::utc::now() + 1h, 1h, 0, [](chrono::time::utc::time_point) -> result_code { return eRESULT::SUCCESS; });
+			pevent_kept = events[0].get();
+			pentity->register_event(std::move(events[0]));
+		}
+		pevent_kept->unregister_event();
+		pevent_kept->set_next_time(chrono::time::utc::now());
+
+		auto pentity = make_own<time_event::entity>();
+		auto events = time_event::make_event_iteration(chrono::time::utc::now() + 1h, 1h, 0, [](chrono::time::utc::time_point) -> result_code { return eRESULT::SUCCESS; });
+		pentity->register_event(std::move(events[0]));
+		pentity->unregister_event_all();
+		EXPECT_EQ(pentity->get_event_count(), 0u);
+	}
+
+	// 23) unlimited with no interval (count 0, interval 0) : executed once and done (it ran again and again without an end)
+	TEST(CGDK10_time_event, event_unlimited_without_interval)
+	{
+		std::atomic<int> count{ 0 };
+
+		auto pentity = make_own<time_event::entity>();
+		auto events = time_event::make_event_iteration(chrono::time::utc::now() + 10ms, chrono::time::duration::zero(), 0, [&](chrono::time::utc::time_point) -> result_code { ++count; return eRESULT::SUCCESS; });
+		pentity->register_event(std::move(events[0]));
+		pentity->start();
+
+		ASSERT_TRUE(wait_until([&] { return count.load() >= 1; }));
+		api::sleep_for(200ms);
+		EXPECT_EQ(count.load(), 1);
+		EXPECT_TRUE(wait_until([&] { return pentity->entity_status().state.load() == time_event::eSTATE::DONE; }));
+
+		pentity->stop();
+	}
+
+	TEST(CGDK10_time_event, entity_iteration_unlimited_without_interval)
+	{
+		std::atomic<int> count{ 0 };
+
+		auto pentity = make_own<time_event::entity_iteration<>>();
+		pentity->set_event_time(chrono::time::utc::now() + 10ms);
+		pentity->set_event_interval(chrono::time::duration::zero());
+		pentity->set_event_function([&](chrono::time::utc::time_point) -> result_code { ++count; return eRESULT::SUCCESS; });
+		pentity->start();
+
+		ASSERT_TRUE(wait_until([&] { return count.load() >= 1; }));
+		api::sleep_for(200ms);
+		EXPECT_EQ(count.load(), 1);
+		EXPECT_TRUE(wait_until([&] { return pentity->entity_status().state.load() == time_event::eSTATE::DONE; }));
+
+		pentity->stop();
+	}
+
+	TEST(CGDK10_time_event, entity_start_iteration_end_unlimited_without_interval)
+	{
+		std::mutex lock;
+		std::vector<int> calls;
+
+		auto time_now = chrono::time::utc::now();
+		auto pentity = make_own<time_event::entity_start_iteration_end<>>();
+		pentity->set_event_start_time(time_now + 20ms);
+		pentity->set_event_end_time(time_now + 200ms);
+		pentity->set_event_interval(chrono::time::duration::zero());
+		pentity->set_start_function([&](chrono::time::utc::time_point) -> result_code { std::lock_guard g(lock); calls.push_back(1); return eRESULT::SUCCESS; });
+		pentity->set_iteration_function([&](chrono::time::utc::time_point) -> result_code { std::lock_guard g(lock); if (calls.size() < 100) calls.push_back(2); return eRESULT::SUCCESS; });
+		pentity->set_end_function([&](chrono::time::utc::time_point) -> result_code { std::lock_guard g(lock); calls.push_back(3); return eRESULT::SUCCESS; });
+		pentity->start();
+
+		ASSERT_TRUE(wait_until([&] { return pentity->entity_status().state.load() == time_event::eSTATE::DONE; }));
+
+		std::lock_guard g(lock);
+		EXPECT_EQ(calls, (std::vector<int>{ 1, 2, 3 }));
 	}
 }

@@ -72,14 +72,22 @@ protected:
 public:
 	// - MSG_ZEROCOPY (linux, the io_uring backend only) : a send of one large buffer (>= zerocopy_threshold()) pins its pages instead of copying them
 	//   into the socket buffer. the buffer (its owner) is held until the kernel notifies the completion on the error queue (EPOLLERR : process_complete_error_queue).
-	//   AF_INET/AF_INET6 only (not a UDS). a socket on an epoll io_context, or a kernel without SO_ZEROCOPY => copied as before. loopback => the kernel copies (notified as copied).
+	//   AF_INET/AF_INET6 only (not a UDS). a socket on an epoll io_context, or a kernel without SO_ZEROCOPY => copied as before. loopback => the kernel copies (notified as copied) : copied in a row stops zerocopy on the socket (is_zerocopy_copied()) till it is reset.
 	static	void				enable_zerocopy(bool _enable = true) noexcept { s_enable_zerocopy.store(_enable, std::memory_order_relaxed); }
 	[[nodiscard]] static bool	is_zerocopy_enabled() noexcept { return s_enable_zerocopy.load(std::memory_order_relaxed); }
 	static	void				zerocopy_threshold(std::size_t _bytes) noexcept { s_zerocopy_threshold.store(_bytes, std::memory_order_relaxed); }
 	[[nodiscard]] static std::size_t zerocopy_threshold() noexcept { return s_zerocopy_threshold.load(std::memory_order_relaxed); }
+	//! @brief the copy check (on by default) : ZEROCOPY_COPIED_TO_STOP zerocopy sends in a row the kernel reports copied (a peer on this host :
+	//!        every send is copied) stop zerocopy on the socket. a NIC reports one now and then (completion : about one per connection) : not stopped.
+	//!        off : zerocopy goes on (the zerocopy path over loopback in the tests). zerocopy_copied_count() counts either way
+	static	void				enable_zerocopy_copy_check(bool _enable = true) noexcept { s_enable_zerocopy_copy_check.store(_enable, std::memory_order_relaxed); }
+	[[nodiscard]] static bool	is_zerocopy_copy_check_enabled() noexcept { return s_enable_zerocopy_copy_check.load(std::memory_order_relaxed); }
 	[[nodiscard]] std::size_t	zerocopy_pending_count() const noexcept { std::lock_guard lock(this->m_lockable_zerocopy); return this->m_queue_zerocopy.size(); }	// - buffers waiting for the notification
 	[[nodiscard]] std::size_t	zerocopy_sent_count() const noexcept { return this->m_zerocopy_count_sent.load(std::memory_order_relaxed); }				// - sends done with MSG_ZEROCOPY
 	[[nodiscard]] std::size_t	zerocopy_fallback_count() const noexcept { return this->m_zerocopy_count_fallback.load(std::memory_order_relaxed); }		// - zerocopy sends refused (ENOBUFS) and sent again as a copy
+	[[nodiscard]] std::size_t	zerocopy_copied_count() const noexcept { return this->m_zerocopy_count_copied.load(std::memory_order_relaxed); }			// - zerocopy sends the kernel copied anyway (a peer on this host : loopback, an address of this host, a local container) : ZEROCOPY_COPIED_TO_STOP in a row stop zerocopy on the socket
+	[[nodiscard]] bool			is_zerocopy_copied() const noexcept { return this->m_zerocopy_is_copied.load(std::memory_order_relaxed); }						// - copied in a row (ZEROCOPY_COPIED_TO_STOP) : no zerocopy on this socket till it is reset
+	static constexpr std::size_t ZEROCOPY_COPIED_TO_STOP = 8;
 	virtual	bool				process_complete_error_queue() noexcept override;
 
 protected:
@@ -96,6 +104,7 @@ protected:
 			ssize_t				_zerocopy_send(CGSOCKET _handle_socket, const void* _data, std::size_t _bytes, int& _flags) noexcept;
 			void				_zerocopy_pause() noexcept;
 			[[nodiscard]] bool	_is_zerocopy_paused() const noexcept { const auto until = this->m_zerocopy_paused_until.load(std::memory_order_relaxed); return until != 0 && std::chrono::steady_clock::now().time_since_epoch().count() < until; }
+			void				_zerocopy_on_notified(std::size_t _count, bool _is_copied) noexcept;
 
 	mutable	std::mutex			m_lockable_zerocopy;
 			std::atomic<int>	m_zerocopy_state{ 0 };		// - 0 : not checked yet, 1 : SO_ZEROCOPY set (io_uring io_context), -1 : not used on this socket
@@ -106,7 +115,11 @@ protected:
 			std::atomic<std::size_t> m_zerocopy_count_sent{ 0 };
 			std::atomic<std::size_t> m_zerocopy_count_fallback{ 0 };
 			std::atomic<int64_t> m_zerocopy_paused_until{ 0 };	// - steady_clock : no zerocopy till then (a zerocopy send was refused with ENOBUFS. 0 : not paused)
+			std::atomic<bool>	m_zerocopy_is_copied{ false };	// - ZEROCOPY_COPIED_TO_STOP zerocopy sends in a row copied (SO_EE_CODE_ZEROCOPY_COPIED / IORING_NOTIF_USAGE_ZC_COPIED) : no zerocopy till the reset
+			std::atomic<std::size_t> m_zerocopy_count_copied{ 0 };
+			std::atomic<std::size_t> m_zerocopy_copied_in_a_row{ 0 };	// - the copied notifications since the last one not copied
 	static inline std::atomic<bool> s_enable_zerocopy{ true };
+	static inline std::atomic<bool> s_enable_zerocopy_copy_check{ true };
 	static inline std::atomic<std::size_t> s_zerocopy_threshold{ 16 * 1024 };
 	static constexpr std::chrono::milliseconds ZEROCOPY_PAUSE_AFTER_ENOBUFS{ 100 };
 #endif

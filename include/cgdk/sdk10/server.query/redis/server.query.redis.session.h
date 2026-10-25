@@ -46,6 +46,9 @@ public:
 				object_ptr<Iquery>		pquery;
 				shared_buffer			buf_request;
 				std::function<void()>	response;
+				// Nonzero only for a batch: one queue node consumes this many replies.
+				std::size_t count_batch = 0;
+				std::size_t received_batch = 0;
 			};
 
 			bool				execute_query(REQUEST_QUERY&& _query);

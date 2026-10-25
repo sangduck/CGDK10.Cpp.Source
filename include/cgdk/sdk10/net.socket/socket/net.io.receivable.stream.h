@@ -107,6 +107,14 @@ protected:
 			DWORD				m_wsa_flag{ 0 };
 
 			object_ptr<executable_receiving> m_pexecutable_receiving; //! @brief receive를 처리할 Iexecutable 객체
+
+			// - the receive buffer for the next receive (the rules of the epoll one) : the buffer only this socket refers to is reused (the data
+			//   not processed moved to the front) instead of a new one at every wrap, grown 8x up to MAX_BYTES_RECEIVE_WINDOW_GROWN when a receive
+			//   filled the window, shrunk after COUNT_SMALL_RECEIVES_TO_SHRINK small receives in a row
+			void				_process_prepare_receive_buffer(std::size_t _bytes_received, bool _is_window_filled, std::size_t _required_bytes);
+	static	constexpr std::size_t MAX_BYTES_RECEIVE_WINDOW_GROWN = 64 * 1024;
+	static	constexpr uint32_t	COUNT_SMALL_RECEIVES_TO_SHRINK = 64;
+			uint32_t			m_count_receive_small = 0;
 		#elif defined(_SYS_EPOLL_H)
 			shared_buffer		m_buffer_received; // 수신 후 처리되지 않은 남은 데이터 (그 뒤의 빈 공간에 이어서 받는다)
 			int					m_bytes_buffer_receive; // 현재 수신 버퍼의 크기

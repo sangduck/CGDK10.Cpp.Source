@@ -195,8 +195,10 @@ int query::http::query::process_response(sMESSAGE& _msg)
 	}
 	else
 	{
-		// 2) ...
-		this->m_function_on_process(msg_http);
+		// 2) a chunk (Nhttp_client delivers each chunk with is_completed == false. no function : ignored.
+		//    called empty, it threw bad_function_call and a chunked response failed)
+		if (this->m_function_on_process)
+			this->m_function_on_process(msg_http);
 	}
 
 	// return)  

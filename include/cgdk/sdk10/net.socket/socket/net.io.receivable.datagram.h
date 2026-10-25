@@ -81,7 +81,9 @@ private:
 		#elif defined(_SYS_EPOLL_H)
 			// - recvmmsg : the datagrams received by one syscall (adaptive : a full batch doubles the next one, a partial one sets it)
 	static	constexpr int		COUNT_RECEIVE_BATCH_MAX = static_cast<int>(DEFAULT_UDP_COUNT_RECEIVE_BUFFER);
-			int					m_count_receive_batch = 1;
+			//   atomic : the threads of the io_context receive on the socket at once (EPOLLET). a plain int was stored in two steps by g++
+			//   (the doubled count, then the limit) : a thread reading between them took 64 and overran the arrays of 32 on its stack
+			std::atomic<int>	m_count_receive_batch{ 1 };
 		#endif
 };
 

@@ -16,6 +16,7 @@ public:
 	EXECUTION_AT(const EXECUTION_AT& _copy) noexcept : tick_at(_copy.tick_at), pexecutable(_copy.pexecutable) {}
 	EXECUTION_AT(EXECUTION_AT&& _move) noexcept : tick_at(_move.tick_at), pexecutable(std::move(_move.pexecutable)) {}
 	EXECUTION_AT(chrono::tick::time_point _tick_at, Iexecutable* _pexecutable) noexcept : tick_at(_tick_at), pexecutable(_pexecutable) {}
+	EXECUTION_AT(chrono::tick::time_point _tick_at, object_ptr<Iexecutable>&& _pexecutable) noexcept : tick_at(_tick_at), pexecutable(std::move(_pexecutable)) {}
 
 public:
 	void			swap(EXECUTION_AT& _rhs) noexcept { SWAP(tick_at, _rhs.tick_at); pexecutable.swap(_rhs.pexecutable); }
@@ -134,33 +135,32 @@ result_code executor::scheduler::stop() noexcept
 	this->cancel();
 
 	// 3) wait
+	//    - the thread checks m_flag_run under the queue lock before it sleeps and cancel() wakes it : it ends soon (a thread posting
+	//      the executables it took out ends after them). yields first, then sleeps (the 1000 loops without a sleep ended in tens of
+	//      microseconds : FAIL without the join while the thread still ran)
 	{
 	#ifdef NDEBUG
 		// declare) 최대 executor 완료 대기시간 (10초)
-		const int MAX_LOOP = 1000;
-
-		for (auto count_loop = MAX_LOOP; this->get_existing_thread_count(); --count_loop)
-		{
-			// check) 
-			if(count_loop <= 0)
-				return result_code(eRESULT::FAIL);
-
-			// - execute
-			this->cancel();
-
-			//// - 1mss만큼 sleep한다.
-			//api::sleep_for(1ms);
-		}
-	#else
-		while (this->get_existing_thread_count())
-		{
-			// - execute
-			this->cancel();
-
-			//// - 1ms만큼 sleep한다.
-			//api::sleep_for(0ms);
-		}
+		const auto tick_limit = chrono::tick::now() + std::chrono::seconds(10);
 	#endif
+
+		for (int count_loop = 0; this->get_existing_thread_count(); ++count_loop)
+		{
+		#ifdef NDEBUG
+			// check)
+			if (chrono::tick::now() >= tick_limit)
+				return result_code(eRESULT::FAIL);
+		#endif
+
+			// - wake the thread
+			this->cancel();
+
+			// - yield, then sleep (windows : sleep_for(1ms) is about 15.6ms)
+			if (count_loop < 100)
+				std::this_thread::yield();
+			else
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
 
 		// - terminate
 		this->api::threads::stop();
@@ -188,127 +188,82 @@ bool executor::scheduler::process_post_at(object_ptr<Iexecutable>&& _pexecutable
 	// check) 
 	CGASSERT_ERROR(_pexecutable.exist());
 
-	// 1) ...
-	this->process_push_executable(EXECUTION_AT(_tick_execute, std::move(_pexecutable)));
-
-	// return) 
-	return true;
+	// 1) push (false : not running. stopped or not started : the executable is not executed)
+	return this->process_push_executable(EXECUTION_AT(_tick_execute, std::move(_pexecutable)));
 }
 
 bool executor::scheduler::cancel(Iexecutable* _pexecutable) noexcept
 {
+	// check)
+	if (_pexecutable == nullptr)
+		return false;
+
+	// declare) the removed one is released after the lock (its destructor may post_at() / cancel() on this scheduler)
+	object_ptr<Iexecutable> pexecutable_removed;
+
 	// lock)
 	std::lock_guard<std::mutex> lock(this->m_lockable_priorityqueue);
 
-	// 1) get first executable object
-	auto iter_end = this->m_priorityqueue_executable.end();
-	auto iter = std::find_if(this->m_priorityqueue_executable.begin(), iter_end, [=](const EXECUTION_AT& iter) { return iter.pexecutable == _pexecutable;});
+	// 1) 힙 위치를 executable에서 바로 얻는다. (O(1))
+	auto pos_now = _pexecutable->m_scheduler_position.index.load(std::memory_order_relaxed);
 
-	// check) return if not exists
-	if(iter == iter_end)
-		return false;
-
-	// 2) get last item
-	auto ptarget = std::move(this->m_priorityqueue_executable.back());
-	auto tick_compare = ptarget.tick_at;
-
-	// 3) get pos_now of item
-	auto pos_now = static_cast<size_t>(iter - this->m_priorityqueue_executable.begin());
-
-	// check) 
-	if (iter == this->m_priorityqueue_executable.begin())
-		this->_notify_in_time(); // notify one 
-
-	// 4) remove tail of heap
-	this->m_priorityqueue_executable.pop_back();
-
-	// check) 
-	if(pos_now == this->m_priorityqueue_executable.size())
-		return true;
-
-	// check) 
-	CGASSERT_ERROR(pos_now < this->m_priorityqueue_executable.size());
-
-	// case A) up heap
-	if(pos_now != 0 && this->m_priorityqueue_executable.at((pos_now - 1) >> 1).tick_at > tick_compare)
+	// check) 위치가 맞지 않으면
+	//    - 같은 executable이 여러 번(또는 다른 scheduler에도) 걸린 적이 없으면 걸려 있지 않은 것이다.
+	//    - 있으면 위치가 덮어써졌을 수 있으므로 처음부터 찾는다.
+	if (pos_now >= this->m_priorityqueue_executable.size() || this->m_priorityqueue_executable[pos_now].pexecutable != _pexecutable)
 	{
-		// - ...
-		auto iter_child = iter;
+		// check)
+		if (_pexecutable->m_scheduler_position.is_shared.load(std::memory_order_relaxed) == false)
+			return false;
 
-		do
-		{
-			// - minus 1 then divied 2
-			pos_now = (pos_now - 1) >> 1;
+		// - find
+		auto iter_end = this->m_priorityqueue_executable.end();
+		auto iter = std::find_if(this->m_priorityqueue_executable.begin(), iter_end, [=](const EXECUTION_AT& iter) { return iter.pexecutable == _pexecutable;});
 
-			// - get left node
-			auto iter_now = this->m_priorityqueue_executable.begin() + pos_now;
+		// check) return if not exists
+		if (iter == iter_end)
+			return false;
 
-			// check) 
-			if(iter_now->tick_at <= tick_compare)
-				break;
-
-			// - move to child node
-			*iter_child = std::move(*iter_now);
-			iter_child = iter_now;
-		} while (pos_now != 0);
-
-		// - 
-		*iter_child = std::move(ptarget);
-	}
-	// case B) down heap
-	else
-	{
-		pos_now = (pos_now << 1) + 1;
-
-		// - size & parent
-		auto pos_max = this->m_priorityqueue_executable.size() - 1;
-		auto iter_parent = iter;
-
-		while(pos_now <= pos_max)
-		{
-			// - get left node
-			auto iter_now = this->m_priorityqueue_executable.begin() + pos_now;
-
-			// - select right node if right node is larger then left node
-			if(pos_now < pos_max && iter_now->tick_at > (iter_now + 1)->tick_at)
-			{
-				++iter_now;
-				++pos_now;
-			}
-
-			// check) 
-			if(tick_compare <= iter_now->tick_at)
-				break;
-
-			// - move to parent node
-			*iter_parent = std::move(*iter_now);
-			iter_parent = iter_now;
-
-			// - set new pos_now ( pos_now x 2 + 1 )
-			pos_now = (pos_now << 1) + 1;
-		}
-
-		*iter_parent = std::move(ptarget);
+		pos_now = static_cast<size_t>(iter - this->m_priorityqueue_executable.begin());
 	}
 
-	// return) 
+	// check) 가장 이른 것이 취소되면 대기 중인 스레드를 깨운다.
+	if (pos_now == 0)
+		this->_notify_in_time(); // notify one
+
+	// 2) remove (released after the lock)
+	pexecutable_removed = this->process_pop_executable(pos_now);
+
+	// return)
 	return true;
 }
 
 void executor::scheduler::cancel() noexcept
 {
+	// declare) the removed ones are released after the lock (their destructors may post_at() / cancel() on this scheduler)
+	std::vector<EXECUTION_AT> vector_removed;
+
 	// lock)
 	std::lock_guard<std::mutex> lock(this->m_lockable_priorityqueue);
 
-	if (this->m_priorityqueue_executable.empty())
+	if (this->m_priorityqueue_executable.empty() == false)
 	{
-		this->m_cv_priorityqueue_exist.notify_one();
+		// - 힙 위치를 지운다. (다른 곳에 다시 걸려 덮어써진 것은 그대로 둔다)
+		for (size_t pos = 0; pos < this->m_priorityqueue_executable.size(); ++pos)
+		{
+			auto& position = this->m_priorityqueue_executable[pos].pexecutable->m_scheduler_position;
+
+			if (position.index.load(std::memory_order_relaxed) == pos)
+				position.index.store(SIZE_MAX, std::memory_order_relaxed);
+		}
+
+		// - taken out (released after the lock)
+		vector_removed.swap(this->m_priorityqueue_executable);
 	}
-	else
-	{
-		this->m_priorityqueue_executable.clear();
-		this->_notify_in_time();
-	}
+
+	// - wake the thread (sleeping for the earliest one or for the first one : stop() calls this to end it)
+	this->m_cv_priorityqueue_exist.notify_one();
+	this->_notify_in_time();
 }
 
 // type name of executable (demangled on gcc/clang)
@@ -436,9 +391,16 @@ bool executor::scheduler::process_execute(chrono::tick::duration /*_tick_diff*/,
 
 				CONDITIONAL_LOCK(this->m_lockable_priorityqueue, lock_wait)
 				{
-					// 1) wait until 
-					if (this->m_priorityqueue_executable.empty())
-						this->m_cv_priorityqueue_exist.wait(lock_wait);
+					// 1) wait until
+					//    (m_flag_run is checked under the lock : a stop() setting it before this thread took the lock does not wait for
+					//     a wakeup that already went)
+					if (this->m_priorityqueue_executable.empty() && this->m_flag_run != 0)
+					{
+						this->m_is_waiting = true;
+						this->m_tick_wait_until = (chrono::tick::time_point::max)();
+						this->m_cv_priorityqueue_exist.wait(lock_wait, [this]() { return this->m_priorityqueue_executable.empty() == false || this->m_flag_run == 0; });
+						this->m_is_waiting = false;
+					}
 
 					// 2) get now tick
 					auto tick_now = chrono::tick::now();
@@ -449,6 +411,10 @@ bool executor::scheduler::process_execute(chrono::tick::duration /*_tick_diff*/,
 					// 3) execute 
 					while (this->m_priorityqueue_executable.empty() == false)
 					{
+						// check) stopped (stop() cancels the rest)
+						if (this->m_flag_run == 0)
+							break;
+
 						// - get first executable object
 						EXECUTION_AT& pexecutable = this->m_priorityqueue_executable.at(0);
 
@@ -465,27 +431,53 @@ bool executor::scheduler::process_execute(chrono::tick::duration /*_tick_diff*/,
 							// - wait time
 							auto time_wait = pexecutable.tick_at - tick_now;
 
-							// - sleep
-#if defined(_WIN32)
-							if (this->m_handle_timer != nullptr)
-							{
-								// - 고해상도 타이머를 설정한다. (상대 시간, 100ns 단위)
-								LARGE_INTEGER due_time;
-								due_time.QuadPart = -(std::max)(static_cast<int64_t>(1), static_cast<int64_t>(std::chrono::duration_cast<std::chrono::duration<int64_t, std::ratio<1, 10000000>>>(time_wait).count()));
-								::SetWaitableTimer(this->m_handle_timer, &due_time, 0, nullptr, nullptr, FALSE);
+							// - 자는 동안 이보다 이른 것이 들어올 때만 깨운다. (process_push_executable)
+							const auto tick_at = pexecutable.tick_at;
+							this->m_is_waiting = true;
+							this->m_tick_wait_until = tick_at;
 
-								// - lock을 풀고 타이머나 깨우기 이벤트(새로운 더 이른 실행, 취소)를 기다린다.
-								HANDLE handles[2] = { this->m_handle_timer, this->m_handle_wake };
+							// - spin wait (spin_wait()) : the last part of the wait is spun outside the lock (the timer wakes this thread
+							//   that much earlier). woken by an earlier post_at / cancel / stop (_notify_in_time)
+							const auto time_spin = std::chrono::nanoseconds(this->m_spin_wait_ns.load(std::memory_order_relaxed));
+
+							if (time_spin.count() > 0 && time_wait <= time_spin)
+							{
+								this->m_is_spin_woken.store(false, std::memory_order_relaxed);
 
 								lock_wait.unlock();
-								::WaitForMultipleObjects(2, handles, FALSE, INFINITE);
+								while (chrono::tick::now() < tick_at && this->m_is_spin_woken.load(std::memory_order_acquire) == false)
+									std::this_thread::yield();
 								lock_wait.lock();
 							}
 							else
-#endif
 							{
-								this->m_cv_priorityqueue_in_time.wait_for(lock_wait, time_wait);
+								// - the timer wakes it time_spin earlier (spun after)
+								time_wait -= time_spin;
+
+								// - sleep
+#if defined(_WIN32)
+								if (this->m_handle_timer != nullptr)
+								{
+									// - 고해상도 타이머를 설정한다. (상대 시간, 100ns 단위)
+									LARGE_INTEGER due_time;
+									due_time.QuadPart = -(std::max)(static_cast<int64_t>(1), static_cast<int64_t>(std::chrono::duration_cast<std::chrono::duration<int64_t, std::ratio<1, 10000000>>>(time_wait).count()));
+									::SetWaitableTimer(this->m_handle_timer, &due_time, 0, nullptr, nullptr, FALSE);
+
+									// - lock을 풀고 타이머나 깨우기 이벤트(새로운 더 이른 실행, 취소)를 기다린다.
+									HANDLE handles[2] = { this->m_handle_timer, this->m_handle_wake };
+
+									lock_wait.unlock();
+									::WaitForMultipleObjects(2, handles, FALSE, INFINITE);
+									lock_wait.lock();
+								}
+								else
+#endif
+								{
+									this->m_cv_priorityqueue_in_time.wait_for(lock_wait, time_wait);
+								}
 							}
+
+							this->m_is_waiting = false;
 
 							// - get now tick
 							tick_now = chrono::tick::now();
@@ -498,13 +490,10 @@ bool executor::scheduler::process_execute(chrono::tick::duration /*_tick_diff*/,
 						}
 
 						// - 꺼낸다. (post는 lock 밖에서 한다)
-						vector_due.push_back(std::move(pexecutable.pexecutable));
+						vector_due.push_back(this->process_pop_executable(0));
 
 						// statistics)
 						++this->m_statistics.now.count_execute;
-
-						// - remove 'executable'
-						this->process_pop_executable();
 					}
 
 					// check)
@@ -569,57 +558,65 @@ bool executor::scheduler::process_execute(chrono::tick::duration /*_tick_diff*/,
 	return true;
 }
 
-void executor::scheduler::process_push_executable(EXECUTION_AT&& _executable)
+bool executor::scheduler::process_push_executable(EXECUTION_AT&& _executable)
 {
+	// declare)
+	const auto tick_at = _executable.tick_at;
+
 	// lock)
-	std::lock_guard<std::mutex> lock(this->m_lockable_priorityqueue);
+	std::unique_lock<std::mutex> lock(this->m_lockable_priorityqueue);
 
-	// check) 
+	// check) not running (stopped, not started) : refused (the caller releases it after the lock)
 	if(this->m_flag_run == 0)
-		return;
+		return false;
 
-	// 1) store pos_now
-	auto pos_now = this->m_priorityqueue_executable.size();
+	// declare)
+	auto pexecutable = _executable.pexecutable.get();
 
-	// 2) push back item
-	this->m_priorityqueue_executable.emplace_back(EXECUTION_AT());
+	// check) 이미 어딘가에 걸려 있으면 그 위치는 덮어써지므로 cancel()이 찾아서 지우도록 표시한다.
+	//    (on the executable : the scheduler it is pending in (another one too) searches when the position does not match)
+	if (pexecutable->m_scheduler_position.index.load(std::memory_order_relaxed) != SIZE_MAX)
+		pexecutable->m_scheduler_position.is_shared.store(true, std::memory_order_relaxed);
 
-	// 3) heap up
-	auto iter_child = --this->m_priorityqueue_executable.end();
+	// 1) push back item and heap up
+	this->m_priorityqueue_executable.emplace_back();
+	this->_heap_up(this->m_priorityqueue_executable.size() - 1, std::move(_executable));
 
-	while(pos_now != 0)
-	{
-		// - 빼기 1 후 나누기 2한다.
-		pos_now = ((pos_now - 1) >> 1);
+	// check) 자고 있는 스레드가 스스로 깨는 시각보다 이를 때만 깨운다.
+	//    - 깨운 시각을 기록해 두어 그보다 늦은 것이 이어서 들어오면 다시 깨우지 않는다.
+	//    - 자고 있지 않으면 잠들기 전에 가장 이른 것을 다시 보므로 깨우지 않는다.
+	if (this->m_is_waiting == false || tick_at >= this->m_tick_wait_until)
+		return true;
 
-		// - ...
-		auto iter_now = this->m_priorityqueue_executable.begin() + pos_now;
+	this->m_tick_wait_until = tick_at;
+	const bool is_first = (this->m_priorityqueue_executable.size() == 1);
 
-		// check) 
-		if(iter_now->tick_at <= _executable.tick_at)
-			break;
+	// 2) notify_one (lock 밖에서 깨워 깨어난 스레드가 바로 lock을 기다리지 않게 한다)
+	lock.unlock();
 
-		// - move to down
-		*iter_child = std::move(*iter_now);
-		iter_child = iter_now;
-	}
-
-	// 4) ...
-	*iter_child = std::move(_executable);
-
-	// check)
-	CGASSERT_ERROR(this->m_priorityqueue_executable.empty() == false);
-
-	// 5) notify_one
-	if (this->m_priorityqueue_executable.size() == 1)
+	if (is_first)
 		this->m_cv_priorityqueue_exist.notify_one();
-	else if (iter_child->pexecutable == this->m_priorityqueue_executable[0].pexecutable)
+	else
 		this->_notify_in_time();
+
+	// return)
+	return true;
+}
+
+void executor::scheduler::spin_wait(chrono::tick::duration _duration) noexcept
+{
+	this->m_spin_wait_ns.store((std::max)(static_cast<int64_t>(0), static_cast<int64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(_duration).count())), std::memory_order_relaxed);
+}
+
+chrono::tick::duration executor::scheduler::spin_wait() const noexcept
+{
+	return std::chrono::duration_cast<chrono::tick::duration>(std::chrono::nanoseconds(this->m_spin_wait_ns.load(std::memory_order_relaxed)));
 }
 
 void executor::scheduler::_notify_in_time() noexcept
 {
 	// 설명) 가장 이른 실행 시각이 바뀌었을 때(추가, 취소) 대기 중인 스레드를 깨운다.
+	this->m_is_spin_woken.store(true, std::memory_order_release);
 	this->m_cv_priorityqueue_in_time.notify_one();
 
 #if defined(_WIN32)
@@ -628,50 +625,92 @@ void executor::scheduler::_notify_in_time() noexcept
 #endif
 }
 
-void executor::scheduler::process_pop_executable() noexcept
+void executor::scheduler::_heap_place(size_t _pos, EXECUTION_AT&& _executable) noexcept
 {
-	// 1) 
-	auto ptarget = std::move(this->m_priorityqueue_executable.back());
-	auto tick_compare = ptarget.tick_at;
+	// 설명) 힙의 _pos에 놓고 그 위치를 executable에 기록한다.
+	_executable.pexecutable->m_scheduler_position.index.store(_pos, std::memory_order_relaxed);
+	this->m_priorityqueue_executable[_pos] = std::move(_executable);
+}
 
-	// 2) target객체를 제거하고 제일 마지막 객체를 그 위치로 가져 온다.
-	this->m_priorityqueue_executable.pop_back();
-
-	// check) 
-	if(this->m_priorityqueue_executable.empty())
-		return;
-
-	// 3) Size & Parent
-	auto pos_max = this->m_priorityqueue_executable.size() - 1;
-	auto pos_now = size_t(1);
-	auto iter_parent = this->m_priorityqueue_executable.begin();
-
-	// 4) down heap
-	while (pos_now <= pos_max)
+void executor::scheduler::_heap_up(size_t _pos, EXECUTION_AT&& _executable) noexcept
+{
+	while (_pos != 0)
 	{
-		// - get now node
-		auto iter_now = this->m_priorityqueue_executable.begin() + pos_now;
+		// - 빼기 1 후 나누기 2한다.
+		auto pos_parent = (_pos - 1) >> 1;
+
+		// check)
+		if (this->m_priorityqueue_executable[pos_parent].tick_at <= _executable.tick_at)
+			break;
+
+		// - move to down
+		this->_heap_place(_pos, std::move(this->m_priorityqueue_executable[pos_parent]));
+		_pos = pos_parent;
+	}
+
+	this->_heap_place(_pos, std::move(_executable));
+}
+
+void executor::scheduler::_heap_down(size_t _pos, EXECUTION_AT&& _executable) noexcept
+{
+	// 1) Size
+	const auto size = this->m_priorityqueue_executable.size();
+
+	// 2) down heap
+	for (;;)
+	{
+		// - get child node (pos x 2 + 1)
+		auto pos_child = (_pos << 1) + 1;
+
+		// check)
+		if (pos_child >= size)
+			break;
 
 		// - Left가 더 크면 Right 선택한다.
-		if (pos_now < pos_max && iter_now->tick_at > (iter_now + 1)->tick_at)
-		{
-			++iter_now;
-			++pos_now;
-		}
+		if (pos_child + 1 < size && this->m_priorityqueue_executable[pos_child].tick_at > this->m_priorityqueue_executable[pos_child + 1].tick_at)
+			++pos_child;
 
 		// check) Child가 더 크면 끝냄.
-		if (tick_compare <= iter_now->tick_at)
+		if (_executable.tick_at <= this->m_priorityqueue_executable[pos_child].tick_at)
 			break;
 
 		// - move to up
-		*iter_parent = std::move(*iter_now);
-		iter_parent = iter_now;
-
-		// - set child node as new pos_now (pos_now = pos_now x 2 + 1)
-		pos_now = (pos_now << 1) + 1;
+		this->_heap_place(_pos, std::move(this->m_priorityqueue_executable[pos_child]));
+		_pos = pos_child;
 	}
 
-	*iter_parent = std::move(ptarget);
+	this->_heap_place(_pos, std::move(_executable));
+}
+
+object_ptr<Iexecutable> executor::scheduler::process_pop_executable(size_t _pos) noexcept
+{
+	// 1) 꺼낸다.
+	auto pexecutable = std::move(this->m_priorityqueue_executable[_pos].pexecutable);
+
+	// - 힙 위치를 지운다. (다른 곳에 다시 걸려 덮어써진 것은 그대로 둔다)
+	if (pexecutable->m_scheduler_position.index.load(std::memory_order_relaxed) == _pos)
+		pexecutable->m_scheduler_position.index.store(SIZE_MAX, std::memory_order_relaxed);
+
+	// 2) 제일 마지막 객체를 그 위치로 가져 온다.
+	auto ptarget = std::move(this->m_priorityqueue_executable.back());
+	this->m_priorityqueue_executable.pop_back();
+
+	// check)
+	if (this->m_priorityqueue_executable.empty())
+		return pexecutable;
+
+	// check) 마지막 것을 꺼냈으면 끝
+	if (_pos == this->m_priorityqueue_executable.size())
+		return pexecutable;
+
+	// 3) heap up or down
+	if (_pos != 0 && this->m_priorityqueue_executable[(_pos - 1) >> 1].tick_at > ptarget.tick_at)
+		this->_heap_up(_pos, std::move(ptarget));
+	else
+		this->_heap_down(_pos, std::move(ptarget));
+
+	// return)
+	return pexecutable;
 }
 
 uint32_t executor::scheduler::fn_thread(executor::scheduler* _this)

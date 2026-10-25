@@ -2,6 +2,7 @@
 
 using namespace CGDK;
 
+bool _compare_event_function(time_event::Ievent* _left, time_event::Ievent* _right) noexcept;
 
 time_event::entity::entity() noexcept
 {
@@ -32,28 +33,30 @@ time_event::entity::entity(const std::string_view _name, int64_t _type)
 
 time_event::entity::~entity() noexcept
 {
+	// 1) the events still registered do not point to this any more (m_pentity is not a reference)
+	this->unregister_event_all();
 }
 
 
 time_event::entity& time_event::entity::operator = (own_ptr<Ievent>&& _pevent)
 {
-	SCOPED_LOCK(this->m_lockable_plog_result)
+	// - m_lockable_vector_event (not m_lockable_plog_result : the vector and the queue are locked by it.
+	//   order : m_lockable_vector_event -> the queue lock of the manager -> m_lockable_plog_result)
+	SCOPED_LOCK(this->m_lockable_vector_event)
 	{
 		// 1) unregister all 
 		this->unregister_event_all();
 
 		// 2) set 
+		if (_pevent.exist())
+			_pevent->m_pentity.store(this, std::memory_order_release);
 		this->m_queue_event.push_back(_pevent);
 		this->m_vector_event.push_back(std::move(_pevent));
 
 		// 3) reset next time
 		if (this->m_queue_event.empty() == false)
 		{
-			this->entity_status().time_next = m_queue_event.front()->event_status().time_next;
-		}
-		else
-		{
-			this->entity_status().reset_next_time();
+			time_event::entity_manager::instance()->process_update_next_time(this, m_queue_event.front()->event_status().time_next);
 		}
 	}
 
@@ -122,14 +125,33 @@ void time_event::entity::process_notify_next_time_changed(time_event::Ievent* _p
 		// check)
 		RETURN_IF(this->m_queue_event.empty());
 
-		if (this->m_queue_event.at(0) == _pevent)
-		{
-			// - update next tiime
-			this->m_entity_status.time_next = _pevent->event_status().time_next;
+		// 1) the time of an event in the queue is changed : rebuild the heap (it is ordered by time_next)
+		if (std::find(this->m_queue_event.begin(), this->m_queue_event.end(), _pevent) != this->m_queue_event.end())
+			std::make_heap(this->m_queue_event.begin(), this->m_queue_event.end(), _compare_event_function);
 
-			// - notify
-			time_event::entity_manager::instance()->process_notify_next_time_changed(this);
-		}
+		// 2) the next time of the entity = the front (under the queue lock of the manager)
+		time_event::entity_manager::instance()->process_update_next_time(this, this->m_queue_event.front()->event_status().time_next);
+	}
+}
+
+void time_event::entity::process_set_event_next_time(time_event::Ievent* _pevent, chrono::time::utc::time_point _time_next) noexcept
+{
+	// check)
+	RETURN_IF(_pevent == nullptr);
+
+	SCOPED_LOCK(this->m_lockable_vector_event)
+	{
+		// 1) set (the time of an event in the heap is changed only under this lock)
+		_pevent->event_status().time_next = _time_next;
+
+		// check) not in the queue (executing : process_execute() pushes it with this time)
+		RETURN_IF(std::find(this->m_queue_event.begin(), this->m_queue_event.end(), _pevent) == this->m_queue_event.end());
+
+		// 2) rebuild the heap (ordered by time_next)
+		std::make_heap(this->m_queue_event.begin(), this->m_queue_event.end(), _compare_event_function);
+
+		// 3) the next time of the entity = the front (under the queue lock of the manager)
+		time_event::entity_manager::instance()->process_update_next_time(this, this->m_queue_event.front()->event_status().time_next);
 	}
 }
 
@@ -140,9 +162,6 @@ void time_event::entity::register_event(own_ptr<time_event::Ievent>&& _pevent)
 
 	try
 	{
-		// declare) 
-		bool is_notify_to = false;
-
 		SCOPED_LOCK(this->m_lockable_vector_event)
 		{
 			// 1) find event
@@ -150,6 +169,9 @@ void time_event::entity::register_event(own_ptr<time_event::Ievent>&& _pevent)
 
 			// check) already exist?
 			THROW_IF(iter_find != this->m_vector_event.end(), throwable::failure(eRESULT::ALREADY_EXIST));
+
+			// check) registered in another entity
+			THROW_IF(_pevent->m_pentity.load(std::memory_order_acquire) != nullptr, throwable::failure(eRESULT::ALREADY_EXIST));
 
 			// 2) preset
 			_pevent->event_status().count_remained = _pevent->event_setting().count_times;
@@ -164,17 +186,13 @@ void time_event::entity::register_event(own_ptr<time_event::Ievent>&& _pevent)
 			// check) 
 			CGASSERT_ERROR(this->m_queue_event.empty() == false);
 
-			// 5) notify_one
-			if (_pevent == this->m_queue_event[0])
-			{
-				// - update next tiime
-				this->m_entity_status.time_next = _pevent->event_status().time_next;
+			// declare)
+			const bool is_front = (_pevent == this->m_queue_event[0]);
 
-				// - 
-				is_notify_to = true;
-			}
+			// 5) add pevent
+			// - the entity it is registered in (Ievent::unregister_event() / set_next_time() use it)
+			_pevent->m_pentity.store(this, std::memory_order_release);
 
-			// 6) add pevent
 			try
 			{
 				this->m_vector_event.push_back(std::move(_pevent));
@@ -182,17 +200,18 @@ void time_event::entity::register_event(own_ptr<time_event::Ievent>&& _pevent)
 			catch (...)
 			{
 				this->_process_erase_event_from_heap(_pevent);
+				_pevent->m_pentity.store(nullptr, std::memory_order_release);
 
 				// reraise) 
 				throw;
 			}
-		}
 
-		// 8) notify
-		if (is_notify_to)
-		{
-			// - notify
-			time_event::entity_manager::instance()->process_notify_next_time_changed(this);
+			// 6) the new front : the next time of the entity (under the queue lock of the manager.
+			//    written directly, the entity kept its position in the heap of the manager and was executed late)
+			if (is_front)
+			{
+				time_event::entity_manager::instance()->process_update_next_time(this, this->m_queue_event[0]->event_status().time_next);
+			}
 		}
 
 		// 9) apply log 
@@ -227,8 +246,8 @@ void time_event::entity::unregister_event(time_event::Ievent* _pevent) noexcept
 	// check)
 	RETURN_IF(_pevent == nullptr);
 
-	// declare) 
-	bool is_notify_to = false;
+	// declare) the event unregistered (released after the lock)
+	own_ptr<time_event::Ievent> pevent_unregistered;
 
 	// 1) create log object
 	auto presult_event = _append_result_log("unregister event");
@@ -238,20 +257,22 @@ void time_event::entity::unregister_event(time_event::Ievent* _pevent) noexcept
 		// 2) find event
 		auto iter_find = std::find(this->m_vector_event.begin(), this->m_vector_event.end(), _pevent);
 
-		// check) 
-		if (iter_find == this->m_vector_event.end())
+		// check) registered (the condition was inverted : an absent event erased end(), a registered one was never removed)
+		if (iter_find != this->m_vector_event.end())
 		{
-			// 3) erase entity
-			this->m_vector_event.erase(iter_find);
+			// 3) remove from the heap first (not there while it is executing : process_execute() does not push it again)
+			const bool is_front_changed = this->_process_erase_event_from_heap(_pevent);
 
-			// 4) reorder heap
-			is_notify_to = this->_process_erase_event_from_heap(_pevent);
-
-			// 5) update next tiime
-			if (is_notify_to == true)
+			// 4) the new front : the next time of the entity (under the queue lock of the manager)
+			if (is_front_changed && this->m_queue_event.empty() == false)
 			{
-				this->m_entity_status.time_next = _pevent->event_status().time_next;
+				time_event::entity_manager::instance()->process_update_next_time(this, this->m_queue_event.front()->event_status().time_next);
 			}
+
+			// 5) erase the event (the own_ptr is released after the lock. _pevent is not used after this)
+			pevent_unregistered = std::move(*iter_find);
+			pevent_unregistered->m_pentity.store(nullptr, std::memory_order_release);
+			this->m_vector_event.erase(iter_find);
 
 			// 6) ...
 			if (this->m_vector_event.empty())
@@ -270,30 +291,33 @@ void time_event::entity::unregister_event(time_event::Ievent* _pevent) noexcept
 		}
 	}
 
-	// 8) apply log 
+	// 8) release the event (out of the lock)
+	pevent_unregistered.reset();
+
+	// 9) apply log
 	_append_result_log_post(presult_event);
 
-	// 9) notify message
+	// 10) notify message
 	time_event::entity_manager::instance()->transmit_message(sMESSAGE_NOTIFY(eMESSAGE::SERVER::TIME_EVENT::EVENT_UNREGISTER, 0, reinterpret_cast<uintptr_t>(this)));
-
-	// 10) notify to entity_manager
-	if (is_notify_to)
-	{
-		// - notify
-		time_event::entity_manager::instance()->process_notify_next_time_changed(this);
-	}
 }
 
 void time_event::entity::unregister_event_all() noexcept
 {
+	// declare) the events unregistered (released after the lock)
+	std::vector<own_ptr<time_event::Ievent>> vector_event;
+
 	SCOPED_LOCK(m_lockable_vector_event)
 	{
-		// 1) clear
-		this->m_vector_event.clear();
+		// 1) clear (the events do not point to this any more)
+		for (auto& iter : this->m_vector_event)
+			iter->m_pentity.store(nullptr, std::memory_order_release);
+
+		vector_event.swap(this->m_vector_event);
 		this->m_queue_event.clear();
 
-		// 2) ...
-		entity_status().reset_next_time();
+		// 2) the next time of the entity is kept : it finds no event when it is executed and is done (like the last event
+		//    unregistered). reset_next_time() only reset time_last_failed. a time written here would be out of the heap order
+		//    of the manager (the time of a registered entity is changed through process_update_next_time())
 	}
 }
 
@@ -330,6 +354,7 @@ intptr_t time_event::entity::process_execute(intptr_t /*_return*/, size_t /*_par
 		// declare) 
 		object_ptr<time_event::Ievent> pevent_front;
 		bool stop_processing = false;
+		chrono::time::utc::time_point time_scheduled;
 
 		{
 			std::unique_lock event_lock(this->m_lockable_vector_event);
@@ -342,6 +367,7 @@ intptr_t time_event::entity::process_execute(intptr_t /*_return*/, size_t /*_par
 			else
 			{
 				pevent_front = this->m_queue_event.front();
+				time_scheduled = pevent_front->event_status().time_next;
 				stop_processing = time_now < pevent_front->event_status().time_next;
 				if (!stop_processing)
 					_pop_heap();
@@ -423,25 +449,34 @@ intptr_t time_event::entity::process_execute(intptr_t /*_return*/, size_t /*_par
 		}
 
 		// 11) [남은 실행 횟수]가 0이 아니면 다시 추가한다.
-		if (pevent_front->event_setting().count_times == 0 
-		 || pevent_front->event_status().count_remained != 0)
-		{
-			// - 실행한 Event에 대해 Interval만큼 증가시킨다.
-			pevent_front->event_status().time_next += pevent_front->event_setting().time_interval;
-			pevent_front->event_status().time_last_executed = time_now;
+		//     (unlimited (count_times 0) with no interval (<= 0) : executed once. pushed again it ran again and again in this
+		//      loop without an end : the time never passed time_now)
+		const bool is_unlimited_without_interval = pevent_front->event_setting().count_times == 0 && pevent_front->event_setting().time_interval <= chrono::time::duration::zero();
 
+		if ((pevent_front->event_setting().count_times == 0 
+		 || pevent_front->event_status().count_remained != 0)
+		 && is_unlimited_without_interval == false)
+		{
 			{
 				std::unique_lock event_lock(this->m_lockable_vector_event);
-				// - push heap
-				_push_heap(pevent_front);
+
+				// - the next time : + interval (not if Ievent::set_next_time() changed it while it was executing. under the lock)
+				if (pevent_front->event_status().time_next == time_scheduled)
+					pevent_front->event_status().time_next += pevent_front->event_setting().time_interval;
+				pevent_front->event_status().time_last_executed = time_now;
+
+				// - push heap (not if it was unregistered while it was executing)
+				if (std::find(this->m_vector_event.begin(), this->m_vector_event.end(), pevent_front.get()) != this->m_vector_event.end())
+					_push_heap(pevent_front);
 			}
 		}
 
-		// 12) set...
-		if (this->m_queue_event.empty() == false)
+		// 12) set entity next time (under the lock : the queue may be changed by another thread)
 		{
-			// - set entity next time
-			this->entity_status().time_next = this->m_queue_event.front()->event_status().time_next;
+			std::unique_lock event_lock(this->m_lockable_vector_event);
+
+			if (this->m_queue_event.empty() == false)
+				time_event::entity_manager::instance()->process_update_next_time(this, this->m_queue_event.front()->event_status().time_next);
 		}
 	}
 
@@ -598,59 +633,20 @@ bool time_event::entity::_process_erase_event_from_heap(time_event::Ievent* _pev
 	// check)
 	RETURN_IF(_pevent == nullptr, false);
 
-	// check)
-	CGASSERT_ERROR(this->m_queue_event.empty() == false);
+	// 1) find _pevent (not in the queue while it is executing : process_execute() popped it)
+	auto iter_find_queue = std::find(this->m_queue_event.begin(), this->m_queue_event.end(), _pevent);
 
-	// check)
-	RETURN_IF(this->m_queue_event.empty(), false);
+	// check) not exist
+	RETURN_IF(iter_find_queue == this->m_queue_event.end(), false);
 
-	if (this->m_queue_event.size() > 1)
-	{
-		// declare)
-		bool is_time_next_changed = false;
+	// 2) is first?
+	const bool is_front = (iter_find_queue == this->m_queue_event.begin());
 
-		// 1) find _pevent
-		auto iter_find_queue = std::find(this->m_queue_event.begin(), this->m_queue_event.end(), _pevent);
+	// 3) erase event object from queue and rebuild the heap
+	//    (the next time of the entity is set by the caller : under the queue lock of the manager)
+	this->m_queue_event.erase(iter_find_queue);
+	std::make_heap(this->m_queue_event.begin(), this->m_queue_event.end(), _compare_event_function);
 
-		// check)
-		CGASSERT_ERROR(iter_find_queue != this->m_queue_event.end());
-
-		// check) not exist?
-		RETURN_IF(iter_find_queue == this->m_queue_event.end(), false);
-
-		// 2) is first?
-		if (iter_find_queue == this->m_queue_event.begin())
-		{
-			is_time_next_changed = true;
-		}
-
-		// 2) erase event object from queue
-		this->m_queue_event.erase(iter_find_queue);
-
-		// 3) regeneration heap
-		std::make_heap(this->m_queue_event.begin(), this->m_queue_event.end(), _compare_event_function);
-
-		// 4) reset next time
-		if (is_time_next_changed == true)
-		{
-			this->entity_status().time_next = this->m_queue_event.front()->event_status().time_next;
-		}
-
-		// return)
-		return is_time_next_changed;
-	}
-	else
-	{
-		// check)
-		CGASSERT_ERROR(this->m_queue_event[0] == _pevent)
-
-		// - clear
-		this->m_queue_event.erase(this->m_queue_event.begin());
-
-		// - reset next time
-		this->entity_status().reset_next_time();
-
-		// return)
-		return true;
-	}
+	// return)
+	return is_front;
 }

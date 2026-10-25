@@ -53,12 +53,12 @@
 ## Handover refresh - 2026-10-22 (evening, r11402~r11418)
 - r11394 의 Linux 미검증 항목 : POKPUNG(g++ 15.2 Debug) 에서 test_socket_option 12개와 net_socket.http 전체 스위트를 epoll / io_uring 으로 통과.
 - 인수인계 문서의 버그성 남은 일(1~7, 11, 12)을 모두 처리하고, connector 의 connect/attach 순서·bind(any:0) EADDRINUSE 묻힘, acceptor stop 수명, io_uring 의 -ECANCELED poll 과 SYNC_CANCEL 을 새로 찾아 고쳤다 : document/handover/CGDK10.handover.2026-10.md 1.12절. object pool/factory TLS, 그룹 헤더, acceptor 헤더가 바뀌어 gruma 전체 재빌드 필요.
-- epoll_wait busy poll 은 r11429(1.13). io_uring completion 1단계(백엔드) r11437(1.14), 2단계(소켓 op 전환)는 WIP r11441(1.15 : completion 모드 2개 실패 남음), 3단계 남음. 그 밖에 Windows TFO SYN 데이터와 _buffer_unreal.h 의 실제 UE 빌드 확인.
+- epoll_wait busy poll 은 r11429(1.13). io_uring completion 1단계(백엔드) r11437(1.14), 2단계(소켓 op 전환)는 WIP r11441(1.15 : completion 모드 2개 실패 남음), 3단계 남음. 그 밖에 Windows TFO SYN 데이터와 _buffer_unreal.h 의 실제 UE 빌드 확인(r11520 에서 해결 : UE 5.7·5.8, 인수인계 문서 1.35).
 
 ## Handover refresh - 2026-10-23 (r11444 : io_uring completion 2단계 완료)
 - 1.15 의 completion 모드 실패 2개(connector_many_connects, io_uring_executor)는 백엔드의 제출 소유 문제였다 : owner 가 아닌 thread 의 enter 가 owner 의 지연 SQE 까지 제출해 짧게 사는 thread 소유가 됐다. r11444 : poll/op 는 ring 의 staging 에 쓰고 owner worker 만 제출(1.16). 소켓 코드 변경 없음.
 - 검증 : WSL2(kernel 6.6) net_socket.http 전체 completion 3회 / epoll / readiness io_uring 모두 114 통과, io_context_uring_cq 9개(새 테스트 ops_from_short_lived_threads 포함). POKPUNG(kernel 7.0), ASan 미실행.
-- 남은 일 : 3단계(multishot recv + provided buffer), POKPUNG 벤치(epoll 대 completion), Windows TFO SYN 데이터, _buffer_unreal.h UE 빌드.
+- 남은 일 : 3단계(multishot recv + provided buffer), POKPUNG 벤치(epoll 대 completion), Windows TFO SYN 데이터, _buffer_unreal.h UE 빌드(r11520 해결).
 
 ## Handover refresh - 2026-10-23 (r11451 : io_uring completion, kernel 7.0 에서 드러난 경쟁)
 - r11444 는 WSL(8 CPU)에서만 검증됐고 mistral(kernel 7.0, 32 CPU)에서 completion 모드 connector_many_connects 3회 모두 실패 등이 났다. r11451 : owner 가 아닌 thread 는 어떤 ring 에도 enter 하지 않음(MSG_RING wake, poll remove staging, 취소는 SYNC_CANCEL), owner 의 flush+submit 을 한 락 안에서, per handle 배열을 chunk 표로(인수인계 문서 1.17). r11448(다른 세션)의 transient worker / acceptor 대기와 함께 동작.

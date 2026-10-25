@@ -234,7 +234,7 @@ void schedulable::manager::process_cancel_schedulable_all() noexcept
 			this->_cancel_schedulable(iter.get());
 
 			vector_executable.emplace_back(std::move(iter->m_pexecutable_schedule));
-			vector_hold.emplace_back(std::move(iter->m_pschedulable_manager));
+			{ std::lock_guard lock_schedulable_manager(iter->m_lockable_pexecutor); vector_hold.emplace_back(std::move(iter->m_pschedulable_manager)); }
 		}
 	}
 
@@ -325,8 +325,8 @@ bool schedulable::manager::process_attach(object_ptr<Ischedulable>&& _pschedulab
 	if(_pschedulable->m_pschedulable_manager.exist())
 		return false;
 
-	// 1) attach
-	_pschedulable->m_pschedulable_manager = this;
+	// 1) attach (m_pschedulable_manager is written under both locks : Ischedulable::schedulable_manager() reads it under its own)
+	{ std::lock_guard lock_schedulable_manager(_pschedulable->m_lockable_pexecutor); _pschedulable->m_pschedulable_manager = this; }
 
 	try
 	{
@@ -336,7 +336,7 @@ bool schedulable::manager::process_attach(object_ptr<Ischedulable>&& _pschedulab
 		// check)
 		if(result == false)
 		{
-			_pschedulable->m_pschedulable_manager.reset();
+			{ std::lock_guard lock_schedulable_manager(_pschedulable->m_lockable_pexecutor); _pschedulable->m_pschedulable_manager.reset(); }
 			return false;
 		}
 
@@ -378,7 +378,7 @@ bool schedulable::manager::process_attach(object_ptr<Ischedulable>&& _pschedulab
 
 		// - reset
 		_pschedulable->m_pexecutable_schedule.reset();
-		_pschedulable->m_pschedulable_manager.reset();
+		{ std::lock_guard lock_schedulable_manager(_pschedulable->m_lockable_pexecutor); _pschedulable->m_pschedulable_manager.reset(); }
 
 		// reraise)
 		throw;
@@ -427,7 +427,7 @@ bool schedulable::manager::process_detach(Ischedulable* _pschedulable) noexcept
 
 		// 4) reset
 		pexecutable_hold = std::move(_pschedulable->m_pexecutable_schedule);
-		phold_this = std::move(_pschedulable->m_pschedulable_manager);
+		{ std::lock_guard lock_schedulable_manager(_pschedulable->m_lockable_pexecutor); phold_this = std::move(_pschedulable->m_pschedulable_manager); }
 	}
 
 	// 5) Hook

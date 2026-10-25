@@ -84,6 +84,9 @@ test_tcp_packet.cpp
 #ssl loopback (a self-signed certificate made by the test)
 test_ssl_loopback.cpp
 
+#tcp_crypt (pn_code) : concurrent senders, encrypted data in the receive of ACCEPT_CERTIFICATION, reconnect after a close while sending
+test_tcp_crypt.cpp
+
 #http client response timeout
 test_http_client_timeout.cpp
 
@@ -117,6 +120,24 @@ test_uring_send.cpp
 
 #send_defer auto : the sends of an executable run by the executor (one socket after another, close, exception, other threads)
 test_send_defer_auto.cpp
+
+#linux UDP send : the wait for EPOLLOUT (EAGAIN injected : sendto / sendmmsg of this executable are replaced)
+test_udp_send_epollout.cpp
+
+#linux TCP receive : the data that came with the FIN is received before the socket is closed
+test_tcp_receive_at_close.cpp
+
+#linux acceptor : accept with no fd left (EMFILE : the pending connections are closed, the workers do not spin)
+test_accept_fd_exhausted.cpp
+
+#linux : the io backend an io_context got is logged (io_uring enabled / not used / disabled)
+test_io_backend_log.cpp
+
+#linux epoll / io_uring readiness : the registration mode of a TCP socket (EPOLLET for small receives, EPOLLONESHOT for large ones)
+test_epoll_receive_mode.cpp
+
+#linux epoll / io_uring readiness : an EPOLLOUT posted while the socket processes an event comes (the registered mask was not cleared)
+test_epollout_rearm.cpp
 )
 
 

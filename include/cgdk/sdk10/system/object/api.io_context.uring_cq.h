@@ -174,6 +174,9 @@ public:
 	[[nodiscard]] size_t		provided_buffer_size() const noexcept { return PROVIDED_BUFFER_SIZE; }
 	//! @brief this thread is the owner of the ring the fd is bound to (an op it submits goes with its next enter : no wake, no syscall of its own)
 	[[nodiscard]] bool			is_ring_owner(CGHANDLE _fd) const noexcept;
+	//! @brief the owner of the ring of the fd submits the ops staged on it now when one of the fd is staged (flush + submit, no wait).
+	//!        false : this thread is not the owner (or the ring is lent) or nothing of the fd is staged
+			bool				submit_staged(CGHANDLE _fd) noexcept;
 	//! @brief the provided buffers delivered and not given back yet (every ring)
 	[[nodiscard]] size_t		provided_buffer_out_count() const noexcept;
 

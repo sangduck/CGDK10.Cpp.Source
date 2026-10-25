@@ -81,6 +81,7 @@ result_code executor::queue_list_threads::start(context& _context)
 	this->m_count_threads_extra_active = 0;
 	this->m_count_threads_extra_exist = 0;
 	this->m_count_threads_extra_max = thread_count;
+	this->m_count_threads_extra_wake = 0;
 	this->m_thread_index = 0;
 
 	try
@@ -122,7 +123,12 @@ result_code executor::queue_list_threads::stop() noexcept
 
 	// 3) Thread를 종료설정를 위해 m_is_active을 false로 설정한 후
 	this->m_is_active = false;
-	this->m_count_threads_blocked = 0;
+	{
+		// lock) (process_control_thread_blocked() / unblocked() change it under the lock)
+		std::lock_guard<std::mutex> lock(this->m_lockable_threads_extra);
+
+		this->m_count_threads_blocked = 0;
+	}
 
 	// - 기다리고 있는 thread를 모두 깨운다.
 	//   (깨우지 않으면 각 thread가 wait의 timeout(1초)이 지나야 m_is_active를 다시 보므로 stop()이 최대 1초 늦어졌다)
@@ -204,10 +210,7 @@ uint32_t executor::queue_list_threads::process_thread_run_extra()
 
 	// 2) executing thread 수 증가
 	++this->m_statistics.now.thread_count;
-	SCOPED_LOCK_NAMED(this->m_lockable_threads_extra, cs_extra)
-	{
-		++this->m_count_threads_extra_active;
-	}
+	//   (m_count_threads_extra_active was counted by process_control_thread_blocked() when it began this thread)
 
 	while (this->m_is_active)
 	{
@@ -257,8 +260,11 @@ bool executor::queue_list_threads::process_control_thread_blocked() noexcept
 	// 3) start extra thread if needed
 	if (extra_count > this->m_count_threads_extra_active)
 	{
+		// - counted as active here, not when the thread runs again : a second call before that saw the same count and woke or began nothing
 		if (this->m_count_threads_extra_active < this->m_count_threads_extra_exist)
 		{
+			++this->m_count_threads_extra_active;
+			++this->m_count_threads_extra_wake;
 			this->m_cv_threads_extra.notify_one();
 		}
 		else
@@ -267,13 +273,23 @@ bool executor::queue_list_threads::process_control_thread_blocked() noexcept
 			if(this->m_count_threads_extra_exist >= this->m_count_threads_extra_max)
 				return false;
 
-			++m_count_threads_extra_exist;
+			++this->m_count_threads_extra_exist;
+			++this->m_count_threads_extra_active;
 
 			// - start new extra thread
-			this->begin_thread([this]()
-				{
-					return this->process_thread_run_extra();
-				});
+			try
+			{
+				this->begin_thread([this]()
+					{
+						return this->process_thread_run_extra();
+					});
+			}
+			catch (...)
+			{
+				--this->m_count_threads_extra_exist;
+				--this->m_count_threads_extra_active;
+				return false;
+			}
 		}
 	}
 
@@ -323,18 +339,22 @@ void executor::queue_list_threads::_is_extra_thread_run() noexcept
 		if(this->m_is_active == false)
 			return;
 
-		// check)
-		if(this->m_count_threads_blocked >= this->m_count_threads_extra_active)
+		// check) still needed (the blocked threads above the threshold, as process_control_thread_blocked() counts them : it compared
+		//        all the blocked threads and an extra thread never ended while fewer than the threshold were blocked)
+		if(this->m_count_threads_blocked - this->m_count_threads_extra_threshold >= this->m_count_threads_extra_active)
 			return;
 
 		// - executing thread 수 감소
 		--this->m_count_threads_extra_active;
 
-		// - wait
-		this->m_cv_threads_extra.wait(cs_extra);
+		// - wait for a wake (process_control_thread_blocked() counted this thread as active again) or the stop
+		this->m_cv_threads_extra.wait(cs_extra, [this]() { return this->m_count_threads_extra_wake > 0 || this->m_is_active == false; });
 
-		// - executing thread 수 증가
-		++this->m_count_threads_extra_active;
+		// - executing thread 수 증가 (a wake : already counted)
+		if (this->m_count_threads_extra_wake > 0)
+			--this->m_count_threads_extra_wake;
+		else
+			++this->m_count_threads_extra_active;
 	}
 }
 

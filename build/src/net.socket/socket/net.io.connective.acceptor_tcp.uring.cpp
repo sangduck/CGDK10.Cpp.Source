@@ -8,6 +8,10 @@ namespace CGDK
 // - the acceptor whose accept this thread processes (net.io.connective.acceptor_tcp.cpp)
 extern thread_local const void* t_pacceptor_accepting;
 
+// - the accept with no fd left : a pending connection closed with the spare fd (net.io.connective.acceptor_tcp.cpp)
+void		net_acceptor_prepare_fd_spare() noexcept;
+std::size_t	net_acceptor_reject_on_fd_exhausted(CGSOCKET _handle_listen, int _error_code, std::string_view _name) noexcept;
+
 //-----------------------------------------------------------------------------
 // io_uring completion (executor::io_backend::io_uring_completion) : the accept with the multishot ACCEPT op
 //
@@ -126,6 +130,9 @@ void net::io::connective::acceptor::Ntcp::process_connective_accept_cq(intptr_t 
 		}
 		else
 		{
+			// - the spare fd for the accept with no fd left (opened once)
+			net_acceptor_prepare_fd_spare();
+
 			this->_process_accepted(handle_socket_new, address_family);
 		}
 	}
@@ -134,18 +141,31 @@ void net::io::connective::acceptor::Ntcp::process_connective_accept_cq(intptr_t 
 	{
 		this->m_last_socket_error = static_cast<int>(-_result);
 		this->statistics_on_fail_connect();
+
+		// - no fd left : the pending connections are closed with the spare fd (posted again below, the accept would fail again at once)
+		if ((_result == -EMFILE || _result == -ENFILE) && is_listening)
+		{
+			const auto handle_listen = is_uds ? _handle_listen : this->native_handle();
+
+			if (handle_listen != INVALID_SOCKET)
+			{
+				for (auto count = net_acceptor_reject_on_fd_exhausted(handle_listen, static_cast<int>(-_result), this->name()); count != 0; --count)
+					this->statistics_on_fail_connect();
+			}
+		}
 	}
 
-	// 3) the op ended (no more CQEs) : posted again while listening
+	// 3) the op ended (no more CQEs) : posted again while listening, disabled too (the sockets it accepts meanwhile are closed above.
+	//    enable() posts nothing : not posted while disabled, the connections stayed in the backlog for good)
 	RETURN_IF((_flags & CGDK_ACCEPT_CQE_FLAG_MORE) != 0);
-	RETURN_IF(is_listening == false || this->is_disable());
+	RETURN_IF(is_listening == false);
 
 	const auto handle_listen = is_uds ? _handle_listen : this->native_handle();
 
 	// check) the listen socket is closed (stop in process)
 	RETURN_IF(handle_listen == INVALID_SOCKET);
 
-	// - (EMFILE/ENFILE ... : the accept is posted again at once like the readiness event that comes again)
+	// - (EMFILE/ENFILE : the pending connections were closed above, the accept waits for the next one)
 	const bool result = this->_process_start_accept_cq(handle_listen, _address_family);
 
 	// check)

@@ -143,11 +143,14 @@
     <ClCompile Include="test_http_parser.cpp" />
     <ClCompile Include="test_tcp_packet.cpp" />
     <ClCompile Include="test_ssl_loopback.cpp" />
+    <ClCompile Include="test_tcp_crypt.cpp" />
     <ClCompile Include="test_http_client_timeout.cpp" />
     <ClCompile Include="test_socket_option.cpp" />
     <ClCompile Include="test_sockaddr_from_string.cpp" />
     <ClCompile Include="test_connect_requestable.cpp" />
     <ClCompile Include="test_emergency.cpp" />
+    <ClCompile Include="test_send_defer_auto.cpp" />
+    <ClCompile Include="test_iocp_socket.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

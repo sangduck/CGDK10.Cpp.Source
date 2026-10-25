@@ -41,10 +41,12 @@ public:
 
 #if defined(_SYS_EPOLL_H)
 	virtual	uint32_t			process_recover_sendable( intptr_t _event, std::size_t _param) PURE;
-	//! @brief EPOLLERR : reads the error queue of the socket (MSG_ERRQUEUE). @return true the event was MSG_ZEROCOPY notifications only (handled : not an error) @return false an error of the socket (the caller closes it)
+	//! @brief EPOLLERR : reads the error queue of the socket (MSG_ERRQUEUE). @return true the event was MSG_ZEROCOPY notifications only, or stale (the error queue empty and no SO_ERROR : read already) : handled, not an error @return false an error of the socket (the caller closes it)
 	virtual	bool				process_complete_error_queue() noexcept { return false; }
 	//! @brief io_uring completion : this sendable waits for the socket buffer with the SEND op of the io_context instead of EPOLLOUT (sendable::Ntcp_async_gather). false : readiness only
 	virtual	bool				is_io_completion_supported() const noexcept { return false; }
+	//! @brief the lock the direct send system calls are made under (the close swaps the handle under it after process_get_lockable_sending()). none : nullptr
+	virtual	lock_object*		process_get_lockable_send_call() noexcept { return nullptr; }
 #endif
 	//! @brief socket을 닫기 전에 부른다. 모아 둔 송신(send_defer : 그룹 락 안 / send cork)이 있으면 어느 thread가 모은 것이든 지금 보낸다.
 	virtual	void				process_flush_deferred_send_on_close() noexcept {}

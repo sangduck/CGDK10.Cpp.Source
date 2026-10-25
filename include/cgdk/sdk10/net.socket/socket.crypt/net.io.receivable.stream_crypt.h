@@ -52,6 +52,15 @@ class net::io::receivable::Nstream_crypt :
 protected:
 	virtual	shared_buffer		process_decryptor(shared_buffer& _buffer);
 	virtual	intptr_t			process_complete_receivable( intptr_t _result, std::size_t _param) override;
+
+	//! @brief the cryptor was set while the received bytes are processed (the client at ACCEPT_CERTIFICATION) : the bytes after _pos received
+	//!        with them were taken as plain (no cryptor) but are encrypted. decrypts them in place. (nothing when the bytes were decrypted)
+			void				process_decrypt_received_after(const void* _pos);
+
+			// - the received bytes being processed (process_packet) and taken as plain (no cryptor) : [m_preceived_plain_begin, m_preceived_plain_end).
+			//   nullptr : none. (only the receiving thread uses them)
+			char*				m_preceived_plain_begin{ nullptr };
+			char*				m_preceived_plain_end{ nullptr };
 };
 
 

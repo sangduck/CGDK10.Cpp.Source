@@ -37,6 +37,8 @@ public:
 
 
 			bool				post(uint32_t _bytes_transferred, uintptr_t _completion_key, Iexecutable* _pexecutable, bool _is_adopt) noexcept;
+			// - batch handoff (executor::io_context::BATCH_HANDOFF) : the executables of a batch after a blocking one go back to the front of the queue
+	static	void				_handoff(executor::io_context::BATCH_HANDOFF& _batch) noexcept;
 	virtual	intptr_t process_execute(intptr_t _result, size_t _param) override;
 };
 
@@ -235,8 +237,16 @@ intptr_t api::io_context_epoll_direct::executable_post::process_execute(intptr_t
 	//    - 하나가 exception을 던져도 나머지는 실행하고 release한다. (첫 exception은 끝난 뒤 다시 던진다)
 	std::exception_ptr pexception;
 
+	// - the rest of the batch goes back to the queue when one blocks (executor::io_context::BATCH_HANDOFF : the other workers take it)
+	executor::io_context::BATCH_HANDOFF batch_handoff{ &executable_post::_handoff, this, array_executable, static_cast<int>(count_executable), 0, nullptr };
+	const bool is_batch_handoff = (count_executable > 1);
+	if (is_batch_handoff)
+		executor::io_context::batch_handoff_begin(batch_handoff);
+
 	for (std::size_t i = 0; i < count_executable; ++i)
 	{
+		batch_handoff.index = static_cast<int>(i);
+
 		// - get executable
 		auto pexecutable = array_executable[i];
 
@@ -260,12 +270,76 @@ intptr_t api::io_context_epoll_direct::executable_post::process_execute(intptr_t
 		}
 	}
 
+	// - the batch ended
+	if (is_batch_handoff)
+		executor::io_context::batch_handoff_end(batch_handoff);
+
 	// reraise)
 	if (pexception)
 		std::rethrow_exception(pexception);
 
 	// return)
 	return 0;
+}
+
+void api::io_context_epoll_direct::executable_post::_handoff(executor::io_context::BATCH_HANDOFF& _batch) noexcept
+{
+	// - the executables after the blocking one go back to the front of the queue (in their order) and are cleared in the batch
+	auto* pthis = static_cast<executable_post*>(_batch.pobject);
+	auto** parray = static_cast<Iexecutable**>(_batch.presults);
+
+	// declare)
+	CGHANDLE event_fd_signal = INVALID_CGHANDLE_VALUE;
+
+	{
+		// lock)
+		std::lock_guard lock(pthis->m_lockable_complete);
+
+		// check) destroyed : they stay in the batch
+		RETURN_IF(pthis->m_event_fd_post == INVALID_CGHANDLE_VALUE);
+
+		// - from the back (push_front keeps their order)
+		bool is_queued = false;
+		for (int i = _batch.count - 1; i > _batch.index; --i)
+		{
+			CONTINUE_IF(parray[i] == nullptr);
+
+			RESULT result;
+			result.data.ptr = reinterpret_cast<void*>(parray[i]);
+			result.events = 0;
+
+			try
+			{
+				pthis->m_queue_executable.push_front(result);
+			}
+			catch (...)
+			{
+				break;
+			}
+
+			// - the reference of post() moves to the queue
+			parray[i] = nullptr;
+			is_queued = true;
+		}
+
+		// check)
+		RETURN_IF(is_queued == false);
+
+		// - signal (the queue is not empty : level triggered until a pop empties it)
+		if (pthis->m_is_signaled == false)
+		{
+			pthis->m_is_signaled = true;
+			event_fd_signal = pthis->m_event_fd_post;
+			pthis->m_count_signaling.fetch_add(1, std::memory_order_relaxed);
+		}
+	}
+
+	// - notify (out of the lock)
+	if (event_fd_signal != INVALID_CGHANDLE_VALUE)
+	{
+		::eventfd_write(event_fd_signal, 1);
+		pthis->m_count_signaling.fetch_sub(1, std::memory_order_release);
+	}
 }
 
 

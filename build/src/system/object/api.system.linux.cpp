@@ -503,9 +503,100 @@ uint64_t api::get_process_id()
 }
 
 
+// - cgroup 의 CPU 한도 (quota / period 올림). 한도가 없거나 읽지 못하면 0
+static size_t get_cgroup_cpu_limit() noexcept
+{
+	try
+	{
+		// declare)
+		size_t limit = 0;
+		auto apply = [&](double _quota, double _period)
+		{
+			if (_quota <= 0 || _period <= 0)
+				return;
+			auto count = static_cast<size_t>((_quota + _period - 1) / _period);
+			if (count == 0)
+				count = 1;
+			if (limit == 0 || count < limit)
+				limit = count;
+		};
+
+		// 1) cgroup v2 : 이 process 의 cgroup 부터 root 까지의 cpu.max ("max 100000" 이면 한도 없음)
+		std::string path_cgroup;
+		{
+			std::ifstream file("/proc/self/cgroup");
+			std::string line;
+			while (std::getline(file, line))
+			{
+				if (line.compare(0, 3, "0::") == 0)
+				{
+					path_cgroup = line.substr(3);
+					break;
+				}
+			}
+		}
+		for (bool is_first = true; is_first || path_cgroup.empty() == false; is_first = false)
+		{
+			std::ifstream file("/sys/fs/cgroup" + path_cgroup + "/cpu.max");
+			std::string quota;
+			double period = 0;
+			if (file >> quota >> period && quota != "max")
+				apply(std::atof(quota.c_str()), period);
+
+			auto pos = path_cgroup.rfind('/');
+			if (pos == std::string::npos)
+				break;
+			path_cgroup.resize(pos);
+		}
+
+		// 2) cgroup v1 : cpu.cfs_quota_us (-1 이면 한도 없음)
+		{
+			std::ifstream file_quota("/sys/fs/cgroup/cpu/cpu.cfs_quota_us");
+			std::ifstream file_period("/sys/fs/cgroup/cpu/cpu.cfs_period_us");
+			double quota = 0, period = 0;
+			if (file_quota >> quota && file_period >> period)
+				apply(quota, period);
+		}
+
+		// return)
+		return limit;
+	}
+	catch (...)
+	{
+		return 0;
+	}
+}
+
+// - 이 process 가 쓸 수 있는 CPU 수 : affinity(taskset, cpuset) 와 cgroup 의 CPU 한도(컨테이너) 중 작은 것
+//   (hardware_concurrency() 는 machine 의 CPU 수라 컨테이너에서 thread 를 너무 많이 만든다)
+static size_t get_available_core_count() noexcept
+{
+	// 1) machine
+	size_t count = std::thread::hardware_concurrency();
+
+	// 2) affinity
+	cpu_set_t set_cpu;
+	CPU_ZERO(&set_cpu);
+	if (::sched_getaffinity(0, sizeof(set_cpu), &set_cpu) == 0)
+	{
+		auto count_affinity = static_cast<size_t>(CPU_COUNT(&set_cpu));
+		if (count_affinity != 0 && (count == 0 || count_affinity < count))
+			count = count_affinity;
+	}
+
+	// 3) cgroup
+	auto count_cgroup = get_cgroup_cpu_limit();
+	if (count_cgroup != 0 && (count == 0 || count_cgroup < count))
+		count = count_cgroup;
+
+	// return)
+	return (count != 0) ? count : 1;
+}
+
 size_t	api::get_core_count() noexcept
 {
-	return std::thread::hardware_concurrency();
+	static const size_t s_count = get_available_core_count();
+	return s_count;
 }
 
 bool api::set_current_thread_affinity(int _cpu) noexcept

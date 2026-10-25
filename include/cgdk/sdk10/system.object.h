@@ -188,8 +188,6 @@ namespace CGDK
 	// 10) api
 	namespace api
 	{
-		class queue_executable;
-
 		class Nthread;
 		class thread;
 		class threads;
@@ -590,7 +588,6 @@ namespace CGDK
 #include "cgdk/sdk10/system/object/api.manager_thread.h"
 #include "cgdk/sdk10/system/object/api.thread.h"
 #include "cgdk/sdk10/system/object/api.threads.h"
-#include "cgdk/sdk10/system/object/api.queue_executable.h"
 
 // 5) executor/thread
 #include "cgdk/sdk10/system/object/Nexecutor.h"

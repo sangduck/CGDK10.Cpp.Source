@@ -53,26 +53,37 @@ bool net::io::sendable::Ntcp_crypt::process_sendable( const buffer_view _buffer,
 	// 4) send overlapped 카운트를 하나 증가시킨다.
 	this->statistics_on_increase_async_sending();
 
-	// 5) send cryptor를 얻는다.
-	object_ptr<Icryptor> pcryptor = this->get_cryptor();
+	// declare)
+	bool result = false;
 
-	// 6) set buffer
-	if (pcryptor.empty())
+	// - the encryption, the handle and WSASend under m_lockable_send_call : the cryptor is a stream cipher (the order of the encryption must be
+	//   the order of the WSASends) and the close swaps the handle under it (a handle closed and made again for another socket is not sent to)
+	SCOPED_LOCK(this->m_lockable_send_call)
 	{
-		pexecutable->m_wsabuf = WSABUF{ _buffer.size<ULONG>(), _buffer.data() };
-	}
-	else
-	{
-		// - 암호화한다.
-		auto buf_crypt = pcryptor->encrypt(_buffer);
+		// 5) send cryptor를 얻는다.
+		object_ptr<Icryptor> pcryptor = this->get_cryptor();
 
-		// - set buffer
-		pexecutable->m_wsabuf = WSABUF{ buf_crypt.size<ULONG>(), buf_crypt.data() };;
-		pexecutable->m_reference = buf_crypt.get_source();
-	}
+		// 6) set buffer
+		if (pcryptor.empty())
+		{
+			pexecutable->m_wsabuf = WSABUF{ _buffer.size<ULONG>(), _buffer.data() };
+		}
+		else
+		{
+			// - 암호화한다.
+			auto buf_crypt = pcryptor->encrypt(_buffer);
 
-	// 9) send async
-	auto result = api::socket::send_async(native_handle(), &pexecutable->m_wsabuf, 1, nullptr, pexecutable.get());
+			// - set buffer
+			pexecutable->m_wsabuf = WSABUF{ buf_crypt.size<ULONG>(), buf_crypt.data() };;
+			pexecutable->m_reference = buf_crypt.get_source();
+		}
+
+		// 9) send async
+		const auto handle_socket = this->native_handle();
+
+		if (handle_socket != INVALID_SOCKET)
+			result = api::socket::send_async(handle_socket, &pexecutable->m_wsabuf, 1, nullptr, pexecutable.get());
+	}
 
 	// check) Result가 false면 전송실패다.
 	if(result == false)
@@ -90,8 +101,8 @@ bool net::io::sendable::Ntcp_crypt::process_sendable( const buffer_view _buffer,
 		return false;
 	}
 
-	// 통계) 
-	this->statistics_on_increase_async_sending();
+	// 통계) (the overlapped count was increased above : once per WSASend)
+	this->statistics_on_send_async();
 
 	// return) 성공!!
 	return true;

@@ -95,29 +95,36 @@ intptr_t net::io::receivable::Ndatagram::process_complete_receivable( uintptr_t 
 
 	//-----------------------------------------------------------------
 	// recvmmsg : up to COUNT_RECEIVE_BATCH_MAX datagrams in one syscall. (a FIONREAD and a recvfrom per datagram before)
-	//  - the batch adapts : a full batch doubles the next one, a partial one is the next size (at least 1).
-	//    (a socket with a datagram per event allocates one buffer, a busy one up to the max)
+	//  - the batch adapts : a full batch doubles the next one, a partial one is the next size (at least COUNT_RECEIVE_BATCH_MIN).
+	//    (a socket with a datagram per event allocates two buffers, a busy one up to the max)
+	//  - at least 2 : a batch of 1 is always full, so a datagram per event took a second recvmmsg (EAGAIN) and two more buffers.
+	//    with 2 the partial batch tells the queue is drained (one syscall, one buffer more than the datagrams)
 	//  - a buffer per datagram (the pool) : a message kept by the application keeps only its own buffer.
 	//  - EPOLLET : drained until there is nothing more. (the edge is lost otherwise)
 	//  - an exception of a message closes nothing (UDP) : logged, the rest of the batch is processed.
 	//-----------------------------------------------------------------
 	const auto size_message = this->m_message_buffer_size;
 
+	// definitions)
+	constexpr int COUNT_RECEIVE_BATCH_MIN = std::min(2, COUNT_RECEIVE_BATCH_MAX);
+
 	for (;;)
 	{
 		// 2) prepare the batch
-		const int count_batch = this->m_count_receive_batch;
+		//    (read once and kept in the limit : the arrays below hold COUNT_RECEIVE_BATCH_MAX. the other threads receiving on the socket change it)
+		const int count_batch = std::clamp(this->m_count_receive_batch.load(std::memory_order_relaxed), COUNT_RECEIVE_BATCH_MIN, COUNT_RECEIVE_BATCH_MAX);
 
 		shared_buffer	array_buffer[COUNT_RECEIVE_BATCH_MAX];
 		net::sockaddr	array_address[COUNT_RECEIVE_BATCH_MAX];
 		::iovec			array_iovec[COUNT_RECEIVE_BATCH_MAX];
-		::mmsghdr		array_message[COUNT_RECEIVE_BATCH_MAX]{};
+		::mmsghdr		array_message[COUNT_RECEIVE_BATCH_MAX];		// - the entries of the batch are cleared below (not all 32 : 2KB)
 
 		for (int i = 0; i < count_batch; ++i)
 		{
 			array_buffer[i] = alloc_shared_buffer(size_message);
 			array_iovec[i].iov_base = array_buffer[i].data();
 			array_iovec[i].iov_len = size_message;
+			array_message[i] = ::mmsghdr{};
 			array_message[i].msg_hdr.msg_name = &array_address[i];
 			array_message[i].msg_hdr.msg_namelen = static_cast<socklen_t>(sizeof(array_address[i].bytes_));
 			array_message[i].msg_hdr.msg_iov = &array_iovec[i];
@@ -139,7 +146,7 @@ intptr_t net::io::receivable::Ndatagram::process_complete_receivable( uintptr_t 
 			}
 
 			// - the next event starts with a small batch
-			this->m_count_receive_batch = 1;
+			this->m_count_receive_batch.store(COUNT_RECEIVE_BATCH_MIN, std::memory_order_relaxed);
 
 			// break)
 			break;
@@ -191,14 +198,14 @@ intptr_t net::io::receivable::Ndatagram::process_complete_receivable( uintptr_t 
 		// 5) adapt the batch : partial => the queue is drained (the next batch is the count received)
 		if (count_received < count_batch)
 		{
-			this->m_count_receive_batch = (count_received > 1) ? count_received : 1;
+			this->m_count_receive_batch.store(std::max(count_received, COUNT_RECEIVE_BATCH_MIN), std::memory_order_relaxed);
 
 			// break)
 			break;
 		}
 
 		// - full => a larger batch next
-		this->m_count_receive_batch = (count_batch * 2 < COUNT_RECEIVE_BATCH_MAX) ? count_batch * 2 : COUNT_RECEIVE_BATCH_MAX;
+		this->m_count_receive_batch.store((count_batch * 2 < COUNT_RECEIVE_BATCH_MAX) ? count_batch * 2 : COUNT_RECEIVE_BATCH_MAX, std::memory_order_relaxed);
 	}
 
 	// return)

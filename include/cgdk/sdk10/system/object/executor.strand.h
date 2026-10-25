@@ -55,20 +55,17 @@ protected:
 				intptr_t result = 0;
 				size_t param = 0;
 			};
-			struct EXECUTABLE_AT
-			{
-				EXECUTABLE executable;
-				chrono::tick::time_point tick;
-			};
 			class executor_post_at;
 
 	mutable	lock_object			m_lockable_pexecutor;
 			object_ptr<Iexecutor> m_pexecutor;
 
-	mutable	lock_object			m_cs_queue_executable;
+	mutable	std::mutex			m_cs_queue_executable;		// not recursive : nothing is called back while it is held (the executables are released outside)
 			std::vector<EXECUTABLE> m_queue_executable;
-			std::list<EXECUTABLE_AT> m_queue_executable_at;
-			bool				m_is_processing = false;
+			std::multimap<chrono::tick::time_point, EXECUTABLE> m_queue_executable_at;	// post_at : by the time (the same time : in the order of the posts)
+			std::multiset<chrono::tick::time_point> m_set_tick_wake;	// the times of the wakes pending in the scheduler (one is posted only when none is earlier)
+			bool				m_is_processing = false;	// posted to the executor or executing (one execution at a time)
+			bool				m_is_executing = false;		// a thread is executing the queue now (false : only posted, not started yet)
 
 	virtual result_code			_process_initialize(context& _context);
 	virtual result_code			_process_destroying() noexcept;
@@ -77,9 +74,11 @@ protected:
 	virtual	bool				process_post_at(object_ptr<Iexecutable>&& _pexecutable, chrono::tick::time_point _tick_execute);
 	virtual	bool				process_execute(chrono::tick::duration _ticks_wait, intptr_t _option) override;
 	virtual	intptr_t			process_execute(intptr_t _result, size_t _param) override;
-			void				process_execute_post_at();
+			void				process_execute_post_at(chrono::tick::time_point _tick_wake);
 			auto				process_get_executor() -> object_ptr<Iexecutor>;
 			void				process_post_next();
+			bool				_post_to_executor() noexcept;
+			bool				_post_wake(chrono::tick::time_point _tick_wake) noexcept;
 };
 
 

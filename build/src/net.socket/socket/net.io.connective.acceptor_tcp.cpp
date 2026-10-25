@@ -1178,6 +1178,87 @@ bool net::io::connective::acceptor::Ntcp::request_accept(CGSOCKET _handle_socket
 // - the acceptor whose accept this thread processes (process_close_socket() called in it : not waiting for itself)
 thread_local const void* t_pacceptor_accepting = nullptr;	// - (net.io.connective.acceptor_tcp.uring.cpp uses it too)
 
+//-----------------------------------------------------------------------------
+// accept with no fd left (EMFILE / ENFILE, linux)
+//
+//  - the pending connection stays in the backlog and the listen socket stays readable : the readiness event (level-triggered) or the
+//    multishot accept (posted again) came back at once and the workers spun on it (CPU 100%) until a fd was freed.
+//  - a spare fd (/dev/null) is kept : it is closed to accept a pending connection that is closed at once (the peer sees the connection
+//    closed), then opened again. the backlog is emptied and the event stops. (the way libuv / libev do it)
+//  - the accept() of the other workers (woken by the same level-triggered event) waits while the spare fd is closed : it took that
+//    number (one accept succeeded, the spare could not be opened again and the workers spun again)
+//  - the spare fd is opened at the first accept event of the process (an acceptor that never accepted has none : the old behavior)
+//-----------------------------------------------------------------------------
+namespace
+{
+	std::shared_mutex		g_lockable_fd_spare;						// - shared : an accept() of a readiness event. unique : the spare fd closed and opened again
+	std::atomic<int>		g_fd_spare{ -1 };
+	std::atomic<int64_t>	g_tick_log_fd_exhausted{ 0 };
+
+	constexpr std::size_t	MAX_REJECT_PER_EVENT = 256;				// - the rest : the next event (a flood does not hold the thread)
+}
+
+void net_acceptor_prepare_fd_spare() noexcept
+{
+	// check) opened already
+	RETURN_IF(g_fd_spare.load(std::memory_order_relaxed) >= 0);
+
+	std::lock_guard lock(g_lockable_fd_spare);
+
+	if (g_fd_spare.load(std::memory_order_relaxed) < 0)
+		g_fd_spare.store(::open("/dev/null", O_RDONLY | O_CLOEXEC), std::memory_order_relaxed);
+}
+
+std::size_t net_acceptor_reject_on_fd_exhausted(CGSOCKET _handle_listen, int _error_code, std::string_view _name) noexcept
+{
+	// declare)
+	std::size_t count_rejected = 0;
+
+	{
+		std::lock_guard lock(g_lockable_fd_spare);
+
+		while (count_rejected < MAX_REJECT_PER_EVENT)
+		{
+			// check) no spare fd (not opened yet, or taken by another thread when it was closed)
+			const auto fd_spare = g_fd_spare.exchange(-1, std::memory_order_relaxed);
+
+			if (fd_spare < 0)
+			{
+				g_fd_spare.store(::open("/dev/null", O_RDONLY | O_CLOEXEC), std::memory_order_relaxed);
+				break;
+			}
+
+			// - accept with the fd of the spare and close it at once
+			::close(fd_spare);
+
+			const auto handle_socket = ::accept4(_handle_listen, nullptr, nullptr, SOCK_CLOEXEC | SOCK_NONBLOCK);
+
+			if (handle_socket >= 0)
+				::close(handle_socket);
+
+			g_fd_spare.store(::open("/dev/null", O_RDONLY | O_CLOEXEC), std::memory_order_relaxed);
+
+			// check) the backlog is empty (EAGAIN) or still no fd
+			if (handle_socket < 0)
+				break;
+
+			++count_rejected;
+		}
+	}
+
+	// log) once a second at most
+	const auto tick_now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+	auto tick_log = g_tick_log_fd_exhausted.load(std::memory_order_relaxed);
+
+	if (tick_now - tick_log >= 1000 && g_tick_log_fd_exhausted.compare_exchange_strong(tick_log, tick_now, std::memory_order_relaxed))
+	{
+		LOG_ERROR << log_level_t::important() << "@ (err ) ACCEPTOR['"sv << _name << "']: no fd to accept (error:"sv << _error_code << ") : the pending connections are closed (rejected:"sv << count_rejected << ")"sv;
+	}
+
+	// return)
+	return count_rejected;
+}
+
 void net::io::connective::acceptor::Ntcp::_process_wait_accepting() noexcept
 {
 	// definitions)
@@ -1239,7 +1320,12 @@ void net::io::connective::acceptor::Ntcp::process_connective_accept(uintptr_t _r
 			this->statistics_on_try();
 
 			// 1) 접속해온 socket handle를 accept 받는다.
-			CGSOCKET handle_socket_new = api::socket::accept(handle_listen, reinterpret_cast<::sockaddr*>(&sockaddr_listen), &addr_len);
+			CGSOCKET handle_socket_new;
+			{
+				std::shared_lock lock(g_lockable_fd_spare);
+
+				handle_socket_new = api::socket::accept(handle_listen, reinterpret_cast<::sockaddr*>(&sockaddr_listen), &addr_len);
+			}
 
 			// check) break if no more pended accepting socket
 			if (handle_socket_new < 0)
@@ -1258,12 +1344,11 @@ void net::io::connective::acceptor::Ntcp::process_connective_accept(uintptr_t _r
 
 				switch (error_code)
 				{
-				// case) "too many opn file"
+				// case) "too many opn file", "file table overflow" : the pending connections are closed with the spare fd
 				case	EMFILE:
-						break;
-
-				// case) "file table overflow"
 				case	ENFILE:
+						for (auto count = net_acceptor_reject_on_fd_exhausted(handle_listen, error_code, this->name()); count != 0; --count)
+							this->statistics_on_fail_connect();
 						break;
 
 				// case) have no memory
@@ -1278,6 +1363,9 @@ void net::io::connective::acceptor::Ntcp::process_connective_accept(uintptr_t _r
 				// break) 
 				break;
 			}
+
+			// - the spare fd for the accept with no fd left (opened once)
+			net_acceptor_prepare_fd_spare();
 
 			// 2) request accept
 			this->_process_accepted(handle_socket_new, address_family);

@@ -981,8 +981,8 @@ template<class B, class T>	class serializer_extract<B, T, std::enable_if_t<std::
 template<class B, class T>	class serializer_peek<B, T, std::enable_if_t<std::is_base_of_v<Ibuffer_serializable, T>>>
 							{	using TX = std::remove_const_t<T>;
 								public:	using type = T;
-								template<class S> constexpr static type _do_peek(const S& _s, int64_t& _offset) { S tb =_s + static_cast<std::size_t>(_offset); type tx; tx.serialize_in(tb); return tx;}
-								template<class D, class S> constexpr static void _do_peek(D& _dest, const S& _s, int64_t& _offset) { S tb =_s + static_cast<std::size_t>(_offset); _dest.serialize_in(tb);}
+								template<class S> constexpr static type _do_peek(const S& _s, int64_t& _offset) { S tb =_s + static_cast<std::size_t>(_offset); type tx; tx.serialize_in(tb); _offset = tb.data() - _s.data(); return tx;}
+								template<class D, class S> constexpr static void _do_peek(D& _dest, const S& _s, int64_t& _offset) { S tb =_s + static_cast<std::size_t>(_offset); _dest.serialize_in(tb); _offset = tb.data() - _s.data();}
 							};
 template<class T>			class serializer_size_of<T, std::enable_if_t<std::is_base_of_v<Ibuffer_serializable, T>>>
 							{	using TX = std::remove_const_t<T>;

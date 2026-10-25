@@ -37,8 +37,13 @@ inline shared_buffer message_web_error(uint32_t _error_code, std::string_view _s
 	// 1) buffer를 할당받는다.
 	auto temp_buffer = alloc_shared_buffer(4096);
 
+	// check) the code of a failure without an http code is 0 : '500 Internal Server Error'
+	if (_error_code < 100 || _error_code > 599)
+		_error_code = 500;
+
 	// 2) append http header
-	temp_buffer.append_text(CGDK::stream_string("HTTP/1.1 ", _strErrorMessage.data(), " ", _error_code, "\r\n"));	// Protocol 버전 및 응답코드
+	//    (the status line is "HTTP/1.1 <code> <reason>". it was "HTTP/1.1 <reason> <code>")
+	temp_buffer.append_text(CGDK::stream_string("HTTP/1.1 ", _error_code, " ", _strErrorMessage.empty() ? "error"sv : _strErrorMessage, "\r\n"));	// Protocol 버전 및 응답코드
 	temp_buffer.append_text("Server: CGCII/9.0.0\r\n");		// Web Server Banner 정보
 	temp_buffer.append_text("Content-type:text/html\r\n");	// MIME 타입
 	temp_buffer.append_text("Content-length:0\r\n");		// http body 크기

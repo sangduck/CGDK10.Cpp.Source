@@ -41,6 +41,7 @@ public:
 			void				queue_executable(object_ptr<Iexecutable>&& _pexecutable);
 			void				clear() noexcept;
 			bool				request_execute(Iexecutor* _pexecutor);
+			// - the executables requested (request_execute) and not completed yet (counted down after each one ran)
 			size_t				executing_count() const noexcept;
 
 			Nbatch&				operator<<(object_ptr<Iexecutable>&& _rhs) { queue_executable(std::move(_rhs)); return *this;}
@@ -50,8 +51,12 @@ protected:
 	virtual intptr_t			process_execute(intptr_t _return, size_t _param) override;
 	virtual void				on_final_release() noexcept override;
 
+			// - one requested execution ended (ran, threw, or the post failed). the last one calls process_complete_execution()
+			void				_complete_one() noexcept;
+
 	mutable	lock_object			m_lockable_list_executable;
 			std::list<object_ptr<Iexecutable>> m_list_executable;
+			std::atomic<size_t>	m_count_executing{ 0 };
 };
 
 

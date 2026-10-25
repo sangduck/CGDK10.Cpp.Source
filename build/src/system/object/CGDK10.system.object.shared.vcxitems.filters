@@ -228,9 +228,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)schedulable.entity.cpp">
       <Filter>execution\schedulable</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)api.queue_executable.cpp">
-      <Filter>api</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)executor.io_context.cpp">
       <Filter>execution\executor</Filter>
     </ClCompile>
@@ -345,9 +342,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)api.io_context.uring_cq.cpp">
       <Filter>api</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)api.io_context.epoll_queued.cpp">
-      <Filter>api</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)api.io_context.Nepoll.cpp">
       <Filter>api</Filter>
     </ClCompile>
@@ -394,9 +388,6 @@
       <Filter>api</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\api.manager_thread.h">
-      <Filter>api</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\api.queue_executable.h">
       <Filter>api</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\api.system.h">
@@ -936,9 +927,6 @@
       <Filter>api</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\api.io_context.uring_cq.h">
-      <Filter>api</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\..\include\cgdk\sdk10\system\object\api.io_context.epoll_queued.h">
       <Filter>api</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)platform.h" />

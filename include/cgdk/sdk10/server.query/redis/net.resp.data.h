@@ -40,6 +40,7 @@ public:
 			std::vector<resp_data> vector_child;
 
 	[[nodiscard]] resp_data&	operator[](int _index) noexcept	{ return vector_child.at(_index);}
+	[[nodiscard]] const resp_data& operator[](int _index) const noexcept { return vector_child.at(_index); }
 	[[nodiscard]] auto			begin() noexcept { return vector_child.begin();}
 	[[nodiscard]] auto			begin() const noexcept { return vector_child.begin();}
 	[[nodiscard]] auto			end() noexcept { return vector_child.end();}

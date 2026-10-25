@@ -18,6 +18,8 @@
 
 #pragma once
 #include <format>
+#include <span>
+#include <initializer_list>
 
 namespace CGDK
 {
@@ -43,6 +45,28 @@ public:
 				int					wait_seconds = 0;	// waits until the sessions are connected (or failed). 0: 5 seconds, < 0: not waited
 				object_ptr<executor::Iio_context> pio_context;
 			};
+
+			// Commands use the same blank-separated syntax as post_execute_query().
+			// All inputs are encoded before returning; views need not outlive this call.
+			// One session/queue entry/send per batch; results retain input order.
+			// On stop, received replies are retained and unfinished replies are NONE_.
+			// Callback runs once, outside locks, possibly inline on cancellation/failure.
+			// Empty/invalid input or a stopped querier throws before accepting the batch.
+			// A pipeline is not a Redis transaction. Commands must each produce one reply.
+			using batch_results = std::vector<resp_data>;
+			using batch_callback = std::function<void(batch_results&&)>;
+			void post_execute_query(std::span<const std::string_view> _commands, batch_callback _response);
+			void post_execute_query(std::initializer_list<std::string_view> _commands, batch_callback _response) { this->post_execute_query(std::span<const std::string_view>(_commands.begin(), _commands.size()), std::move(_response)); }
+
+			// A string selects a single query. A span/vector/array of strings
+			// selects the batch overload. Sync results use result()[index].
+			void post_execute_query(std::span<const std::string> _commands, batch_callback _response);
+			[[nodiscard]] object_ptr<redis::query> execute_query_sync(std::span<const std::string_view> _commands);
+			[[nodiscard]] object_ptr<redis::query> execute_query_sync(std::span<const std::string> _commands);
+			[[nodiscard]] object_ptr<redis::query> execute_query_sync(std::initializer_list<std::string_view> _commands) { return this->execute_query_sync(std::span<const std::string_view>(_commands.begin(), _commands.size())); }
+			execute_result<object_ptr<redis::query>> execute_query(std::span<const std::string_view> _commands);
+			execute_result<object_ptr<redis::query>> execute_query(std::span<const std::string> _commands);
+			execute_result<object_ptr<redis::query>> execute_query(std::initializer_list<std::string_view> _commands) { return this->execute_query(std::span<const std::string_view>(_commands.begin(), _commands.size())); }
 
 			querier();
 	virtual	~querier() noexcept;
@@ -74,7 +98,7 @@ public:
 			void				post_execute_query(std::string_view _command, std::function<void(redis::query*)>&& _response) { this->post_execute_query<redis::query>(_command, std::move(_response)); }
 			template<class TQUERY>
 			std::enable_if_t<std::is_base_of_v<Iquery, TQUERY>, void>
-								post_execute_query(std::string&& _command, std::function<void(TQUERY*)>&& _response) { this->post_execute_query<TQUERY>(std::move(_command), std::move(_response)); }
+								post_execute_query(std::string&& _command, std::function<void(TQUERY*)>&& _response) { this->post_execute_query<TQUERY>(std::string_view(_command), std::move(_response)); }
 			void				post_execute_query(std::string&& _command, std::function<void(redis::query*)>&& _response) { this->post_execute_query<redis::query>(std::move(_command), std::move(_response)); }
 #if defined(__cpp_impl_coroutine)
 			//    - co_execute_query()      : 지금 쓸 수 있는 session이 있으면 이 thread에서 바로 실행한다. (응답까지 블로킹. 'co_await'해도 suspend하지 않는다) 없으면 co_post_execute_query()와 같다.
@@ -211,7 +235,12 @@ protected:
 			//   fairness  : a new shared one does not go ahead of the waiting ones (FIFO) : the session a dedicated one waits for is drained.
 			//               a blocked shared one (alloc_shared_session()) shares a session in the stack after 100ms. (it may hold a shared
 			//               query of that session itself : not waited forever)
-			object_ptr<session>	process_get_shared_session() noexcept { SCOPED_LOCK(this->m_lockable_query) { return this->m_sessions_stack.front(); } }
+			//   spread    : a thread uses the session [its index % the stack size] (the shared queries of a thread go to one session
+			//               while the stack does not change : its posts are sent and answered in order). it was always the front one :
+			//               the other sessions (and their io threads) were not used by the shared queries.
+			//               a dedicated one waits (FIFO) until a session in the stack is drained when the shared ones use all of them.
+			object_ptr<session>	process_get_shared_session() noexcept { SCOPED_LOCK(this->m_lockable_query) { return this->m_sessions_stack[_get_thread_index() % this->m_sessions_stack.size()]; } }
+	static	std::size_t			_get_thread_index() noexcept { static std::atomic<std::size_t> s_count_thread{ 0 }; thread_local const std::size_t t_index = s_count_thread.fetch_add(1, std::memory_order_relaxed); return t_index; }
 			object_ptr<session>	process_take_unused_session() noexcept;	// a session no query uses taken out of the stack. empty if there is none
 			struct QUEUED_QUERY
 			{

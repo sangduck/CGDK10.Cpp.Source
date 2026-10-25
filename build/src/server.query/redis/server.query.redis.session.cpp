@@ -89,9 +89,10 @@ bool query::redis::session::execute_query(REQUEST_QUERY&&_query)
 	// declare) (empty if unregistered)
 	object_ptr<querier> pquerier = this->m_pquerier;
 
-	// statistics)
+	const auto count_requests = _query.count_batch ? _query.count_batch : 1;
+	THROW_IF(_query.count_batch && (pquerier.empty() || this->socket_state() != eSOCKET_STATE::ESTABLISHED), throwable::failure(eRESULT::CANCEL));
 	if (pquerier.exist())
-		pquerier->statistics_on_query_try();
+		for (std::size_t i = 0; i < count_requests; ++i) pquerier->statistics_on_query_try();
 
 	// declare)
 	bool result = true;
@@ -101,7 +102,8 @@ bool query::redis::session::execute_query(REQUEST_QUERY&&_query)
 	try
 	{
 		// 1) Query를 먼저 Queuing한다
-		this->push_query(std::move(_query));
+		// - already holding m_cs_queue_query; do not acquire it again through push_query().
+		this->m_queue_query.push_back(std::move(_query));
 		is_queued = true;
 
 		// 2) send를 전송한다.
@@ -127,7 +129,7 @@ bool query::redis::session::execute_query(REQUEST_QUERY&&_query)
 
 		// statistics)
 		if (pquerier.exist())
-			pquerier->statistics_on_query_fail();
+			for (std::size_t i = 0; i < count_requests; ++i) pquerier->statistics_on_query_fail();
 
 		// reraise)
 		throw;
@@ -164,23 +166,26 @@ void query::redis::session::process_cancel_query_all(querier* _pquerier) noexcep
 		list_query = std::move(this->m_queue_query);
 	}
 
-	// 2) the requests waiting for responses are completed with no result (out of the lock. the response functions are not called)
+	// 2) Complete outside the lock. Batch callbacks retain received replies; singles keep their legacy cancellation policy.
 	for(auto& iter: list_query)
 	{
+		if (iter.count_batch && _pquerier != nullptr)
+			for (auto i = iter.received_batch; i < iter.count_batch; ++i) _pquerier->statistics_on_query_fail();
 		try
 		{
 			// - set result as ...
-			iter.pquery->m_result.type = eRESP_DATA_TYPE::NONE_;
+			if (!iter.count_batch) iter.pquery->m_result.type = eRESP_DATA_TYPE::NONE_;
 
 			// - process response
 			iter.pquery->process_response();
+			if (iter.count_batch && iter.response) iter.response();
 		}
 		catch (...)
 		{
 		}
 
 		// statistics) 
-		if (_pquerier != nullptr)
+		if (_pquerier != nullptr && !iter.count_batch)
 			_pquerier->statistics_on_query_fail();
 	}
 }
@@ -242,6 +247,37 @@ void query::redis::session::on_fail_connect([[maybe_unused]] uint64_t _reason)
 
 void query::redis::session::on_disconnect([[maybe_unused]] uint64_t _reason)
 {
+	// Never replay a batch after a broken connection: some commands may have run
+	// even if their replies were lost. Keep the legacy retry policy for singles.
+	circular_list<REQUEST_QUERY> canceled;
+	object_ptr<querier> pquerier;
+	{
+		std::unique_lock<std::recursive_mutex> lock(this->m_cs_queue_query);
+		pquerier = this->m_pquerier;
+		// Detached sessions are canceled by process_close_session(), which owns their statistics.
+		if (pquerier.empty()) return;
+		for (auto it = this->m_queue_query.begin(); it != this->m_queue_query.end();)
+		{
+			if (it->count_batch)
+			{
+				canceled.push_back(std::move(*it));
+				it = this->m_queue_query.erase(it);
+			}
+			else ++it;
+		}
+	}
+	for (auto& request : canceled)
+	{
+		if (pquerier.exist())
+			for (auto i = request.received_batch; i < request.count_batch; ++i)
+				pquerier->statistics_on_query_fail();
+		try
+		{
+			request.pquery->process_response();
+			if (request.response) request.response();
+		}
+		catch (...) {}
+	}
 }
 
 result_code query::redis::session::process_message(sMESSAGE& _msg)
@@ -251,13 +287,39 @@ result_code query::redis::session::process_message(sMESSAGE& _msg)
 	{
 		// declare) 
 		REQUEST_QUERY query_info;
+		bool partial_batch = false;
+		const bool response_failed = static_cast<sMESSAGE_RESP&>(_msg).data.type == eRESP_DATA_TYPE::ERROR_;
 		object_ptr<querier>	pquerier;
 
 		// 1) poping queued query (an unregistered session also completes the request. statistics: only when registered)
 		SCOPED_LOCK(this->m_cs_queue_query)
 		{
-			query_info = this->pop_query();
+			// - pop and capture the querier under one lock (callbacks run after unlocking).
+			if (this->m_queue_query.empty() == false)
+			{
+				auto& front = this->m_queue_query.front();
+				if (front.count_batch)
+				{
+					front.pquery->m_result.vector_child[front.received_batch++] = std::move(static_cast<sMESSAGE_RESP&>(_msg).data);
+					partial_batch = front.received_batch != front.count_batch;
+				}
+				if (!partial_batch)
+				{
+					query_info = std::move(front);
+					this->m_queue_query.pop_front();
+				}
+			}
 			pquerier = this->m_pquerier;
+		}
+
+		if (partial_batch)
+		{
+			if (pquerier.exist())
+			{
+				if (response_failed) pquerier->statistics_on_query_fail();
+				else pquerier->statistics_on_query_success();
+			}
+			return eRESULT::BYPASS;
 		}
 
 		// check) return if pquery is empty
@@ -267,7 +329,25 @@ result_code query::redis::session::process_message(sMESSAGE& _msg)
 		auto& msg_redis = (sMESSAGE_RESP&)_msg;
 
 		// - result를 설정한다.
-		query_info.pquery->m_result = std::move(msg_redis.data);
+		if (!query_info.count_batch)
+			query_info.pquery->m_result = std::move(msg_redis.data);
+		else
+		{
+			// Publish command statistics before the completion callback can stop
+			// the querier or wake a caller inspecting the counters.
+			if (pquerier.exist())
+			{
+				if (response_failed) pquerier->statistics_on_query_fail();
+				else pquerier->statistics_on_query_success();
+			}
+			try
+			{
+				query_info.pquery->process_response();
+				if (query_info.response) query_info.response();
+			}
+			catch (...) {}
+			return eRESULT::BYPASS;
+		}
 
 		// - 완료 시...
 		try
@@ -282,7 +362,7 @@ result_code query::redis::session::process_message(sMESSAGE& _msg)
 			query_info.pquery->process_response();
 
 			// statistics) 
-			if (query_info.pquery->m_result.type != eRESP_DATA_TYPE::ERROR_)
+			if (!response_failed)
 			{
 				if (pquerier.exist())
 					pquerier->statistics_on_query_success();

@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "platform.h"
 
 namespace CGDK
 {
@@ -66,6 +67,10 @@ scoped_thread_block::scoped_thread_block()
 	//   (a sync query sends its request and waits for the response here : a deferred request would never be answered)
 	send_defer::suspend();
 
+	// - runnext : the slot of this thread goes to the shared queue and is not used until unblocked (an executable posted before
+	//   or while blocking is run by the other workers : a sync query waiting for one would never be answered)
+	executor::io_context::runnext_suspend();
+
 	// 1) get thread
 	auto current_thread = api::get_current_thread();
 
@@ -94,6 +99,9 @@ scoped_thread_block::~scoped_thread_block() noexcept
 {
 	// - send defer
 	send_defer::resume();
+
+	// - runnext
+	executor::io_context::runnext_resume();
 
 	// 1) get executor
 	auto pexecutor = this->m_pexecutor;

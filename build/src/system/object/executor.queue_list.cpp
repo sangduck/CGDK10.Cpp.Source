@@ -95,13 +95,30 @@ result_code executor::queue_list::start(context& _context)
 	// 3) 이전 stop()의 대기 취소를 푼다.
 	this->cancel_wait(false);
 
+	// 4) accept the posts again
+	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_queue_executable);
+
+		this->m_is_accepting = true;
+	}
+
 	// return)
 	return result_code(eRESULT::SUCCESS);
 }
 
 result_code executor::queue_list::stop() noexcept
 {
-	// 1) Queued된 것을 일단 모두 실행한다.
+	// 1) refuse the posts from now (an Nbatch / batch_wait counts a refused post as done : it waited forever for an executable queued
+	//    after the threads ended). the queue only shrinks from here
+	{
+		// lock)
+		std::lock_guard lock(this->m_lockable_queue_executable);
+
+		this->m_is_accepting = false;
+	}
+
+	// 2) Queued된 것을 일단 모두 실행한다.
 	this->execute_all();
 
 	// return)
@@ -121,6 +138,10 @@ bool executor::queue_list::process_post(object_ptr<Iexecutable>&& _pexecutable)
 	{
 		// lock)
 		std::lock_guard lock(this->m_lockable_queue_executable);
+
+		// check) stopped
+		if (this->m_is_accepting == false)
+			return false;
 
 		// - 완전히 비어 있었다면 Thread를 signal시킨다.
 		is_queued = this->m_queue_executable.empty();
@@ -261,13 +282,20 @@ void executor::queue_list::execute_all() noexcept
 
 	for(auto& iter: tempQeue)
 	{
-		// 1) Releaser으 생성!
-		AUTO_RELEASE_EXECUTABLE	auto_executable(std::move(iter));
+		// - an exception of one executable does not end the others (noexcept : it called std::terminate at the stop())
+		try
+		{
+			// 1) Releaser으 생성!
+			AUTO_RELEASE_EXECUTABLE	auto_executable(std::move(iter));
 
-		// 2) on_execute함수를 호출한다.
-		auto_executable.m_pexecutable->process_execute(1, 0);
+			// 2) on_execute함수를 호출한다.
+			auto_executable.m_pexecutable->process_execute(1, 0);
 
-		// 3) reset
-		auto_executable.reset();
+			// 3) reset
+			auto_executable.reset();
+		}
+		catch (...)
+		{
+		}
 	}
 }

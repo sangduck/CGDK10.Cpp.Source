@@ -65,7 +65,7 @@ public:
 	template <class T = element_t>
 	constexpr auto				data() const noexcept { return reinterpret_cast<_buffer_return_t<traits, T>*>(this->data_); }
 	template <class T = element_t>
-	constexpr auto				data(int64_t _offset) const { _CGD_BUFFER_BOUND_CHECK(_offset <= static_cast<int64_t>(this->_get_upper_distance_from_end())); return reinterpret_cast<_buffer_return_t<traits, T>*>(this->data_ + _offset); } // unsafe
+	constexpr auto				data(int64_t _offset) const { _CGD_BUFFER_BOUND_CHECK((this->data_ + _offset) <= this->get_upper_bound()); return reinterpret_cast<_buffer_return_t<traits, T>*>(this->data_ + _offset); } // unsafe
 	constexpr void				set_data(element_t* _data) { _CGD_BUFFER_BOUND_CHECK(_data >= this->get_lower_bound() && (_data + this->size_) <= this->get_upper_bound()); this->data_ = _data; } // unsafe
 	constexpr void				add_data(size_type _size) { _CGD_BUFFER_BOUND_CHECK(_size <= this->_get_upper_distance_from_end()); this->data_ += _size; } // unsafe
 	constexpr void				sub_data(size_type _size) { _CGD_BUFFER_BOUND_CHECK(_size <= this->_get_lower_distance_from_front()); this->data_ -= _size; } // unsafe

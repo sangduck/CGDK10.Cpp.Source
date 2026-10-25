@@ -232,30 +232,28 @@ bool net::io::sendable::Ntcp_async_gather_raw::process_sendable(const buffer_vie
 
 		// 2) queueing
 		this->m_flag_sending = true;
-	}
 
-	// 3) async send and return result
-	return this->process_sendable_async(handle_socket, _buffer, _powner, _count_messages);
-}
-
-bool net::io::sendable::Ntcp_async_gather_raw::process_sendable_async(CGSOCKET _handle_socket, const buffer_view& _buffer, Ireferenceable* _psource, std::size_t _count_messages)
-{
-	// 1) prepare executable
-	{
+		// 3) the sending queue (in the lock : a reset of a close meanwhile clears it and the flag under the same lock)
 		CGASSERT_ERROR(this->m_queue_sending.count_node == 0);
 		CGASSERT_ERROR(this->m_queue_sending.capacity_node != 0);
 		CGASSERT_ERROR(this->m_queue_sending.allocated != nullptr);
 
 		this->m_queue_sending.count_node = 1;
 		*this->m_queue_sending.array_wsabuffer = { _buffer.size<ULONG>(), _buffer.data() };
-		this->m_queue_sending.array_node->psource = _psource;
+		this->m_queue_sending.array_node->psource = _powner.get();
 		this->m_queue_sending.bytes_data = _buffer.size();
 		this->m_queue_sending.count_message = _count_messages;
 
-		if (_psource != nullptr)
-			_psource->add_ref();
+		if (_powner.get() != nullptr)
+			_powner.get()->add_ref();
 	}
 
+	// 3) async send and return result
+	return this->process_sendable_async(handle_socket, _buffer, _powner, _count_messages);
+}
+
+bool net::io::sendable::Ntcp_async_gather_raw::process_sendable_async(CGSOCKET _handle_socket, const buffer_view& /*_buffer*/, Ireferenceable* /*_psource*/, std::size_t /*_count_messages*/)
+{
 	// 2) 
 	this->m_pexecutable_send_buffer_list->m_psendable = this;
 
@@ -268,8 +266,16 @@ bool net::io::sendable::Ntcp_async_gather_raw::process_sendable_async(CGSOCKET _
 	// declare) 
 	DWORD bytes_sent = 0;
 
-	// 4) send~
-	auto result = api::socket::send_async(_handle_socket, this->m_queue_sending.array_wsabuffer, 1, &bytes_sent, this->m_pexecutable_send_buffer_list.get());
+	// 4) send~ (the handle is read and WSASend is called under m_lockable_send_call : the close swaps the handle under it.
+	//    _handle_socket was read under m_lockable_sending only : closed and made again for another socket meanwhile, that socket got it)
+	bool result = false;
+	SCOPED_LOCK(this->m_lockable_send_call)
+	{
+		const auto handle_socket = this->native_handle();
+
+		if (handle_socket == _handle_socket && handle_socket != INVALID_SOCKET)
+			result = api::socket::send_async(handle_socket, this->m_queue_sending.array_wsabuffer, 1, &bytes_sent, this->m_pexecutable_send_buffer_list.get());
+	}
 
 	// check)
 	if(result == false)
@@ -311,6 +317,9 @@ void net::io::sendable::Ntcp_async_gather_raw::process_complete_sendable( uintpt
 	this->statistics_on_send_bytes(_transferred_bytes);
 	this->statistics_on_send_message((_transferred_bytes != 0) ? this->m_queue_sending.count_message : 0);
 
+	// statistics) the overlapped send completed (it was never decreased : statistics_get_now_async_io() of a socket that had sent stayed > 0)
+	this->statistics_on_decrease_async_sending();
+
 	// check)
 	if(this->m_queue_sending.count_message == 0)
 		return;
@@ -323,8 +332,11 @@ void net::io::sendable::Ntcp_async_gather_raw::process_complete_sendable( uintpt
 		// check) 
 		CGASSERT_ERROR(this->m_queue_sending.array_node != nullptr);
 
-		// 1) clear m_queue_sending
-		this->m_queue_sending.buffer_reset();
+		// 1) clear m_queue_sending (under m_lockable_send_call : the completion may come before the sending thread returns from WSASend)
+		SCOPED_LOCK(this->m_lockable_send_call)
+		{
+			this->m_queue_sending.buffer_reset();
+		}
 
 		// declare)
 		handle_socket = this->native_handle();
@@ -350,13 +362,7 @@ void net::io::sendable::Ntcp_async_gather_raw::process_complete_sendable( uintpt
 
 			// - shutdown if send_disconnected
 			if (this->socket_state() == eSOCKET_STATE::SEND_DISCONNECTED)
-			{
-				// - linger Option을 Graceful disconnect로 설정한다.
-				api::socket::set_linger_option(handle_socket, 0);
-
-				// - 접속을 종료한다.
-				api::socket::shutdown(handle_socket, SD_SEND);
-			}
+				this->_process_shutdown_send();
 
 			// return) 
 			return;
@@ -378,8 +384,13 @@ void net::io::sendable::Ntcp_async_gather_raw::process_complete_sendable( uintpt
 	// declare) 
 	DWORD bytes_sent = 0;
 
-	// 7) send~
-	auto result = api::socket::send_async(handle_socket, this->m_queue_sending.array_wsabuffer, static_cast<uint32_t>(this->m_queue_sending.count_node), &bytes_sent, this->m_pexecutable_send_buffer_list.get());
+	// 7) send~ (the handle again under m_lockable_send_call : the close swaps it under it)
+	bool result = false;
+	SCOPED_LOCK(this->m_lockable_send_call)
+	{
+		if (this->native_handle() == handle_socket)
+			result = api::socket::send_async(handle_socket, this->m_queue_sending.array_wsabuffer, static_cast<uint32_t>(this->m_queue_sending.count_node), &bytes_sent, this->m_pexecutable_send_buffer_list.get());
+	}
 
 	// check)
 	if (result == false)
@@ -418,13 +429,22 @@ void net::io::sendable::Ntcp_async_gather_raw::process_close_sender()
 	}
 
 	if (do_shutdown)
-	{
-		auto handle_socket = this->native_handle();
+		this->_process_shutdown_send();
+}
 
-		// - linger Option을 Graceful disconnect로 설정한다.
+void net::io::sendable::Ntcp_async_gather_raw::_process_shutdown_send() noexcept
+{
+	// - the handle is read under m_lockable_send_call (the close swaps the handle under it)
+	SCOPED_LOCK(this->m_lockable_send_call)
+	{
+		const auto handle_socket = this->native_handle();
+
+		RETURN_IF(handle_socket == INVALID_SOCKET);
+
+		// - linger Option : graceful disconnect
 		api::socket::set_linger_option(handle_socket, 0);
 
-		// - 접속을 종료한다.
+		// - shutdown
 		api::socket::shutdown(handle_socket, SD_SEND);
 	}
 }
@@ -434,8 +454,11 @@ void net::io::sendable::Ntcp_async_gather_raw::process_reset_sendable() noexcept
 	// 1) ...
 	SCOPED_LOCK(this->m_lockable_sending)
 	{
-		// - reset send buffer
-		this->_process_prepare_send_buffers();
+		// - reset send buffer (m_queue_sending : under m_lockable_send_call, after the sending thread returned from WSASend)
+		SCOPED_LOCK(this->m_lockable_send_call)
+		{
+			this->_process_prepare_send_buffers();
+		}
 
 		// - reset flag
 		this->m_flag_sending = false;

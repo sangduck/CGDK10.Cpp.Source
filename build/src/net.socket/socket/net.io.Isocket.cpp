@@ -199,6 +199,9 @@ void net::io::Isocket::reset_epoll_event_flag() noexcept
 	m_epoll_event_flag = 0;
 	m_epoll_event_flag_queued = 0;
 	m_epoll_event_processing_now = false;
+	m_epoll_event_registered = 0;
+	m_epoll_event_oneshot = false;
+	m_epoll_count_small_receive = 0;
 }
 
 void net::io::Isocket::post_epoll_event_EPOLLOUT() noexcept
@@ -226,6 +229,7 @@ void net::io::Isocket::post_epoll_event_EPOLLOUT() noexcept
 
 		// 3) epoll event를 업데이트한다.
 		pio_context->set_event(get_epoll_handle(), m_epoll_event_flag);
+		m_epoll_event_registered = m_epoll_event_flag;
 	}
 }
 
@@ -252,6 +256,8 @@ bool net::io::Isocket::process_start_io(executor::Iio_context* _pio_context, boo
 	}
 
 	// 2) readiness (the connect of a completion io_context is an op : the handle is not registered)
+	this->m_epoll_event_registered = this->m_epoll_event_flag;
+
 	if (_is_attached && is_completion_backend == false)
 		return _pio_context->set_event(this->get_epoll_handle(), this->m_epoll_event_flag, this->m_pexecutable_socket);
 

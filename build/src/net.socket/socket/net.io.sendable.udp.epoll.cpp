@@ -169,16 +169,17 @@ uint32_t net::io::sendable::Nudp::_process_send_pending(CGSOCKET _handle_socket)
 	//    sent partially (0 < n < count) : the error of the next one is reported by the next call (retried).
 	//-----------------------------------------------------------------
 	// declare)
-	std::vector<NODE> vector_send;
+	// - the datagrams of a batch : list nodes moved from the queue by splice (no allocation, no copy. a vector of SEND_BATCH_MAX nodes was
+	//   4.6KB from malloc at every call : beyond the thread cache)
+	std::list<NODE> list_send;
+	NODE* array_node[SEND_BATCH_MAX];
 	::mmsghdr array_message[SEND_BATCH_MAX];
 	::iovec array_iovec[SEND_BATCH_MAX];
 
-	vector_send.reserve(SEND_BATCH_MAX);
-
 	for (;;)
 	{
-		// 1) take up to SEND_BATCH_MAX datagrams
-		vector_send.clear();
+		// 1) take up to SEND_BATCH_MAX datagrams (the batch before is released : the owners of the sent datagrams)
+		list_send.clear();
 
 		SCOPED_LOCK(this->m_lockable_sending)
 		{
@@ -189,21 +190,22 @@ uint32_t net::io::sendable::Nudp::_process_send_pending(CGSOCKET _handle_socket)
 				return 0;
 			}
 
-			while (vector_send.size() < SEND_BATCH_MAX && this->m_queue_pending.empty() == false)
-			{
-				auto& node = this->m_queue_pending.front();
-				this->m_bytes_pending -= node.buf_send.size();
-				vector_send.push_back(std::move(node));
-				this->m_queue_pending.pop_front();
-			}
+			auto iter_end = this->m_queue_pending.begin();
+
+			for (std::size_t count = 0; count < SEND_BATCH_MAX && iter_end != this->m_queue_pending.end(); ++count, ++iter_end)
+				this->m_bytes_pending -= iter_end->buf_send.size();
+
+			list_send.splice(list_send.end(), this->m_queue_pending, this->m_queue_pending.begin(), iter_end);
 		}
 
 		// 2) sendmmsg
-		const auto count_send = vector_send.size();
+		std::size_t count_send = 0;
 
-		for (std::size_t i = 0; i < count_send; ++i)
+		for (auto& node : list_send)
 		{
-			auto& node = vector_send[i];
+			const auto i = count_send++;
+
+			array_node[i] = &node;
 
 			array_iovec[i].iov_base = const_cast<char*>(node.buf_send.data());
 			array_iovec[i].iov_len = node.buf_send.size();
@@ -224,11 +226,11 @@ uint32_t net::io::sendable::Nudp::_process_send_pending(CGSOCKET _handle_socket)
 				break;
 		}
 
-		// 3) the sent ones : statistics (the owners are released with vector_send)
+		// 3) the sent ones : statistics (the owners are released with list_send)
 		const std::size_t count_ok = (count_sent > 0) ? static_cast<std::size_t>(count_sent) : 0;
 
 		for (std::size_t i = 0; i < count_ok; ++i)
-			this->process_complete_sendable(0, static_cast<std::size_t>(array_message[i].msg_len), vector_send[i].count_message);
+			this->process_complete_sendable(0, static_cast<std::size_t>(array_message[i].msg_len), array_node[i]->count_message);
 
 		// check) all sent => the next batch
 		if (count_ok == count_send)
@@ -265,13 +267,17 @@ uint32_t net::io::sendable::Nudp::_process_send_pending(CGSOCKET _handle_socket)
 		}
 
 		// 5) the rest back to the head of the queue (in order)
-		SCOPED_LOCK(this->m_lockable_sending)
+		if (index_rest < count_send)
 		{
-			for (std::size_t i = count_send; i > index_rest; --i)
+			auto iter_rest = list_send.begin();
+			std::advance(iter_rest, index_rest);
+
+			SCOPED_LOCK(this->m_lockable_sending)
 			{
-				auto& node = vector_send[i - 1];
-				this->m_bytes_pending += node.buf_send.size();
-				this->m_queue_pending.push_front(std::move(node));
+				for (auto iter = iter_rest; iter != list_send.end(); ++iter)
+					this->m_bytes_pending += iter->buf_send.size();
+
+				this->m_queue_pending.splice(this->m_queue_pending.begin(), list_send, iter_rest, list_send.end());
 			}
 		}
 
@@ -284,28 +290,32 @@ uint32_t net::io::sendable::Nudp::_process_send_pending(CGSOCKET _handle_socket)
 void net::io::sendable::Nudp::_process_set_epollout(bool _enable) noexcept
 {
 	// - the UDP socket is registered with EPOLLET | EPOLLIN | EPOLLERR (receivable::Ndatagram::prepare_receive).
-	//   EPOLLOUT is added while datagrams wait for the socket buffer and removed when they are sent.
+	//   EPOLLOUT is added while the sending thread waits for the socket buffer (m_flag_epollout : no thread sends, the queue waits)
+	//   and removed when a thread takes the queue over (process_recover_sendable).
+	// - the flag and the registered events change together under m_lockable_sending : set_event() outside the lock let the
+	//   'off' of a thread that had sent everything land after the 'on' of the next sending thread (EAGAIN) => EPOLLOUT was not
+	//   registered while the queue waited for it and the socket sent nothing any more (the sends after it were only queued).
 	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		RETURN_IF(this->m_flag_epollout == _enable);
 
 		this->m_flag_epollout = _enable;
+
+		// - get io_context
+		auto pio_context = this->io_context();
+
+		// check)
+		RETURN_IF(pio_context.empty());
+
+		// - get socket handle
+		const auto handle_socket = this->native_handle();
+
+		// check)
+		RETURN_IF(handle_socket == INVALID_SOCKET);
+
+		// - set event (the executable is kept : nullptr)
+		pio_context->set_event(static_cast<CGHANDLE>(handle_socket), static_cast<uint32_t>(EPOLLET | EPOLLIN | EPOLLERR) | (_enable ? static_cast<uint32_t>(EPOLLOUT) : 0u), nullptr);
 	}
-
-	// - get io_context
-	auto pio_context = this->io_context();
-
-	// check)
-	RETURN_IF(pio_context.empty());
-
-	// - get socket handle
-	const auto handle_socket = this->native_handle();
-
-	// check)
-	RETURN_IF(handle_socket == INVALID_SOCKET);
-
-	// - set event (the executable is kept : nullptr)
-	pio_context->set_event(static_cast<CGHANDLE>(handle_socket), static_cast<uint32_t>(EPOLLET | EPOLLIN | EPOLLERR) | (_enable ? static_cast<uint32_t>(EPOLLOUT) : 0u), nullptr);
 }
 
 uint32_t net::io::sendable::Nudp::process_recover_sendable( intptr_t /*_event*/, std::size_t /*_param*/)
@@ -316,12 +326,18 @@ uint32_t net::io::sendable::Nudp::process_recover_sendable( intptr_t /*_event*/,
 	// check)
 	RETURN_IF(handle_socket == INVALID_SOCKET, 0);
 
-	// 2) send the queue (this thread is the sending thread : the thread that met EWOULDBLOCK left it to EPOLLOUT)
-	const auto result = this->_process_send_pending(handle_socket);
+	// 2) take the queue over : EPOLLOUT off under the lock. not waiting => nothing (EPOLLET : an event carries EPOLLOUT while it is
+	//    registered. another thread took the queue over already, or the queue was sent and a thread sends now : it is the sending thread)
+	SCOPED_LOCK(this->m_lockable_sending)
+	{
+		RETURN_IF(this->m_flag_epollout == false, 0);
 
-	// 3) all sent => EPOLLOUT off
-	if (result != EPOLLOUT)
 		this->_process_set_epollout(false);
+	}
+
+	// 3) send the queue (this thread is the sending thread now). the socket buffer full again => EPOLLOUT
+	if (this->_process_send_pending(handle_socket) == EPOLLOUT)
+		this->_process_set_epollout(true);
 
 	// return)
 	return 0;

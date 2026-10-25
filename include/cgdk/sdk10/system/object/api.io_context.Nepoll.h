@@ -102,7 +102,9 @@ protected:
 				uint32_t			events;			// - the event mask of the registration (io_uring : re-arms a registration without EPOLLONESHOT by it)
 			};
 
-			struct BUCKET_REGISTER
+			// - a cache line each : the lock of a bucket is taken (shared) by every event of its handles, and the handles of neighbouring
+			//   buckets (fd numbers in a row) run on other threads at the same time
+			struct alignas(64) BUCKET_REGISTER
 			{
 				std::shared_mutex	cs_register;
 				std::vector<NODE>	vector_register;

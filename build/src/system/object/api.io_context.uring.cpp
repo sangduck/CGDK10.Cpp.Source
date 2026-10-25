@@ -60,9 +60,11 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 #include <poll.h>
 #include <algorithm>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <thread>
@@ -83,6 +85,7 @@ namespace CGDK
 namespace
 {
 	std::atomic<int> s_default_io_backend{ -1 };	// - -1 : not decided (the env is read at the first use)
+	std::atomic<bool> s_is_default_io_backend_asked{ false };	// - chosen by the env or set_default_io_backend() (not the built-in default)
 
 	int _decide_default_io_backend() noexcept
 	{
@@ -91,8 +94,11 @@ namespace
 		if (backend >= 0)
 			return backend;
 
-		// - env CGDK_IO_URING : 1/true/on => io_uring, completion/cq/2 => io_uring_completion
-		backend = static_cast<int>(executor::io_backend::epoll);
+		// - the built-in default : io_uring_completion (falls back to epoll where it is not available : a kernel before 6.0,
+		//   io_uring disabled by sysctl or a seccomp profile). (epoll before 2026-10-24 : completion was faster in the benches of
+		//   small messages at every thread count and did not drop with more threads)
+		// - env CGDK_IO_URING : 0/false/off/epoll => epoll, 1/true/on => io_uring (readiness), completion/cq/2 => io_uring_completion
+		backend = static_cast<int>(executor::io_backend::io_uring_completion);
 
 		if (const char* penv = std::getenv("CGDK_IO_URING"); penv != nullptr)
 		{
@@ -100,6 +106,10 @@ namespace
 				backend = static_cast<int>(executor::io_backend::io_uring);
 			else if (std::strcmp(penv, "2") == 0 || std::strcmp(penv, "completion") == 0 || std::strcmp(penv, "cq") == 0)
 				backend = static_cast<int>(executor::io_backend::io_uring_completion);
+			else if (std::strcmp(penv, "0") == 0 || std::strcmp(penv, "false") == 0 || std::strcmp(penv, "off") == 0 || std::strcmp(penv, "epoll") == 0)
+				backend = static_cast<int>(executor::io_backend::epoll);
+
+			s_is_default_io_backend_asked.store(true, std::memory_order_relaxed);
 		}
 
 		// - the first decision wins (a set_default_io_backend() meanwhile)
@@ -110,8 +120,54 @@ namespace
 	}
 }
 
+namespace
+{
+	// - the io backend an io_context got (info) : at the first io_context of the process and again when it or the one asked changes (a backend asked
+	//   with set_default_io_backend() between two executors). with the reason when io_uring is not used and the kernel / the sysctl
+	//   (kernel.io_uring_disabled : 0 allowed, 1 a group only, 2 disabled. RHEL / CentOS default 2) : where a server runs on epoll
+	void _log_io_backend(executor::io_backend _backend) noexcept
+	{
+		static std::atomic<int> s_backend_logged{ -1 };
+
+		// - logged again when the backend got or the one asked changes
+		const auto backend_asked = static_cast<executor::io_backend>(_decide_default_io_backend());
+		const int key = static_cast<int>(_backend) | (static_cast<int>(backend_asked) << 4);
+
+		RETURN_IF(s_backend_logged.exchange(key, std::memory_order_relaxed) == key);
+
+		const bool is_asked = s_is_default_io_backend_asked.load(std::memory_order_relaxed);
+
+		utsname name{};
+		static_cast<void>(::uname(&name));
+
+		char io_uring_disabled[8] = "-";
+		if (FILE* pfile = std::fopen("/proc/sys/kernel/io_uring_disabled", "r"); pfile != nullptr)
+		{
+			if (std::fgets(io_uring_disabled, sizeof(io_uring_disabled), pfile) != nullptr)
+				io_uring_disabled[std::strcspn(io_uring_disabled, "\r\n")] = '\0';
+			std::fclose(pfile);
+		}
+
+		const auto name_of = [](executor::io_backend _b) { return (_b == executor::io_backend::io_uring_completion) ? "io_uring completion"sv : (_b == executor::io_backend::io_uring) ? "io_uring (readiness)"sv : "epoll"sv; };
+
+		if (_backend != executor::io_backend::epoll)
+		{
+			LOG_INFO << "(info) io_context: io_uring enabled - backend '"sv << name_of(_backend) << "' ("sv << (is_asked ? "asked"sv : "default"sv) << ", kernel "sv << name.release << ")"sv;
+		}
+		else if (backend_asked == executor::io_backend::epoll)
+		{
+			LOG_INFO << "(info) io_context: io_uring not used - backend 'epoll' (asked : CGDK_IO_URING / set_default_io_backend(), kernel "sv << name.release << ", kernel.io_uring_disabled "sv << io_uring_disabled << ")"sv;
+		}
+		else
+		{
+			LOG_INFO << "(info) io_context: io_uring disabled - backend 'epoll' instead of '"sv << name_of(backend_asked) << "' (not available : kernel "sv << name.release << ", kernel.io_uring_disabled "sv << io_uring_disabled << ", a seccomp profile (docker) may block it. "sv << name_of(backend_asked) << " needs "sv << ((backend_asked == executor::io_backend::io_uring_completion) ? "6.0+"sv : "5.13+"sv) << ")"sv;
+		}
+	}
+}
+
 void executor::set_default_io_backend(executor::io_backend _backend) noexcept
 {
+	s_is_default_io_backend_asked.store(true, std::memory_order_relaxed);
 	s_default_io_backend.store(static_cast<int>(_backend), std::memory_order_release);
 }
 
@@ -499,6 +555,8 @@ public:
 			bool				post(uintptr_t _completion_key, Iexecutable* _pexecutable, bool _is_adopt) noexcept;
 			void				signal() noexcept;
 			void				wake() noexcept;
+			// - batch handoff (executor::io_context::BATCH_HANDOFF) : the executables of a batch after a blocking one go back to the front of the queue
+	static	void				_handoff(executor::io_context::BATCH_HANDOFF& _batch) noexcept;
 	virtual	intptr_t			process_execute(intptr_t _result, size_t _param) override;
 };
 
@@ -719,8 +777,16 @@ intptr_t api::io_context_uring::executable_post::process_execute(intptr_t _resul
 	// 4) execute (an exception : the rest is executed and released, the first one is thrown again)
 	std::exception_ptr pexception;
 
+	// - the rest of the batch goes back to the queue when one blocks (executor::io_context::BATCH_HANDOFF : the other workers take it)
+	executor::io_context::BATCH_HANDOFF batch_handoff{ &executable_post::_handoff, this, array_executable, static_cast<int>(count_executable), 0, nullptr };
+	const bool is_batch_handoff = (count_executable > 1);
+	if (is_batch_handoff)
+		executor::io_context::batch_handoff_begin(batch_handoff);
+
 	for (std::size_t i = 0; i < count_executable; ++i)
 	{
+		batch_handoff.index = static_cast<int>(i);
+
 		auto pexecutable = array_executable[i];
 
 		CONTINUE_IF(pexecutable == nullptr);
@@ -741,10 +807,71 @@ intptr_t api::io_context_uring::executable_post::process_execute(intptr_t _resul
 		}
 	}
 
+	// - the batch ended
+	if (is_batch_handoff)
+		executor::io_context::batch_handoff_end(batch_handoff);
+
 	if (pexception)
 		std::rethrow_exception(pexception);
 
 	return 0;
+}
+
+void api::io_context_uring::executable_post::_handoff(executor::io_context::BATCH_HANDOFF& _batch) noexcept
+{
+	// - the executables after the blocking one go back to the front of the queue (in their order) and are cleared in the batch
+	auto* pthis = static_cast<executable_post*>(_batch.pobject);
+	auto** parray = static_cast<Iexecutable**>(_batch.presults);
+
+	// declare)
+	CGHANDLE event_fd_signal = INVALID_CGHANDLE_VALUE;
+
+	{
+		// lock)
+		std::lock_guard lock(pthis->m_lockable_complete);
+
+		// check) destroyed : they stay in the batch
+		RETURN_IF(pthis->m_event_fd_post == INVALID_CGHANDLE_VALUE);
+
+		// - from the back (push_front keeps their order)
+		bool is_queued = false;
+		for (int i = _batch.count - 1; i > _batch.index; --i)
+		{
+			CONTINUE_IF(parray[i] == nullptr);
+
+			RESULT result;
+			result.data.ptr = reinterpret_cast<void*>(parray[i]);
+			result.events = 0;
+
+			try
+			{
+				pthis->m_queue_executable.push_front(result);
+			}
+			catch (...)
+			{
+				break;
+			}
+
+			// - the reference of post() moves to the queue
+			parray[i] = nullptr;
+			is_queued = true;
+		}
+
+		// check)
+		RETURN_IF(is_queued == false);
+
+		// - signal (a multishot poll completes on a wakeup only : always written)
+		pthis->m_is_signaled = true;
+		event_fd_signal = pthis->m_event_fd_post;
+		pthis->m_count_signaling.fetch_add(1, std::memory_order_relaxed);
+	}
+
+	// - notify (out of the lock)
+	if (event_fd_signal != INVALID_CGHANDLE_VALUE)
+	{
+		::eventfd_write(event_fd_signal, 1);
+		pthis->m_count_signaling.fetch_sub(1, std::memory_order_release);
+	}
 }
 
 
@@ -1624,15 +1751,17 @@ bool api::io_context_linux::create(int _hint_size) noexcept
 			if (pcq->create(_hint_size))
 			{
 				this->m_pcq = std::move(pcq);
+				_log_io_backend(executor::io_backend::io_uring_completion);
 				return true;
 			}
 
 			LOG_WARNING << "(warn) io_context: fail to create the io_uring completion backend. epoll is used"sv;
 		}
-		else
+		else if (s_is_default_io_backend_asked.load(std::memory_order_relaxed))
 		{
 			LOG_WARNING << "(warn) io_context: the io_uring completion backend is not available on this kernel (6.0+ needed, or io_uring disabled). epoll is used"sv;
 		}
+		// - the built-in default : only the info of _log_io_backend() below (once : every io_context of the process falls back the same way)
 	}
 
 	// 2) io_uring when asked for and available
@@ -1645,6 +1774,7 @@ bool api::io_context_linux::create(int _hint_size) noexcept
 			if (puring->create(_hint_size))
 			{
 				this->m_puring = std::move(puring);
+				_log_io_backend(executor::io_backend::io_uring);
 				return true;
 			}
 
@@ -1662,6 +1792,8 @@ bool api::io_context_linux::create(int _hint_size) noexcept
 	RETURN_IF(pepoll->create(_hint_size) == false, false);
 
 	this->m_pepoll = std::move(pepoll);
+
+	_log_io_backend(executor::io_backend::epoll);
 
 	return true;
 }

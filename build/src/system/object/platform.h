@@ -64,12 +64,10 @@ namespace CGDK
 	{
 	#if defined(__ANDROID__) || defined(__linux__)
 		class io_context_Nepoll;
-		class io_context_epoll_queued;
 		class io_context_epoll_direct;
 		class io_context_uring;
 		class io_context_uring_cq;
 		class io_context_linux;
-		//using io_context = io_context_epoll_queued;
 		//using io_context = io_context_epoll_direct;
 		using io_context = io_context_linux;		// - epoll or io_uring (executor::default_io_backend())
 	#elif defined(_IO_APISET_H_)
@@ -90,7 +88,6 @@ namespace CGDK
 	#include "cgdk/sdk10/system/object/api.io_context.iocp_direct.h"
 #elif defined(__linux__) // 
 	#include "cgdk/sdk10/system/object/api.io_context.Nepoll.h"
-	#include "cgdk/sdk10/system/object/api.io_context.epoll_queued.h"
 	#include "cgdk/sdk10/system/object/api.io_context.epoll_direct.h"
 	#include "cgdk/sdk10/system/object/api.io_context.uring_cq.h"
 	#include "cgdk/sdk10/system/object/api.io_context.uring.h"

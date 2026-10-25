@@ -64,8 +64,9 @@ protected:
 protected:
 		using CONTAINER_EXECUTABLE_QUEUE = circular_list<object_ptr<Iexecutable>>;
 
-	mutable	lock_object			m_lockable_queue_executable;
+	mutable	std::mutex			m_lockable_queue_executable;	// not recursive : nothing is called back while it is held
 			CONTAINER_EXECUTABLE_QUEUE m_queue_executable;
+			bool				m_is_accepting = true;		// false between stop() and start() : process_post() refuses (m_lockable_queue_executable)
 
 			std::mutex			m_lockable_complete;
 			std::condition_variable m_cv_complete;

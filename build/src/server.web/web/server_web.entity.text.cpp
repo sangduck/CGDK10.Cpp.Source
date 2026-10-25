@@ -319,7 +319,7 @@ int server::web::entity::text::process_request(sMESSAGE_HTTP_REQUEST& _msg, std:
 	// 3) make http header
 	{
 		// - response head 만들기
-		buf_head.append_text(CGDK::stream_string("HTTP/", 1, ".", 1, " ", "OK"sv, " ", 200, "\r\n"));
+		buf_head.append_text(CGDK::stream_string("HTTP/", 1, ".", 1, " ", 200, " ", "OK"sv, "\r\n"));
 
 		// - Date (예: "Date: Fri, 08 Jul 2011 00:59:41 GMT\r\n")
 		buf_head.append_text("Date: "sv);
@@ -345,7 +345,6 @@ int server::web::entity::text::process_request(sMESSAGE_HTTP_REQUEST& _msg, std:
 	{
 		psocket->send(iter);
 	}
-	psocket->send(m_buffer_context_tail);
 
 	// 6) disconnect
 	psocket->disconnect();

@@ -68,6 +68,12 @@ public:
 			bool				cancel(Iexecutable* _pexecutable) noexcept;
 			void				cancel() noexcept;
 
+			// - spin wait : the last _duration of a wait for the earliest one is spun (yield) instead of sleeping (0 : off, the default).
+			//   the timer wakes the thread that much earlier : the lateness of the timer (windows high resolution waitable timer : about
+			//   0.2 ~ 0.6ms, up to 1ms) is spun away at the cost of the CPU of the spin for every wait
+			void				spin_wait(chrono::tick::duration _duration) noexcept;
+	[[nodiscard]] chrono::tick::duration spin_wait() const noexcept;
+
 	[[nodiscard]] virtual size_t pended_count() const noexcept override;
 	[[nodiscard]] bool			empty() const noexcept { return this->pended_count() == 0;}
 	[[nodiscard]] bool			exist() const noexcept { return !empty();}
@@ -90,13 +96,20 @@ protected:
 	mutable	std::mutex			m_lockable_priorityqueue;
 			std::condition_variable	m_cv_priorityqueue_exist;
 			std::condition_variable	m_cv_priorityqueue_in_time;
+			bool				m_is_waiting = false;	// the scheduler thread is sleeping (m_lockable_priorityqueue)
+			chrono::tick::time_point m_tick_wait_until;	// the time it wakes up at by itself ((max)() : no time)
+			std::atomic<int64_t> m_spin_wait_ns{ 0 };	// spin_wait() (nanoseconds)
+			std::atomic<bool>	m_is_spin_woken{ false };	// the spinning thread is woken (_notify_in_time)
 #if defined(_WIN32)
 			void*				m_handle_timer = nullptr;	// high resolution waitable timer (HANDLE)
 			void*				m_handle_wake = nullptr;	// wake event (HANDLE)
 #endif
 
-			void				process_push_executable(EXECUTION_AT&& _pexecutable);
-			void				process_pop_executable() noexcept;
+			bool				process_push_executable(EXECUTION_AT&& _pexecutable);
+			object_ptr<Iexecutable> process_pop_executable(size_t _pos) noexcept;
+			void				_heap_place(size_t _pos, EXECUTION_AT&& _executable) noexcept;
+			void				_heap_up(size_t _pos, EXECUTION_AT&& _executable) noexcept;
+			void				_heap_down(size_t _pos, EXECUTION_AT&& _executable) noexcept;
 			void				_notify_in_time() noexcept;
 
 	virtual	bool				process_post(object_ptr<Iexecutable>&& _pexecutable) override;

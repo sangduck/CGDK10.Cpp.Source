@@ -61,7 +61,12 @@ std::size_t net::io::packetable::Nresp::process_packet( shared_buffer& _buffer, 
 			// check) 완전히 처리하지 못했다면 처리하던 Redis객체를 저장해 놓고 끝낸다.
 			//        - 나머지 데이터가 더 도착하면 이어서 처리하기 위해...
 			//        - 준비해야 할 버퍼의 크기(현재 받아놓은 버퍼의 크기 + BUFFER_MIN)를 리턴한다.
-			RETURN_IF(result == false, temp_buffer.size() + BUFFER_MIN);
+			//   (what was consumed is kept : the resumed parsing may have read a line. returned unchanged, the line was read again)
+			if (result == false)
+			{
+				_buffer = std::move(temp_buffer);
+				return _buffer.size() + BUFFER_MIN;
+			}
 
 			// - Message 사전 처리 프로세스를 호출
 			process_pre_message(this->m_msg_resp);
@@ -126,10 +131,16 @@ std::size_t net::io::packetable::Nresp::process_packet( shared_buffer& _buffer, 
 	}
 	catch(...)
 	{
-		// 설명) 메시지가 완전히 처리되지 않았다면 이쪽으로 전달될 수 있다.
+		// - the partial message is dropped (the socket is closed)
+		this->m_msg_resp.data.reset();
 
 		// check) 최대 메시지 크기보다 버퍼가 커진 경우 Exception을 던진다.
 		THROW_IF(temp_buffer.size() + BUFFER_MIN > MAX_TCP_MESSAGE_SIZE, throwable::failure(eRESULT::OVERFLOW_ERROR));
+
+		// reraise) an incomplete message returns false (it does not come here) : a parse error or an exception of
+		//          process_message(). swallowed, the partial state stayed (the replies were matched to the wrong queries)
+		//          : the socket is closed
+		throw;
 	}
 
 	// - set
@@ -156,15 +167,15 @@ bool do_extract_integer(buffer_view& _buffer, int64_t& _result)
 	// check) _buffer.data_ must be not nullptr
 	CGASSERT_ERROR(_buffer.data() != nullptr);
 
-	// check) minimum 3bytes '2\r\n' 
-	CGASSERT_ERROR(_buffer.size() > 3);
-
-	// 1) 
+	// 1) (the line may not be complete yet : every read is checked against the end first)
 	char* pos_begin = _buffer.data() + 1;
 	char* pos_now = pos_begin;
-	char* pos_end = pos_begin + _buffer.size() - 1;
+	char* pos_end = _buffer.data() + _buffer.size();
 	int64_t	value = 0;
 	bool is_negative = false;
+
+	// check)
+	RETURN_IF(pos_now >= pos_end, false);
 
 	// 2) get sign
 	if (*pos_now == '-')
@@ -177,16 +188,21 @@ bool do_extract_integer(buffer_view& _buffer, int64_t& _result)
 	}
 
 	// 2) parsing integer value
-	while (*pos_now != '\r')
+	for (;;)
 	{
-		// check) 
+		// check) not complete yet
 		RETURN_IF(pos_now >= pos_end, false);
 
 		// - 값을 읽는다.
 		char temp_num = *pos_now;
 
+		BREAK_IF(temp_num == '\r');
+
 		// check) 
 		THROW_IF(temp_num<'0' || temp_num>'9', throwable::failure(eRESULT::INVALID_ARGUMENT));
+
+		// check) overflow
+		THROW_IF(value > ((std::numeric_limits<int64_t>::max)() - 9) / 10, throwable::failure(eRESULT::INVALID_ARGUMENT));
 
 		// - value...
 		value = value * 10 - '0' + temp_num;
@@ -194,6 +210,12 @@ bool do_extract_integer(buffer_view& _buffer, int64_t& _result)
 		// - next
 		++pos_now;
 	}
+
+	// check) no digit
+	THROW_IF(pos_now == pos_begin + (is_negative ? 1 : 0), throwable::failure(eRESULT::INVALID_ARGUMENT));
+
+	// check) '\r' is the last byte received : '\n' is not here yet
+	RETURN_IF(pos_now + 1 >= pos_end, false);
 
 	// check) ...
 	THROW_IF(*(pos_now + 1) != '\n', throwable::failure(eRESULT::INVALID_ARGUMENT));
@@ -219,26 +241,31 @@ bool do_extract_integer(buffer_view& _buffer, int64_t& _result)
 
 bool do_extract_text(resp_data& _resp_data, shared_buffer& _buffer)
 {
-	// 1) 
+	// 1) (pos_end : the end of the data received. every read is checked against it first)
 	char* pos_begin = _buffer.data();
 	char* pos_now = pos_begin + 1;
-	char* pos_end = pos_begin + _buffer.size() - 1;
+	char* pos_end = pos_begin + _buffer.size();
 
 	// 2) parsing integer value
-	while (*pos_now != '\r')
+	for (;;)
 	{
 		// check) 끝까지 왔다면 0을 리턴한다.
 		RETURN_IF(pos_now >= pos_end, false);
+
+		BREAK_IF(*pos_now == '\r');
 
 		// - next
 		++pos_now;
 	}
 
+	// check) '\r' is the last byte received : '\n' is not here yet
+	RETURN_IF(pos_now + 1 >= pos_end, false);
+
 	// check) 문자열의 끝이 '\r\n'이 아니라면 exception을 던진다.
 	THROW_IF(*(pos_now + 1) != '\n', throwable::failure(eRESULT::INVALID_ARGUMENT));
 
 	// 3) set...
-	_buffer = buffer_base<char>{ static_cast<std::size_t>(pos_end - pos_now - 1), pos_now + 2 };
+	_buffer = buffer_base<char>{ static_cast<std::size_t>(pos_end - pos_now - 2), pos_now + 2 };
 
 	// check) 
 	CGASSERT_ERROR(_buffer.size() < 0x1fffffff);
@@ -267,9 +294,17 @@ bool do_process_resp_parsing_bulk_string(resp_data& _resp_data, shared_buffer& _
 		// check) 
 		RETURN_IF(result == false, false);
 
-		// - len_bulk_string이 0보다 작을 경우 그냥 0으로 설정한다.
-		//   (Bulk에서 length가 0이하값이 전송되는 경우도 있다.)
-		SATURATE_MIN(len_bulk_string, 0);
+		// - null bulk string ("$-1\r\n") : no data and no '\r\n' after it
+		//   (2 bytes were skipped as its '\r\n' : they were the head of the next reply and the replies got out of order)
+		if (len_bulk_string < 0)
+		{
+			_resp_data.pos_processing = 0;
+			_resp_data.buf_store = _buffer ^ buffer_view{ pos_begin, static_cast<std::size_t>(_buffer.data() - pos_begin) };
+			return true;
+		}
+
+		// check) the length + '\r\n' must not overflow
+		THROW_IF(len_bulk_string > static_cast<int64_t>(0x7fffffff), throwable::failure(eRESULT::INVALID_ARGUMENT));
 	}
 	// 1-2) m_posProcess=2이면 [문자열]의 길이는 읽어낸 것이므로...
 	else
@@ -279,7 +314,8 @@ bool do_process_resp_parsing_bulk_string(resp_data& _resp_data, shared_buffer& _
 
 	// 2) len_bulk_string이 0보다 클 경우 문자열을 읽어낸다.
 	//    (Bulk의 경우 아무런 데이터가 전송되지 않을 시 length가 -1이 전송되는 경우도 있다.)
-	if(len_bulk_string > 0)
+	//    (also with the length 0 : "$0\r\n\r\n" has the '\r\n' after the empty data)
+	if(len_bulk_string >= 0)
 	{
 		// check) 남은 데이터의 길이가 length + tail('\r\n')보다 짧으면 처리를 중단하고 false를 리턴한다.
 		if (_buffer.size() < static_cast<std::size_t>(len_bulk_string + 2))
@@ -341,7 +377,7 @@ bool do_process_resp_parsing_array(resp_data& _resp_data, shared_buffer& _buffer
 		// 3) std::verter를 Reserve한다.
 		if (count > 0)
 		{
-			_resp_data.vector_child.reserve(count);
+			_resp_data.vector_child.reserve(static_cast<std::size_t>((std::min)(count, int64_t(1024))));
 		}
 	}
 	else
@@ -381,7 +417,8 @@ bool do_process_resp_parsing_array(resp_data& _resp_data, shared_buffer& _buffer
 		}
 
 		// - push_back
-		auto& temp = _resp_data.vector_child.emplace_back(*_buffer.data<eRESP_DATA_TYPE>());
+		//   (the type is the first byte : it read 4 bytes as the enum and an element of an array never matched a type)
+		auto& temp = _resp_data.vector_child.emplace_back(static_cast<eRESP_DATA_TYPE>(*_buffer.data<char>()));
 
 		// - process parsing
 		auto result = do_process_resp_parsing(temp, _buffer);

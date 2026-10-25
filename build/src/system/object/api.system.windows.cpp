@@ -273,9 +273,52 @@ uint64_t api::get_process_id()
 	return GetCurrentProcessId();
 }
 
+// - the CPUs this process may run on : the affinity of the process (start /affinity, a job object with an affinity) and the CPU
+//   rate limit of its job object (a container), the smaller (hardware_concurrency() is the CPUs of the machine : too many threads
+//   in a container or with an affinity, as on linux with sched_getaffinity / cgroup)
+static std::size_t get_available_core_count() noexcept
+{
+	// 1) machine (all the processor groups)
+	std::size_t count = ::GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
+	if (count == 0)
+		count = std::thread::hardware_concurrency();
+
+	// 2) affinity of the process (one processor group only : with threads in several groups both masks are 0)
+	DWORD_PTR mask_process = 0;
+	DWORD_PTR mask_system = 0;
+	if (::GetProcessAffinityMask(::GetCurrentProcess(), &mask_process, &mask_system) && mask_process != 0 && ::GetActiveProcessorGroupCount() == 1)
+	{
+		std::size_t count_affinity = 0;
+		for (auto mask = static_cast<uint64_t>(mask_process); mask != 0; mask &= mask - 1)
+			++count_affinity;
+
+		if (count_affinity != 0 && count_affinity < count)
+			count = count_affinity;
+	}
+
+	// 3) CPU rate limit of the job object (hard cap : CpuRate is in 1/100 % of all the CPUs)
+	JOBOBJECT_CPU_RATE_CONTROL_INFORMATION info_rate{};
+	if (::QueryInformationJobObject(nullptr, JobObjectCpuRateControlInformation, &info_rate, sizeof(info_rate), nullptr)
+	 && (info_rate.ControlFlags & JOB_OBJECT_CPU_RATE_CONTROL_ENABLE) != 0
+	 && (info_rate.ControlFlags & JOB_OBJECT_CPU_RATE_CONTROL_HARD_CAP) != 0
+	 && (info_rate.ControlFlags & (JOB_OBJECT_CPU_RATE_CONTROL_WEIGHT_BASED | JOB_OBJECT_CPU_RATE_CONTROL_MIN_MAX_RATE)) == 0
+	 && info_rate.CpuRate > 0)
+	{
+		const auto count_machine = static_cast<std::size_t>(::GetActiveProcessorCount(ALL_PROCESSOR_GROUPS));
+		const auto count_rate = (count_machine * info_rate.CpuRate + 9999) / 10000;
+
+		if (count_rate != 0 && count_rate < count)
+			count = count_rate;
+	}
+
+	// return)
+	return (count != 0) ? count : 1;
+}
+
 std::size_t	api::get_core_count() noexcept
 {
-	return std::thread::hardware_concurrency();
+	static const std::size_t s_count = get_available_core_count();
+	return s_count;
 }
 
 bool api::set_current_thread_affinity(int _cpu) noexcept

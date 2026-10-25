@@ -4632,4 +4632,23 @@ namespace CGDK
 			EXPECT_EQ(b.e, (std::vector<int>{ 4, 5 }));
 		}
 	}
+
+	//-----------------------------------------------------------------
+	// Test) data<T>(offset) - an offset in the data is valid however small the space after the data is
+	//       (the bound was checked from the end of the data : the RESP parser read of '\r\n' threw near the end of a receive buffer)
+	//-----------------------------------------------------------------
+	TEST(CGDK10_object_buffer, data_offset_bound)
+	{
+		auto buf_temp = alloc_shared_buffer(256);
+
+		// - fill all but 2 bytes
+		buf_temp.add_size(buf_temp.get_remained_size() - 2);
+		ASSERT_EQ(buf_temp.get_remained_size(), 2u);
+
+		// - offsets in the data (larger than the space left after it)
+		EXPECT_NO_THROW((void)buf_temp.data<uint16_t>(16));
+		EXPECT_EQ(reinterpret_cast<const char*>(buf_temp.data<uint16_t>(16)), buf_temp.data() + 16);
+		EXPECT_NO_THROW((void)buf_temp.data<const uint32_t>(static_cast<int64_t>(buf_temp.size()) - 4));
+		EXPECT_EQ(buf_temp.data<char>(100), buf_temp.data(100));
+	}
 }

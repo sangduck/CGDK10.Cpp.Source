@@ -37,7 +37,7 @@ public:
 			void				next_tick(chrono::tick::time_point _tick_next) { this->m_tick_next = _tick_next; }
 	[[nodiscard]] auto			next_tick() const noexcept { return this->m_tick_next; }
 
-	[[nodiscard]] auto			schedulable_manager() const noexcept { return this->m_pschedulable_manager; }
+	[[nodiscard]] auto			schedulable_manager() const noexcept { std::lock_guard lock(this->m_lockable_pexecutor); return this->m_pschedulable_manager; }
 	[[nodiscard]] auto			executor() const noexcept { std::lock_guard lock(this->m_lockable_pexecutor); return this->m_pexecutor; }
 			void				executor(const object_ptr<Iexecutor>& _pexecutor) noexcept { this->executor(object_ptr<Iexecutor>(_pexecutor)); }
 			void				executor(object_ptr<Iexecutor>&& _pexecutor) noexcept { std::lock_guard lock(this->m_lockable_pexecutor); this->m_pexecutor = std::move(_pexecutor); }
@@ -51,7 +51,7 @@ public:
 	virtual	bool				process_schedule() PURE;
 
 protected:
-	mutable	lock_object			m_lockable_pexecutor;
+	mutable	lock_object			m_lockable_pexecutor;		// m_pexecutor, m_pschedulable_manager (the manager writes it holding its m_lockable_schedule too : lock order manager -> this)
 			object_ptr<Iexecutor> m_pexecutor;
 
 			object_ptr<schedulable::manager> m_pschedulable_manager;

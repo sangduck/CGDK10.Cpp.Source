@@ -25,6 +25,25 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 
+// - executor::io_context (the fake io_context of 5. : its submits are overridden). its headers like system.object's platform.h
+namespace CGDK
+{
+	namespace api
+	{
+		class io_context_Nepoll;
+		class io_context_epoll_direct;
+		class io_context_uring;
+		class io_context_uring_cq;
+		class io_context_linux;
+		using io_context = io_context_linux;
+	}
+}
+#include "cgdk/sdk10/system/object/api.io_context.Nepoll.h"
+#include "cgdk/sdk10/system/object/api.io_context.epoll_direct.h"
+#include "cgdk/sdk10/system/object/api.io_context.uring_cq.h"
+#include "cgdk/sdk10/system/object/api.io_context.uring.h"
+#include "cgdk/sdk10/system/object/executor.io_context.h"
+
 namespace CGDK
 {
 using namespace std::chrono_literals;
@@ -87,7 +106,8 @@ namespace
 
 	//-----------------------------------------------------------------------------
 	// the server socket : the test thread reaches the socket accepted last (g_lus_server)
-	//  'E' echo, 'C' two replies then closesocket(), 'D' the same in a send_defer::scope, 'P' the same in a posted executable
+	//  'E' echo, 'C' two replies then closesocket(), 'D' the same in a send_defer::scope, 'P' the same in a posted executable,
+	//  'G' two replies then disconnect() (graceful), 'H' two replies (the client shuts its side down after the request)
 	//-----------------------------------------------------------------------------
 	std::mutex				g_lus_lockable;
 	object_ptr<net::io::Isocket> g_lus_server;
@@ -136,6 +156,17 @@ namespace
 					this->send(lus_buffer(lus_message(index + 1, 3000, 'R')));
 					this->closesocket();
 				}
+				break;
+
+			case 'G':
+				this->send(lus_buffer(lus_message(index, 100, 'R')));
+				this->send(lus_buffer(lus_message(index + 1, 3000, 'R')));
+				this->disconnect();
+				break;
+
+			case 'H':
+				this->send(lus_buffer(lus_message(index, 100, 'R')));
+				this->send(lus_buffer(lus_message(index + 1, 3000, 'R')));
 				break;
 
 			case 'P':
@@ -291,6 +322,11 @@ namespace
 			this->close();
 		}
 
+		void shutdown_send()
+		{
+			::shutdown(this->m_fd, SHUT_WR);
+		}
+
 		void close()
 		{
 			if (this->m_fd >= 0)
@@ -324,6 +360,14 @@ void lus_check_socket_buffer_full()
 	auto pexecutor = lus_make_executor();
 	ASSERT_TRUE(pexecutor.exist());
 	ASSERT_EQ(pexecutor->backend(), executor::io_backend::io_uring_completion);
+
+	// - the copy check off : the large sends stay SEND_ZC ops over loopback (on : the first one the kernel reports copied stops them)
+	struct copy_check_off
+	{
+		bool previous = net::io::sendable::Itcp_gather::is_zerocopy_copy_check_enabled();
+		copy_check_off() { net::io::sendable::Itcp_gather::enable_zerocopy_copy_check(false); }
+		~copy_check_off() { net::io::sendable::Itcp_gather::enable_zerocopy_copy_check(this->previous); }
+	} guard_copy_check;
 
 	lus_small_send_buffer_guard guard;
 	lus_take_server();
@@ -481,6 +525,98 @@ TEST(uring_send, send_then_close_buffered)
 }
 
 //-----------------------------------------------------------------------------
+// 2.1 the graceful ends, with the sends of the ring owner as ops (enable_send_on_owner_ring) and without : the replies arrive before
+//     the EOF. disconnect() in the handler after the replies (the shutdown waits for the sending), and the EOF of the client received
+//     with its request (the close of the EOF runs right after the handler : the op of the owner staged by the replies is submitted by
+//     the close before its shutdown. cancelled by the close before : lost)
+//-----------------------------------------------------------------------------
+template <class TBASE>
+void lus_check_send_then_disconnect(bool _is_send_on_owner_ring)
+{
+	using server_socket = lus_server_socket<TBASE>;
+
+	if (executor::is_io_uring_completion_available() == false)
+		GTEST_SKIP() << "io_uring completion is not available on this kernel";
+
+	// - the switch of the owner ops (protected statics of Ntcp_async_gather : reached through a class derived from it, never created)
+	struct send_on_owner_ring_switch : public net::io::sendable::Ntcp_async_gather
+	{
+		static bool get() noexcept { return is_send_on_owner_ring_enabled(); }
+		static void set(bool _enable) noexcept { enable_send_on_owner_ring(_enable); }
+	};
+
+	struct send_on_owner_ring_guard
+	{
+		explicit send_on_owner_ring_guard(bool _enable) : m_before(send_on_owner_ring_switch::get()) { send_on_owner_ring_switch::set(_enable); }
+		~send_on_owner_ring_guard() { send_on_owner_ring_switch::set(this->m_before); }
+		bool m_before;
+	} guard_send_on_owner_ring(_is_send_on_owner_ring);
+
+	auto pexecutor = lus_make_executor();
+	ASSERT_TRUE(pexecutor.exist());
+
+	lus_take_server();
+
+	auto pacceptor = make_own<lus_acceptor<server_socket>>();
+	pacceptor->io_context(pexecutor.get());
+	ASSERT_EQ(pacceptor->start(lus_acceptor_parameter<server_socket>()), eRESULT::SUCCESS);
+	const auto port = pacceptor->local_endpoint().port();
+
+	for (int loop = 0; loop < 60; ++loop)
+	{
+		const auto index = static_cast<uint32_t>(loop * 10);
+
+		lus_client client;
+		ASSERT_TRUE(client.connect(port)) << "loop " << loop;
+
+		for (uint32_t e = 0; e < 3; ++e)
+		{
+			ASSERT_TRUE(client.send(lus_message(index + 100 + e, 64, 'E')));
+
+			std::string message;
+			ASSERT_TRUE(client.read_message(message)) << "loop " << loop << " echo " << e;
+		}
+
+		// - even : the server disconnect()s after its replies. odd : the client shuts its side down right after the request (the
+		//   server receives the request and the EOF together : the replies of the request, then the close of the EOF)
+		const bool is_peer_shutdown = (loop % 2) != 0;
+
+		ASSERT_TRUE(client.send(lus_message(index, 16, is_peer_shutdown ? 'H' : 'G')));
+
+		if (is_peer_shutdown)
+			client.shutdown_send();
+
+		std::string reply_1, reply_2;
+		ASSERT_TRUE(client.read_message(reply_1)) << "loop " << loop << " peer shutdown " << is_peer_shutdown << " reply 1 (recv " << client.m_last << " errno " << client.m_errno << ")";
+		ASSERT_EQ(reply_1, lus_message(index, 100, 'R')) << "loop " << loop;
+		ASSERT_TRUE(client.read_message(reply_2)) << "loop " << loop << " peer shutdown " << is_peer_shutdown << " reply 2 (recv " << client.m_last << " errno " << client.m_errno << ")";
+		ASSERT_EQ(reply_2, lus_message(index + 1, 3000, 'R')) << "loop " << loop;
+		EXPECT_TRUE(client.read_eof()) << "loop " << loop << " peer shutdown " << is_peer_shutdown << " errno " << client.m_errno;
+
+		lus_take_server();
+	}
+
+	EXPECT_TRUE(lus_wait_until([&]() { return pacceptor->count() == 0; }, 10000ms)) << "connected yet " << pacceptor->count();
+	pacceptor->stop();
+	pexecutor->stop();
+}
+
+TEST(uring_send, send_then_disconnect_gather)
+{
+	lus_check_send_then_disconnect<net::socket::tcp<>>(false);
+}
+
+TEST(uring_send, send_then_disconnect_gather_send_on_owner_ring)
+{
+	lus_check_send_then_disconnect<net::socket::tcp<>>(true);
+}
+
+TEST(uring_send, send_then_disconnect_buffered)
+{
+	lus_check_send_then_disconnect<net::socket::tcp_buffered<>>(false);
+}
+
+//-----------------------------------------------------------------------------
 // 3. close while an op is in flight (the server closes, the client resets) : closed, reused cleanly
 //-----------------------------------------------------------------------------
 template <class TBASE>
@@ -633,6 +769,227 @@ TEST(uring_send, send_queue_limit_gather)
 TEST(uring_send, send_queue_limit_buffered)
 {
 	lus_check_send_queue_limit<net::socket::tcp_buffered<>>();
+}
+
+//-----------------------------------------------------------------------------
+// 5. the owner of a zerocopy buffer lives till the notification of its SEND_ZC op
+//
+//  - the executable of the SEND ops is shared by the ops of a socket : a SEND_ZC op that ends with F_MORE (its notification comes
+//    later) can be followed by a SENDMSG op (a repost) that completes first. its final CQE must not release the owner of the SEND_ZC
+//    buffer (the kernel may still send from it : a retransmit on a real NIC). before the fix every final CQE released the oldest owner.
+//  - the CQE order is made by hand : the ops go to a fake io_context (submit_send / submit_sendmsg record them) and the test
+//    delivers the CQEs to the executable (-ENOBUFS with F_MORE on the SEND_ZC : the same buffer again as a SENDMSG, zerocopy paused)
+//-----------------------------------------------------------------------------
+namespace
+{
+	constexpr std::size_t	LUS_CQE_F_MORE = 1u << 1;
+	constexpr std::size_t	LUS_CQE_F_NOTIF = 1u << 3;
+	constexpr std::size_t	LUS_ZC_BYTES = 64 * 1024;
+
+	std::atomic<int>		g_lus_zc_owner_destroyed{ 0 };
+	char					g_lus_zc_data[LUS_ZC_BYTES];
+
+	class lus_zc_owner : virtual public Ireferenceable
+	{
+	public:
+		virtual ~lus_zc_owner() noexcept { ++g_lus_zc_owner_destroyed; }
+	};
+
+	struct lus_fake_submit
+	{
+		Iexecutable*		pexecutable = nullptr;
+		bool				is_zerocopy = false;
+	};
+
+	class lus_fake_send_context : public executor::io_context
+	{
+	public:
+		virtual	bool submit_send(CGHANDLE /*_fd*/, const void* /*_buf*/, size_t /*_len*/, int /*_msg_flags*/, Iexecutable* _pexecutable, bool _zerocopy) noexcept override
+		{
+			return this->_record(_pexecutable, _zerocopy);
+		}
+		virtual	bool submit_sendmsg(CGHANDLE /*_fd*/, const msghdr* /*_msg*/, int /*_msg_flags*/, Iexecutable* _pexecutable, bool _zerocopy) noexcept override
+		{
+			return this->_record(_pexecutable, _zerocopy);
+		}
+		bool _record(Iexecutable* _pexecutable, bool _zerocopy) noexcept
+		{
+			if (this->m_submits.size() >= this->m_submits.capacity())
+				return false;
+			this->m_submits.push_back(lus_fake_submit{ _pexecutable, _zerocopy });
+			return true;
+		}
+
+		std::vector<lus_fake_submit> m_submits;
+	};
+
+	template <class TBASE>
+	class lus_zc_order_socket : public lus_server_socket<TBASE>
+	{
+	public:
+		// - the SEND_ZC op of one large buffer to the fake io_context, its result CQE (-ENOBUFS, F_MORE) reposts it as a SENDMSG, the
+		//   SENDMSG completes, then the notification of the SEND_ZC. the result is the error (empty : passed)
+		std::string run_zerocopy_owner_order(int _error = ENOBUFS)
+		{
+			auto pfake = make_object<lus_fake_send_context>();
+			pfake->m_submits.reserve(8);
+
+			auto pio_context_before = this->io_context();
+			this->io_context(pfake.get());
+
+			const auto result = this->_run_zerocopy_owner_order(*pfake, _error);
+
+			this->io_context(pio_context_before.get());
+			return result;
+		}
+
+	private:
+		std::string _run_zerocopy_owner_order(lus_fake_send_context& _fake, int _error)
+		{
+			// 1) the SEND_ZC op of one large buffer (its owner is held by the queue and the executable only)
+			const auto count_copied_before = this->zerocopy_copied_count();
+			const auto count_sent_before = this->zerocopy_sent_count();
+			bool is_posted = false;
+			{
+				std::lock_guard lock(this->m_lockable_sending);
+
+				if (this->m_flag_sending)
+					return "the socket is sending";
+
+				object_ptr<Ireferenceable> powner = make_object<lus_zc_owner>();
+
+				if constexpr (std::is_base_of_v<net::io::sendable::Ntcp_async_gather_buffered, TBASE>)
+				{
+					net::io::sendable::Ntcp_async_gather_buffered::QUEUE_SEND::NODE node;
+					node.buf_send = buffer_view(g_lus_zc_data, LUS_ZC_BYTES);
+					node.powner = std::move(powner);
+					node.bytes_data = LUS_ZC_BYTES;
+					node.count_message = 1;
+					this->m_queue_pending.array_node.push_back(std::move(node));
+					this->m_queue_pending.bytes_data += LUS_ZC_BYTES;
+				}
+				else
+				{
+					this->m_queue_sending.push_back(buffer_view(g_lus_zc_data, LUS_ZC_BYTES), std::move(powner), LUS_ZC_BYTES, 1);
+					this->m_index_sending = 0;
+				}
+
+				this->m_flag_sending = true;
+				is_posted = this->_process_post_send_op();
+			}
+
+			if (is_posted == false || _fake.m_submits.size() != 1)
+				return "the op was not posted";
+			if (_fake.m_submits[0].is_zerocopy == false)
+				return "the large buffer did not go as a SEND_ZC op";
+
+			auto* pexecutable = _fake.m_submits[0].pexecutable;
+
+			// 2) the result CQE of the SEND_ZC : -ENOBUFS (or -ENOMEM : RLIMIT_MEMLOCK charged by io_uring) with F_MORE (the notification follows) => the same buffer as a SENDMSG op
+			pexecutable->process_execute(-static_cast<intptr_t>(_error), LUS_CQE_F_MORE);
+
+			if (_fake.m_submits.size() != 2 || _fake.m_submits[1].is_zerocopy || _fake.m_submits[1].pexecutable != pexecutable)
+				return "the SENDMSG op was not posted on the same executable";
+
+			// 3) the SENDMSG completes (all of it, its final CQE) before the notification of the SEND_ZC
+			pexecutable->process_execute(static_cast<intptr_t>(LUS_ZC_BYTES), 0);
+
+			if (g_lus_zc_owner_destroyed.load() != 0)
+				return "the owner of the SEND_ZC buffer was released by the final CQE of the SENDMSG (before its notification)";
+
+			// 4) the notification of the SEND_ZC (reported copied, as the kernel does for a SEND_ZC that failed) : the owner is released.
+			//    the failed SEND_ZC is not counted as copied nor as sent (copied ones in a row would stop zerocopy on the socket)
+			pexecutable->process_execute(static_cast<intptr_t>(static_cast<int32_t>(0x80000000u)), LUS_CQE_F_NOTIF);
+
+			if (g_lus_zc_owner_destroyed.load() != 1)
+				return "the owner of the SEND_ZC buffer was not released by its notification";
+			if (this->zerocopy_copied_count() != count_copied_before)
+				return "the notification of the failed SEND_ZC was counted as copied";
+			if (this->zerocopy_sent_count() != count_sent_before)
+				return "the failed SEND_ZC was counted as sent";
+
+			if (_fake.m_submits.size() != 2)
+				return "an op more was posted";
+
+			return std::string();
+		}
+	};
+}
+
+template <class TBASE>
+void lus_check_zerocopy_owner_order(int _error = ENOBUFS)
+{
+	using server_socket = lus_zc_order_socket<TBASE>;
+
+	if (executor::is_io_uring_completion_available() == false)
+		GTEST_SKIP() << "io_uring completion is not available on this kernel";
+
+	auto pexecutor = lus_make_executor();
+	ASSERT_TRUE(pexecutor.exist());
+	ASSERT_EQ(pexecutor->backend(), executor::io_backend::io_uring_completion);
+
+	struct zerocopy_guard
+	{
+		bool previous_enable = net::io::sendable::Itcp_gather::is_zerocopy_enabled();
+		std::size_t previous_threshold = net::io::sendable::Itcp_gather::zerocopy_threshold();
+		zerocopy_guard() { net::io::sendable::Itcp_gather::enable_zerocopy(true); net::io::sendable::Itcp_gather::zerocopy_threshold(16 * 1024); }
+		~zerocopy_guard() { net::io::sendable::Itcp_gather::enable_zerocopy(this->previous_enable); net::io::sendable::Itcp_gather::zerocopy_threshold(this->previous_threshold); }
+	} guard_zerocopy;
+
+	lus_take_server();
+	g_lus_zc_owner_destroyed = 0;
+
+	auto pacceptor = make_own<lus_acceptor<server_socket>>();
+	pacceptor->io_context(pexecutor.get());
+	ASSERT_EQ(pacceptor->start(lus_acceptor_parameter<server_socket>()), eRESULT::SUCCESS);
+	const auto port = pacceptor->local_endpoint().port();
+
+	// 1) a client (sends nothing : the server socket has no completion meanwhile)
+	lus_client client;
+	ASSERT_TRUE(client.connect(port));
+	ASSERT_TRUE(lus_wait_until([&]() { std::lock_guard lock(g_lus_lockable); return g_lus_server.exist(); })) << "accept";
+
+	auto pserver = lus_take_server();
+	ASSERT_TRUE(pserver->is_io_completion()) << "the server socket is not a completion socket";
+
+	auto* psocket = dynamic_cast<server_socket*>(pserver.get());
+	ASSERT_NE(psocket, nullptr);
+
+	// 2) the CQEs in the order of the bug
+	const auto error = psocket->run_zerocopy_owner_order(_error);
+	EXPECT_TRUE(error.empty()) << error;
+
+	// 3) close
+	const int count_disconnect = g_lus_count_disconnect.load();
+	client.close();
+	EXPECT_TRUE(lus_wait_until([&]() { return g_lus_count_disconnect.load() > count_disconnect; })) << "disconnect";
+	pserver.reset();
+
+	EXPECT_TRUE(lus_wait_until([&]() { return pacceptor->count() == 0; }, 10000ms)) << "connected yet " << pacceptor->count();
+	pacceptor->stop();
+	pexecutor->stop();
+}
+
+TEST(uring_send, zerocopy_owner_till_notification_gather)
+{
+	lus_check_zerocopy_owner_order<net::socket::tcp<>>();
+}
+
+TEST(uring_send, zerocopy_owner_till_notification_buffered)
+{
+	lus_check_zerocopy_owner_order<net::socket::tcp_buffered<>>();
+}
+
+// - a SEND_ZC refused with -ENOMEM (io_uring charges its pinned pages to RLIMIT_MEMLOCK : __io_account_mem) : sent again as a SENDMSG
+//   like -ENOBUFS (before : the socket was closed, errno 12)
+TEST(uring_send, zerocopy_enomem_falls_back_to_copy_gather)
+{
+	lus_check_zerocopy_owner_order<net::socket::tcp<>>(ENOMEM);
+}
+
+TEST(uring_send, zerocopy_enomem_falls_back_to_copy_buffered)
+{
+	lus_check_zerocopy_owner_order<net::socket::tcp_buffered<>>(ENOMEM);
 }
 
 }

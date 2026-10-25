@@ -31,7 +31,9 @@ int CGDK::Ireferenceable::release(int _count) noexcept
 	// check)
 	CGASSERT_ERROR(result >= 0);
 
-	if (result == 0)
+	// - release(0) releases nothing : it does not dispose the object (at the count 0, in its final release, it disposed it a second time.
+	//   Nmessage_transmitter::process_reset_message_transmitter() releases the count of the messageables, 0 if none)
+	if (result == 0 && _count != 0)
 		_process_on_final_release();
 
 	// return) 

@@ -162,11 +162,33 @@ protected:
 
 	// - 수신 lock (windows iocp/rio, linux io_uring completion) : 수신은 이 lock 안에서 handle을 읽고 recv까지 한다. close는 같은 lock 안에서 handle을 INVALID_SOCKET으로 바꾼다.
 	//   (닫은 뒤 같은 handle 값으로 다시 만들어진 다른 socket에서 받지 않도록)
+	//   windows : a shared_mutex (SRW lock). the receives / UDP sends that may run on many threads at once take it shared (_call_receiving_shared :
+	//   a UDP socket has 32 receives in flight. the system call was made under one mutex by every completing thread), the close takes it exclusive
+#if defined(_WINSOCK2API_)
+			std::shared_mutex	m_lockable_receiving;
+public:
+			std::shared_mutex&	get_lockable_receiving() noexcept { return this->m_lockable_receiving; }
+#else
 			std::mutex			m_lockable_receiving;
 public:
 			std::mutex&			get_lockable_receiving() noexcept { return this->m_lockable_receiving; }
+#endif
 protected:
 #if defined(_WINSOCK2API_)
+	// - _call_receiving() under the shared lock : the calls may run at once on many threads (the UDP receives and sends of the socket)
+			template <class F>
+			bool				_call_receiving_shared(F&& _function)
+			{
+				std::shared_lock lock(this->m_lockable_receiving);
+				const auto handle_socket = this->native_handle();
+				if (handle_socket == INVALID_SOCKET)
+				{
+					::WSASetLastError(WSAENOTSOCK);
+					return false;
+				}
+				return _function(handle_socket);
+			}
+
 	// - 수신 lock 안에서 handle을 읽어 _function(handle)을 부른다. (handle이 INVALID_SOCKET이면 WSAENOTSOCK으로 false)
 			template <class F>
 			bool				_call_receiving(F&& _function)
@@ -214,6 +236,19 @@ public:
 			uint32_t			m_epoll_event_flag = 0;
 			uint32_t			m_epoll_event_flag_queued = 0;
 			bool				m_epoll_event_processing_now = false;
+
+	// - the registration of a TCP socket (socket::Ntcp::process_execute_epoll) :
+	//   . small receives : EPOLLET without EPOLLONESHOT. no epoll_ctl(MOD) per event (the MOD of every worker waited for the lock of the
+	//     shared epoll), a MOD only when the mask changes (EPOLLOUT added / removed) or a receive was cut (EPOLL_RECEIVE_MORE)
+	//   . large receives (a filled window of 4KB+ or 16KB+ in an event : EPOLL_RECEIVE_LARGE) : EPOLLONESHOT, re-armed after every event.
+	//     EPOLLET wakes another thread for every segment of a large message while one thread receives it (56 ~ 74% of the events wasted)
+	//   . back to EPOLLET after EPOLL_COUNT_SMALL_TO_EDGE events of small receives in a row
+			uint32_t			m_epoll_event_registered = 0;		// - the mask given to the kernel last
+			bool				m_epoll_event_oneshot = false;
+			uint8_t				m_epoll_count_small_receive = 0;
+	static	constexpr intptr_t	EPOLL_RECEIVE_LARGE = intptr_t(1) << 26;	// - returned by receivable::Nstream::process_complete_receivable (with EPOLLIN)
+	static	constexpr intptr_t	EPOLL_RECEIVE_MORE = intptr_t(1) << 27;		// - (the same) cut by MAX_RECEIVE_PER_EVENT : data is left
+	static	constexpr uint8_t	EPOLL_COUNT_SMALL_TO_EDGE = 4;
 
 			[[nodiscard]] CGHANDLE get_epoll_handle() const noexcept { return this->m_epoll_handle.load(std::memory_order_acquire); }
 			void				set_epoll_handle(CGHANDLE _handle_epoll) noexcept { this->m_epoll_handle.store(_handle_epoll, std::memory_order_release); }

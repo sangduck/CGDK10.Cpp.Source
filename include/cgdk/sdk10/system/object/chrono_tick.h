@@ -71,6 +71,15 @@ namespace chrono
 			[[nodiscard]] static constexpr time_point(max)() noexcept { return time_point((clock::duration::max)()); }
 		};
 		[[nodiscard]] inline		   time_point now() noexcept { return clock::now(); }
+
+		// - a coarse now() : linux CLOCK_MONOTONIC_COARSE (the time of the last kernel tick, 1 ~ 4ms behind. no hardware counter read).
+		//   the same clock as now() (steady_clock = CLOCK_MONOTONIC) : for times compared in milliseconds or more (the last send / receive
+		//   of a socket). others : now()
+	#if defined(__linux__) && defined(CLOCK_MONOTONIC_COARSE)
+		[[nodiscard]] inline		   time_point now_coarse() noexcept { timespec ts; ::clock_gettime(CLOCK_MONOTONIC_COARSE, &ts); return time_point(std::chrono::duration_cast<duration>(std::chrono::seconds(ts.tv_sec) + std::chrono::nanoseconds(ts.tv_nsec))); }
+	#else
+		[[nodiscard]] inline		   time_point now_coarse() noexcept { return clock::now(); }
+	#endif
 		[[nodiscard]] inline constexpr time_point zero() { return time_point(duration::zero()); }
 		[[nodiscard]] inline constexpr time_point(max)() { return time_point((duration::max)()); }
 

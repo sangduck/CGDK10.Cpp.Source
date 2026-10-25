@@ -63,7 +63,7 @@ public:
 			uint32_t			suspend();
 			uint32_t			resume();
 
-			// - force raises an exception in this thread (Windows: SetThreadContext+APC, Linux: signal)
+			// - force raises an exception in this thread (Windows: an APC that catches its own exception : no visible effect, Linux: not supported, false)
 			//   (DANGEROUS: may cause memory leaks or data corruption if called during lock acquisition)
 			bool				force_raise_exception(const std::string_view& _message = "Forced thread termination") noexcept;
 

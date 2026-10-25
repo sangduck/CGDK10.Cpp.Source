@@ -266,6 +266,14 @@ void time_event::Nentity_start_iteration_end::process_execute_iteration(const ch
 		// check) Interval이 모두 0이면 안 된다!
 		CGASSERT_ERROR(m_time_diff_interval != chrono::time::duration::zero());
 
+		// check) unlimited (times <= 0) with no interval (<= 0) : the iteration is executed once, then waits the end time
+		//        (it ran again and again in this loop without an end : the next time never passed _time_now)
+		if (this->m_times_remained <= 0 && this->m_time_diff_interval <= chrono::time::duration::zero())
+		{
+			this->m_times_remained = 0;
+			break;
+		}
+
 		// 4) set next - Interval만큼을 더해 다음 시간을 설정한다.
 		this->entity_status().time_next += this->m_time_diff_interval;
 

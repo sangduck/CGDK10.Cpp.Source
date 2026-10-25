@@ -3,6 +3,20 @@
 namespace CGDK
 {
 
+namespace
+{
+	// - now + _interval, (max)() when it overflows (an interval of (max)() : never. it wrapped to a time in the past : executed at once)
+	chrono::tick::time_point _tick_after(chrono::tick::duration _interval) noexcept
+	{
+		auto tick_now = chrono::tick::now();
+
+		if (_interval > chrono::tick::duration::zero() && tick_now > (chrono::tick::max)() - _interval)
+			return (chrono::tick::max)();
+
+		return tick_now + _interval;
+	}
+}
+
 Ischedulable::Ischedulable() noexcept
 {
 	this->m_statistics_schedulable.id = reinterpret_cast<uint64_t>(this);
@@ -12,10 +26,10 @@ void Nschedulable::execute_interval(chrono::tick::duration _tick_interval)
 {
 	// 1) set interval and next tick
 	this->m_tick_diff_execute = _tick_interval;
-	this->m_tick_next = chrono::tick::now() + this->m_tick_diff_execute;
+	this->m_tick_next = _tick_after(this->m_tick_diff_execute);
 
 	// 2) reschedule if registered (apply the new interval immediately)
-	auto pschedulable_manager = this->m_pschedulable_manager;
+	auto pschedulable_manager = this->schedulable_manager();
 
 	if (pschedulable_manager.exist())
 		pschedulable_manager->reschedule(this);

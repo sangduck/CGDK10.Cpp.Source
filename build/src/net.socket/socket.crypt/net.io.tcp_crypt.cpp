@@ -224,6 +224,10 @@ void net::io::Ntcp_crypt::on_message_NETWORK_SECURITY_ACCEPT_CERTIFICATION(const
 	// 2) set cryptor
 	this->process_initialize_cryptor_for_client(_buffer);
 
+	// - the bytes received with this message after it were taken as plain but the server encrypted them (it sends encrypted right after
+	//   this message) : decrypted now, before the next message of them is processed
+	this->process_decrypt_received_after(_buffer.data() + _buffer.size());
+
 	// 3) on_connect()를 호출한다. (상태는 1)에서 CAS로 이미 CERTIFIED다 : 다시 쓰면 그 사이의 CLOSED를 덮어쓸 수 있다)
 	// 4) on_connect()를 호출한다.
 	this->on_connect();

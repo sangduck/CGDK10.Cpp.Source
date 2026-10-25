@@ -19,28 +19,6 @@ bool net::io::sendable::Ntcp_crypt_async_gather_buffered::process_sendable( cons
 	if(_buffer.data() == nullptr)
 		return false;
 
-	// declare) 
-	buffer_view buffer_encrypt;
-	object_ptr<Ireferenceable> powner_encrypt;
-
-	// 1) send cryptor를 얻는다.
-	object_ptr<Icryptor> pcryptor = this->get_cryptor();
-
-	// 2) set buffer
-	if (pcryptor.empty())
-	{
-		buffer_encrypt = _buffer;
-		powner_encrypt = std::move(_powner);
-	}
-	else
-	{
-		// - 암호화한다.
-		auto buf_crypted = pcryptor->encrypt(_buffer);
-
-		buffer_encrypt = buf_crypted;
-		powner_encrypt = std::move(std::move(buf_crypted.get_source()));
-	}
-
 	// declare)
 	CGSOCKET handle_socket;
 
@@ -57,22 +35,40 @@ bool net::io::sendable::Ntcp_crypt_async_gather_buffered::process_sendable( cons
 		if(handle_socket == INVALID_SOCKET)
 			return false;
 
-		// 2) 전송 처리 중(m_flag_sending이 signal된 상태(true))라면 queuing 처리만 하고 끝낸다.
+		// check) queue overflowed? (while sending : it would be queued. before the encryption : the keystream is not used for a dropped send)
+		if (this->m_flag_sending == true && ((this->m_queue_pending.array_buffer.size() >= this->m_max_depth_of_send_buffer) || (this->m_queue_pending.bytes_data >= this->m_bytes_max_queued)))
+		{
+			// statistics)
+			this->statistics_on_error_send();
+
+			// check)
+			this->process_on_send_overflow();
+
+			// return)
+			return false;
+		}
+
+		// 2) encrypt (in the lock : the cryptor is a stream cipher, so the order of the encryption must be the order of the bytes on the wire.
+		//    encrypted out of the lock, two senders could queue in the other order and the peer decrypts garbage)
+		buffer_view buffer_encrypt;
+		object_ptr<Ireferenceable> powner_encrypt;
+
+		if (auto pcryptor = this->get_cryptor(); pcryptor.empty())
+		{
+			buffer_encrypt = _buffer;
+			powner_encrypt = std::move(_powner);
+		}
+		else
+		{
+			auto buf_crypted = pcryptor->encrypt(_buffer);
+
+			buffer_encrypt = buf_crypted;
+			powner_encrypt = std::move(buf_crypted.get_source());
+		}
+
+		// 3) 전송 처리 중(m_flag_sending이 signal된 상태(true))라면 queuing 처리만 하고 끝낸다.
 		if (this->m_flag_sending == true)
 		{
-			// check) queue overflowed?
-			if ((this->m_queue_pending.array_buffer.size() >= this->m_max_depth_of_send_buffer) || (this->m_queue_pending.bytes_data >= this->m_bytes_max_queued))
-			{
-				// statistics)
-				this->statistics_on_error_send();
-
-				// check)
-				this->process_on_send_overflow();
-
-				// return)
-				return false;
-			}
-
 			// - queuing to pending_queue
 			this->m_queue_pending.push_back(buffer_encrypt, std::move(powner_encrypt), _count_messages);
 
@@ -149,6 +145,9 @@ void net::io::sendable::Ntcp_crypt_async_gather_buffered::process_complete_senda
 	// statistics) 
 	this->statistics_on_send_bytes(_transferred_bytes);
 	this->statistics_on_send_message((_transferred_bytes != 0) ? this->m_queue_sending.count_message : 0);
+
+	// statistics) the overlapped send completed (it was never decreased : statistics_get_now_async_io() of a socket that had sent stayed > 0)
+	this->statistics_on_decrease_async_sending();
 
 	// check) 이미 destroy 된 경우 더 이상 처리하지 않고 그냥 끝낸다. (destroy되어 clear 처리된 경우 bytes_data가 0일 것이다.)
 	if(this->m_queue_sending.bytes_data == 0)
@@ -273,11 +272,10 @@ void net::io::sendable::Ntcp_crypt_async_gather_buffered::process_reset_sendable
 		// - reset send buffer
 		this->m_queue_pending.clear();
 
-		// - reset sending buffer
-		if (this->m_flag_sending == false)
-		{
-			this->m_queue_sending.clear();
-		}
+		// - reset sending buffer and flag (a WSASend that failed or a close while sending left m_flag_sending true : the socket reused
+		//   for another connection queued every send and never sent again. its completion, if any, sees the cleared queue and returns)
+		this->m_queue_sending.clear();
+		this->m_flag_sending = false;
 	}
 
 	// 2) reset socket option

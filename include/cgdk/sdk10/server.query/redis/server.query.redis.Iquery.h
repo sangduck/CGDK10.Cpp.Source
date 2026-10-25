@@ -73,7 +73,7 @@ protected:
 			template <class TLOCK>
 			void				process_wait(TLOCK& _cs) { this->m_cv_complete.wait(_cs); }
 
-	virtual	void				on_final_release() noexcept override { this->reset_session(); this->m_result.reset(); }
+	virtual	void				on_final_release() noexcept override { this->reset_session(); this->m_result.reset(); this->m_state_query = eOBJECT_STATE::NONE; }
 
 			shared_buffer		m_buffer_query;
 			resp_data			m_result;

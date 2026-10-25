@@ -8,6 +8,8 @@
 #include <set>
 #include <thread>
 #include <vector>
+#include <cstdio>
+#include <sys/utsname.h>
 
 //-----------------------------------------------------------------------------
 // the io_uring completion backend of the io_context (executor::io_backend::io_uring_completion, linux 6.0+)
@@ -485,6 +487,14 @@ TEST(io_context_uring_cq, op_send_zerocopy_and_sendmsg)
 	EXPECT_NE(psend_zc->at(0).param & CQ_F_MORE, 0u);
 	EXPECT_NE(psend_zc->at(1).param & CQ_F_NOTIF, 0u);
 	EXPECT_EQ(psend_zc->at(1).param & CQ_F_MORE, 0u);
+
+	// - the usage report (IORING_SEND_ZC_REPORT_USAGE, 6.2+) : loopback is copied by the kernel => IORING_NOTIF_USAGE_ZC_COPIED (bit 31 of the res)
+	if (utsname name{}; ::uname(&name) == 0)
+	{
+		int major = 0, minor = 0;
+		if (std::sscanf(name.release, "%d.%d", &major, &minor) == 2 && (major > 6 || (major == 6 && minor >= 2)))
+			EXPECT_NE(static_cast<uint32_t>(psend_zc->at(1).result) & (1u << 31), 0u) << "res " << psend_zc->at(1).result;
+	}
 	EXPECT_TRUE(cq_wait_until([&]() { return psend_zc->reference_count() == 1; }));
 
 	// 2) sendmsg : a gather of 3 parts (the msghdr / iov live till the completion)

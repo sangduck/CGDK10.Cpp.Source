@@ -6,6 +6,9 @@
 
 using namespace CGDK;
 
+// - NTSTATUS of a receive completed by the ICMP port unreachable of a datagram sent before (SIO_UDP_CONNRESET on : WSAECONNRESET)
+static constexpr LONG STATUS_PORT_UNREACHABLE_VALUE = static_cast<LONG>(0xC000023FUL);
+
 net::io::receivable::Ndatagram::Ndatagram() noexcept :
 	m_message_buffer_size(DEFAULT_UDP_MESSAGE_BUFFER_SIZE),
 	m_prepare_receive_count(DEFAULT_UDP_COUNT_RECEIVE_BUFFER)
@@ -122,7 +125,7 @@ bool net::io::receivable::Ndatagram::prepare_receive()
 			this->statistics_on_increase_async_receiveing();
 
 			// 6) receive한다.
-			while(false == this->_call_receiving([&](CGSOCKET _handle_socket) { return api::socket::recv_from_async(	// - the handle is read under the receiving lock (close changes it under the same lock)
+			while(false == this->_call_receiving_shared([&](CGSOCKET _handle_socket) { return api::socket::recv_from_async(	// - the handle is read under the receiving lock (close changes it under the same lock)
 				_handle_socket,									// - socket Handle
 				pexecutable->get_wsabuf(),						// - WSABUF
 				1,												// - buffer count
@@ -216,6 +219,15 @@ intptr_t net::io::receivable::Ndatagram::process_complete_receivable( uintptr_t 
 	// check) _buffer.get_source()은 nullptr이면 안된다.
 	CGASSERT_ERROR(_buffer.get_source() != nullptr);
 
+	// - the executable of this receive (_result)
+	auto pexecutable = reinterpret_cast<executable_receive*>(_result);
+
+	// check) temp_executable은 nullptr이면 안된다.
+	CGASSERT(pexecutable != nullptr, 0);
+
+	// - the status of this receive (NTSTATUS, not the last error : the completion was taken by GetQueuedCompletionStatusEx)
+	const LONG io_status = pexecutable->io_status();
+
 
 	//-----------------------------------------------------------------
 	//
@@ -224,8 +236,8 @@ intptr_t net::io::receivable::Ndatagram::process_complete_receivable( uintptr_t 
 	//-----------------------------------------------------------------
 	try
 	{
-		// 1) _buffer.size_이 0인지를 확인한다.
-		if(_transferred != 0)
+		// 1) a datagram (a zero-length datagram is one too : succeeded with 0 bytes. a truncated one (STATUS_BUFFER_OVERFLOW) is passed as before)
+		if(_transferred != 0 || io_status >= 0)
 		{
 			// 통계) socket의 receive통계.
 			this->statistics_on_receive_bytes(_transferred);
@@ -247,13 +259,12 @@ intptr_t net::io::receivable::Ndatagram::process_complete_receivable( uintptr_t 
 			// - on_fail_receive함수를 호출한다.
 			this->on_fail_receive(0, _buffer, _address);
 
-			// - Error Code를 얻어낸다.
-			int	error_code = api::get_last_error();
-
 			// check) ERROR_PORT_UNREACHABLE이 떴을 경우 Error사항에 대해서 전달해주어야 한다.
 			//        Port Unreachable은 해당 Port로 전송을 할 수 없을 때 뜨는 Error이다.
 			//        Port Unreachable은 WSAECONNRESET 옵션을 켰을 때만 동작한다.
-			if(error_code == ERROR_PORT_UNREACHABLE)
+			//        - the status of the receive (STATUS_PORT_UNREACHABLE : ERROR_PORT_UNREACHABLE / WSAECONNRESET). api::get_last_error() was read here :
+			//          not set by GetQueuedCompletionStatusEx (and on_fail_receive() runs before) => the report never came
+			if(io_status == STATUS_PORT_UNREACHABLE_VALUE)
 			{
 				// - connect reset이 떴음을 Notify한다.
 				shared_buffer buf_temp;
@@ -308,25 +319,21 @@ intptr_t net::io::receivable::Ndatagram::process_complete_receivable( uintptr_t 
 	// 2. 새로운 Overlapped receive를 거는 부분.
 	//
 	//-----------------------------------------------------------------
-	// 1) executable를 얻기...
-	auto pexecutable = reinterpret_cast<executable_receive*>(_result);
-
-	// check) temp_executable은 nullptr이면 안된다.
-	CGASSERT(pexecutable != nullptr, 0);
-
-	// 2) add_ref한다.
+	// 1) add_ref한다.
 	pexecutable->add_ref();
 
-	// 3) buffer를 재설정한다.
+	// 2) buffer를 재설정한다.
+	//     - the same buffer again when the message was not kept (prepare_receive_buffer)
 	//     -------------------------------------------------------
 	//     Exceptions) Packet을 할당 중 Exception이 발생했을 경우.
 	//     - 메모리가 부족할 경우 주로 발생한다.
 	//     - 혹은 Packet Size가 너무 클 경우도 발생한다.
 	//     -------------------------------------------------------
-	pexecutable->set_receive_buffer(alloc_shared_buffer(get_message_size()) ^ get_message_size());
+	pexecutable->prepare_receive_buffer(get_message_size());
 
-	// 4) receive한다.
-	while(false == this->_call_receiving([&](CGSOCKET _handle_socket) { return api::socket::recv_from_async(	// - the handle is read under the receiving lock (close changes it under the same lock)
+	// 3) receive한다.
+	//    - shared : the receives of this socket are posted by many threads at once (the close changes the handle under the exclusive lock)
+	while(false == this->_call_receiving_shared([&](CGSOCKET _handle_socket) { return api::socket::recv_from_async(	// - the handle is read under the receiving lock (close changes it under the same lock)
 		_handle_socket,									// - socket Handle
 		pexecutable->get_wsabuf(),						// - WSABUF
 		1,												// - buffer count

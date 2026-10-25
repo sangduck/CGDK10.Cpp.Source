@@ -264,7 +264,14 @@ void time_event::entity_manager::on_start(context& /*_msg*/)
 void time_event::entity_manager::on_stopping()
 {
 	// 1) set m_flag_run 'false' and get old state
-	this->m_flag_run = 0;
+	//    (under the queue lock : the thread checks it under the lock before it waits. set outside, the notify below could
+	//     come between the check and the wait and be lost (on_stopping() then hung in wait()))
+	SCOPED_LOCK(this->m_lockable_priorityqueue)
+	{
+		this->m_flag_run = 0;
+		this->m_cv_priorityqueue_exist.notify_all();
+		this->m_cv_priorityqueue_in_time.notify_all();
+	}
 
 	// 2) cancel all executable
 	this->unregister_event_all();
@@ -291,7 +298,7 @@ result_code time_event::entity_manager::process_update(context& /*_context*/)
 void time_event::entity_manager::unregister_event_all() noexcept
 {
 	// declare) 
-	std::set<object_ptr<Ientity>> set_time_entity;
+	std::set<object_ptr<Ientity>, std::less<>> set_time_entity;
 
 	// 1) terminate execting loop
 	SCOPED_LOCK(this->m_lockable_priorityqueue)
@@ -326,7 +333,7 @@ void time_event::entity_manager::unregister_event_all() noexcept
 
 object_ptr<time_event::Ientity> time_event::entity_manager::find_event(uint64_t _id_event) const noexcept
 {
-	SCOPED_LOCK(this->m_lockable_priorityqueue)
+	SCOPED_LOCK(this->m_lockable_set_time_entity) // (the set is locked by m_lockable_set_time_entity. it locked the queue lock)
 	{
 		// 1) find event
 		for (auto& iter : this->m_set_time_entity)
@@ -568,7 +575,7 @@ bool time_event::entity_manager::_process_detach(Ientity* _ptime_entity) noexcep
 
 	// 1) get first executable object
 	auto iter_end = this->m_priorityqueue_time_entity.end();
-	auto iter = std::find_if(this->m_priorityqueue_time_entity.begin(), iter_end, [=](const object_ptr<Ientity>& iter) { return iter == _ptime_entity; });
+	auto iter = std::find(this->m_priorityqueue_time_entity.begin(), iter_end, _ptime_entity);
 
 	// 2) remove schedulable if exist
 	if (iter != iter_end)
@@ -789,6 +796,27 @@ void time_event::entity_manager::process_notify_next_time_changed(time_event::Ie
 	}
 }
 
+void time_event::entity_manager::process_update_next_time(time_event::Ientity* _ptime_entity, chrono::time::utc::time_point _time_next) noexcept
+{
+	// check)
+	RETURN_IF(_ptime_entity == nullptr);
+
+	std::lock_guard lock(this->m_lockable_priorityqueue);
+
+	// 1) not in the queue (executing or not registered) : _reschedule_time_entity() pushes it with this time
+	if (std::find(this->m_priorityqueue_time_entity.begin(), this->m_priorityqueue_time_entity.end(), _ptime_entity) == this->m_priorityqueue_time_entity.end())
+	{
+		_ptime_entity->m_entity_status.time_next = _time_next;
+		return;
+	}
+
+	// 2) remove -> change -> push again (the heap is ordered by time_next. notifies if the front is changed)
+	//    (also with the same time : time_next may have been written directly before. push_back does not allocate : one was just removed)
+	this->_process_detach(_ptime_entity);
+	_ptime_entity->m_entity_status.time_next = _time_next;
+	this->_push_time_entity(_ptime_entity);
+}
+
 bool time_event::entity_manager::process_post(object_ptr<Iexecutable>&& /*_pexecutable*/)
 {
 	return true;
@@ -807,17 +835,17 @@ bool time_event::entity_manager::process_execute(chrono::tick::duration /*_ticks
 
 				CONDITIONAL_LOCK(this->m_lockable_priorityqueue, lock_wait)
 				{
-					// 1) wait until
-					if (this->m_priorityqueue_time_entity.empty())
-					{
-						this->m_cv_priorityqueue_exist.wait(lock_wait);
-					}
+					// 1) wait until an entity is pushed or stopped (with the predicate : no lost or spurious wakeup)
+					this->m_cv_priorityqueue_exist.wait(lock_wait, [this] { return this->m_flag_run == 0 || this->m_priorityqueue_time_entity.empty() == false; });
+
+					// check) stopped
+					BREAK_IF(this->m_flag_run == 0);
 
 					// 2) get now tick
 					auto time_now = chrono::time::utc::now();
 
 					// 3) pop the entities in time
-					while (this->m_priorityqueue_time_entity.empty() == false)
+					while (this->m_flag_run != 0 && this->m_priorityqueue_time_entity.empty() == false)
 					{
 						// - get first executable object
 						auto ptime_entity = this->m_priorityqueue_time_entity.at(0);

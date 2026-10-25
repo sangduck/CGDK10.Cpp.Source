@@ -232,23 +232,16 @@ std::vector<time_event::sEVENT_SETTING> _get_parameter_event_setting_list(contex
 
 void time_event::Ientity::set_next_time(chrono::time::utc::time_point _time_next) noexcept
 {
-	// check)
-	RETURN_IF(_time_next == m_entity_status.time_next);
-
-	// 1) change
-	m_entity_status.time_next = _time_next;
-
-	// 2) notify
-	process_notify_update_next_time();
+	// 1) change under the queue lock of the manager
+	//    (the queue is a heap ordered by time_next : written here directly, a registered entity kept its old position
+	//     and an earlier time on an entity deep in the heap was executed late)
+	time_event::entity_manager::instance()->process_update_next_time(this, _time_next);
 }
 
 void time_event::Ientity::process_notify_update_next_time()
 {
-	// check) 
-	RETURN_IF(m_entity_status.state == eSTATE::RUN, );
-
-	// 1) notify to manager
-	time_event::entity_manager::instance()->process_notify_next_time_changed(this);
+	// 1) re-push with the current time (time_next written directly)
+	time_event::entity_manager::instance()->process_update_next_time(this, m_entity_status.time_next);
 }
 
 void time_event::Ientity::LOG_EVENT(Ilogger* _plog_target, log_type_t _type, log_level_t _level, eCHARACTER_SET _char_code, std::string_view _message) noexcept

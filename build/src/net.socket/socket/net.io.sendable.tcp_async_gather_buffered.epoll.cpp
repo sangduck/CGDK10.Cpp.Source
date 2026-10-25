@@ -319,12 +319,33 @@ bool net::io::sendable::Ntcp_async_gather_buffered::process_sendable_async(CGSOC
 	const bool is_zerocopy_op = this->is_io_completion() && this->_is_zerocopy_op(bytes_requested, _powner);
 
 	// 1) send at once (EINTR : again)
+	//    - the handle is checked and sent under m_lockable_send_call (closed meanwhile : the close swapped it under the lock)
+	bool is_closed = false;
+
 	for (bytes_sent = 0; is_zerocopy_op == false;)
 	{
-		bytes_sent = this->_zerocopy_send(_handle_socket, _buffer.data(), bytes_requested, flags_send);
+		SCOPED_LOCK(this->m_lockable_send_call)
+		{
+			is_closed = (_handle_socket == INVALID_SOCKET || this->native_handle() != _handle_socket);
 
-		if (bytes_sent >= 0 || api::get_last_error() != EINTR)
+			if (is_closed == false)
+				bytes_sent = this->_zerocopy_send(_handle_socket, _buffer.data(), bytes_requested, flags_send);
+		}
+
+		if (is_closed || bytes_sent >= 0 || api::get_last_error() != EINTR)
 			break;
+	}
+
+	// check) closed meanwhile => dropped (m_flag_sending = false)
+	if (is_closed)
+	{
+		SCOPED_LOCK(this->m_lockable_sending)
+		{
+			this->_process_clear_send_buffers();
+		}
+
+		// return)
+		return false;
 	}
 
 	// case) send completed~ => 그 사이 m_queue_pending에 쌓인 것을 이어서 보낸다.
@@ -539,8 +560,13 @@ uint32_t net::io::sendable::Ntcp_async_gather_buffered::process_recover_sendable
 		// check)
 		CGASSERT_ERROR(bytes_sending != 0);
 
-		// 3) send 한다.
-		auto bytes_result = ::sendmsg(this->native_handle(), &msg_send, MSG_DONTWAIT | MSG_NOSIGNAL);
+		// 3) send 한다. (handle은 m_lockable_send_call 안에서 읽는다 : close가 그 안에서 handle을 바꾼다)
+		ssize_t bytes_result;
+
+		SCOPED_LOCK(this->m_lockable_send_call)
+		{
+			bytes_result = ::sendmsg(this->native_handle(), &msg_send, MSG_DONTWAIT | MSG_NOSIGNAL);
+		}
 
 		// 4-1) [case] send completed~
 		if (bytes_result == static_cast<int>(bytes_sending))
@@ -669,11 +695,8 @@ uint32_t net::io::sendable::Ntcp_async_gather_buffered::process_recover_sendable
 	// - shutdown if send_disconnected
 	if (is_shutdown)
 	{
-		// - set linger Option for graceful disconnect
-		api::socket::set_linger_option(this->native_handle(), 0);
-
-		// - send shutdown
-		api::socket::shutdown(this->native_handle(), SD_SEND);
+		// - set linger Option for graceful disconnect and send shutdown
+		this->_process_shutdown_send(this->native_handle());
 	}
 
 	// - post epoll event
@@ -844,8 +867,9 @@ uint32_t net::io::sendable::Ntcp_async_gather_buffered::_process_send_pending(CG
 		}
 
 		// 3) send (one buffer : send. a large user buffer : MSG_ZEROCOPY)
-		ssize_t bytes_result;
+		ssize_t bytes_result = 0;
 		bool is_zerocopy = false;
+		bool is_closed = false;
 
 		if (count_iovec == 1)
 		{
@@ -860,7 +884,15 @@ uint32_t net::io::sendable::Ntcp_async_gather_buffered::_process_send_pending(CG
 
 			int flags_send = MSG_DONTWAIT | MSG_NOSIGNAL | ((node_first.bytes_remained == 0) ? this->_zerocopy_send_flags(_handle_socket, array_iovec[0].iov_len, node_first.powner) : 0);
 
-			bytes_result = this->_zerocopy_send(_handle_socket, array_iovec[0].iov_base, array_iovec[0].iov_len, flags_send);
+			// - the handle is checked and sent under m_lockable_send_call (closed meanwhile : the close swapped it under the lock)
+			SCOPED_LOCK(this->m_lockable_send_call)
+			{
+				is_closed = (_handle_socket == INVALID_SOCKET || this->native_handle() != _handle_socket);
+
+				if (is_closed == false)
+					bytes_result = this->_zerocopy_send(_handle_socket, array_iovec[0].iov_base, array_iovec[0].iov_len, flags_send);
+			}
+
 			is_zerocopy = (bytes_result > 0) && (flags_send & MSG_ZEROCOPY) != 0;
 		}
 		else
@@ -869,7 +901,30 @@ uint32_t net::io::sendable::Ntcp_async_gather_buffered::_process_send_pending(CG
 			msg_send.msg_iov = array_iovec;
 			msg_send.msg_iovlen = count_iovec;
 
-			bytes_result = ::sendmsg(_handle_socket, &msg_send, MSG_DONTWAIT | MSG_NOSIGNAL);
+			SCOPED_LOCK(this->m_lockable_send_call)
+			{
+				is_closed = (_handle_socket == INVALID_SOCKET || this->native_handle() != _handle_socket);
+
+				if (is_closed == false)
+					bytes_result = ::sendmsg(_handle_socket, &msg_send, MSG_DONTWAIT | MSG_NOSIGNAL);
+			}
+		}
+
+		// check) closed meanwhile => dropped (m_flag_sending = false. the close completes the disconnect)
+		if (is_closed)
+		{
+			queue_send.clear();
+
+			SCOPED_LOCK(this->m_lockable_sending)
+			{
+				this->_process_clear_send_buffers();
+			}
+
+			// - set result
+			result = SEND_PENDING_FAILED;
+
+			// break)
+			break;
 		}
 
 		// 4) the part sent
@@ -984,11 +1039,8 @@ uint32_t net::io::sendable::Ntcp_async_gather_buffered::_process_send_pending(CG
 	// - shutdown if send_disconnected (모두 보냈을 때)
 	if (is_shutdown)
 	{
-		// - set linger Option for graceful disconnect
-		api::socket::set_linger_option(this->native_handle(), 0);
-
-		// - send shutdown
-		api::socket::shutdown(this->native_handle(), SD_SEND);
+		// - set linger Option for graceful disconnect and send shutdown
+		this->_process_shutdown_send(this->native_handle());
 	}
 
 	// return)
@@ -1019,11 +1071,8 @@ void net::io::sendable::Ntcp_async_gather_buffered::process_close_sender()
 
 	if (do_shutdown)
 	{
-		// - linger Option을 Graceful disconnect로 설정한다.
-		api::socket::set_linger_option(this->native_handle(), 0);
-
-		// - 접속을 종료한다.
-		api::socket::shutdown(this->native_handle(), SD_SEND);
+		// - linger Option을 Graceful disconnect로 설정하고 접속을 종료한다.
+		this->_process_shutdown_send(this->native_handle());
 	}
 }
 
@@ -1064,5 +1113,20 @@ void net::io::sendable::Ntcp_async_gather_buffered::_process_clear_send_buffers(
 	this->_zerocopy_reset();
 }
 
+void net::io::sendable::Ntcp_async_gather_buffered::_process_shutdown_send(CGSOCKET _handle_socket) noexcept
+{
+	// - the handle is checked under m_lockable_send_call (closed meanwhile : not done. it may be a handle made again with the same number)
+	SCOPED_LOCK(this->m_lockable_send_call)
+	{
+		// check)
+		RETURN_IF(_handle_socket == INVALID_SOCKET || this->native_handle() != _handle_socket);
+
+		// - set linger Option for graceful disconnect
+		api::socket::set_linger_option(_handle_socket, 0);
+
+		// - send shutdown
+		api::socket::shutdown(_handle_socket, SD_SEND);
+	}
+}
 
 #endif

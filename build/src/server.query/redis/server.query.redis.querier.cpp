@@ -967,3 +967,154 @@ void query::redis::querier::post_alloc_session(Iquery* _pquery, std::function<vo
 //		}
 //	}
 //}
+
+shared_buffer generate_redis_batch(std::span<const std::string_view> commands);
+
+void query::redis::querier::post_execute_query(std::span<const std::string_view> commands, batch_callback response)
+{
+	// Encode every command before publishing anything: malformed input sends nothing.
+	auto buffer = generate_redis_batch(commands);
+	auto pquery = make_object<redis::query>();
+	pquery->m_result.type = eRESP_DATA_TYPE::ARRAY_;
+	pquery->m_result.vector_child.resize(commands.size());
+	pquery->m_buffer_query = buffer;
+
+	struct completion
+	{
+		std::atomic<bool> done{false};
+		object_ptr<redis::query> pquery;
+		batch_callback response;
+	};
+	auto state = std::make_shared<completion>();
+	state->pquery = pquery;
+	state->response = std::move(response);
+	auto finish = [state]() {
+		if (!state->done.exchange(true) && state->response)
+			state->response(std::move(state->pquery->m_result.vector_child));
+	};
+	auto execute = [pquery, buffer, count = commands.size(), finish]() {
+		try
+		{
+			pquery->m_state_query = eOBJECT_STATE::REQUESTING;
+			session::REQUEST_QUERY request;
+			request.pquery = pquery;
+			request.buf_request = buffer;
+			request.response = finish;
+			request.count_batch = count;
+			pquery->get_session()->execute_query(std::move(request));
+		}
+		catch (...)
+		{
+			// Once accepted, even a queued send failure completes the batch once.
+			try { finish(); } catch (...) {}
+		}
+	};
+	{
+		std::unique_lock<std::recursive_mutex> lock(this->m_lockable_query);
+		THROW_IF(!this->process_is_running(), throwable::failure(eRESULT::NOT_READY));
+		if (!this->m_sessions_stack.empty() && this->m_queue_query.empty())
+		{
+			pquery->set_session(this->process_get_shared_session());
+		}
+		else
+		{
+			QUEUED_QUERY queued(this);
+			queued.pquery = pquery;
+			queued.is_shared = true;
+			queued.f_execute = std::move(execute);
+			queued.f_cancel = std::move(finish);
+			this->m_queue_query.push_back(std::move(queued));
+			return;
+		}
+	}
+	execute();
+}
+namespace
+{
+	std::vector<std::string_view> redis_command_views(std::span<const std::string> commands)
+	{
+		std::vector<std::string_view> views;
+		views.reserve(commands.size());
+		for (const auto& command : commands) views.emplace_back(command);
+		return views;
+	}
+}
+
+void query::redis::querier::post_execute_query(std::span<const std::string> commands, batch_callback response)
+{
+	auto views = redis_command_views(commands);
+	this->post_execute_query(std::span<const std::string_view>(views), std::move(response));
+}
+
+object_ptr<query::redis::query> query::redis::querier::execute_query_sync(std::span<const std::string_view> commands)
+{
+	THROW_IF(!this->process_is_running(), throwable::failure(eRESULT::NOT_READY));
+	auto buffer = generate_redis_batch(commands);
+	auto pquery = make_object<redis::query>();
+	pquery->m_result.type = eRESP_DATA_TYPE::ARRAY_;
+	pquery->m_result.vector_child.resize(commands.size());
+	pquery->m_buffer_query = buffer;
+
+	// Flush/suspend deferred sends and lend the executor worker while waiting.
+	// Use the existing synchronous shared-session allocator, including its FIFO
+	// and 100ms shared fallback, rather than waiting on an asynchronous callback.
+	scoped_thread_block thread_block;
+	this->alloc_shared_session(pquery);
+	std::unique_lock<std::recursive_mutex> lock(pquery->m_lockable_state_query);
+	pquery->m_state_query = eOBJECT_STATE::REQUESTING;
+	try
+	{
+		session::REQUEST_QUERY request;
+		request.pquery = pquery;
+		request.buf_request = std::move(buffer);
+		request.count_batch = commands.size();
+		pquery->get_session()->execute_query(std::move(request));
+		while (pquery->m_state_query == eOBJECT_STATE::REQUESTING)
+			pquery->m_cv_complete.wait(lock);
+	}
+	catch (...)
+	{
+		pquery->m_state_query = eOBJECT_STATE::READY;
+		throw;
+	}
+	return pquery;
+}
+
+object_ptr<query::redis::query> query::redis::querier::execute_query_sync(std::span<const std::string> commands)
+{
+	auto views = redis_command_views(commands);
+	return this->execute_query_sync(std::span<const std::string_view>(views));
+}
+
+query::execute_result<object_ptr<query::redis::query>> query::redis::querier::execute_query(std::span<const std::string_view> commands)
+{
+	if (!is_deferred_execution())
+		return execute_result<object_ptr<redis::query>>::executed(this->execute_query_sync(commands));
+
+	// A deferred coroutine must own the inputs until it is awaited/executed.
+	auto owned = std::make_shared<std::vector<std::string>>();
+	owned->reserve(commands.size());
+	for (auto command : commands) owned->emplace_back(command);
+	auto pquerier = object_ptr<querier>(this);
+	return execute_result<object_ptr<redis::query>>::deferred(
+		[pquerier, owned]() { return pquerier->execute_query_sync(std::span<const std::string>(*owned)); },
+		[pquerier, owned](object_ptr<redis::query>& result, std::function<void()>&& complete) {
+			// Allocate before starting: a failure here propagates to the awaiter,
+			// rather than throwing inside a response callback and losing its wakeup.
+			auto pquery = make_object<redis::query>();
+			result = pquery;
+			pquerier->post_execute_query(std::span<const std::string>(*owned),
+				[pquery, complete = std::move(complete)](batch_results&& results) {
+					pquery->m_state_query = eOBJECT_STATE::PROCESSED;
+					pquery->m_result.type = eRESP_DATA_TYPE::ARRAY_;
+					pquery->m_result.vector_child = std::move(results);
+					complete();
+				});
+		});
+}
+
+query::execute_result<object_ptr<query::redis::query>> query::redis::querier::execute_query(std::span<const std::string> commands)
+{
+	auto views = redis_command_views(commands);
+	return this->execute_query(std::span<const std::string_view>(views));
+}

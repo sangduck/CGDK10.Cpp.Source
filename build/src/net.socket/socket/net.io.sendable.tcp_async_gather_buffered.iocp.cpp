@@ -19,12 +19,14 @@ bool net::io::sendable::Ntcp_async_gather_buffered::process_sendable( const buff
 	if(_buffer.data() == nullptr)
 		return false;
 
-	// declare)
-	CGSOCKET handle_socket;
-
 	// - send defer : 이 thread가 그룹 락 안에서 보내는 중이다. (바로 보내지 않고 모아 두었다가 가장 바깥 그룹 락이 풀릴 때 한번에 보낸다)
 	const auto ptoken = send_defer::token();
 	const bool is_deferring = send_defer::is_deferring(static_cast<const Isocket*>(this));
+
+	// declare) 이 thread가 보내는 thread가 되어 lock 밖에서 m_queue_sending을 보낸다.
+	//          - is_send_own : 이 송신 하나만 보낸다. (실패하면 false를 돌려준다)
+	bool is_send_now = false;
+	bool is_send_own = false;
 
 	SCOPED_LOCK(this->m_lockable_sending)
 	{
@@ -32,11 +34,8 @@ bool net::io::sendable::Ntcp_async_gather_buffered::process_sendable( const buff
 		if(this->socket_state() < eSOCKET_STATE::ESTABLISHED)
 			return false;
 
-		// 1) get socket native handle
-		handle_socket = this->native_handle();
-
-		// check) if invalid socket, return false 
-		if(handle_socket == INVALID_SOCKET)
+		// check) if invalid socket, return false (보낼 때 m_lockable_send_call 안에서 다시 확인한다)
+		if(this->native_handle() == INVALID_SOCKET)
 			return false;
 
 		// case) send defer : 이 thread가 모으고 있다. (아직 WSASend하지 않았다 : m_queue_sending은 이 thread만 쓴다)
@@ -51,14 +50,14 @@ bool net::io::sendable::Ntcp_async_gather_buffered::process_sendable( const buff
 
 			// - 모은 것이 많으면 지금 보낸다. (overflow 되지 않게)
 			if (this->_is_send_defer_full())
+			{
 				this->_process_send_deferred();
-
-			// return)
-			return true;
+				is_send_now = true;
+			}
 		}
 
-		// 2) 전송 처리 중(m_flag_sending이 signal된 상태(true))라면 queuing 처리만 하고 끝낸다.
-		if (this->m_flag_sending == true)
+		// case) 전송 처리 중(m_flag_sending이 signal된 상태(true))라면 queuing 처리만 하고 끝낸다.
+		else if (this->m_flag_sending == true)
 		{
 			// check) queue overflowed?
 			if ((this->m_queue_pending.array_buffer.size() >= m_max_depth_of_send_buffer) || (this->m_queue_pending.bytes_data >= m_bytes_max_queued))
@@ -75,16 +74,13 @@ bool net::io::sendable::Ntcp_async_gather_buffered::process_sendable( const buff
 
 			// - queuing to pending_queue
 			this->m_queue_pending.push_back(_buffer, std::move(_powner), _count_messages);
-
-			// return) 
-			return true;
 		}
 
 		// case) send defer : 처음 모은다. (WSASend하지 않고 m_queue_sending에 넣어 둔다)
 		//       - 이 thread가 보내는 thread가 된다. (그 사이 다른 thread가 보내는 것은 m_flag_sending을 보고 m_queue_pending에 쌓는다)
 		//       - 등록하면 가장 바깥 그룹 락이 풀릴 때 process_flush_deferred_send()로 보낸다. (등록에 실패하면 바로 보낸다)
 		//       - 한번에 모을 크기보다 큰 message는 모으지 않는다. (바로 보낸다)
-		if (is_deferring && _buffer.size() < SEND_DEFER_MAX_BYTES)
+		else if (is_deferring && _buffer.size() < SEND_DEFER_MAX_BYTES)
 		{
 			// check) 보내는 thread가 없으면 m_queue_sending은 비어 있다.
 			CGASSERT_ERROR(this->m_queue_sending.array_buffer.empty());
@@ -98,74 +94,41 @@ bool net::io::sendable::Ntcp_async_gather_buffered::process_sendable( const buff
 
 			// - 등록한다. (모은 것이 많으면 지금 보낸다 : queue 한도가 아주 작을 때)
 			if (send_defer::push(this, object_ptr<Ireferenceable>(this)) == false || this->_is_send_defer_full())
+			{
 				this->_process_send_deferred();
-
-			// return)
-			return true;
+				is_send_now = true;
+			}
 		}
-
-		// 3) set flag_sending true
-		this->m_flag_sending = true;
-
-		// - handle은 lock 안에서 읽고 send까지 lock 안에서 한다.
-		//   (close는 같은 lock 안에서 handle을 INVALID_SOCKET으로 바꾼다 : 닫힌 뒤 같은 값으로 다시 만들어진 다른 socket에 보내지 않도록)
-		// 4) queuing to sending buffer
+		else
 		{
-			CGASSERT_ERROR(this->m_queue_sending.array_buffer.empty());
-			CGASSERT_ERROR(this->m_queue_sending.array_node.empty());
+			// 3) set flag_sending true (이 thread가 보내는 thread가 된다 : lock 밖에서 보낸다. 그 사이 다른 thread는 m_queue_pending에 쌓는다)
+			this->m_flag_sending = true;
 
-			this->m_queue_sending.array_buffer.emplace_back(_buffer.size<ULONG>(), _buffer.data());
-			this->m_queue_sending.array_node.emplace_back(std::move(_powner));
-			this->m_queue_sending.bytes_data = _buffer.size();
-			this->m_queue_sending.count_message = _count_messages;
+			// 4) queuing to sending buffer
+			{
+				CGASSERT_ERROR(this->m_queue_sending.array_buffer.empty());
+				CGASSERT_ERROR(this->m_queue_sending.array_node.empty());
+
+				this->m_queue_sending.array_buffer.emplace_back(_buffer.size<ULONG>(), _buffer.data());
+				this->m_queue_sending.array_node.emplace_back(std::move(_powner));
+				this->m_queue_sending.bytes_data = _buffer.size();
+				this->m_queue_sending.count_message = _count_messages;
+			}
+
+			is_send_now = true;
+			is_send_own = true;
 		}
-
-		// 5) prepare executable
-		this->m_pexecutable_send_buffer_list->m_psendable = this;
-
-		// 6) reference count를 증가시킨다.
-		this->m_pexecutable_send_buffer_list->add_ref();
-
-		// statistics) send overlapped 카운트를 하나 증가시킨다.
-		this->statistics_on_increase_async_sending();
-
-		// 7) send async
-		auto result = api::socket::send_async(handle_socket, &this->m_queue_sending.array_buffer.front(), 1, nullptr, this->m_pexecutable_send_buffer_list.get());
-
-		// check) result가 false이고 WOULD BLOCK이 아닐 때만 전송 실패이다.
-		if (result == false && api::get_last_error() != WSA_IO_PENDING)
-		{
-			// - set last error
-			this->m_last_socket_error = api::get_last_error();
-
-			// statistics)
-			this->statistics_on_error_send();
-
-			// - send overlapped 카운트를 하나 줄인다.
-			this->statistics_on_decrease_async_sending();
-
-			// - reset 
-			this->m_pexecutable_send_buffer_list->m_psendable.reset();
-
-			// - release 'm_pexecutable_send_buffer_list'
-			this->m_pexecutable_send_buffer_list->release();
-
-			// - process reset sendable
-			this->process_reset_sendable();
-
-			// return) fail to send
-			return false;
-		}
-
-		// statistics) 
-		this->statistics_on_send_async();
-
-		// return)
-		return true;
 	}
 
-	// return) (not reached)
-	return false;
+	// check)
+	if (is_send_now == false)
+		return true;
+
+	// 5) send async (lock 밖)
+	const auto result = this->_process_send_queue_sending();
+
+	// return)
+	return (is_send_own) ? result : true;
 }
 
 bool net::io::sendable::Ntcp_async_gather_buffered::_is_send_defer_full() const noexcept
@@ -193,9 +156,12 @@ void net::io::sendable::Ntcp_async_gather_buffered::process_flush_deferred_send(
 		if(this->m_pdefer_owner.load(std::memory_order_relaxed) != send_defer::token())
 			return;
 
-		// - send
+		// - 모으기를 끝낸다.
 		this->_process_send_deferred();
 	}
+
+	// - send (lock 밖)
+	this->_process_send_queue_sending();
 }
 
 void net::io::sendable::Ntcp_async_gather_buffered::process_flush_deferred_send_on_close() noexcept
@@ -208,14 +174,17 @@ void net::io::sendable::Ntcp_async_gather_buffered::process_flush_deferred_send_
 		if(this->m_pdefer_owner.load(std::memory_order_relaxed) == nullptr)
 			return;
 
-		// - send
+		// - 모으기를 끝낸다. (이 thread가 보내는 thread가 된다)
 		this->_process_send_deferred();
 	}
+
+	// - send (lock 밖. close는 이것이 돌아온 뒤에 handle을 바꾼다)
+	this->_process_send_queue_sending();
 }
 
 void net::io::sendable::Ntcp_async_gather_buffered::_process_send_deferred() noexcept
 {
-	// - m_lockable_sending 안에서 부른다.
+	// - m_lockable_sending 안에서 부른다. 모아 둔 것(m_queue_sending)은 부른 thread가 lock 밖에서 보낸다. (_process_send_queue_sending)
 
 	// 1) 모으기를 끝낸다. (보내는 thread는 그대로다 : m_flag_sending)
 	this->m_pdefer_owner.store(nullptr, std::memory_order_relaxed);
@@ -223,66 +192,94 @@ void net::io::sendable::Ntcp_async_gather_buffered::_process_send_deferred() noe
 	// check)
 	CGASSERT_ERROR(this->m_flag_sending == true);
 	CGASSERT_ERROR(this->m_queue_sending.array_buffer.empty() == false);
+}
 
-	// 2) get socket native handle
-	const auto handle_socket = this->native_handle();
+bool net::io::sendable::Ntcp_async_gather_buffered::_process_send_queue_sending() noexcept
+{
+	//-----------------------------------------------------------------
+	// 설명) 보내는 thread(m_flag_sending)가 m_queue_sending을 보낸다.
+	//
+	//  - m_lockable_sending 밖에서 부른다. (WSASend 동안 다른 thread는 기다리지 않고 m_queue_pending에 쌓는다)
+	//    m_queue_sending은 보내는 thread만 쓴다. (완료 처리가 지우고 m_queue_pending을 가져온다)
+	//  - handle은 m_lockable_send_call 안에서 읽고 WSASend도 그 안에서 한다.
+	//    (close는 같은 lock 안에서 handle을 INVALID_SOCKET으로 바꾼다 : 닫힌 뒤 같은 값으로 다시 만들어진 다른 socket에 보내지 않도록)
+	//  - 실패하면 보내려던 것은 버린다. (process_reset_sendable)
+	//-----------------------------------------------------------------
+	bool result = false;
 
-	// check) 그 사이 socket이 닫혔다 => 모아 둔 것은 버린다.
-	if (handle_socket == INVALID_SOCKET)
+	SCOPED_LOCK(this->m_lockable_send_call)
 	{
-		// - process reset sendable
-		this->process_reset_sendable();
+		// 1) get socket native handle
+		const auto handle_socket = this->native_handle();
 
-		// return)
-		return;
+		// check) 그 사이 socket이 닫혔다 => 보내려던 것은 버린다.
+		if (handle_socket != INVALID_SOCKET)
+		{
+			// 2) prepare executable
+			this->m_pexecutable_send_buffer_list->m_psendable = this;
+
+			// 3) reference count를 증가시킨다.
+			this->m_pexecutable_send_buffer_list->add_ref();
+
+			// statistics) send overlapped 카운트를 하나 증가시킨다.
+			this->statistics_on_increase_async_sending();
+
+			// - the messages of this WSASend (counted at its completion : process_reset_sendable() may clear m_queue_sending before it comes)
+			this->m_count_message_sending.store(this->m_queue_sending.count_message, std::memory_order_release);
+
+			// 4) send async
+			result = api::socket::send_async(handle_socket, &this->m_queue_sending.array_buffer.front(), static_cast<uint32_t>(this->m_queue_sending.array_buffer.size()), nullptr, this->m_pexecutable_send_buffer_list.get());
+
+			// check) result가 false이고 WOULD BLOCK이 아닐 때만 전송 실패이다.
+			if (result == false && api::get_last_error() != WSA_IO_PENDING)
+			{
+				// - set last error
+				this->m_last_socket_error = api::get_last_error();
+
+				// statistics)
+				this->statistics_on_error_send();
+
+				// - send overlapped 카운트를 하나 줄인다.
+				this->statistics_on_decrease_async_sending();
+
+				// - reset
+				this->m_pexecutable_send_buffer_list->m_psendable.reset();
+
+				// - release 'm_pexecutable_send_buffer_list'
+				this->m_pexecutable_send_buffer_list->release();
+			}
+			else
+			{
+				result = true;
+			}
+		}
 	}
 
-	// 3) prepare executable
-	this->m_pexecutable_send_buffer_list->m_psendable = this;
-
-	// 4) reference count를 증가시킨다.
-	this->m_pexecutable_send_buffer_list->add_ref();
-
-	// statistics) send overlapped 카운트를 하나 증가시킨다.
-	this->statistics_on_increase_async_sending();
-
-	// 5) send async (모아 둔 것을 한번에)
-	auto result = api::socket::send_async(handle_socket, &this->m_queue_sending.array_buffer.front(), static_cast<uint32_t>(this->m_queue_sending.array_buffer.size()), nullptr, this->m_pexecutable_send_buffer_list.get());
-
-	// check) result가 false이고 WOULD BLOCK이 아닐 때만 전송 실패이다.
-	if (result == false && api::get_last_error() != WSA_IO_PENDING)
+	// check) fail to send
+	if (result == false)
 	{
-		// - set last error
-		this->m_last_socket_error = api::get_last_error();
-
-		// statistics)
-		this->statistics_on_error_send();
-
-		// - send overlapped 카운트를 하나 줄인다.
-		this->statistics_on_decrease_async_sending();
-
-		// - reset
-		this->m_pexecutable_send_buffer_list->m_psendable.reset();
-
-		// - release 'm_pexecutable_send_buffer_list'
-		this->m_pexecutable_send_buffer_list->release();
-
 		// - process reset sendable
 		this->process_reset_sendable();
 
 		// return) fail to send
-		return;
+		return false;
 	}
 
 	// statistics)
 	this->statistics_on_send_async();
+
+	// return)
+	return true;
 }
 
 void net::io::sendable::Ntcp_async_gather_buffered::process_complete_sendable( uintptr_t /*_result*/, std::size_t _transferred_bytes, std::size_t /*_count_messages*/)
 {
-	// statistics) 
+	// statistics)
 	this->statistics_on_send_bytes(_transferred_bytes);
-	this->statistics_on_send_message((_transferred_bytes != 0) ? this->m_queue_sending.count_message : 0);
+	this->statistics_on_send_message((_transferred_bytes != 0) ? this->m_count_message_sending.load(std::memory_order_acquire) : 0);
+
+	// statistics) the overlapped send completed (it was never decreased : statistics_get_now_async_io() of a socket that had sent stayed > 0)
+	this->statistics_on_decrease_async_sending();
 
 	// check) 이미 destroy 된 경우 더 이상 처리하지 않고 그냥 끝낸다. (destroy되어 clear 처리된 경우 bytes_data가 0일 것이다.)
 	if(this->m_queue_sending.bytes_data == 0)
@@ -291,14 +288,14 @@ void net::io::sendable::Ntcp_async_gather_buffered::process_complete_sendable( u
 	SCOPED_LOCK(this->m_lockable_sending)
 	{
 		// 1) clear seding queue
-		this->m_queue_sending.clear();
+		//    - 보낸 thread가 WSASend에서 돌아온 뒤에 지운다. (m_lockable_send_call : 완료가 WSASend가 돌아오기 전에 올 수 있다)
+		SCOPED_LOCK(this->m_lockable_send_call)
+		{
+			this->m_queue_sending.clear();
+		}
 
-		// - handle은 lock 안에서 읽고 send까지 lock 안에서 한다.
-		//   (close는 같은 lock 안에서 handle을 INVALID_SOCKET으로 바꾼다 : 닫힌 뒤 같은 값으로 다시 만들어진 다른 socket에 보내지 않도록)
-		const auto handle_socket = this->native_handle();
-
-		// check) 
-		if (handle_socket == INVALID_SOCKET)
+		// check)
+		if (this->native_handle() == INVALID_SOCKET)
 		{
 			// - process reset sendable
 			this->process_reset_sendable();
@@ -316,11 +313,20 @@ void net::io::sendable::Ntcp_async_gather_buffered::process_complete_sendable( u
 			// - shutdown if send_disconnected
 			if (socket_state() == eSOCKET_STATE::SEND_DISCONNECTED)
 			{
-				// - set linger Option for graceful disconnect
-				api::socket::set_linger_option(handle_socket, 0);
+				// - handle은 m_lockable_send_call 안에서 읽는다. (close는 같은 lock 안에서 handle을 INVALID_SOCKET으로 바꾼다)
+				SCOPED_LOCK(this->m_lockable_send_call)
+				{
+					const auto handle_socket = this->native_handle();
 
-				// - send shutdown
-				api::socket::shutdown(handle_socket, SD_SEND);
+					if (handle_socket != INVALID_SOCKET)
+					{
+						// - set linger Option for graceful disconnect
+						api::socket::set_linger_option(handle_socket, 0);
+
+						// - send shutdown
+						api::socket::shutdown(handle_socket, SD_SEND);
+					}
+				}
 			}
 
 			// return)
@@ -329,48 +335,10 @@ void net::io::sendable::Ntcp_async_gather_buffered::process_complete_sendable( u
 
 		// - move 'm_queue_pending' -> 'm_queue_sending' and clear 'm_queue_pending'
 		this->m_queue_sending.reset_and_swap(std::move(this->m_queue_pending));
-
-		// - send (lock 안)
-		// 2) prepare executable
-		this->m_pexecutable_send_buffer_list->m_psendable = this;
-
-		// 3) reference count를 증가시킨다.
-		this->m_pexecutable_send_buffer_list->add_ref();
-
-		// statistics) send overlapped 카운트를 하나 증가시킨다.
-		this->statistics_on_increase_async_sending();
-
-		// 4) send async
-		auto result = api::socket::send_async(handle_socket, &this->m_queue_sending.array_buffer.front(), static_cast<uint32_t>(this->m_queue_sending.array_buffer.size()), nullptr, this->m_pexecutable_send_buffer_list.get());
-
-		// check) result가 false이고 WOULD BLOCK이 아닐 때만 전송 실패이다.
-		if (result == false && api::get_last_error() != WSA_IO_PENDING)
-		{
-			// - set last error
-			this->m_last_socket_error = api::get_last_error();
-
-			// statistics)
-			this->statistics_on_error_send();
-
-			// - send overlapped 카운트를 하나 줄인다.
-			this->statistics_on_decrease_async_sending();
-
-			// - reset 
-			this->m_pexecutable_send_buffer_list->m_psendable.reset();
-
-			// - release 'm_pexecutable_send_buffer_list'
-			this->m_pexecutable_send_buffer_list->release();
-
-			// - process reset sendable
-			this->process_reset_sendable();
-
-			// return) fail to send
-			return;
-		}
-
-		// statistics) 
-		this->statistics_on_send_async();
 	}
+
+	// 2) send async (lock 밖 : 이 thread가 보내는 thread다)
+	this->_process_send_queue_sending();
 }
 
 std::size_t net::io::sendable::Ntcp_async_gather_buffered::process_get_sending_queued_bytes() const noexcept
@@ -386,18 +354,21 @@ void net::io::sendable::Ntcp_async_gather_buffered::process_close_sender()
 		if(this->m_queue_sending.array_buffer.empty() == false)
 			return;
 
-		// - handle은 lock 안에서 읽는다. (close는 같은 lock 안에서 handle을 INVALID_SOCKET으로 바꾼다)
-		const auto handle_socket = this->native_handle();
+		// - handle은 m_lockable_send_call 안에서 읽는다. (close는 같은 lock 안에서 handle을 INVALID_SOCKET으로 바꾼다)
+		SCOPED_LOCK(this->m_lockable_send_call)
+		{
+			const auto handle_socket = this->native_handle();
 
-		// check)
-		if(handle_socket == INVALID_SOCKET)
-			return;
+			// check)
+			if(handle_socket == INVALID_SOCKET)
+				return;
 
-		// - linger Option을 Graceful disconnect로 설정한다.
-		api::socket::set_linger_option(handle_socket, 0);
+			// - linger Option을 Graceful disconnect로 설정한다.
+			api::socket::set_linger_option(handle_socket, 0);
 
-		// - 접속을 종료한다.
-		api::socket::shutdown(handle_socket, SD_SEND);
+			// - 접속을 종료한다.
+			api::socket::shutdown(handle_socket, SD_SEND);
+		}
 	}
 }
 
@@ -408,7 +379,12 @@ void net::io::sendable::Ntcp_async_gather_buffered::process_reset_sendable() noe
 	{
 		this->m_flag_sending = false;
 		this->m_queue_pending.clear();
-		this->m_queue_sending.clear();
+
+		// - m_queue_sending : 보내는 thread가 WSASend에서 돌아온 뒤에 지운다.
+		SCOPED_LOCK(this->m_lockable_send_call)
+		{
+			this->m_queue_sending.clear();
+		}
 
 		// - send defer : 모으던 thread의 flush는 아무것도 하지 않는다.
 		this->m_pdefer_owner.store(nullptr, std::memory_order_relaxed);

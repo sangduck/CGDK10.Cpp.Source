@@ -149,7 +149,7 @@ namespace time_event
 		sENTITY_STATUS& operator = (const sENTITY_STATUS& _rhs) noexcept;
 
 		void						reset() noexcept;
-		void						reset_next_time() noexcept		{ time_last_failed = chrono::time::utc::time_point(chrono::time::duration::zero()); }
+		void						reset_next_time() noexcept		{ time_next = chrono::time::utc::time_point(chrono::time::duration::zero()); }
 
 		void						statistics_try() noexcept		{ ++count_try; time_last_try = chrono::time::utc::now();}
 		void						statistics_succeeded() noexcept	{ ++count_succeeded; time_last_succeeded = chrono::time::utc::now();}

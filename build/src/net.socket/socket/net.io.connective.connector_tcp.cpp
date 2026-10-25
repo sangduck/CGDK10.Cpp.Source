@@ -909,7 +909,7 @@ bool net::io::connective::connector::Ntcp::process_connecting( Iconnectable* _pc
 	pexecutable_connective->m_pconnectable = _pconnectable;
 
 	// 4) set event : EPOLLOUT (connected) / EPOLLERR (failed) completes the connect
-	auto result = _pconnectable->io_context()->attach(_pconnectable->native_handle(), pexecutable_connective, EPOLLONESHOT | EPOLLWAKEUP | EPOLLOUT | EPOLLERR);
+	auto result = _pconnectable->io_context()->attach(_pconnectable->native_handle(), pexecutable_connective, EPOLLONESHOT | EPOLLOUT | EPOLLERR);
 
 	// check)
 	if (result == false)
@@ -970,8 +970,8 @@ void net::io::connective::connector::Ntcp::process_connective_connect( Iconnecta
 				} 
 			}
 
-			// 2) enable 'fast loopback'
-			api::socket::set_loopback_fast_path(_pconnectable->native_handle(), true);
+			// - SIO_LOOPBACK_FAST_PATH is not set here : it works only when set before the connect (on both ends) and it is deprecated
+			//   ('not recommended' : the loopback of windows 10+ does not need it). set here it did nothing (ConnectEx completed already)
 
 		#endif
 

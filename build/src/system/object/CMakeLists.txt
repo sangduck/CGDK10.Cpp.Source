@@ -61,9 +61,7 @@ definitions.object.cpp
 definitions.admin.cpp
 
 #api
-api.queue_executable.cpp
 api.io_context.Nepoll.cpp
-api.io_context.epoll_queued.cpp
 api.io_context.epoll_direct.cpp
 api.io_context.uring.cpp
 api.io_context.uring_cq.cpp

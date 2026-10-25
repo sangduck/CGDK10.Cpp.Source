@@ -491,7 +491,8 @@ size_t net::io::Nhttp_client::process_packet_websocket( shared_buffer& _buffer, 
 				// check) length보다 길이가 작으면 여기서 끝낸다.
 				//        주의!!) 이 BREAK문은 반드시 여기서 BREAK를 해야한다. 이유는 중복 Masking 처리를 방지하기 위해서이다.
 				//        (size가 mask(4 byte)보다 작을 수 있으므로 빼지 않고 더해서 비교한다.)
-				BREAK_IF(buf_apply.size() < sizeof(uint32_t) + length);
+				//        (overflow safe : with no body limit a 64 bit length near the max would wrap 'sizeof(uint32_t) + length')
+				BREAK_IF(buf_apply.size() < sizeof(uint32_t) || buf_apply.size() - sizeof(uint32_t) < length);
 
 				// declare) 
 				uint8_t	mask[4];

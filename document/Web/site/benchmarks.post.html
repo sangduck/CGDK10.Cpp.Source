@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>executor post · runnext · scheduler · CGDK10 기술 문서</title>
+<meta name="description" content="CGDK10 Linux executor post 경로 벤치 - handler 가 자기 executor 로 post 하는 runnext 슬롯(epoll r11560, io_uring r11565) 전후, scheduler post_at 깨우기 줄이기(r11569) · cancel 인덱스 힙(r11571) 전후">
+<link rel="icon" href="assets/CGCII_logo.PNG">
+<link rel="stylesheet" href="style.css?v=7">
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand"><a href="index.html"><img src="assets/CGCII_logo_white.png" alt="CGC.II."></a></div>
+  <div class="ver"><span class="tag">Game Server Engine</span><span class="since">since 1998</span></div>
+  <ul>
+    <li class="head"><a href="index.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a2 2 0 0 0-2-2H2z"/><path d="M14 3.5h-4a2 2 0 0 0-2 2v8a2 2 0 0 1 2-2h4z"/></svg>기술적 설명</a></li>
+    <li class="sub"><a href="executor.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/><path d="M6.5 1.5v3M9.5 1.5v3M6.5 11.5v3M9.5 11.5v3M1.5 6.5h3M1.5 9.5h3M11.5 6.5h3M11.5 9.5h3"/></svg>Executor system</a></li>
+    <li class="sub"><a href="pool.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Pool system</a></li>
+    <li class="sub"><a href="object.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l6 3v7l-6 3-6-3v-7z"/><path d="M2 4.5l6 3 6-3M8 7.5v7"/></svg>Object system</a></li>
+    <li class="sub"><a href="log.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h6l3 3v10H4z"/><path d="M6.5 8h4M6.5 10.5h4M6.5 5.5h2"/></svg>Log system</a></li>
+    <li class="sub"><a href="socket.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1.5v3.5M10 1.5v3.5"/><path d="M3.5 5h9v3.5a4.5 4.5 0 0 1-9 0z"/><path d="M8 13v1.5"/></svg>Socket system</a></li>
+    <li class="sub"><a href="socket.io_uring.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 1.5L3.5 9h4.5l-1 5.5L12.5 7H8z"/></svg>io_uring</a></li>
+    <li class="sub"><a href="socket.uds.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.6-1.6a2.8 2.8 0 0 1 4 4L11 8.5"/><path d="M9 11.5l-1.6 1.6a2.8 2.8 0 0 1-4-4L5 7.5"/></svg>UDS (같은 host 접속)</a></li>
+    <li class="sub"><a href="socket.send.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 1.5L7 9"/><path d="M14.5 1.5l-4.5 13-2.2-5.3L2.5 6z"/></svg>send 최적화</a></li>
+    <li class="sub"><a href="socket.recv.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9.5v4h12v-4"/><path d="M8 2v8M5 7.5l3 3 3-3"/></svg>Receive 최적화</a></li>
+    <li class="sub"><a href="p2p.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="8" cy="12" r="2"/><path d="M5.6 5.2l1.6 5.2M10.4 5.2l-1.6 5.2M6 4h4"/></svg>P2P system</a></li>
+    <li class="sub"><a href="update.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5V5.2h-2.7"/></svg>Update system</a></li>
+    <li class="sub"><a href="server.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="4.5" rx="1"/><rect x="2" y="9.5" width="12" height="4.5" rx="1"/><path d="M4.5 4.25h.01M4.5 11.75h.01"/></svg>Server system</a></li>
+    <li class="sub"><a href="group.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 2.8a2.3 2.3 0 0 1 0 4.4M13.5 14c0-1.8-1-3.1-2.5-3.6"/></svg>Group system</a></li>
+    <li class="sub"><a href="query.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Query system</a></li>
+    <li class="sub"><a href="query.redis.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></svg>Redis · 배치·성능</a></li>
+    <li class="head"><a href="build.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-3.8 3.8L2.8 12.2a1.4 1.4 0 0 0 2 2l5.9-3.9a3 3 0 0 0 3.8-3.8l-2 2-2-2z"/></svg>빌드 · 플랫폼</a></li>
+    <li class="head"><a href="tests.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5.5 8.2l2 2 3.2-4"/></svg>단위 테스트 · CI</a></li>
+    <li class="head"><a href="benchmarks.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V9M8 13.5V4M13 13.5V7"/><path d="M1.5 13.5h13"/></svg>벤치마크</a></li>
+    <li class="sub"><a href="benchmarks.push.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4 3 3 6-6"/><path d="M10.5 5.5h4v4"/></svg>큰 묶음 push 처리량</a></li>
+    <li class="sub"><a href="benchmarks.cork.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h8M2 11.5h5"/><path d="M12 9.5l2 2-2 2"/></svg>send cork · 서버 push</a></li>
+    <li class="sub"><a href="benchmarks.iocp.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="3" width="13" height="10" rx="1.5"/><path d="M4 8h6M8 6l2 2-2 2"/></svg>Windows IOCP 송신</a></li>
+    <li class="sub"><a href="benchmarks.linux.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 13.5h12"/><path d="M3.5 11V7M6.5 11V4M9.5 11V6M12.5 11V2.5"/></svg>Linux io 백엔드 비교</a></li>
+    <li class="sub"><a href="benchmarks.post.html" class="cur"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h9"/><path d="M8 5l3 3-3 3"/><path d="M13.5 3v10"/></svg>executor post · runnext</a></li>
+    <li class="head"><a href="samples.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4"/></svg>예제 · 튜토리얼</a></li>
+    <li class="head"><a href="releases.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h5.5l6.5 6.5-5.5 5.5L2 8z"/><circle cx="5.2" cy="5.2" r=".9"/></svg>릴리즈 노트</a></li>
+    <li class="head"><a href="status.html"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3M8 11.5h.01"/></svg>미구현 · 알려진 문제</a></li>
+  </ul>
+</aside>
+<main>
+<h1 id="post">executor post · runnext <small>Linux · handler 안에서 자기 executor 로 post · r11560 (epoll) · r11565 (io_uring) · r11569 · r11571 (scheduler)</small></h1>
+<p>worker 가 handler 안에서 자기 executor 로 다음 일을 post 하는 경로(coroutine 재개, <code>stream_queue</code> · <code>messageable.queue</code> 수신, executable batch)를 쟀다. 구현은 <a href="executor.html">Executor system</a> 의 <code>executor::io_context</code> 다.</p>
+
+<div class="note"><b>요약</b>
+<ul>
+  <li><b>runnext 슬롯(epoll r11560, io_uring 두 백엔드 r11565)</b> : worker 가 실행 중 자기 executor 로 post 하면 thread 의 슬롯에 넣고 묶음 끝에 바로 실행한다. 사슬 1개 0.50M → 13.3M hops/s(27배), worker 8개 · 사슬 32개 3.1M → 94M(31배).</li>
+  <li>외부 thread 의 post 처리량과 쉬던 executor 깨우기 지연은 그대로다.</li>
+  <li><b>순서</b> : 새 post 가 슬롯을 차지하고 이전 것은 공유 큐로 간다(Go 의 runnext 와 같음). worker 1개 executor 에서도 연달아 post 한 순서가 바뀔 수 있다. <code>CGDK_RUNNEXT=0</code> 으로 끈다.</li>
+  <li><b>기본 백엔드(io_uring completion, r11556)</b> : 사슬 1개 1.37M → 12.1M(9배), 8개 1.57M → 49.9M(32배), 32개 2.09M → 76.6M(37배).</li>
+  <li><b>scheduler post_at 깨우기 줄이기(r11569)</b> : 자는 thread 를 더 이른 것이 올 때만 lock 밖에서 깨운다. post_at 처리량 Windows 1.4 ~ 1.9배, Linux 미래 시각 최대 3배(3.0M → 9.2M/s). <a href="#scheduler">아래</a>.</li>
+  <li><b>scheduler cancel 인덱스 힙(r11571)</b> : cancel 이 선형 탐색에서 O(log n) 으로, 대기 10만에서 Linux 3.1 µs → 36 ns, Windows 4.7 µs → 54 ns. thread 4개 동시 post_at 은 10 ~ 15% 낮다. <a href="#scheduler-cancel">아래</a>.</li>
+</ul></div>
+
+<h4 class="sec">관련 리비전</h4>
+<table class="bench wrap">
+<tr><th>리비전</th><th>내용</th></tr>
+<tr><td>r11547</td><td>쓰이지 않던 <code>io_context_epoll_queued</code>(epoll 펌프 thread + mutex · condition_variable 큐) 와 <code>api::queue_executable</code> 삭제. Linux 의 io_context 는 <code>io_context_linux</code>(epoll_direct : worker 가 직접 <code>epoll_wait</code>) 라 2단 구조는 post 경로에만 남아 있었다.</td></tr>
+<tr><td class="hl">r11560</td><td class="hl">runnext 슬롯 (<code>executor.io_context.cpp</code>, epoll 백엔드)</td></tr>
+<tr><td>r11561 · r11562</td><td>벤치 <code>bench_post.cpp</code>(기본 비활성 gtest), completion 백엔드 측정 추가</td></tr>
+<tr><td class="hl">r11565</td><td class="hl">runnext 를 io_uring readiness · completion 에도 적용. completion 은 슬롯 항목을 1개짜리 묶음으로 ring 에 게시해 긴 handler 의 ring 빌려주기(<code>_lend_busy</code>) · blocking(<code>thread_blocked</code>)이 그대로 동작한다</td></tr>
+<tr><td>r11567 · r11568</td><td>scheduler cancel 인덱스 힙 적용 후 되돌림</td></tr>
+<tr><td class="hl">r11569</td><td class="hl">scheduler post_at 깨우기 줄이기 (<code>executor.scheduler.cpp</code>, Windows · Linux 공통)</td></tr>
+<tr><td class="hl">r11571</td><td class="hl">scheduler cancel 인덱스 힙 (r11569 위에 다시 적용, <code>Iexecutable::m_scheduler_position</code>)</td></tr>
+</table>
+
+<h4 class="sec">동작</h4>
+<ul>
+  <li><b>전</b> : post 는 mutex 큐에 넣고 큐가 비었다 찰 때 eventfd 를 쓴다. post 한 worker 는 아직 실행 중이라 eventfd 가 자던 다른 worker 를 깨우고 일이 그쪽으로 옮겨 간다. 한 걸음에 context switch 약 2회, 약 2 µs.</li>
+  <li><b>후</b> : 묶음을 실행하는 동안 같은 thread 의 같은 executor 로의 post 는 <code>thread_local</code> 슬롯 1개로 간다(lock · eventfd · 깨우기 없음). 슬롯이 차 있으면 이전 것을 공유 큐로 보내고 새 것을 넣는다.</li>
+  <li>슬롯은 묶음 직후, 다음 <code>epoll_wait</code> / <code>io_uring_enter</code> 전에 실행한다. 실행 중의 post 는 다시 슬롯으로 가서 사슬이 같은 thread 에서 이어진다.</li>
+  <li>20 µs 가 지나면 남은 것을 공유 큐로 보낸다. 긴 사슬이 그 worker 의 socket event 를 오래 막지 않는다. worker 가 잠들 때 슬롯은 항상 비어 있다.</li>
+  <li>handler 안에서 executor 를 다시 돌리면 바깥 슬롯을 보관했다가 되돌린다.</li>
+  <li>io_uring completion : 슬롯 항목도 묶음처럼 ring 에 게시한다. 오래 도는 항목은 다른 worker 가 ring 을 빌려 가고, 시작할 때 ring 이 빌려 간 상태면 그 항목 뒤 나머지는 공유 큐로 보낸다. io_uring readiness : 슬롯 항목이 남긴 re-arm 을 끝에 한 번에 제출한다.</li>
+</ul>
+
+<h4 class="sec">측정 구성</h4>
+<ul>
+  <li><b>장비</b> : i9-13900K(P 8코어 × 2 + E 16코어 = 32 thread), Ubuntu 26.04.1, kernel 7.0, g++ 15.2 Release(<code>-O3</code>). thread 고정 없음. 하이브리드 CPU 라 thread 가 걸린 코어에 따라 흔들려 교대 5회의 최소 ~ 최대와 중앙값을 적는다.</li>
+  <li><b>A 외부 post</b> : worker 가 아닌 thread P 개가 빈 executable 을 post.</li>
+  <li><b>B 자기 post 사슬</b> : executable K 개가 실행될 때마다 자기 자신을 같은 executor 에 다시 post. 사슬 1개 = 한 걸음의 지연, 여러 개 = 처리량.</li>
+  <li><b>C 깨우기 지연</b> : 300 µs 쉬게 한 뒤 외부에서 post 해 실행까지 걸린 시간, 2,000회.</li>
+  <li>전 / 후는 같은 바이너리에서 <code>CGDK_RUNNEXT=0 / 1</code> 로 바꿨다(2026-10-24, r11560).</li>
+</ul>
+
+<h4 class="sec">B 자기 post 사슬 (epoll, hops/s, 중앙값 · 범위)</h4>
+<table class="bench wrap">
+<tr><th>worker</th><th>사슬</th><th>전</th><th class="hl">후 (runnext)</th><th>배</th></tr>
+<tr><td>2</td><td>1</td><td>0.91M (0.86 ~ 0.94)</td><td class="hl"><b>16.1M</b> (16.1 ~ 16.2)</td><td>18</td></tr>
+<tr><td>2</td><td>2</td><td>3.13M (2.80 ~ 3.33)</td><td class="hl"><b>31.9M</b> (31.9 ~ 32.3)</td><td>10</td></tr>
+<tr><td>2</td><td>8</td><td>3.06M (2.81 ~ 3.39)</td><td class="hl"><b>25.1M</b> (22.5 ~ 28.1)</td><td>8</td></tr>
+<tr><td>4</td><td>1</td><td>0.54M (0.53 ~ 0.55)</td><td class="hl"><b>15.3M</b> (14.9 ~ 15.7)</td><td>28</td></tr>
+<tr><td>4</td><td>4</td><td>3.31M (3.18 ~ 3.38)</td><td class="hl"><b>61.7M</b> (59.3 ~ 62.1)</td><td>19</td></tr>
+<tr><td>4</td><td>16</td><td>3.76M (3.62 ~ 3.81)</td><td class="hl"><b>49.9M</b> (48.9 ~ 51.4)</td><td>13</td></tr>
+<tr><td>8</td><td>1</td><td>0.50M (0.49 ~ 0.50)</td><td class="hl"><b>13.3M</b> (12.9 ~ 14.2)</td><td>27</td></tr>
+<tr><td>8</td><td>8</td><td>2.42M (2.33 ~ 2.52)</td><td class="hl"><b>54.1M</b> (52.0 ~ 56.6)</td><td>22</td></tr>
+<tr><td>8</td><td>32</td><td>3.06M (2.96 ~ 3.09)</td><td class="hl"><b>93.9M</b> (87.5 ~ 95.4)</td><td>31</td></tr>
+</table>
+<ul>
+  <li>전 : 사슬 1개 한 걸음 1.1 ~ 2.0 µs, 걸음마다 context switch 2.1회(worker 8개). 함수로 바로 부르면 5 ns.</li>
+  <li>후 : 사슬 1개 한 걸음 62 ~ 75 ns, context switch 0.007회.</li>
+  <li>슬롯은 worker 당 1개다. 사슬이 worker 수보다 많으면 나머지는 공유 큐를 거친다(worker 8 · 사슬 32 의 사슬당 한 걸음 약 340 ns).</li>
+  <li>전에는 worker 를 늘려도 처리량이 늘지 않았다(사슬 여러 개 2.4 ~ 3.8M). 공유 큐 mutex 와 eventfd 에 몰리기 때문이다.</li>
+</ul>
+
+<h4 class="sec">A 외부 post · C 깨우기 지연 (epoll)</h4>
+<table class="bench">
+<tr><th>worker</th><th>A P=1 전 / 후</th><th>A P=4 전 / 후</th><th>C p50 전 / 후 µs</th></tr>
+<tr><td>2</td><td>5.99M / 5.94M</td><td>4.41M / 4.08M</td><td>10.9 / 11.0</td></tr>
+<tr><td>4</td><td>4.16M / 4.39M</td><td>3.08M / 3.40M</td><td>11.0 / 11.2</td></tr>
+<tr><td>8</td><td>4.42M / 4.42M</td><td>2.59M / 2.57M</td><td>10.9 / 13.2</td></tr>
+</table>
+<ul>
+  <li>A 는 runnext 대상이 아니라 범위 안에서 같다. thread 가 늘면 공유 큐 경합으로 떨어진다(P=4 : worker 2개 4.4M → 8개 2.6M).</li>
+  <li>C p99 는 12 ~ 90 µs 로 회차마다 크게 흔들렸다. C 만 따로 교대 3회 잰 결과 전 81 ~ 118, 후 92 ~ 110 µs 로 차이가 없었다(CPU 유휴 상태 복귀).</li>
+</ul>
+
+<h4 class="sec">세 백엔드 (r11565, worker 8개, 교대 3회 중앙값)</h4>
+<table class="bench wrap">
+<tr><th>백엔드</th><th>B 사슬 1 전 / 후</th><th>B 사슬 8 전 / 후</th><th>B 사슬 32 전 / 후</th><th>A P=1 전 / 후</th><th>C p50 전 / 후 µs</th></tr>
+<tr><td>io_uring completion (기본, r11556)</td><td>1.37M / <b>12.1M</b></td><td>1.57M / <b>49.9M</b></td><td>2.09M / <b>76.6M</b></td><td>2.87M / 2.85M</td><td>13.3 / 13.2</td></tr>
+<tr><td>io_uring readiness</td><td>0.52M / <b>11.9M</b></td><td>0.59M / <b>95.2M</b></td><td>2.07M / <b>91.1M</b></td><td>6.88M / 7.22M</td><td>13.9 / 14.4</td></tr>
+<tr><td>epoll</td><td>0.48M / <b>13.5M</b></td><td>2.47M / <b>53.2M</b></td><td>2.85M / <b>99.1M</b></td><td>4.56M / 4.47M</td><td>11.3 / 11.3</td></tr>
+</table>
+<ul>
+  <li>completion 의 슬롯 실행은 항목마다 묶음 게시(원자 연산 몇 개)가 붙어 epoll 보다 조금 느리다.</li>
+  <li>검증 : 실행기 테스트 80개, net_socket 전체 172개(io_uring · completion) · 170개(epoll) 통과. 오래 도는 handler · blocking handler 테스트(<code>blocking_handler.*</code>) 포함.</li>
+</ul>
+
+<h4 class="sec" id="scheduler">scheduler post_at · 깨우기 줄이기 (r11569)</h4>
+<p><code>executor::scheduler</code> 는 <code>post_at</code>(시각 지정 1회 실행)을 우선순위 큐(binary heap, mutex)에 넣고 전용 thread 가 시각이 되면 다른 executor 로 넘긴다. <code>system_executor::post(exec, time)</code>, schedulable, coroutine 재개, strand <code>post_at</code> 이 이 경로를 쓴다.</p>
+<ul>
+  <li><b>전</b> : 넣은 것이 가장 이른 것이 될 때마다 lock 안에서 깨웠다(condition_variable notify, Windows 는 <code>SetEvent</code> 도). <code>post_at(object_ptr&amp;&amp;)</code> 은 raw 포인터를 거쳐 AddRef · Release 를 한 번 더 했다.</li>
+  <li><b>후 (r11569)</b> : scheduler thread 는 잠들기 전에 lock 안에서 "자는 중"과 스스로 깨는 시각을 기록한다. <code>post_at</code> 은 자는 중이고 그 시각보다 이를 때만 lock 밖에서 깨우고, 그 시각을 낮춰 뒤이은 늦은 것이 다시 깨우지 않게 한다. object_ptr 은 이동만 한다.</li>
+  <li>측정 : 별도 scheduler 하나, worker 1개 executor, thread T 개가 2초 동안 <code>post_at(now + [0, D))</code>. Windows = DOLPUNG Core Ultra 7 270K Plus(24 thread), Linux = POKPUNG i9-13900K(32 thread, Ubuntu 26.04.1, kernel 7.0, g++ 15.2), 둘 다 Release. 전 / 후 교대 2회.</li>
+</ul>
+<table class="bench wrap">
+<tr><th>T · D</th><th>Windows 전</th><th class="hl">Windows 후</th><th>Linux 전</th><th class="hl">Linux 후</th></tr>
+<tr><td>1 · 0 (지금)</td><td>4.1M/s</td><td class="hl"><b>5.9 ~ 6.1M</b></td><td>9.5 ~ 9.8M</td><td class="hl">9.4 ~ 10.8M</td></tr>
+<tr><td>1 · 100 µs</td><td>3.7 ~ 3.8M</td><td class="hl"><b>6.6 ~ 7.0M</b></td><td>3.0M</td><td class="hl"><b>9.0 ~ 9.2M</b></td></tr>
+<tr><td>1 · 1 ms</td><td>3.6M</td><td class="hl"><b>6.7 ~ 6.8M</b></td><td>3.2M</td><td class="hl"><b>6.5 ~ 7.5M</b></td></tr>
+<tr><td>4 · 0</td><td>4.0M</td><td class="hl"><b>5.7 ~ 6.1M</b></td><td>4.8M</td><td class="hl">5.1 ~ 5.2M</td></tr>
+<tr><td>4 · 100 µs</td><td>3.7 ~ 3.8M</td><td class="hl"><b>5.1 ~ 5.2M</b></td><td>3.7M</td><td class="hl">4.3M</td></tr>
+<tr><td>4 · 1 ms</td><td>3.5M</td><td class="hl"><b>4.7 ~ 5.0M</b></td><td>3.6 ~ 3.7M</td><td class="hl">4.2M</td></tr>
+</table>
+<ul>
+  <li>깨어나는 지연(쉬는 scheduler 에 <code>post_at(now + 2ms)</code> → 실행, 300회)은 그대로 : Linux p50 53 µs(timer slack 50 µs), Windows p50 약 480 µs(고해상도 waitable timer).</li>
+  <li>Linux T=1 · D=0 은 늘 가장 이른 것이라 전에도 대부분 이미 깨어 있는 thread 에 넣어 차이가 작다.</li>
+</ul>
+
+<h4 class="sec" id="scheduler-cancel">scheduler cancel · 인덱스 힙 (r11571)</h4>
+<p><code>cancel(Iexecutable*)</code> 은 힙 전체를 선형 탐색했다(lock 보유). 인덱스 힙을 적용했다(r11571, r11569 위). 지연 취소는 구현 · 측정만 하고 적용하지 않았다.</p>
+<ul>
+  <li><b>인덱스 힙 (적용)</b> : executable(<code>Iexecutable::m_scheduler_position</code>, 8 B)이 힙 위치를 기억하고 항목이 옮겨질 때마다 위치를 쓴다. cancel O(log n). 같은 executable 을 겹쳐 걸면 그동안만 선형 탐색으로 대체한다.</li>
+  <li><b>지연 취소 (적용 안 함)</b> : 항목에 넣을 때의 세대를 두고 cancel 은 executable 의 세대만 올린다(O(1)). 버린 것은 가장 이른 것이 될 때 버리고, 절반을 넘으면 힙을 다시 만든다. 같은 executable 의 대기가 한 번에 모두 취소되고, 취소한 객체의 해제가 늦어진다.</li>
+</ul>
+
+<p><b>r11569 → r11571</b> (별도 scheduler, worker 1개 executor, 교대 2회)</p>
+<table class="bench wrap">
+<tr><th>항목</th><th>Linux r11569</th><th class="hl">Linux r11571</th><th>Windows r11569</th><th class="hl">Windows r11571</th></tr>
+<tr><td>cancel ns (대기 10만)</td><td>3,074 ~ 3,111</td><td class="hl"><b>35 ~ 36</b></td><td>4,730 ~ 4,760</td><td class="hl"><b>54</b></td></tr>
+<tr><td>cancel 후 다시 post_at ns (대기 10만)</td><td>6,190 ~ 6,207</td><td class="hl"><b>67</b></td><td>9,476 ~ 9,607</td><td class="hl"><b>102 ~ 150</b></td></tr>
+<tr><td>schedulable 5만 개 해제 ns (섞인 순서)</td><td>1,980 ~ 2,025</td><td class="hl"><b>392 ~ 397</b></td><td>3,017 ~ 3,089</td><td class="hl"><b>717 ~ 729</b></td></tr>
+<tr><td>post_at ns, thread 1 (대기 10만)</td><td>28 ~ 30</td><td class="hl">30</td><td>48 ~ 52</td><td class="hl">52 ~ 57</td></tr>
+<tr><td>post_at /s, thread 4 · D=0</td><td>4.8 ~ 5.3M</td><td class="hl">4.0 ~ 4.4M</td><td>4.3 ~ 4.5M</td><td class="hl">3.7 ~ 3.8M</td></tr>
+<tr><td>post_at /s, thread 4 · D&lt;100 µs</td><td>4.0 ~ 4.3M</td><td class="hl">3.6 ~ 3.8M</td><td>4.4M</td><td class="hl">4.2 ~ 4.6M</td></tr>
+<tr><td>post_at /s, thread 4 · D&lt;1 ms</td><td>3.9 ~ 4.2M</td><td class="hl">3.4 ~ 3.6M</td><td>4.1 ~ 4.2M</td><td class="hl">3.8 ~ 4.1M</td></tr>
+</table>
+<ul>
+  <li>cancel 은 Linux 88배, Windows 87배 빨라졌다.</li>
+  <li>대가 : thread 4개가 동시에 post_at 하면 10 ~ 15% 낮다. 힙에서 항목이 옮겨질 때마다 lock 안에서 executable(다른 thread 가 참조 계수를 바꾸는 객체)에 위치를 써 cache miss 가 lock 시간을 늘린다. thread 1개는 같다.</li>
+  <li>post_at /s 의 thread 마다 executable 1,024개를 돌려 가며 건다(같은 객체를 반복해 걸지 않게).</li>
+</ul>
+
+<p><b>세 방식 비교</b> (Linux, r11568 기준, 깨우기 줄이기 없이)</p>
+<table class="bench wrap">
+<tr><th>ns/op (Linux, 대기 수)</th><th>선형 탐색</th><th>인덱스 힙</th><th>지연 취소</th></tr>
+<tr><td>cancel (1.6만 / 10만)</td><td>540 / 3,360</td><td>24 / 32 ~ 36</td><td>30 / 33</td></tr>
+<tr><td>cancel 후 다시 post_at (1.6만 / 10만)</td><td>1,070 / 7,080</td><td>49 / 71 ~ 73</td><td>56 / 46</td></tr>
+<tr><td>post_at (10만, 실제 scheduler)</td><td>31 ~ 32</td><td>33 ~ 36</td><td>34 ~ 35</td></tr>
+<tr><td>힙만 : pop 후 push (1.6만 / 10만 / 100만)</td><td>38 / 45 / 55</td><td>35 / 44 / 59</td><td>47 / 55 / 67</td></tr>
+<tr><td>힙만 : 한꺼번에 pop (100만)</td><td>69</td><td>143</td><td>90</td></tr>
+<tr><td>schedulable 5만 개 해제 (섞인 순서)</td><td>2,010</td><td>380 ~ 400</td><td>380 ~ 390</td></tr>
+</table>
+<ul>
+  <li>실제 scheduler 의 thread 1개 post_at 차이는 잡음 범위다(mutex · executor post 가 대부분). 힙만 떼면 지연 취소가 항목 16 → 24 B 와 pop 때 executable 읽기로 약 20% 느리고, 인덱스 힙은 같지만 큰 힙을 한꺼번에 비울 때 2배다.</li>
+  <li>측정 코드는 저장소 밖 단일 파일 벤치(<code>heap_bench.cpp</code> : CGDK 없이 힙만, <code>bench_scheduler.cpp</code> · <code>bench_notify.cpp</code> : system.object lib 링크)다.</li>
+</ul>
+
+<h4 class="sec">재현</h4>
+<pre>./CGDK10.unit_test.system.object.execute.Release --gtest_also_run_disabled_tests \
+    --gtest_filter="bench_post.DISABLED_epoll"           # _io_uring, _io_uring_completion
+# env : BP_THREADS=8  BP_POSTS=2000000  BP_HOPS=2000000  BP_SAMPLES=2000  BP_ONLY_C=1
+#       CGDK_RUNNEXT=0 (runnext 끔)</pre>
+<p>소스 : <code>build/src/system/unit_test/unit_test.object.execute/bench_post.cpp</code>. 관련 문서 : <a href="executor.html">Executor system</a>, <a href="benchmarks.linux.html">Linux io 백엔드 비교</a>, <a href="benchmarks.html">벤치마크</a>.</p>
+
+<footer>CGDK10 · 소스 기준 정리 (r11571, 2026-10-25) · <a href="mailto:sangduck@cgcii.co.kr">sangduck@cgcii.co.kr</a></footer>
+</main>
+</div>
+</body>
+</html>

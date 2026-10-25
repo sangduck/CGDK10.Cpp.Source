@@ -7,12 +7,15 @@
 #include <thread>
 #include <filesystem>
 #include <sys/resource.h>
+#include <sys/utsname.h>
+#include <cstdio>
 
 //-----------------------------------------------------------------------------
 // linux socket performance features (functional checks)
 //
 //  1. TCP echo : many small messages in a stream (the receive buffer grows and keeps its size : hysteresis)
-//  2. MSG_ZEROCOPY : large messages. the buffers held for the notifications are released (EPOLLERR : error queue), ENOBUFS (no memory to pin) => sent as a copy
+//  2. MSG_ZEROCOPY : large messages. the buffers held for the notifications are released (EPOLLERR : error queue), ENOBUFS (no memory to pin) => sent as a copy,
+//     the copy check (a send the kernel copied : loopback => no zerocopy on the socket)
 //  3. UDP : recvmmsg / sendmmsg (a burst of datagrams, echo)
 //  4. acceptor : cpu affinity (an accepted socket runs on the io_context of its CPU), TCP_DEFER_ACCEPT
 //  5. io_uring : an executor with the io_uring backend (TCP, UDS, large messages, UDP). completion : the accepted sockets spread over the workers
@@ -354,6 +357,14 @@ TEST(linux_io, tcp_zerocopy_large_messages_io_uring)
 		GTEST_SKIP() << "io_uring is not available on this kernel";
 
 	lio_uds_guard guard;
+
+	// - the copy check off : every large send is a zerocopy send over loopback too (the kernel copies : on, the first copy stops it)
+	struct copy_check_off
+	{
+		bool previous = net::io::sendable::Itcp_gather::is_zerocopy_copy_check_enabled();
+		copy_check_off() { net::io::sendable::Itcp_gather::enable_zerocopy_copy_check(false); }
+		~copy_check_off() { net::io::sendable::Itcp_gather::enable_zerocopy_copy_check(this->previous); }
+	} guard_copy_check;
 	net::io::connect_requestable::Ntcp::enable_uds_loopback(false);
 
 	ASSERT_TRUE(net::io::sendable::Itcp_gather::is_zerocopy_enabled());
@@ -403,6 +414,71 @@ TEST(linux_io, tcp_zerocopy_large_messages_io_uring)
 		ASSERT_TRUE(lio_send(psocket.get(), static_cast<uint32_t>(100 + i), size));
 	ASSERT_TRUE(lio_wait_until([&]() { return psocket->bytes_received.load() == (count + 4) * size; }, 30000ms));
 	EXPECT_TRUE(lio_wait_until([&]() { return pgather->zerocopy_pending_count() == 0; }));
+
+	psocket->stop();
+	pacceptor->stop();
+	pexecutor->stop();
+}
+
+// - a stale EPOLLERR : the notifications it reported were read already (by the loop of an earlier event, or the poll of another thread
+//   reported them too) => the error queue is empty and the socket has no error : not an error. before : the socket was closed
+//   (io_uring readiness : linux_io.tcp_stream_mixed_sizes failed ~5% of the runs, the echo server closed and the client send got EPIPE)
+TEST(linux_io, tcp_zerocopy_stale_epollerr_io_uring)
+{
+	if (executor::is_io_uring_available() == false)
+		GTEST_SKIP() << "io_uring is not available on this kernel";
+
+	lio_uds_guard guard;
+
+	struct copy_check_off
+	{
+		bool previous = net::io::sendable::Itcp_gather::is_zerocopy_copy_check_enabled();
+		copy_check_off() { net::io::sendable::Itcp_gather::enable_zerocopy_copy_check(false); }
+		~copy_check_off() { net::io::sendable::Itcp_gather::enable_zerocopy_copy_check(this->previous); }
+	} guard_copy_check;
+	net::io::connect_requestable::Ntcp::enable_uds_loopback(false);
+
+	const auto backend_before = executor::default_io_backend();
+	executor::set_default_io_backend(executor::io_backend::io_uring);
+	auto pexecutor = executor::make_io_context_threads("io_uring stale epollerr", 2);
+	executor::set_default_io_backend(backend_before);
+	ASSERT_TRUE(pexecutor.exist());
+
+	if (pexecutor->backend() == executor::io_backend::epoll)
+		GTEST_SKIP() << "the io_uring executor fell back to epoll";
+
+	auto pacceptor = make_own<net::acceptor<lio_echo_server_socket>>();
+	pacceptor->io_context(pexecutor.get());
+	ASSERT_EQ(pacceptor->start(lio_acceptor_parameter(lio_port())), eRESULT::SUCCESS);
+	const auto port = pacceptor->local_endpoint().port();
+
+	auto psocket = make_own<lio_client_socket>();
+	psocket->keep_received = false;
+	psocket->io_context(pexecutor.get());
+	psocket->start(lio_connect_parameter(port));
+	ASSERT_TRUE(lio_wait_until([&]() { return psocket->is_connected.load(); }));
+
+	// 1) zerocopy sends and their notifications (the error queue is read and empty after)
+	constexpr std::size_t size = 64 * 1024;
+	for (int i = 0; i < 4; ++i)
+		ASSERT_TRUE(lio_send(psocket.get(), static_cast<uint32_t>(i), size)) << "send " << i;
+	ASSERT_TRUE(lio_wait_until([&]() { return psocket->bytes_received.load() == 4 * size; }, 30000ms)) << "received " << psocket->bytes_received.load();
+
+	auto* pgather = dynamic_cast<net::io::sendable::Itcp_gather*>(psocket.get());
+	ASSERT_NE(pgather, nullptr);
+	if (pgather->zerocopy_sent_count() == 0)
+		GTEST_SKIP() << "no zerocopy send (ENOBUFS : the locked memory of the user is short)";
+	ASSERT_TRUE(lio_wait_until([&]() { return pgather->zerocopy_pending_count() == 0; })) << "pending " << pgather->zerocopy_pending_count();
+
+	// 2) an EPOLLERR now finds nothing : handled (not an error of the socket)
+	EXPECT_TRUE(pgather->process_complete_error_queue());
+
+	// 3) the socket keeps working
+	for (int i = 0; i < 4; ++i)
+		ASSERT_TRUE(lio_send(psocket.get(), static_cast<uint32_t>(100 + i), size)) << "send " << (100 + i);
+	ASSERT_TRUE(lio_wait_until([&]() { return psocket->bytes_received.load() == 8 * size; }, 30000ms)) << "received " << psocket->bytes_received.load();
+	EXPECT_TRUE(psocket->is_connected.load());
+	EXPECT_EQ(psocket->count_disconnect.load(), 0);
 
 	psocket->stop();
 	pacceptor->stop();
@@ -520,6 +596,122 @@ TEST(linux_io, tcp_zerocopy_not_on_epoll)
 	pexecutor->stop();
 }
 
+// - the copy check : a peer on this host (loopback) gets the zerocopy sends copied by the kernel (SO_EE_CODE_ZEROCOPY_COPIED, the
+//   completion notification IORING_NOTIF_USAGE_ZC_COPIED : 6.2+). ZEROCOPY_COPIED_TO_STOP in a row stop zerocopy on the socket (on by default),
+//   off : zerocopy goes on and the copies are counted only
+namespace
+{
+	struct lio_zerocopy_copy_check_guard
+	{
+		bool previous = net::io::sendable::Itcp_gather::is_zerocopy_copy_check_enabled();
+		explicit lio_zerocopy_copy_check_guard(bool _enable) { net::io::sendable::Itcp_gather::enable_zerocopy_copy_check(_enable); }
+		~lio_zerocopy_copy_check_guard() { net::io::sendable::Itcp_gather::enable_zerocopy_copy_check(this->previous); }
+	};
+
+	bool lio_is_kernel_at_least(int _major, int _minor)
+	{
+		utsname name{};
+		int major = 0, minor = 0;
+		if (::uname(&name) != 0 || std::sscanf(name.release, "%d.%d", &major, &minor) != 2)
+			return false;
+		return major > _major || (major == _major && minor >= _minor);
+	}
+}
+
+void lio_check_zerocopy_stops_when_copied(executor::io_backend _backend)
+{
+	if (_backend == executor::io_backend::io_uring && executor::is_io_uring_available() == false)
+		GTEST_SKIP() << "io_uring is not available on this kernel";
+	if (_backend == executor::io_backend::io_uring_completion && executor::is_io_uring_completion_available() == false)
+		GTEST_SKIP() << "io_uring completion is not available on this kernel";
+	if (_backend == executor::io_backend::io_uring_completion && lio_is_kernel_at_least(6, 2) == false)
+		GTEST_SKIP() << "IORING_SEND_ZC_REPORT_USAGE needs 6.2";
+
+	lio_uds_guard guard;
+	net::io::connect_requestable::Ntcp::enable_uds_loopback(false);
+
+	const auto backend_before = executor::default_io_backend();
+	executor::set_default_io_backend(_backend);
+	auto pexecutor = executor::make_io_context_threads("zerocopy copy check", 2);
+	executor::set_default_io_backend(backend_before);
+	ASSERT_TRUE(pexecutor.exist());
+
+	// check) the ring could not be created (the locked memory of the user is short) => the executor is epoll (no zerocopy)
+	if (pexecutor->backend() == executor::io_backend::epoll)
+		GTEST_SKIP() << "the io_uring executor fell back to epoll";
+
+	auto pacceptor = make_own<net::acceptor<lio_echo_server_socket>>();
+	pacceptor->io_context(pexecutor.get());
+	ASSERT_EQ(pacceptor->start(lio_acceptor_parameter(lio_port())), eRESULT::SUCCESS);
+	const auto port = pacceptor->local_endpoint().port();
+
+	constexpr std::size_t size = 256 * 1024;
+
+	for (const bool is_check : { true, false })
+	{
+		lio_zerocopy_copy_check_guard guard_check(is_check);
+
+		auto psocket = make_own<lio_client_socket>();
+		psocket->keep_received = false;
+		psocket->io_context(pexecutor.get());
+		psocket->start(lio_connect_parameter(port));
+		ASSERT_TRUE(lio_wait_until([&]() { return psocket->is_connected.load(); }));
+
+		auto* pgather = dynamic_cast<net::io::sendable::Itcp_gather*>(psocket.get());
+		ASSERT_NE(pgather, nullptr);
+
+		// 1) large messages one by one (each echoed before the next) : the kernel reports them copied (ZEROCOPY_COPIED_TO_STOP in a row stop zerocopy)
+		uint32_t index = 0;
+		std::size_t bytes_expected = 0;
+		for (std::size_t i = 0; i < net::io::sendable::Itcp_gather::ZEROCOPY_COPIED_TO_STOP + 4; ++i)
+		{
+			ASSERT_TRUE(lio_send(psocket.get(), index++, size)) << "send " << i;
+			bytes_expected += size;
+			ASSERT_TRUE(lio_wait_until([&]() { return psocket->bytes_received.load() == bytes_expected; }, 30000ms)) << "received " << psocket->bytes_received.load();
+		}
+
+		ASSERT_TRUE(lio_wait_until([&]() { return pgather->zerocopy_copied_count() >= net::io::sendable::Itcp_gather::ZEROCOPY_COPIED_TO_STOP; })) << "check " << is_check << " : no copy reported (sent " << pgather->zerocopy_sent_count() << " fallback " << pgather->zerocopy_fallback_count() << ")";
+		if (is_check)
+			EXPECT_TRUE(lio_wait_until([&]() { return pgather->is_zerocopy_copied(); })) << "copied " << pgather->zerocopy_copied_count();
+		else
+			EXPECT_FALSE(pgather->is_zerocopy_copied());
+
+		// 2) more : no zerocopy any more with the check on (a send before the report may still have been one), zerocopy goes on with it off
+		const auto sent_before = pgather->zerocopy_sent_count();
+		for (int i = 0; i < 8; ++i)
+		{
+			ASSERT_TRUE(lio_send(psocket.get(), index++, size)) << "send " << i;
+			bytes_expected += size;
+			ASSERT_TRUE(lio_wait_until([&]() { return psocket->bytes_received.load() == bytes_expected; }, 30000ms)) << "received " << psocket->bytes_received.load();
+		}
+
+		if (is_check)
+			EXPECT_EQ(pgather->zerocopy_sent_count(), sent_before) << "zerocopy went on after the copy was reported";
+		else
+			EXPECT_GT(pgather->zerocopy_sent_count() + pgather->zerocopy_fallback_count(), sent_before) << "zerocopy stopped with the check off";
+
+		EXPECT_TRUE(lio_wait_until([&]() { return pgather->zerocopy_pending_count() == 0; })) << "pending " << pgather->zerocopy_pending_count();
+		EXPECT_TRUE(psocket->is_connected.load());
+		EXPECT_EQ(psocket->count_disconnect.load(), 0);
+
+		psocket->stop();
+		EXPECT_TRUE(lio_wait_until([&]() { return pacceptor->count() == 0; }, 10000ms)) << "connected yet " << pacceptor->count();
+	}
+
+	pacceptor->stop();
+	pexecutor->stop();
+}
+
+TEST(linux_io, tcp_zerocopy_stops_when_copied_io_uring)
+{
+	lio_check_zerocopy_stops_when_copied(executor::io_backend::io_uring);
+}
+
+TEST(linux_io, tcp_zerocopy_stops_when_copied_io_uring_completion)
+{
+	lio_check_zerocopy_stops_when_copied(executor::io_backend::io_uring_completion);
+}
+
 
 //-----------------------------------------------------------------------------
 // 3. UDP : recvmmsg / sendmmsg
@@ -567,6 +759,86 @@ TEST(linux_io, udp_send_deferred_in_group)
 
 	pclient->stop();
 	pserver->stop();
+}
+
+TEST(linux_io, udp_receive_on_many_threads)
+{
+	//-----------------------------------------------------------------
+	// one UDP socket received by the 16 threads of an epoll executor at once (EPOLLET : a datagram arriving while a thread drains the
+	// socket wakes another). the batch of recvmmsg (Ndatagram::m_count_receive_batch) was a plain int : g++ stored its doubling in two
+	// steps (the doubled count, then the limit 32) and a thread reading between them filled 64 entries of the arrays of 32 on its stack
+	// ("stack smashing detected" : handover remaining 23). 8 threads flood it with sendmmsg (full batches : the batch doubles all the time)
+	//-----------------------------------------------------------------
+	class udp_counting_socket : public net::socket::udp
+	{
+	public:
+				std::atomic<std::size_t> count_received{ 0 };
+	protected:
+		virtual result_code			on_message(sMESSAGE_NETWORK& /*_msg*/) override { ++this->count_received; return eRESULT::DONE; }
+	};
+
+	const auto backend_before = executor::default_io_backend();
+	executor::set_default_io_backend(executor::io_backend::epoll);
+	auto pexecutor = executor::make_io_context_threads("udp receive on many threads", 16);
+	executor::set_default_io_backend(backend_before);
+	ASSERT_TRUE(pexecutor.exist());
+
+	auto pserver = make_own<udp_counting_socket>();
+	pserver->io_context(pexecutor.get());
+	ASSERT_EQ(pserver->start({ { net::ip::address_v4::loopback(), 0 } }), eRESULT::SUCCESS);
+	const auto port = pserver->local_endpoint().port();
+	ASSERT_NE(port, 0);
+
+	std::atomic<bool> is_running{ true };
+	std::atomic<std::size_t> count_sent{ 0 };
+	std::vector<std::thread> senders;
+
+	for (int t = 0; t < 8; ++t)
+	{
+		senders.emplace_back([&]()
+		{
+			const int handle = ::socket(AF_INET, SOCK_DGRAM, 0);
+			if (handle < 0)
+				return;
+
+			::sockaddr_in address{};
+			address.sin_family = AF_INET;
+			address.sin_port = htons(port);
+			address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+			char data[64]{};
+			::iovec array_iovec[32];
+			::mmsghdr array_message[32]{};
+			for (int i = 0; i < 32; ++i)
+			{
+				array_iovec[i] = { data, sizeof(data) };
+				array_message[i].msg_hdr.msg_name = &address;
+				array_message[i].msg_hdr.msg_namelen = sizeof(address);
+				array_message[i].msg_hdr.msg_iov = &array_iovec[i];
+				array_message[i].msg_hdr.msg_iovlen = 1;
+			}
+
+			while (is_running.load(std::memory_order_relaxed))
+			{
+				const int count = ::sendmmsg(handle, array_message, 32, 0);
+				if (count > 0)
+					count_sent += static_cast<std::size_t>(count);
+			}
+
+			::close(handle);
+		});
+	}
+
+	std::this_thread::sleep_for(3s);
+	is_running = false;
+	for (auto& iter : senders)
+		iter.join();
+
+	// - the process is alive (a broken stack aborts it) and the socket received
+	EXPECT_TRUE(lio_wait_until([&]() { return pserver->count_received.load() != 0; })) << "sent " << count_sent.load();
+
+	pserver->stop();
+	pexecutor->stop();
 }
 
 
@@ -1156,9 +1428,97 @@ TEST(linux_io, io_uring_completion_accepted_sockets_spread)
 	pexecutor->stop();
 }
 
+//-----------------------------------------------------------------------------
+// io_uring completion : the multishot accept that ends while the acceptor is disabled is posted again
+//
+//  - before : the final CQE (no F_MORE) of the accept op was not posted again while disabled, and enable() posts nothing : the
+//    connections stayed in the backlog for good. the op is ended here by a cancel of the ops of the listen fd (-ECANCELED : what
+//    the exit of the submitting thread, an error of accept or a full CQ give)
+//  - a connection while disabled is closed by the acceptor (the op runs), one after enable() is accepted
+//-----------------------------------------------------------------------------
+namespace
+{
+	// - a blocking client of the OS : connected (to the backlog of the listen socket at least), -1 : failed
+	int lio_raw_connect(uint16_t _port)
+	{
+		const int handle = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+		if (handle < 0)
+			return -1;
+
+		timeval timeout{ 0, 100 * 1000 };
+		::setsockopt(handle, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+
+		sockaddr_in address{};
+		address.sin_family = AF_INET;
+		address.sin_port = htons(_port);
+		address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+		if (::connect(handle, reinterpret_cast<const sockaddr*>(&address), sizeof(address)) != 0)
+		{
+			::close(handle);
+			return -1;
+		}
+
+		return handle;
+	}
+
+	// - the peer closed the connection (EOF or RST). a timeout of the recv : not closed (yet)
+	bool lio_raw_is_closed(int _handle)
+	{
+		char byte;
+		const auto result = ::recv(_handle, &byte, 1, 0);
+		return result == 0 || (result < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR);
+	}
+}
+
+TEST(linux_io, io_uring_completion_accept_ended_while_disabled)
+{
+	if (executor::is_io_uring_completion_available() == false)
+		GTEST_SKIP() << "io_uring completion is not available on this kernel";
+
+	const auto backend_before = executor::default_io_backend();
+	executor::set_default_io_backend(executor::io_backend::io_uring_completion);
+	auto pexecutor = executor::make_io_context_threads("io_uring completion accept disabled", 2);
+	executor::set_default_io_backend(backend_before);
+	ASSERT_TRUE(pexecutor.exist());
+	ASSERT_EQ(pexecutor->backend(), executor::io_backend::io_uring_completion);
+
+	auto pacceptor = make_own<net::acceptor<lio_echo_server_socket>>();
+	pacceptor->io_context(pexecutor.get());
+	ASSERT_EQ(pacceptor->start(lio_acceptor_parameter(lio_port())), eRESULT::SUCCESS);
+	const auto port = pacceptor->local_endpoint().port();
+	const auto handle_listen = pacceptor->native_handle();
+	ASSERT_NE(handle_listen, INVALID_SOCKET);
+
+	// 1) disabled, then the accept op ends (its ops cancelled : the final CQE -ECANCELED)
+	pacceptor->disable();
+	ASSERT_TRUE(pacceptor->is_disable());
+	ASSERT_TRUE(pexecutor->submit_cancel_fd(static_cast<CGHANDLE>(handle_listen))) << "no op of the listen socket";
+
+	// 2) a connection while disabled : accepted by the op posted again and closed (not left in the backlog)
+	const int handle_disabled = lio_raw_connect(port);
+	ASSERT_GE(handle_disabled, 0) << "connect while disabled";
+	const bool is_closed = lio_wait_until([&]() { return lio_raw_is_closed(handle_disabled); }, 3000ms);
+	::close(handle_disabled);
+	EXPECT_TRUE(is_closed) << "the connections stay in the backlog : the accept op was not posted again while disabled";
+	EXPECT_EQ(pacceptor->count(), 0u);
+
+	// 3) enabled : a connection is accepted
+	pacceptor->enable();
+	const int handle_after = lio_raw_connect(port);
+	ASSERT_GE(handle_after, 0);
+	EXPECT_TRUE(lio_wait_until([&]() { return pacceptor->count() == 1; })) << "accepted " << pacceptor->count();
+	EXPECT_FALSE(lio_raw_is_closed(handle_after)) << "the connection after enable() was closed";
+	::close(handle_after);
+
+	EXPECT_TRUE(lio_wait_until([&]() { return pacceptor->count() == 0; }, 10000ms)) << "connected yet " << pacceptor->count();
+	pacceptor->stop();
+	pexecutor->stop();
+}
+
 TEST(linux_io, io_uring_default_backend_option)
 {
-	// - the default is epoll. the option is kept until changed
+	// - the option is kept until changed (the built-in default is io_uring_completion, epoll where it is not available)
 	const auto backend_before = executor::default_io_backend();
 	executor::set_default_io_backend(executor::io_backend::io_uring);
 	EXPECT_EQ(executor::default_io_backend(), executor::io_backend::io_uring);

@@ -1205,3 +1205,17 @@ tls pool의 garbage collection 처리 변경
 - Windows/Linux Redis 테스트 각각50개 및 실제 Redis 순서/혼합/동시 요청/stop/restart 검증 통과. 전체 SDK/GRUMA 빌드나 원격 Redis 성능 검증은 아니다.
 - benchmark/3.query_redis에 최신 원본/요약/조건/소스 해시와 --profile=current 재실행 경로를 추가했다. 이전 날짜의 비교는 당시 구현의 기록이다.
 - Nstream/REQUEST_QUERY/Iquery/execute_result 등 공개 헤더·상태 구조 변경: Net/System/Query/Redis 라이브러리 및 모든 사용 프로그램을 함께 재빌드해야 한다. 기존 바이너리와 혼용하지 않는다.
+
+
+2026.10.26 - Redis 응답 post 기본값 false 및 재비교 (이 커밋)
+- START_PARAMETER.post_response, session 내부값, 벤치마크 기본값을 false로 통일했다. post_execute_query 사용자 callback은 직접 처리하며 true를 명시하면 post한다. 동기 완료는 기존처럼 직접 처리한다.
+- 기존 START_PARAMETER 초기값true로 빌드한 이용 프로그램에도 기본값을 적용하려면 Redis 라이브러리와 이용측을 재빌드한다. 이번 기본값 변경은 레이아웃을 바꾸지 않는다.
+- false를 명시하고 설정 로그 post_response=0을 확인한 60회 비교, 모두 errors=0. GCC15 Release/epoll/Redis8.2.10, GET16B, 준비0.3초+측정2초, 각3회 중앙값이다.
+  단건 비동기 CGDK50,950/s vs hiredis51,280/s, 평균19.6 vs19.5us, p99 모두21.4us.
+  비동기1024·4연결 CGDK5,225,703/s vs hiredis5,184,434/s, 평균195.9 vs197.5us, p99 250.9 vs209.9us.
+  batch1000·1연결 CGDK4,559,869/s vs hiredis3,737,381/s vs Boost4,062,863/s.
+  batch1000·4연결 CGDK5,747,844/s vs hiredis5,748,346/s vs Boost5,769,838/s. 동기 batch는5,771,845/s.
+  단건 동기 CGDK38,281/s vs hiredis55,010/s로 여전히 느리다. 높은 동시성의 p99도 개선 대상이다.
+- 평균 지연시간을 p50/p99와 분리해 기록한다. pipeline 지연은1000개 그룹 전체 완료시간이다. 이전 post=true 자료는 다른 시점의 기록으로 보존하며 옵션 하나의 순수 개선율로 비교하지 않는다.
+- 비교기에 --post-response=off/on과 실제 설정 검사, 평균/p999 요약을 추가했다. benchmark/3.query_redis/results/clients_post_off_20261026.*에 원본/전체stdout/요약/조건/실행스크립트/소스 해시를 저장했다.
+- Windows/Linux Release Redis 테스트 각각50개 및 실제 Redis 순서/혼합/동시 요청/콜백 내 동기 요청/stop/restart 통과. 전체 SDK/GRUMA나 원격 Redis 성능 검증은 아니다.

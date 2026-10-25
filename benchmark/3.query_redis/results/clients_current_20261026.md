@@ -1,6 +1,6 @@
-# Redis 최종 클라이언트 비교 (2026-10-26)
+# Redis 이전 post=true 클라이언트 비교 (2026-10-26)
 
-현재 기본값은 post_execute_query의 사용자 콜백 post 켜짐, 동기 execute_query 완료는 직접 처리다. Redis 자동 send_cork 및 전용 옵션은 제거했고 send_defer는 독립적으로 설정한다. 파싱과 응답 매칭은 I/O에서 수행한다.
+이 문서는 r11623의 post=true 기본값으로 측정한 기록이다. 현재 기본값은 false이며 [최신 false 비교](clients_post_off_20261026.md)를 기준으로 한다. 동기 execute_query 완료는 직접 처리한다. Redis 자동 send_cork 및 전용 옵션은 제거했고 send_defer는 독립적으로 설정한다. 파싱과 응답 매칭은 I/O에서 수행한다.
 
 SAKPUNG Ryzen 9 8945HX, Linux 6.12, GCC 15.2.1 Release -O3 -DNDEBUG, epoll, Redis 8.2.10(io-threads=1, CPU 8), 클라이언트 CPU 0-7,16-23. hiredis 1.3.0(poll 비동기 어댑터), redis-plus-plus 1.3.15, Boost 1.90. GET 16B, 1024 keys, 준비 0.3초+측정 2초, 실행 순서 교차, 각 3회 중앙값. 60회 모두 errors=0. loopback 결과이며 원격 Redis나 다른 값 크기의 성능을 보장하지 않는다.
 

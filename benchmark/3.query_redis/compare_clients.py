@@ -8,6 +8,7 @@ import subprocess,os,json,statistics,time,argparse,platform
 parser=argparse.ArgumentParser(description="Compare current Redis clients; pipeline latency covers the complete group.")
 parser.add_argument('build',type=Path)
 parser.add_argument('--output',type=Path,required=True)
+parser.add_argument('--post-response',choices=['off','on'],default='off',help='CGDK asynchronous callback dispatch; default off')
 parser.add_argument('--profile',choices=['full','current'],default='full')
 parser.add_argument('--port',type=int,default=6390)
 parser.add_argument('--keys',type=int,default=1024)
@@ -28,7 +29,7 @@ if args.profile=='current':
  batched=[('hiredis.pipeline','bench_hiredis',[]),('redis++.pipeline','bench_redispp',[]),('Boost.Redis','bench_boost_redis',[]),('CGDK.batch.async','bench_cgdk',['--variant=batch']),('CGDK.batch.sync','bench_cgdk',['--variant=batch_sync'])]
  cases=[('get16_single',16,'get',1,1,1,sync),('get16_async1024_c4',16,'get',1024,4,1,asyncs),('get16_batch1000_c1',16,'get',1,1,1000,batched),('get16_batch1000_c4',16,'get',4,4,1000,batched+[('CGDK.individual','bench_cgdk',['--variant=shared'])])]
 
-meta={'profile':args.profile,'started':time.strftime('%Y-%m-%dT%H:%M:%S%z'),'host':platform.node(),'kernel':platform.release(),'build':str(b),'seconds':args.seconds,'warmup':args.warmup,'rounds':args.rounds,'cpus':args.cpus,'port':args.port,'keys':args.keys,'hiredis_async_adapter':'poll','latency':'Per command for single/async chains; full group for pipeline. CPU includes all client threads.'}
+meta={'profile':args.profile,'cgdk_post_response':args.post_response=='on','started':time.strftime('%Y-%m-%dT%H:%M:%S%z'),'host':platform.node(),'kernel':platform.release(),'build':str(b),'seconds':args.seconds,'warmup':args.warmup,'rounds':args.rounds,'cpus':args.cpus,'port':args.port,'keys':args.keys,'hiredis_async_adapter':'poll','latency':'Per command for single/async chains; full group for pipeline. CPU includes all client threads.'}
 args.output.with_suffix('.metadata.json').write_text(json.dumps(meta,indent=2));rows=[];total=args.rounds*sum(len(c[-1]) for c in cases)
 with args.output.open('w') as f:
  for rnd in range(args.rounds):
@@ -38,7 +39,11 @@ with args.output.open('w') as f:
    for label,binary,extra in clients[offset:]+clients[:offset]:
     mode='pipeline' if count>1 else 'sync'
     cmd=['taskset','-c',args.cpus,str(b/binary),f'--port={args.port}',f'--keys={args.keys}',f'--size={size}',f'--op={op}',f'--callers={callers}',f'--sessions={sessions}',f'--pipeline={count}',f'--mode={mode}',f'--seconds={args.seconds}',f'--warmup={args.warmup}']+extra
+    if binary=='bench_cgdk': cmd+=['--post-response='+args.post_response]
     completed=subprocess.run(cmd,env=env,capture_output=True,text=True,timeout=args.seconds+40)
+    if binary=='bench_cgdk':
+     expected='post_response='+('1' if args.post_response=='on' else '0')+' '
+     assert expected in completed.stdout,completed.stdout
     lines=[line for line in completed.stdout.splitlines() if line.startswith('RESULT ')]
     if completed.returncode or len(lines)!=1:raise RuntimeError((case,label,completed.returncode,completed.stdout,completed.stderr))
     row=dict(field.split('=',1) for field in lines[0].split()[1:]);assert int(row['errors'])==0 and int(row['ops'])>0,row
@@ -49,7 +54,7 @@ for case,*_rest,clients in cases:
  item={'case':case,'clients':{}}
  for label,*_ in clients:
   selected=[x for x in rows if x['case']==case and x['competitor']==label]
-  item['clients'][label]={metric:statistics.median(float(x[metric]) for x in selected) for metric in ['ops_per_s','p50_us','p99_us','cpu_us_per_op','server_cores']}
+  item['clients'][label]={metric:statistics.median(float(x[metric]) for x in selected) for metric in ['ops_per_s','mean_us','p50_us','p99_us','p999_us','cpu_us_per_op','server_cores']}
   item['clients'][label]['min_ops_per_s']=min(float(x['ops_per_s']) for x in selected)
   item['clients'][label]['max_ops_per_s']=max(float(x['ops_per_s']) for x in selected)
  summary.append(item)

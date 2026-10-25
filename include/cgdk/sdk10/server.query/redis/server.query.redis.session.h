@@ -143,7 +143,7 @@ protected:
             std::recursive_mutex m_cs_response_processing;
             std::deque<COMPLETED_RESPONSE> m_queue_response;
             bool m_response_scheduled = false;
-            bool m_post_response = true;
+            bool m_post_response = false;
             object_ptr<Iexecutor> m_response_executor;
             class encoding_executable;
 };

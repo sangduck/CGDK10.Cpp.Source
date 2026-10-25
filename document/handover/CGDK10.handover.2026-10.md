@@ -845,6 +845,17 @@ r11579 의 코드를 네 영역(io_uring completion, 실행기 · strand, window
 
 ---
 
+### 1.46 Redis post_response 기본 false와 이번 비교 (이 커밋, 2026-10-26)
+
+- 1.45/r11623의 비동기 post 기본 on을 후속 사용자 요청으로 false로 바꿨다. START_PARAMETER/session/벤치 기본값을 통일했고 true 명시로 post를 선택한다. 동기 완료는 직접 처리, RESP 파싱/매칭은 I/O에 유지한다.
+- Windows/Linux Release 테스트 각50개 및 실 Redis 검증 통과. 변경은 기본값뿐이며 레이아웃은 같다. 기존 이용 프로그램의 START_PARAMETER 초기값도 바뀌려면 Redis와 이용측을 재빌드한다.
+- 같은 CPU/연결 조건의 GET16B 비교60회 모두 errors=0, CGDK24회 전부 --post-response=off/로그0 확인. 옵션 없는 기본값0도 별도 확인했다.
+- CGDK/hiredis: 단건 비동기50,950/51,280/s(평균19.6/19.5us, p99 모두21.4us), 비동기1024·4연결5.226/5.184M/s(평균195.9/197.5us, p99 250.9/209.9us), batch1000·1연결4.560/3.737M/s, 4연결5.748/5.748M/s. 단건 동기38,281/55,010/s와 고동시성 p99는 개선 대상이다.
+- 최신 결과는 results/clients_post_off_20261026.*, 이전 clients_current_20261026.*는 post=true 당시 기록으로 보존한다. 평균은 실행별 실제 평균의3회 중앙값이며 p50과 다르다. pipeline 지연은 그룹 전체 완료시간이다. 시점이 다른 두 비교를 옵션 하나의 순수 효과로 해석하지 않는다.
+- compare_clients.py --profile=current --post-response=off로 재실행한다. 측정 당시 정확한 runner도 보존했다. 웹 Redis 문서/README/release_note를 현재 false 기준으로 갱신한다. 다른 작업의 zerocopy/벤치 주석/VS 경로4개 파일은 제출하지 않는다.
+
+---
+
 ## 2. 남은 일 (우선순위 순)
 
 1. ~~Ntcp_reconnect 즉시 실패 시 재접속 미예약~~ - 해결(r11404, 1.12).

@@ -1,0 +1,21 @@
+{
+  "profile": "current",
+  "cgdk_post_response": false,
+  "started": "2026-10-26T07:16:56+0900",
+  "host": "sakpung",
+  "kernel": "6.12.0-273.el10.x86_64",
+  "build": "/home/sangduck/redis_bench/codex_resume_window_20261025/bench-after",
+  "seconds": 2.0,
+  "warmup": 0.3,
+  "rounds": 3,
+  "cpus": "0-7,16-23",
+  "port": 6390,
+  "keys": 1024,
+  "hiredis_async_adapter": "poll",
+  "latency": "Per command for single/async chains; full group for pipeline. CPU includes all client threads.",
+  "source_base": "SVN r11624 + post_response default=false",
+  "default_probe": "post_response=0 without option",
+  "comparison_cgdk_runs": 24,
+  "comparison_total_runs": 60,
+  "errors": 0
+}

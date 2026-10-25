@@ -49,7 +49,7 @@ public:
 				bool enable_send_defer = true;
 				bool encode_on_session = true;
                 // Post asynchronous user callbacks; synchronous completion stays inline.
-                bool post_response = true;
+                bool post_response = false;
                 object_ptr<Iexecutor> presponse_executor; // Empty: Redis I/O executor.
 				std::size_t request_send_window = 8; // 0: disable the outstanding-request gate
 				// Empty: prefer Redis I/O, retaining an explicitly bound coroutine executor.

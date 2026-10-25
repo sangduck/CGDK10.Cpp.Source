@@ -2,9 +2,9 @@
 
 ## 최신 구현과 비교 (2026-10-26)
 
-[최종 비교와 검증](results/clients_current_20261026.md). 이전 날짜의 측정은 당시 구현 결과이며 현재 기본값 비교는 이 문서를 기준으로 한다.
+[post=false 기본값의 최신 비교와 검증](results/clients_post_off_20261026.md). 이전 날짜의 측정은 당시 구현 결과이며 현재 기본값 비교는 이 문서를 기준으로 한다.
 
-- `post_execute_query`: 사용자 callback을 post하는 것이 기본이다. `START_PARAMETER.post_response=false`로 직접 처리할 수 있다. `presponse_executor`를 비워 두면 Redis I/O executor를 사용한다.
+- `post_execute_query`: 사용자 callback을 직접 처리하는 `START_PARAMETER.post_response=false`가 기본이다. `true`를 명시하면 post한다. `presponse_executor`를 비워 두면 Redis I/O executor를 사용한다.
 - 동기 `execute_query`: post 여부와 관계없이 완료 통지는 직접 처리한다. RESP 파싱·응답 매칭은 I/O에서 수행한다.
 - 입력은 반환 전에 소유하고 세션이 전송 직전에 인코딩한다. 개별 요청도 큐에서 모아서 보내며 응답은 도착 즉시 처리한다. 명시적 batch만 전체 결과를 모아 한 번 통지한다.
 - start에서 고정한 연결을 사용하고 stop 이후 접근은 실패한다. 일반 공유 연결 선택은 querier mutex를 사용하지 않는다. 전용 연결·관리·대기열에는 필요한 동기화가 남아 있다.

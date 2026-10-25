@@ -61,7 +61,7 @@ struct options
 	std::size_t request_send_window = 8;
 	std::string resume_executor = "default";
 	bool encode_on_session = true;
-    bool post_response = true;
+    bool post_response = false;
     std::string response_executor = "io";
     double callback_work_us = 0;
 	bool post_latency = false;

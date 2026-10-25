@@ -1,0 +1,242 @@
+[
+  {
+    "case": "get16_single",
+    "clients": {
+      "hiredis.sync": {
+        "ops_per_s": 55010.0,
+        "mean_us": 18.2,
+        "p50_us": 18.0,
+        "p99_us": 19.8,
+        "p999_us": 22.4,
+        "cpu_us_per_op": 5.694,
+        "server_cores": 0.41,
+        "min_ops_per_s": 54872.0,
+        "max_ops_per_s": 56118.0
+      },
+      "hiredis.async": {
+        "ops_per_s": 51280.0,
+        "mean_us": 19.5,
+        "p50_us": 19.6,
+        "p99_us": 21.4,
+        "p999_us": 24.2,
+        "cpu_us_per_op": 6.985,
+        "server_cores": 0.38,
+        "min_ops_per_s": 51107.0,
+        "max_ops_per_s": 51653.0
+      },
+      "redis++.sync": {
+        "ops_per_s": 53615.0,
+        "mean_us": 18.6,
+        "p50_us": 18.6,
+        "p99_us": 20.6,
+        "p999_us": 23.7,
+        "cpu_us_per_op": 5.924,
+        "server_cores": 0.4,
+        "min_ops_per_s": 53223.0,
+        "max_ops_per_s": 54514.0
+      },
+      "Boost.Redis": {
+        "ops_per_s": 46681.0,
+        "mean_us": 21.4,
+        "p50_us": 21.4,
+        "p99_us": 23.4,
+        "p999_us": 27.3,
+        "cpu_us_per_op": 9.299,
+        "server_cores": 0.34,
+        "min_ops_per_s": 46598.0,
+        "max_ops_per_s": 46811.0
+      },
+      "CGDK.sync": {
+        "ops_per_s": 38281.0,
+        "mean_us": 26.1,
+        "p50_us": 26.0,
+        "p99_us": 29.1,
+        "p999_us": 33.5,
+        "cpu_us_per_op": 15.971,
+        "server_cores": 0.29,
+        "min_ops_per_s": 37853.0,
+        "max_ops_per_s": 39241.0
+      },
+      "CGDK.async": {
+        "ops_per_s": 50950.0,
+        "mean_us": 19.6,
+        "p50_us": 19.6,
+        "p99_us": 21.4,
+        "p999_us": 23.9,
+        "cpu_us_per_op": 7.05,
+        "server_cores": 0.38,
+        "min_ops_per_s": 50939.0,
+        "max_ops_per_s": 51089.0
+      }
+    }
+  },
+  {
+    "case": "get16_async1024_c4",
+    "clients": {
+      "hiredis.async": {
+        "ops_per_s": 5184434.0,
+        "mean_us": 197.5,
+        "p50_us": 197.6,
+        "p99_us": 209.9,
+        "p999_us": 276.5,
+        "cpu_us_per_op": 0.207,
+        "server_cores": 0.92,
+        "min_ops_per_s": 5173314.0,
+        "max_ops_per_s": 5228731.0
+      },
+      "Boost.Redis": {
+        "ops_per_s": 4183795.0,
+        "mean_us": 244.7,
+        "p50_us": 244.7,
+        "p99_us": 255.0,
+        "p999_us": 325.6,
+        "cpu_us_per_op": 0.472,
+        "server_cores": 0.79,
+        "min_ops_per_s": 4167782.0,
+        "max_ops_per_s": 4227393.0
+      },
+      "CGDK.async": {
+        "ops_per_s": 5225703.0,
+        "mean_us": 195.9,
+        "p50_us": 193.5,
+        "p99_us": 250.9,
+        "p999_us": 288.8,
+        "cpu_us_per_op": 0.354,
+        "server_cores": 0.92,
+        "min_ops_per_s": 5202730.0,
+        "max_ops_per_s": 5291852.0
+      }
+    }
+  },
+  {
+    "case": "get16_batch1000_c1",
+    "clients": {
+      "hiredis.pipeline": {
+        "ops_per_s": 3737381.0,
+        "mean_us": 267.6,
+        "p50_us": 264.2,
+        "p99_us": 276.5,
+        "p999_us": 346.1,
+        "cpu_us_per_op": 0.122,
+        "server_cores": 0.61,
+        "min_ops_per_s": 3731384.0,
+        "max_ops_per_s": 3744420.0
+      },
+      "redis++.pipeline": {
+        "ops_per_s": 2679409.0,
+        "mean_us": 363.6,
+        "p50_us": 362.5,
+        "p99_us": 374.8,
+        "p999_us": 448.5,
+        "cpu_us_per_op": 0.237,
+        "server_cores": 0.44,
+        "min_ops_per_s": 2656443.0,
+        "max_ops_per_s": 2703478.0
+      },
+      "Boost.Redis": {
+        "ops_per_s": 4062863.0,
+        "mean_us": 246.1,
+        "p50_us": 244.7,
+        "p99_us": 252.9,
+        "p999_us": 321.5,
+        "cpu_us_per_op": 0.106,
+        "server_cores": 0.68,
+        "min_ops_per_s": 4033371.0,
+        "max_ops_per_s": 4118356.0
+      },
+      "CGDK.batch.async": {
+        "ops_per_s": 4559869.0,
+        "mean_us": 219.3,
+        "p50_us": 218.1,
+        "p99_us": 226.3,
+        "p999_us": 297.0,
+        "cpu_us_per_op": 0.066,
+        "server_cores": 0.75,
+        "min_ops_per_s": 4543858.0,
+        "max_ops_per_s": 4569379.0
+      },
+      "CGDK.batch.sync": {
+        "ops_per_s": 4482390.0,
+        "mean_us": 223.1,
+        "p50_us": 222.2,
+        "p99_us": 232.4,
+        "p999_us": 301.1,
+        "cpu_us_per_op": 0.068,
+        "server_cores": 0.74,
+        "min_ops_per_s": 4448451.0,
+        "max_ops_per_s": 4483928.0
+      }
+    }
+  },
+  {
+    "case": "get16_batch1000_c4",
+    "clients": {
+      "hiredis.pipeline": {
+        "ops_per_s": 5748346.0,
+        "mean_us": 695.8,
+        "p50_us": 692.2,
+        "p99_us": 716.8,
+        "p999_us": 782.3,
+        "cpu_us_per_op": 0.13,
+        "server_cores": 0.95,
+        "min_ops_per_s": 5700349.0,
+        "max_ops_per_s": 5798857.0
+      },
+      "redis++.pipeline": {
+        "ops_per_s": 5213396.0,
+        "mean_us": 755.6,
+        "p50_us": 766.0,
+        "p99_us": 913.4,
+        "p999_us": 987.1,
+        "cpu_us_per_op": 0.258,
+        "server_cores": 0.86,
+        "min_ops_per_s": 5193829.0,
+        "max_ops_per_s": 5284854.0
+      },
+      "Boost.Redis": {
+        "ops_per_s": 5769838.0,
+        "mean_us": 693.3,
+        "p50_us": 692.2,
+        "p99_us": 725.0,
+        "p999_us": 790.5,
+        "cpu_us_per_op": 0.115,
+        "server_cores": 0.94,
+        "min_ops_per_s": 5691370.0,
+        "max_ops_per_s": 5775346.0
+      },
+      "CGDK.batch.async": {
+        "ops_per_s": 5747844.0,
+        "mean_us": 695.8,
+        "p50_us": 692.2,
+        "p99_us": 725.0,
+        "p999_us": 798.7,
+        "cpu_us_per_op": 0.072,
+        "server_cores": 0.94,
+        "min_ops_per_s": 5702340.0,
+        "max_ops_per_s": 5785339.0
+      },
+      "CGDK.batch.sync": {
+        "ops_per_s": 5771845.0,
+        "mean_us": 693.0,
+        "p50_us": 692.2,
+        "p99_us": 716.8,
+        "p999_us": 790.5,
+        "cpu_us_per_op": 0.077,
+        "server_cores": 0.95,
+        "min_ops_per_s": 5715344.0,
+        "max_ops_per_s": 5807345.0
+      },
+      "CGDK.individual": {
+        "ops_per_s": 4183910.0,
+        "mean_us": 956.1,
+        "p50_us": 905.2,
+        "p99_us": 1581.1,
+        "p999_us": 1826.8,
+        "cpu_us_per_op": 1.661,
+        "server_cores": 0.79,
+        "min_ops_per_s": 4172389.0,
+        "max_ops_per_s": 4254382.0
+      }
+    }
+  }
+]

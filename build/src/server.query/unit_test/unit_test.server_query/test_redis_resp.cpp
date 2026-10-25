@@ -1330,6 +1330,6 @@ TEST(CGDK10_redis_resp, redis_session_does_not_use_native_send_cork)
 {
     auto session = make_object<test_send_window_session>();
     EXPECT_FALSE(session->send_cork_enabled());
-    EXPECT_TRUE(query::redis::querier::START_PARAMETER().post_response);
+    EXPECT_FALSE(query::redis::querier::START_PARAMETER().post_response);
 }
 }

@@ -45,22 +45,24 @@
 </aside>
 <main>
 <h1>Redis · 타입 기반 배치와 성능 비교<small>구현·검증·측정: 2026-10-26 · C++20 · Windows / Linux</small></h1>
-<h2 id="current">최신 구현과 측정 · 2026-10-26</h2>
-<p>비동기 <code>post_execute_query</code>의 사용자 callback은 post하는 것이 기본이며 <code>START_PARAMETER.post_response=false</code>로 직접 처리할 수 있다. 동기 <code>execute_query</code> 완료는 직접 처리한다. 파싱·응답 매칭은 I/O에서 수행한다. Redis 자동 send_cork와 해당 옵션은 제거했고 send_defer는 독립적으로 유지한다.</p>
-<p>GET 16B, SAKPUNG Linux Release/epoll, Redis 8.2.10, 동일 CPU/연결 조건에서 각3회 중앙값. 60회 errors=0. 단건/개별 비동기는 명령 단위, batch 지연은 1000개 그룹 전체 완료 시간이다.</p>
+<h2 id="current">최신 구현과 측정 · post_response=false · 2026-10-26</h2>
+<p><code>START_PARAMETER.post_response=false</code>가 기본이다. 비동기 <code>post_execute_query</code> 사용자 callback은 I/O에서 직접 처리하며 <code>true</code>를 명시하면 post한다. 동기 <code>execute_query</code> 완료는 직접 처리한다. 파싱·응답 매칭은 I/O에서 수행한다. Redis 자동 send_cork는 제거했고 send_defer는 독립적으로 유지한다.</p>
+<p>SAKPUNG Linux Release/epoll, Redis8.2.10, GET16B, 같은 CPU/연결 조건에서 각3회 중앙값. 60회 errors=0, CGDK 모든 실행에서 post_response=0을 확인했다. 단건/개별 비동기는 명령별, batch 지연은 1000개 그룹 전체 완료시간이다.</p>
 <table><thead><tr><th>조건</th><th>CGDK 요청/초</th><th>hiredis</th><th>redis++</th><th>Boost.Redis</th></tr></thead><tbody>
-<tr><td>단건 동기·1연결</td><td>38,344</td><td>54,425</td><td>54,054</td><td>46,958</td></tr>
-<tr><td>개별 비동기1024·4연결</td><td>5,077,493</td><td>5,177,391</td><td>측정하지 않음</td><td>4,172,839</td></tr>
-<tr><td>batch1000·1연결</td><td>4,468,357</td><td>3,735,873</td><td>2,649,929</td><td>4,052,886</td></tr>
-<tr><td>batch1000·4연결</td><td>5,697,843</td><td>5,700,374</td><td>5,229,360</td><td>5,704,849</td></tr>
+<tr><td>단건 동기·1연결</td><td>38,281</td><td>55,010</td><td>53,615</td><td>46,681</td></tr>
+<tr><td>단건 비동기·1연결</td><td>50,950</td><td>51,280</td><td>측정하지 않음</td><td>46,681</td></tr>
+<tr><td>개별 비동기1024·4연결</td><td>5,225,703</td><td>5,184,434</td><td>측정하지 않음</td><td>4,183,795</td></tr>
+<tr><td>batch1000·1연결</td><td>4,559,869</td><td>3,737,381</td><td>2,679,409</td><td>4,062,863</td></tr>
+<tr><td>batch1000·4연결</td><td>5,747,844</td><td>5,748,346</td><td>5,213,396</td><td>5,769,838</td></tr>
 </tbody></table>
-<p>단건 동기는 hiredis보다 느리고 4연결 batch 처리량은 비슷하다. post on/off 비교에서는 1연결 개별 등록 -11.8%, 4연결 +2.4%로 부하에 따라 달랐다. loopback 결과를 다른 환경의 보장 성능으로 해석하지 않는다.</p>
-<p>검증: Windows/Linux Redis 테스트 각각50개, 실제 Redis 순서·혼합·동시 요청·stop/restart 통과. 공개 헤더 변경으로 SDK와 사용하는 프로그램을 함께 재빌드한다. 아래 이전 날짜의 표는 당시 구현의 기록이다.</p>
+<table><thead><tr><th>비동기 조건</th><th>CGDK 평균 / p99 µs</th><th>hiredis 평균 / p99 µs</th></tr></thead><tbody>
+<tr><td>단건·1연결</td><td>19.6 / 21.4</td><td>19.5 / 21.4</td></tr>
+<tr><td>1024개·4연결</td><td>195.9 / 250.9</td><td>197.5 / 209.9</td></tr>
+</tbody></table>
+<p>평균은 실제 평균 완료시간의 3회 중앙값이며 p50과 다르다. 개별 비동기 처리량은 hiredis와 비슷하지만 높은 동시성의 p99는 길다. 단건 동기는 느리고 batch1000·1연결은 약22% 빠르며 4연결 batch는 비슷하다. loopback 결과를 다른 환경의 보장 성능으로 해석하지 않는다. 이전 post=true 측정은 시점이 달라 순수 옵션 효과로 비교하지 않는다.</p>
+<p>검증: Windows/Linux Redis 테스트 각각50개, 실제 Redis 순서·혼합·동시 요청·stop/restart 통과. 기본값을 이용측에도 반영하려면 Redis 라이브러리와 이용 프로그램을 재빌드한다. 아래 이전 날짜의 표는 당시 구현의 기록이다.</p>
+<p><a href="https://github.com/sangduck/CGDK10.Cpp.Source/blob/main/benchmark/3.query_redis/results/clients_post_off_20261026.md">false 기본값 비교·측정 조건·원본 로그</a></p>
 
-<p>문자열 하나를 넘기면 단건, 명령 문자열의 배열·벡터·span을 넘기면 배치를 실행한다. 별도 <code>post_batch</code> 함수 이름 없이 기존 <code>post_execute_query</code>, <code>execute_query</code>의 오버로드로 구분한다.</p>
-<ul class="toc"><li><a href="#api">단건·배치 API</a></li><li><a href="#changes">수정 내용과 처리 구조</a></li><li><a href="#cancel">완료·오류·취소 계약</a></li><li><a href="#bench">클라이언트 비교 벤치마크</a></li><li><a href="#validation">검증과 재실행</a></li></ul>
-
-<p><a href="https://github.com/sangduck/CGDK10.Cpp.Source/blob/main/benchmark/3.query_redis/results/clients_current_20261026.md">최종 비교·측정 조건·원본 로그</a></p>
 <h2 id="api">인자 타입으로 단건·배치 선택</h2>
 <table><thead><tr><th>입력</th><th>비동기</th><th>동기</th></tr></thead><tbody>
 <tr><td><code>string / string_view</code></td><td><code>post_execute_query(command, callback)</code><br>기존 query 포인터 callback</td><td><code>execute_query(command)</code><br>기존 단건 query 반환</td></tr>
